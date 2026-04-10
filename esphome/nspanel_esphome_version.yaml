@@ -14,7 +14,7 @@ substitutions:
   # Minimum required blueprint version for compatibility
   # Select 'next' or '${version}' when you change the "contract" between ESPHome and Blueprint
   # Versioning workflow will replace this by the new version being generated
-  min_blueprint_version: ${version}
+  min_blueprint_version: 2026.4.12
 
   # Minimum required TFT version for compatibility
   # Must be manually updated with Nextion Editor

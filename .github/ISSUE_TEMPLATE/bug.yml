@@ -33,14 +33,14 @@ body:
     attributes:
       label: Firmware Version
       description: Enter the ESPHome firmware version number.
-      placeholder: e.g., 2026.4.11
+      placeholder: e.g., 2026.4.12
     validations:
       required: false
   - type: input
     attributes:
       label: Blueprint Version
       description: Enter the Blueprint version number.
-      placeholder: e.g., 2026.4.11
+      placeholder: e.g., 2026.4.12
     validations:
       required: false
   - type: dropdown
