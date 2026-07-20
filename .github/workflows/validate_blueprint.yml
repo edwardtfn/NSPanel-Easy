@@ -27,7 +27,7 @@ jobs:
 
       - name: Set up Python
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
-        uses: actions/setup-python@v6.3.0
+        uses: actions/setup-python@v7.0.0
         with:
           python-version: "3.11"
 
