@@ -1115,6 +1115,74 @@ blueprint:
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
+    humidifier_page_settings:
+      name: Humidifier page
+      icon: mdi:air-humidifier
+      description: >-
+        Select what to display on the climate page when the entity shown
+        there is a humidifier or dehumidifier. The climate page's dial and
+        on/off controls are reused automatically for humidity instead of
+        temperature - the settings below only cover the extra entity values
+        and custom button shown alongside it.
+      collapsed: true
+      input:
+        humidifier_value01:
+          name: Humidifier page - Entity State 01 - Entity
+          description: >-
+            Entity shown instead of "Entity State 01" when the entity bound
+            to the climate page is a humidifier (e.g. a humidity or
+            temperature sensor related to the humidifier).
+
+            *Only one entity may be selected.*
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value02:
+          name: Humidifier page - Entity State 02 - Entity
+          description: >-
+            Entity shown instead of "Entity State 02" when the entity bound
+            to the climate page is a humidifier.
+
+            *Only one entity may be selected.*
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value03:
+          name: Humidifier page - Entity State 03 - Entity
+          description: >-
+            Entity shown instead of "Entity State 03" when the entity bound
+            to the climate page is a humidifier.
+
+            *Only one entity may be selected.*
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value04:
+          name: Humidifier page - Entity State 04 - Entity
+          description: >-
+            Entity shown instead of "Entity State 04" when the entity bound
+            to the climate page is a humidifier.
+
+            *Only one entity may be selected.*
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_button01:
+          name: Humidifier page - Custom button - Entity
+          description: >-
+            Entity shown instead of the two "Custom button" slots when the
+            entity bound to the climate page is a humidifier (e.g. a switch
+            to manually force the ventilation system).
+
+            *Only one entity may be selected.*
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_button01_icon:
+          name: Humidifier page - Custom button - Icon
+          description: *description_icon_automatic_default
+          default: []
+          selector: *selector_icon
+        humidifier_button01_icon_color:
+          name: Humidifier page - Custom button - Icon color
+          description: *description_icon_color
+          default: [200, 204, 200]
+          selector: *color_selector
     water_heater_page_settings:
       name: Water heater page
       icon: mdi:thermostat-cog
@@ -5512,6 +5580,16 @@ triggers:
         for:
           seconds: 1
 
+      - alias: Humidifier custom button
+        id: humidifier_button01_state
+        trigger: state
+        entity_id: !input humidifier_button01
+        not_to:
+          - unknown
+          - unavailable
+        for:
+          seconds: 1
+
       - alias: Button 02
         id: climate_button09_state
         trigger: state
@@ -6537,6 +6615,15 @@ actions:
               icon: power
               color: "off"
               component: button07
+          humidifier_mode:
+            - mode: "on"
+              icon: water-percent
+              color: orange
+              component: button05
+            - mode: "off"
+              icon: power
+              color: "off"
+              component: button07
 
       ##### Utilities page #####
       pages_utilities:
@@ -6665,6 +6752,7 @@ actions:
           - climate
           - cover
           - fan
+          - humidifier
           - input_boolean
           - input_button
           - input_select
@@ -6939,6 +7027,17 @@ actions:
                   {%- else -%}
                     {{ entity_icon_color_tmp }}
                   {%- endif -%}
+                {%- elif entity_domain == "humidifier" -%}
+                  {%- set entity_humidifier_action = state_attr(entity_id, "action") | default(entity_state) -%}
+                  {%- if "off" in entity_humidifier_action -%}
+                    {{ nextion.color.off }}
+                  {%- elif "humidifying" in entity_humidifier_action -%}
+                    {{ nextion.color.blue }}
+                  {%- elif "drying" in entity_humidifier_action -%}
+                    {{ nextion.color.orange }}
+                  {%- else -%}
+                    {{ entity_icon_color_tmp }}
+                  {%- endif -%}
                 {%- elif entity_domain == "water_heater" -%}
                   {%- set wh_mode = state_attr(entity_id, "operation_mode") | default(entity_state) -%}
                   {%- set wh_color_map = {
@@ -7017,6 +7116,15 @@ actions:
                     {{ all_icons["lock-open-variant"] }}
                   {%- else -%}
                     {{ all_icons["lock-alert"] }}
+                  {%- endif -%}
+                {%- elif entity_domain == "humidifier" -%}
+                  {%- set entity_humidifier_action = state_attr(entity_id, "action") | default(entity_state) -%}
+                  {%- if "off" in entity_humidifier_action -%}
+                    {{ all_icons["air-humidifier-off"] }}
+                  {%- elif "humidifying" in entity_humidifier_action or "drying" in entity_humidifier_action -%}
+                    {{ all_icons["air-humidifier"] }}
+                  {%- else -%}
+                    {{ icon_domain }}
                   {%- endif -%}
                 {%- elif entity_domain == "water_heater" -%}
                   {%- set wh_mode = state_attr(entity_id, "operation_mode") | default(entity_state) -%}
@@ -8189,6 +8297,52 @@ actions:
                                 data:
                                   target_temp_low: '{{ target_temp_low }}'
                                   target_temp_high: '{{ target_temp_high }}'
+                                target:
+                                  entity_id: '{{ nspanel_event.entity }}'
+                                continue_on_error: true
+                          - alias: "climate.set_temperature (humidifier reroute)"
+                            conditions:
+                              - '{{ nspanel_event.action == "climate.set_temperature" }}'
+                              - '{{ nspanel_event.key == "temperature" }}'
+                              - '{{ nspanel_event.entity.split(".")[0] == "humidifier" }}'
+                            sequence:
+                              - action: humidifier.set_humidity
+                                data:
+                                  humidity: '{{ nspanel_event.value }}'
+                                target:
+                                  entity_id: '{{ nspanel_event.entity }}'
+                                continue_on_error: true
+                          - alias: "climate.set_hvac_mode (humidifier dual-mode toggle reroute)"
+                            conditions:
+                              - '{{ nspanel_event.action == "climate.set_hvac_mode" }}'
+                              - '{{ nspanel_event.entity.split(".")[0] == "humidifier" }}'
+                              - '{{ nspanel_event.value == "toggle_humidify_dehumidify" }}'
+                            sequence:
+                              # Best-effort: switches a combo humidifier/dehumidifier between its two
+                              # modes. Untested - no such hardware was available to verify against.
+                              - variables:
+                                  humidifier_current_mode: '{{ state_attr(nspanel_event.entity, "mode") | default("", true) }}'
+                                  humidifier_available_modes: '{{ state_attr(nspanel_event.entity, "available_modes") | default([], true) }}'
+                                  humidifier_dehumidify_mode: "{{ (humidifier_available_modes | select('search', 'dehum') | list | first) | default('', true) }}"
+                                  humidifier_humidify_mode: "{{ (humidifier_available_modes | reject('search', 'dehum') | select('search', 'humid') | list | first) | default('', true) }}"
+                              - action: humidifier.set_mode
+                                data:
+                                  mode: >
+                                    {{
+                                      humidifier_humidify_mode
+                                      if humidifier_current_mode == humidifier_dehumidify_mode
+                                      else humidifier_dehumidify_mode
+                                    }}
+                                target:
+                                  entity_id: '{{ nspanel_event.entity }}'
+                                continue_on_error: true
+                          - alias: "climate.set_hvac_mode (humidifier reroute)"
+                            conditions:
+                              - '{{ nspanel_event.action == "climate.set_hvac_mode" }}'
+                              - '{{ nspanel_event.entity.split(".")[0] == "humidifier" }}'
+                            sequence:
+                              - action: '{{ "humidifier.turn_off" if nspanel_event.value == "off" else "humidifier.turn_on" }}'
+                                data: {}
                                 target:
                                   entity_id: '{{ nspanel_event.entity }}'
                                 continue_on_error: true
@@ -9425,7 +9579,7 @@ actions:
                                   if (
                                     entity_id is string
                                     and entity_id.split(".") | count == 2
-                                    and entity_id.split(".")[0] == "climate"
+                                    and entity_id.split(".")[0] in ["climate", "humidifier"]
                                   )
                                   else climate
                                 }}
@@ -9459,7 +9613,7 @@ actions:
                                 continue_on_error: true
                               - *delay_default
 
-                          - condition: '{{ settings_entity_domain == "climate" }}'
+                          - condition: '{{ settings_entity_domain in ["climate", "humidifier"] }}'
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
                             data:
                               page: mem
@@ -9472,7 +9626,7 @@ actions:
                           ##### Values #####
                           - &variables-climate_page
                             variables:
-                              climate_page_entities:
+                              climate_page_entities_default:
                                 - entity: !input 'climate_value01'
                                   icon: !input 'climate_value01_icon'
                                   icon_color_rgb: !input 'climate_value01_icon_color'
@@ -9497,6 +9651,42 @@ actions:
                                   label_color_rgb: !input 'climate_value04_label_color'
                                   page: climate
                                   component: value04
+                              climate_page_entities_humidifier:
+                                - entity: !input 'humidifier_value01'
+                                  icon: []
+                                  icon_color_rgb: [200, 204, 200]
+                                  label_color_rgb: [200, 204, 200]
+                                  page: climate
+                                  component: value01
+                                - entity: !input 'humidifier_value02'
+                                  icon: []
+                                  icon_color_rgb: [200, 204, 200]
+                                  label_color_rgb: [200, 204, 200]
+                                  page: climate
+                                  component: value02
+                                - entity: !input 'humidifier_value03'
+                                  icon: []
+                                  icon_color_rgb: [200, 204, 200]
+                                  label_color_rgb: [200, 204, 200]
+                                  page: climate
+                                  component: value03
+                                - entity: !input 'humidifier_value04'
+                                  icon: []
+                                  icon_color_rgb: [200, 204, 200]
+                                  label_color_rgb: [200, 204, 200]
+                                  page: climate
+                                  component: value04
+                              shown_entity_domain: >
+                                {{
+                                  settings_entity_domain
+                                  if settings_entity_domain is defined
+                                  else (
+                                    states(detailed_entity).split(".")[0]
+                                    if states(detailed_entity) is string and states(detailed_entity).split(".") | count == 2
+                                    else ""
+                                  )
+                                }}
+                              climate_page_entities: '{{ climate_page_entities_humidifier if shown_entity_domain == "humidifier" else climate_page_entities_default }}'
                           - repeat:
                               for_each: >
                                 {{
@@ -9536,40 +9726,69 @@ actions:
                             if: '{{ not (climate_entity == climate and embedded_climate) }}'
                             then:
                               - variables:
-                                  current_temp: '{{ state_attr(climate_entity, "current_temperature") | float(-999) | round(1) }}'
+                                  # Best-effort detection of a humidifier/dehumidifier entity bound to
+                                  # the climate page. Reuses the dial and on/off controls for humidity
+                                  # instead of temperature - see the "Humidifier page" input group.
+                                  is_humidifier: '{{ settings_entity_domain == "humidifier" }}'
+                              - variables:
+                                  current_temp: >-
+                                    {{
+                                      (state_attr(climate_entity, "current_humidity") if is_humidifier else state_attr(climate_entity, "current_temperature"))
+                                      | float(-999) | round(1)
+                                    }}
                                   supported_features: '{{ state_attr(climate_entity, "supported_features") | int(0) }}'
-                                  is_target_temperature: '{{ supported_features | bitwise_and(1) > 0 }}'
-                                  is_target_temperature_range: '{{ supported_features | bitwise_and(2) > 0 }}'
-                                  target_temp: '{{ state_attr(climate_entity, "temperature") | float(-999) | round(1) if is_target_temperature else -999 }}'
+                                  is_target_temperature: '{{ true if is_humidifier else supported_features | bitwise_and(1) > 0 }}'
+                                  is_target_temperature_range: '{{ false if is_humidifier else supported_features | bitwise_and(2) > 0 }}'
+                                  target_temp: >-
+                                    {{
+                                      (state_attr(climate_entity, "humidity") if is_humidifier else state_attr(climate_entity, "temperature"))
+                                      | float(-999) | round(1)
+                                      if is_target_temperature else -999
+                                    }}
                                   target_temp_high: '{{ state_attr(climate_entity, "target_temp_high") | float(-999) | round(1) if is_target_temperature_range else -999 }}'
                                   target_temp_low: '{{ state_attr(climate_entity, "target_temp_low") | float(-999) | round(1) if is_target_temperature_range else -999 }}'
                               - variables:
                                   is_target_temperature: '{{ is_target_temperature and target_temp > -999 }}'
                                   is_target_temperature_range: '{{ is_target_temperature_range and target_temp_high > -999 and target_temp_low > -999 }}'
                                   temp_step: >
-                                    {% set target_temp_step = state_attr(climate_entity, "target_temp_step") %}
-                                    {% if not is_number(target_temp_step) %}
-                                      {% set target_temp_step = state_attr(climate_entity, "target_temperature_step") %}
+                                    {% if is_humidifier %}
+                                      10
+                                    {% else %}
+                                      {% set target_temp_step = state_attr(climate_entity, "target_temp_step") %}
+                                      {% if not is_number(target_temp_step) %}
+                                        {% set target_temp_step = state_attr(climate_entity, "target_temperature_step") %}
+                                      {% endif %}
+                                      {% set target_temp_step = target_temp_step | float(0.5) | abs %}
+                                      {{ ((10 * target_temp_step) | round(0) | int) if is_number(target_temp_step) and target_temp_step > 0 else 10 }}
                                     {% endif %}
-                                    {% set target_temp_step = target_temp_step | float(0.5) | abs %}
-                                    {{ ((10 * target_temp_step) | round(0) | int) if is_number(target_temp_step) and target_temp_step > 0 else 10 }}
-                                  temp_offset_raw: '{{ (state_attr(climate_entity, "min_temp") | float(7) * 10) | round(0) | int }}'
+                                  temp_offset_raw: >-
+                                    {{
+                                      ((state_attr(climate_entity, "min_humidity") if is_humidifier else state_attr(climate_entity, "min_temp"))
+                                      | float(0 if is_humidifier else 7) * 10)
+                                      | round(0) | int
+                                    }}
                                   temp_offset: '{{ temp_offset_raw if (temp_offset_raw % temp_step) == 0 else temp_offset_raw + temp_step - (temp_offset_raw % temp_step) }}'
-                                  max_temp: '{{ (state_attr(climate_entity, "max_temp") | float(35) * 10) | round(0) | int }}'
+                                  max_temp: >-
+                                    {{
+                                      ((state_attr(climate_entity, "max_humidity") if is_humidifier else state_attr(climate_entity, "max_temp"))
+                                      | float(100 if is_humidifier else 35) * 10)
+                                      | round(0) | int
+                                    }}
                                   total_steps: >
                                     {{
                                       (((max_temp - temp_offset) / temp_step) | int)
                                       if max_temp >= temp_offset and temp_step > 0 else 0
                                     }}
                                   climate_state: '{{ states(climate_entity) | default("unavailable") if climate_entity is string else "unavailable" }}'
-                                  hvac_action: '{{ state_attr(climate_entity, "hvac_action") | default("") }}'
-                                  hvac_modes: '{{ state_attr(climate_entity, "hvac_modes") }}'
+                                  hvac_action: '{{ (state_attr(climate_entity, "action") if is_humidifier else state_attr(climate_entity, "hvac_action")) | default("") }}'
+                                  hvac_modes: '{{ state_attr(climate_entity, "hvac_modes") if settings_entity_domain == "climate" else [] }}'
                                   climate_action: '{{ hvac_action if hvac_action and hvac_action not in enum.states.unknown else climate_state }}'
                                   climate_icon: >
                                     {% if "off" in climate_action %}{{ all_icons.blank }}
                                     {% elif "heat_cool" in climate_action %}{{ all_icons.autorenew }}
                                     {% elif "heating" in climate_action or "heat" in climate_action %}{{ all_icons["thermometer-lines"] }}
                                     {% elif "cooling" in climate_action or "cool" in climate_action %}{{ all_icons.snowflake }}
+                                    {% elif "humidifying" in climate_action %}{{ all_icons["water-percent"] }}
                                     {% elif "drying" in climate_action or "dry" in climate_action %}{{ all_icons["water-percent"] }}
                                     {% elif "fan" in climate_action or "fan_only" in climate_action %}{{ all_icons.fan }}
                                     {% elif "auto" in climate_action %}{{ all_icons["refresh-auto"] }}
@@ -9579,7 +9798,7 @@ actions:
                               - action: 'esphome.{{ action_prefix }}_page_climate'
                                 data:
                                   current_temp: '{{ current_temp }}'
-                                  supported_features: '{{ supported_features }}'
+                                  supported_features: '{{ 1 if is_humidifier else supported_features }}'
                                   target_temp: '{{ target_temp }}'
                                   target_temp_high: '{{ target_temp_high }}'
                                   target_temp_low: '{{ target_temp_low }}'
@@ -9593,6 +9812,7 @@ actions:
                                       if climate_entity == thermostat_embedded
                                       else climate_entity
                                     }}
+                                  unit: '{{ "%" if is_humidifier else "" }}'
                                 continue_on_error: true
                               - *delay_default
 
@@ -9600,10 +9820,24 @@ actions:
                           - &climate-update_buttons
                             if: '{{ not (climate_entity == climate and embedded_climate) }}'
                             then:
+                              - if: '{{ is_humidifier }}'
+                                then:
+                                  - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                    data:
+                                      page: mem
+                                      id: command
+                                      txt_list:
+                                        - "vis button01,0"
+                                        - "vis button02,0"
+                                        - "vis button03,0"
+                                        - "vis button04,0"
+                                        - "vis button06,0"
+                                    continue_on_error: true
+                                  - *delay_default
                               - repeat:
-                                  for_each: '{{ page_climate.buttons.hvac_mode }}'
+                                  for_each: '{{ page_climate.buttons.humidifier_mode if is_humidifier else page_climate.buttons.hvac_mode }}'
                                   sequence:
-                                    - condition: '{{ repeat.item.mode in hvac_modes }}'
+                                    - condition: '{{ true if is_humidifier else repeat.item.mode in hvac_modes }}'
                                     ### ICON Font Color ###
                                     - action: 'esphome.{{ action_prefix }}_component_color'
                                       data:
@@ -9633,7 +9867,7 @@ actions:
                             sequence:
                               - &climate_custom_buttons_variables
                                 variables:
-                                  climate_custom_buttons:
+                                  climate_custom_buttons_default:
                                     - entity: !input climate_button08
                                       icon: !input climate_button08_icon
                                       icon_color_rgb: !input climate_button08_icon_color
@@ -9642,6 +9876,33 @@ actions:
                                       icon: !input climate_button09_icon
                                       icon_color_rgb: !input climate_button09_icon_color
                                       component: button09
+                                  climate_custom_buttons_humidifier:
+                                    - entity: !input humidifier_button01
+                                      icon: !input humidifier_button01_icon
+                                      icon_color_rgb: !input humidifier_button01_icon_color
+                                      component: button08
+                                  shown_entity_domain: >
+                                    {{
+                                      settings_entity_domain
+                                      if settings_entity_domain is defined
+                                      else (
+                                        states(detailed_entity).split(".")[0]
+                                        if states(detailed_entity) is string and states(detailed_entity).split(".") | count == 2
+                                        else ""
+                                      )
+                                    }}
+                                  climate_custom_buttons: '{{ climate_custom_buttons_humidifier if shown_entity_domain == "humidifier" else climate_custom_buttons_default }}'
+                              - if: '{{ shown_entity_domain == "humidifier" }}'
+                                then:
+                                  - action: 'esphome.{{ action_prefix }}_components_visibility'
+                                    data:
+                                      page: climate
+                                      ids:
+                                        - button08
+                                        - button09
+                                      visible: false
+                                    continue_on_error: true
+                                  - *delay_default
                               - &climate_custom_buttons_update
                                 repeat:
                                   for_each: '{{ climate_custom_buttons | selectattr("entity", "defined") | rejectattr("entity", "eq", []) | list }}'
@@ -11207,7 +11468,7 @@ actions:
                             - alias: Climate page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.climate }}'
-                                - '{{ original_state.entity_domain in ["climate"] }}'
+                                - '{{ original_state.entity_domain in ["climate", "humidifier"] }}'
                               sequence: *refresh_page_climate
                             - alias: Cover settings page
                               conditions:
@@ -11370,7 +11631,7 @@ actions:
                                                   and last_click_button_entity_state in ["opening", "closing"]
                                                   and state_attr(last_click_button.entity, "supported_features") | int(0) | bitwise_and(4) == 0 %}
                                               cover.stop_cover
-                                            {% elif entity_domain in ["cover", "fan", "input_boolean", "light", "remote", "switch"] %}
+                                            {% elif entity_domain in ["cover", "fan", "humidifier", "input_boolean", "light", "remote", "switch"] %}
                                               {{ entity_domain }}.toggle
                                             {% elif entity_domain == "automation" %}
                                               automation.{{ domain_automation_button_action if domain_automation_button_action is string else "toggle"}}
@@ -12195,6 +12456,7 @@ actions:
             id:
               - climate_button08_state
               - climate_button09_state
+              - humidifier_button01_state
           - '{{ pages.current == pages.climate }}'
         sequence:
           - *climate_custom_buttons
