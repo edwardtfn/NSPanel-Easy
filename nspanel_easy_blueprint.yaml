@@ -9731,11 +9731,20 @@ actions:
                                   # instead of temperature - see the "Humidifier page" input group.
                                   is_humidifier: '{{ settings_entity_domain == "humidifier" }}'
                               - variables:
-                                  current_temp: '{{ (state_attr(climate_entity, "current_humidity") if is_humidifier else state_attr(climate_entity, "current_temperature")) | float(-999) | round(1) }}'
+                                  current_temp: >-
+                                    {{
+                                      (state_attr(climate_entity, "current_humidity") if is_humidifier else state_attr(climate_entity, "current_temperature"))
+                                      | float(-999) | round(1)
+                                    }}
                                   supported_features: '{{ state_attr(climate_entity, "supported_features") | int(0) }}'
                                   is_target_temperature: '{{ true if is_humidifier else supported_features | bitwise_and(1) > 0 }}'
                                   is_target_temperature_range: '{{ false if is_humidifier else supported_features | bitwise_and(2) > 0 }}'
-                                  target_temp: '{{ (state_attr(climate_entity, "humidity") if is_humidifier else state_attr(climate_entity, "temperature")) | float(-999) | round(1) if is_target_temperature else -999 }}'
+                                  target_temp: >-
+                                    {{
+                                      (state_attr(climate_entity, "humidity") if is_humidifier else state_attr(climate_entity, "temperature"))
+                                      | float(-999) | round(1)
+                                      if is_target_temperature else -999
+                                    }}
                                   target_temp_high: '{{ state_attr(climate_entity, "target_temp_high") | float(-999) | round(1) if is_target_temperature_range else -999 }}'
                                   target_temp_low: '{{ state_attr(climate_entity, "target_temp_low") | float(-999) | round(1) if is_target_temperature_range else -999 }}'
                               - variables:
@@ -9752,9 +9761,19 @@ actions:
                                       {% set target_temp_step = target_temp_step | float(0.5) | abs %}
                                       {{ ((10 * target_temp_step) | round(0) | int) if is_number(target_temp_step) and target_temp_step > 0 else 10 }}
                                     {% endif %}
-                                  temp_offset_raw: '{{ ((state_attr(climate_entity, "min_humidity") if is_humidifier else state_attr(climate_entity, "min_temp")) | float(0 if is_humidifier else 7) * 10) | round(0) | int }}'
+                                  temp_offset_raw: >-
+                                    {{
+                                      ((state_attr(climate_entity, "min_humidity") if is_humidifier else state_attr(climate_entity, "min_temp"))
+                                      | float(0 if is_humidifier else 7) * 10)
+                                      | round(0) | int
+                                    }}
                                   temp_offset: '{{ temp_offset_raw if (temp_offset_raw % temp_step) == 0 else temp_offset_raw + temp_step - (temp_offset_raw % temp_step) }}'
-                                  max_temp: '{{ ((state_attr(climate_entity, "max_humidity") if is_humidifier else state_attr(climate_entity, "max_temp")) | float(100 if is_humidifier else 35) * 10) | round(0) | int }}'
+                                  max_temp: >-
+                                    {{
+                                      ((state_attr(climate_entity, "max_humidity") if is_humidifier else state_attr(climate_entity, "max_temp"))
+                                      | float(100 if is_humidifier else 35) * 10)
+                                      | round(0) | int
+                                    }}
                                   total_steps: >
                                     {{
                                       (((max_temp - temp_offset) / temp_step) | int)
