@@ -37,6 +37,10 @@ Page cover
                 button_back.picc2=pic_background_main
                 cover_value.picc=pic_background_main
                 cover_value.pco=color_pco_main
+                cover_value_2.picc=pic_background_main
+                cover_value_2.pco=color_pco_main
+                tilt_value.picc=pic_background_main
+                tilt_value.pco=color_pco_main
                 battery_icon.picc=pic_background_main
                 battery_icon.pco=color_pco_main
                 battery_value.picc=pic_background_main
@@ -51,6 +55,12 @@ Page cover
                 cover_stop.picc2=pic_background_main
                 cover_stop.pco=color_pco_main
             }
+            vis coverslider,0
+            vis cover_value,0
+            vis coverslider2,0
+            vis cover_value_2,0
+            vis tiltslider,0
+            vis tilt_value,0
             dim=brightness
             sendme
         
@@ -75,7 +85,7 @@ Text battery_value
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 326
+        x coordinate            : 405
         y coordinate            : 66
         Width                   : 60
         Height                  : 35
@@ -102,7 +112,7 @@ Text cover_value
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 183
+        x coordinate            : 145
         y coordinate            : 43
         Width                   : 83
         Height                  : 20
@@ -183,7 +193,7 @@ Text battery_icon
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 291
+        x coordinate            : 370
         y coordinate            : 66
         Width                   : 35
         Height                  : 35
@@ -203,6 +213,60 @@ Text battery_icon
         Horizontal Spacing      : 0
         Vertical Spacing        : 0
     
+Text tilt_value
+    Attributes
+        ID                      : 14
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 252
+        y coordinate            : 43
+        Width                   : 83
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text cover_value_2
+    Attributes
+        ID                      : 16
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 199
+        y coordinate            : 43
+        Width                   : 83
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
 Slider coverslider
     Attributes
         ID                     : 6
@@ -210,7 +274,7 @@ Slider coverslider
         Dragging               : 0
         Send Component ID      : on press and release
         Opacity                : 127
-        x coordinate           : 183
+        x coordinate           : 145
         y coordinate           : 67
         Width                  : 83
         Height                 : 233
@@ -247,6 +311,94 @@ Slider coverslider
             cover_value.txt+=home.units_sep.txt
             cover_value.txt+="%"
         
+Slider tiltslider
+    Attributes
+        ID                     : 13
+        Scope                  : global
+        Dragging               : 0
+        Send Component ID      : on press and release
+        Opacity                : 127
+        x coordinate           : 252
+        y coordinate           : 67
+        Width                  : 83
+        Height                 : 233
+        Effect                 : load
+        Effect Priority        : 0
+        Effect Time            : 300
+        Direction              : vertical
+        Fill                   : image
+        Cursor width           : auto
+        Cursor height          : 255
+        Back. Picture ID       : 104
+        Slided Back. Picture ID: 105
+        Position               : 0
+        Upper range limit      : 100
+        Lower range limit      : 0
+    
+    Events
+        Touch Release Event
+            covx tiltslider.val,va1.txt,0,0
+            tilt_value.txt=va1.txt
+            tilt_value.txt+=home.units_sep.txt
+            tilt_value.txt+="%"
+            coversetting.txt="cover,tilt_position,"+va1.txt
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints coversetting.txt,0
+            printh 00
+            printh FF FF FF
+        
+        Touch Move Event
+            covx tiltslider.val,va1.txt,0,0
+            tilt_value.txt=va1.txt
+            tilt_value.txt+=home.units_sep.txt
+            tilt_value.txt+="%"
+        
+Slider coverslider2
+    Attributes
+        ID                     : 15
+        Scope                  : global
+        Dragging               : 0
+        Send Component ID      : on press and release
+        Opacity                : 127
+        x coordinate           : 199
+        y coordinate           : 67
+        Width                  : 83
+        Height                 : 233
+        Effect                 : load
+        Effect Priority        : 0
+        Effect Time            : 300
+        Direction              : vertical
+        Fill                   : image
+        Cursor width           : auto
+        Cursor height          : 255
+        Back. Picture ID       : 20
+        Slided Back. Picture ID: 19
+        Position               : 0
+        Upper range limit      : 100
+        Lower range limit      : 0
+    
+    Events
+        Touch Release Event
+            covx coverslider2.val,va1.txt,0,0
+            cover_value_2.txt=va1.txt
+            cover_value_2.txt+=home.units_sep.txt
+            cover_value_2.txt+="%"
+            coversetting.txt="cover,position,"+va1.txt
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints coversetting.txt,0
+            printh 00
+            printh FF FF FF
+        
+        Touch Move Event
+            covx coverslider2.val,va1.txt,0,0
+            cover_value_2.txt=va1.txt
+            cover_value_2.txt+=home.units_sep.txt
+            cover_value_2.txt+="%"
+        
 Button cover_open
     Attributes
         ID                                  : 4
@@ -254,7 +406,7 @@ Button cover_open
         Dragging                            : 0
         Send Component ID                   : on press and release
         Opacity                             : 127
-        x coordinate                        : 295
+        x coordinate                        : 395
         y coordinate                        : 169
         Width                               : 65
         Height                              : 55
@@ -291,7 +443,7 @@ Button cover_close
         Dragging                            : 0
         Send Component ID                   : on press and release
         Opacity                             : 127
-        x coordinate                        : 295
+        x coordinate                        : 395
         y coordinate                        : 245
         Width                               : 65
         Height                              : 55
@@ -328,7 +480,7 @@ Button cover_stop
         Dragging                            : 0
         Send Component ID                   : on press and release
         Opacity                             : 127
-        x coordinate                        : 98
+        x coordinate                        : 20
         y coordinate                        : 245
         Width                               : 65
         Height                              : 55

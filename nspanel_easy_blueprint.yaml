@@ -8950,8 +8950,30 @@ actions:
                                   page: mem
                                   id: command
                                   txt_list:
+                                    # The page holds two position sliders: one next to the tilt
+                                    # slider and one centered for covers without tilt. Only one of
+                                    # them is visible, both are written.
                                     - 'coverslider.val={{ current_position }}'
                                     - 'cover_value.txt="{{ current_position ~ units_separator }}%"'
+                                    - 'coverslider2.val={{ current_position }}'
+                                    - 'cover_value_2.txt="{{ current_position ~ units_separator }}%"'
+                                continue_on_error: true
+                              - *delay_default
+
+                          - variables:
+                              current_tilt_attr: '{{ state_attr(entity_id, "current_tilt_position") }}'
+                          - alias: Cover tilt state
+                            if: '{{ is_number(current_tilt_attr) }}'
+                            then:
+                              - variables:
+                                  current_tilt: '{{ current_tilt_attr | round(0) | int }}'
+                              - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                data:
+                                  page: mem
+                                  id: command
+                                  txt_list:
+                                    - 'tiltslider.val={{ current_tilt }}'
+                                    - 'tilt_value.txt="{{ current_tilt ~ units_separator }}%"'
                                 continue_on_error: true
                               - *delay_default
 
@@ -8996,6 +9018,32 @@ actions:
                                 - 'cover_close.txt="{{ cover_icons.close }}"'
                             continue_on_error: true
                           - *delay_default
+                          - alias: Cover sliders
+                            # Component coordinates are fixed at design time, so the page holds both
+                            # layouts: a centered position slider, or the position and tilt pair.
+                            # `vis` is not sticky across page loads, so set it both ways every time.
+                            sequence:
+                              - variables:
+                                  cover_tilt_available: '{{ state_attr(entity_id, "supported_features") | int(0) | bitwise_and(128) > 0 }}'
+                              - action: 'esphome.{{ action_prefix }}_components_visibility'
+                                data:
+                                  page: cover
+                                  ids:
+                                    - coverslider
+                                    - cover_value
+                                    - tiltslider
+                                    - tilt_value
+                                  visible: '{{ cover_tilt_available }}'
+                                continue_on_error: true
+                              - action: 'esphome.{{ action_prefix }}_components_visibility'
+                                data:
+                                  page: cover
+                                  ids:
+                                    - coverslider2
+                                    - cover_value_2
+                                  visible: '{{ not cover_tilt_available }}'
+                                continue_on_error: true
+                              - *delay_default
                           - alias: Cover battery icon
                             sequence:
                               - variables:
@@ -11757,7 +11805,7 @@ actions:
                           - if: >
                               {{
                                 entity_domain in domains_functionality.detailed_only or
-                                (entity_domain == "cover" and supported_features | bitwise_and(4) > 0) or
+                                (entity_domain == "cover" and supported_features | bitwise_and(132) > 0) or
                                 (entity_domain == "fan" and supported_features | bitwise_and(11) > 0) or
                                 (entity_domain == "light" and (color_mode_brightness or color_mode_color or color_mode_temp)) or
                                 (entity_domain == "timer")

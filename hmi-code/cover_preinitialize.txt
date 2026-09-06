@@ -1,0 +1,44 @@
+if(api==0)
+{
+    page home_page_id
+}
+// set background image and fg color to all components
+if(theme==1)
+{
+    cover.pic=pic_background_main
+    icon_state.picc=pic_background_main
+    icon_state.pco=color_pco_main
+    page_label.picc=pic_background_main
+    page_label.pco=color_pco_main
+    button_back.font=button_back_font
+    button_back.pco=color_pco_navigation
+    button_back.picc=pic_background_main
+    button_back.picc2=pic_background_main
+    cover_value.picc=pic_background_main
+    cover_value.pco=color_pco_main
+    cover_value_2.picc=pic_background_main
+    cover_value_2.pco=color_pco_main
+    tilt_value.picc=pic_background_main
+    tilt_value.pco=color_pco_main
+    battery_icon.picc=pic_background_main
+    battery_icon.pco=color_pco_main
+    battery_value.picc=pic_background_main
+    battery_value.pco=color_pco_main
+    cover_open.picc=pic_background_main
+    cover_open.picc2=pic_background_main
+    cover_open.pco=color_pco_main
+    cover_close.picc=pic_background_main
+    cover_close.picc2=pic_background_main
+    cover_close.pco=color_pco_main
+    cover_stop.picc=pic_background_main
+    cover_stop.picc2=pic_background_main
+    cover_stop.pco=color_pco_main
+}
+vis coverslider,0
+vis cover_value,0
+vis coverslider2,0
+vis cover_value_2,0
+vis tiltslider,0
+vis tilt_value,0
+dim=brightness
+sendme

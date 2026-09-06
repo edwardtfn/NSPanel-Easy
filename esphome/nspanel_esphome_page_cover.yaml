@@ -29,7 +29,7 @@ script:
             const std::string& key = params[1];
             ESP_LOGV("${TAG_PAGE_COVER}", "Cover control: key=%s", key.c_str());
 
-            if (key == "position") {
+            if (key == "position" || key == "tilt_position") {
               if (params_count != 3) {
                 ESP_LOGW("${TAG_PAGE_COVER}", "Bad params");
                 return;
@@ -39,14 +39,18 @@ script:
               char* end = nullptr;
               long pos = strtol(value.c_str(), &end, 10);
               if (end == value.c_str() || *end != '\0' || pos < 0 || pos > 100) {
-                ESP_LOGW("${TAG_PAGE_COVER}", "Bad position: %s", value.c_str());
+                ESP_LOGW("${TAG_PAGE_COVER}", "Bad %s: %s", key.c_str(), value.c_str());
                 return;
               }
               const std::string pos_str = std::to_string(pos);
-              ESP_LOGV("${TAG_PAGE_COVER}", "Setting position: %s", pos_str.c_str());
+              ESP_LOGV("${TAG_PAGE_COVER}", "Setting %s: %s", key.c_str(), pos_str.c_str());
 
+              // The blueprint builds the action data as {key: value}, so the key must
+              // match the action parameter name.
+              const std::string action = (key == "position") ? "cover.set_cover_position"
+                                                             : "cover.set_cover_tilt_position";
               fire_ha_event("action_call", {
-                {"action", "cover.set_cover_position"},
+                {"action", action.c_str()},
                 {"key", key.c_str()},
                 {"value", pos_str.c_str()},
                 {"entity", detailed_entity->state.c_str()}
@@ -58,7 +62,7 @@ script:
                 {"action", action.c_str()},
                 {"entity", detailed_entity->state.c_str()}
               });
-            } // endif key == "position"
+            } // endif key is a position
           } // endif page == "cover"
 
   - id: !extend reset_globals
