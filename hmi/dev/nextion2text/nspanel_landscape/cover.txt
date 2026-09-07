@@ -247,7 +247,7 @@ Text cover_value_2
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 199
+        x coordinate            : 183
         y coordinate            : 43
         Width                   : 83
         Height                  : 20
@@ -285,8 +285,8 @@ Slider coverslider
         Fill                   : image
         Cursor width           : auto
         Cursor height          : 255
-        Back. Picture ID       : 20
-        Slided Back. Picture ID: 19
+        Back. Picture ID       : 104
+        Slided Back. Picture ID: 106
         Position               : 0
         Upper range limit      : 100
         Lower range limit      : 0
@@ -329,8 +329,8 @@ Slider tiltslider
         Fill                   : image
         Cursor width           : auto
         Cursor height          : 255
-        Back. Picture ID       : 104
-        Slided Back. Picture ID: 105
+        Back. Picture ID       : 108
+        Slided Back. Picture ID: 110
         Position               : 0
         Upper range limit      : 100
         Lower range limit      : 0
@@ -362,7 +362,7 @@ Slider coverslider2
         Dragging               : 0
         Send Component ID      : on press and release
         Opacity                : 127
-        x coordinate           : 199
+        x coordinate           : 183
         y coordinate           : 67
         Width                  : 83
         Height                 : 233

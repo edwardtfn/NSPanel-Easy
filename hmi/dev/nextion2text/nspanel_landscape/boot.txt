@@ -357,9 +357,9 @@ Text sys_framework
         Send Component ID       : disabled
         Opacity                 : 127
         x coordinate            : 20
-        y coordinate            : 250
+        y coordinate            : 278
         Width                   : 175
-        Height                  : 30
+        Height                  : 2
         Effect                  : load
         Effect Priority         : 0
         Effect Time             : 300
@@ -384,9 +384,9 @@ Text sys_baudrate
         Send Component ID       : disabled
         Opacity                 : 127
         x coordinate            : 20
-        y coordinate            : 280
+        y coordinate            : 308
         Width                   : 175
-        Height                  : 30
+        Height                  : 2
         Effect                  : load
         Effect Priority         : 0
         Effect Time             : 300

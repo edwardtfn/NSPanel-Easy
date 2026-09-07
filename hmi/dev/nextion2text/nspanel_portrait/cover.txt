@@ -329,8 +329,8 @@ Slider coverslider
         Fill                   : image
         Cursor width           : auto
         Cursor height          : 255
-        Back. Picture ID       : 20
-        Slided Back. Picture ID: 19
+        Back. Picture ID       : 104
+        Slided Back. Picture ID: 106
         Position               : 0
         Upper range limit      : 100
         Lower range limit      : 0
@@ -373,8 +373,8 @@ Slider tiltslider
         Fill                   : image
         Cursor width           : auto
         Cursor height          : 255
-        Back. Picture ID       : 104
-        Slided Back. Picture ID: 105
+        Back. Picture ID       : 108
+        Slided Back. Picture ID: 110
         Position               : 0
         Upper range limit      : 100
         Lower range limit      : 0
