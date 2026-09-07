@@ -40,8 +40,12 @@ Page theme_apply
                 // climate page
                 climate.b[0].pic=64
                 // cover page
-                cover.coverslider.pic=75
-                cover.coverslider.pic1=74
+                cover.coverslider2.pic=112
+                cover.coverslider2.pic1=113
+                cover.coverslider.pic=105
+                cover.coverslider.pic1=107
+                cover.tiltslider.pic=109
+                cover.tiltslider.pic1=111
                 // fan page
                 fan.fanslider.pic=72
                 fan.fanslider.pic1=73
@@ -60,8 +64,12 @@ Page theme_apply
                 // climate page
                 climate.b[0].pic=37
                 // cover page
-                cover.coverslider.pic=20
-                cover.coverslider.pic1=19
+                cover.coverslider2.pic=20
+                cover.coverslider2.pic1=19
+                cover.coverslider.pic=104
+                cover.coverslider.pic1=106
+                cover.tiltslider.pic=108
+                cover.tiltslider.pic1=110
                 // fan page
                 fan.fanslider.pic=39
                 fan.fanslider.pic1=40
