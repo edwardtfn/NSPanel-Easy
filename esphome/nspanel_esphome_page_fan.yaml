@@ -81,6 +81,32 @@ script:
                 {"entity", detailed_entity->state.c_str()}
               });
             }
+          } else if (params[0] == "fan" and params[1] == "preset_index") {
+            // CSV Format: fan,preset_index,<index into preset_modes>
+            // An index is sent instead of the name, as a preset mode name may
+            // contain the separator this protocol uses.
+
+            if (params_count != 3) {
+              ESP_LOGW("${TAG_PAGE_FAN}", "Bad params");
+              return;
+            }
+
+            const std::string& value = params[2];
+            char* end = nullptr;
+            long index = strtol(value.c_str(), &end, 10);
+            if (end == value.c_str() || *end != '\0' || index < 0) {
+              ESP_LOGW("${TAG_PAGE_FAN}", "Bad preset index: %s", value.c_str());
+              return;
+            }
+
+            ESP_LOGV("${TAG_PAGE_FAN}", "Fan preset mode index: %ld", index);
+
+            fire_ha_event("action_call", {
+              {"action", "fan.set_preset_mode"},
+              {"key", "preset_index"},
+              {"value", value.c_str()},
+              {"entity", detailed_entity->state.c_str()}
+            });
           }
 
   - id: !extend page_change
