@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.9.7)
+  name: NSPanel Easy Configuration (v2026.9.8)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -4789,7 +4789,7 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.9.7
+  blueprint_version: 2026.9.8
 
   # Firmware version as reported by the ESPHome integration in the device registry.
   # Format: "<project_version> (ESPHome <compiler_version>)", e.g. "2026.8.5 (ESPHome 2026.6.0)".
@@ -8150,6 +8150,34 @@ actions:
                             continue_on_error: true
                           - *delay_boot
 
+              - alias: Lawn mower start/pause toggle
+                conditions:
+                  - '{{ nspanel_event.type == "action_call" }}'
+                  - '{{ nspanel_event.action == "_lawn_mower_start_pause_toggle_" }}'
+                  - '{{ nspanel_event.entity is defined }}'
+                sequence:
+                  - action: >-
+                      {{ "lawn_mower.pause"
+                        if states(nspanel_event.entity) in ["mowing", "returning"]
+                        else "lawn_mower.start_mowing" }}
+                    target:
+                      entity_id: '{{ nspanel_event.entity }}'
+                    continue_on_error: true
+
+              - alias: Vacuum start/pause toggle
+                conditions:
+                  - '{{ nspanel_event.type == "action_call" }}'
+                  - '{{ nspanel_event.action == "_vacuum_start_pause_toggle_" }}'
+                  - '{{ nspanel_event.entity is defined }}'
+                sequence:
+                  - action: >-
+                      {{ "vacuum.pause"
+                        if states(nspanel_event.entity) in ["cleaning", "returning"]
+                        else "vacuum.start" }}
+                    target:
+                      entity_id: '{{ nspanel_event.entity }}'
+                    continue_on_error: true
+
               - alias: NSPanel action call
                 conditions:
                   - '{{ nspanel_event.type == "action_call" }}'
@@ -8253,35 +8281,14 @@ actions:
                               entity_id: '{{ nspanel_event.entity }}'
                             continue_on_error: true
                     else:
-                      - choose:
-                          - alias: Lawn mower start/pause toggle
-                            conditions: '{{ nspanel_event.action == "lawn_mower.start_pause_toggle" }}'
-                            sequence:
-                              - action: >-
-                                  {{ "lawn_mower.pause"
-                                    if states(nspanel_event.entity) in ["mowing", "returning"]
-                                    else "lawn_mower.start_mowing" }}
-                                target:
-                                  entity_id: '{{ nspanel_event.entity }}'
-                                continue_on_error: true
-                          - alias: Vacuum start/pause toggle
-                            conditions: '{{ nspanel_event.action == "vacuum.start_pause_toggle" }}'
-                            sequence:
-                              - action: >-
-                                  {{ "vacuum.pause"
-                                    if states(nspanel_event.entity) in ["cleaning", "returning"]
-                                    else "vacuum.start" }}
-                                target:
-                                  entity_id: '{{ nspanel_event.entity }}'
-                                continue_on_error: true
-                        default:
-                          - condition:
-                              - '{{ nspanel_event.action is defined }}'
-                              - '{{ nspanel_event.entity is defined }}'
-                          - action: '{{ nspanel_event.action }}'
-                            target:
-                              entity_id: '{{ nspanel_event.entity }}'
-                            continue_on_error: true
+                      - condition:
+                          - '{{ nspanel_event.action is defined }}'
+                          - '{{ nspanel_event.entity is defined }}'
+                          - '{{ "." in nspanel_event.action }}'
+                      - action: '{{ nspanel_event.action }}'
+                        target:
+                          entity_id: '{{ nspanel_event.entity }}'
+                        continue_on_error: true
                   - delay:
                       milliseconds: '{{ media_player_update_delay }}'
                   - condition:
