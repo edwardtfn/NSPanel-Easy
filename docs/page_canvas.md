@@ -117,8 +117,9 @@ available in the [Nextion Instruction Set — GUI Designing Commands](https://ne
 > sequence (a fill and the text drawn on top of it) inside the same list, and add a `delay` of
 > **50 ms between action calls**.
 >
-> The underlying scripts are queued with a bounded run count, so keep each `txt_list` to roughly
-> **10 commands or fewer** and split larger drawings across multiple calls.
+> There is no hard limit on the number of elements in a `txt_list`, but each one is sent to the
+> display as an individual command, so a very long list produces one long burst of UART traffic
+> during which the panel cannot react to touch. Split large drawings across several calls.
 <!-- markdownlint-enable MD028 -->
 
 ### Header components
