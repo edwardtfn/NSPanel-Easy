@@ -132,7 +132,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Build firmware
-        uses: esphome/build-action@v8.0.0
+        uses: esphome/build-action@v8.1.0
         with:
           yaml-file: ${{ matrix.firmware.yaml-file }}
           substitutions: |
@@ -182,7 +182,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Build firmware
-        uses: esphome/build-action@v8.0.0
+        uses: esphome/build-action@v8.1.0
         with:
           yaml-file: ${{ matrix.firmware.yaml-file }}
           version: dev
@@ -210,7 +210,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Build firmware
-        uses: esphome/build-action@v8.0.0
+        uses: esphome/build-action@v8.1.0
         with:
           yaml-file: ${{ matrix.firmware.yaml-file }}
           substitutions: |
@@ -257,7 +257,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Build firmware
-        uses: esphome/build-action@v8.0.0
+        uses: esphome/build-action@v8.1.0
         with:
           yaml-file: ${{ matrix.firmware.yaml-file }}
           version: dev
