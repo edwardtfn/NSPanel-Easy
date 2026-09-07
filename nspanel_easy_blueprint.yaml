@@ -4747,6 +4747,10 @@ trigger_variables:
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_current_page$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_current_page" }}
 
+  background_type: >-
+    {%- set m = nspanel_entities | select("search", "^select\\..+_background_type$") | list %}
+    {{ m[0] if m | count > 0 else "select." ~ entity_prefix ~ "_background_type" }}
+
   nspaneltemp: >-
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_temperature$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_temperature" }}
@@ -9336,9 +9340,14 @@ actions:
                                     - '{{ current_preset_mode }}'
                                 continue_on_error: true
 
-                              ##### Always: highlight the active mode button #####
+                              ##### Always: paint the mode buttons, active one highlighted #####
                               - if: '{{ preset_buttons }}'
                                 then:
+                                  - variables:
+                                      # Each button has its own pictures, as the generator bakes the
+                                      # background into the rounded corners: four slots per position,
+                                      # active and inactive in both themes.
+                                      panel_theme_light: '{{ states(background_type) | lower == "light" }}'
                                   - action: 'esphome.{{ nspanel_name }}_component_text_list'
                                     data:
                                       page: mem
@@ -9346,8 +9355,10 @@ actions:
                                       txt_list: >-
                                         {% set ns = namespace(items=[]) %}
                                         {% for mode in preset_modes_raw %}
-                                          {% set colour = 7519 if mode == current_preset_mode else "color_pco_main" %}
-                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".pco=" ~ colour] %}
+                                          {% set base = 114 + (loop.index0 * 4) %}
+                                          {% set slot = base + (0 if mode == current_preset_mode else 2) + (1 if panel_theme_light else 0) %}
+                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".picc=" ~ slot] %}
+                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".pco=65535"] %}
                                         {% endfor %}
                                         {{ ns.items }}
                                     continue_on_error: true
