@@ -26,8 +26,8 @@ The pattern has two parts:
 ### Sending raw Nextion commands
 
 Raw display commands are sent with the `component_text_list` action, targeting the special
-memory namespace `page: mem`, `id: command`. Every element of `txt_list` is forwarded to the
-display as an individual Nextion command, in the order given:
+memory namespace `page: mem`, `id: command`. Every non-empty element of `txt_list` is forwarded to
+the display as an individual Nextion command, in the order given:
 
 ```yaml
 - action: esphome.<panel_name>_component_text_list

@@ -262,7 +262,7 @@ Also used by page modules that store list-shaped data in memory (e.g. the option
 >
 > Some `mem` targets are provided by the core packages and are therefore always available:
 >
-> - `command` — sends each element of `txt_list` to the display as a raw Nextion command,
+> - `command` — sends each non-empty element of `txt_list` to the display as a raw Nextion command,
 >   in the order given (provided by `nspanel_esphome_hw_display.yaml`, part of `nspanel_esphome_core.yaml`)
 >
 > **Before using `page: mem` in your automations:**
