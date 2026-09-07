@@ -38,7 +38,7 @@ display:
             switch (component_id) {
               case 8:  // bt_start_pause — Blueprint resolves state and calls correct action
                 fire_ha_event("action_call", {
-                  {"action", is_mower ? "lawn_mower.start_pause_toggle" : "vacuum.start_pause_toggle"},
+                  {"action", is_mower ? "_lawn_mower_start_pause_toggle_" : "_vacuum_start_pause_toggle_"},
                   {"entity", entity.c_str()}
                 });
                 break;
@@ -51,17 +51,10 @@ display:
                 break;
 
               case 10:  // bt_return
-                if (is_mower) {
-                  fire_ha_event("action_call", {
-                    {"action", "lawn_mower.dock"},
-                    {"entity", entity.c_str()}
-                  });
-                } else {
-                  fire_ha_event("action_call", {
-                    {"action", "vacuum.return_to_base"},
-                    {"entity", entity.c_str()}
-                  });
-                }
+                fire_ha_event("action_call", {
+                  {"action", is_mower ? "lawn_mower.dock" : "vacuum.return_to_base"},
+                  {"entity", entity.c_str()}
+                });
                 break;
 
               default:

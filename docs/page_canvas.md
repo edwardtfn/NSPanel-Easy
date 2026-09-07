@@ -21,7 +21,27 @@ The pattern has two parts:
    button in the project so that pressing the button opens the page.
 2. **A Home Assistant automation** triggered when the panel reports that the canvas page is active.
    The automation draws whatever content you want by sending Nextion commands through the
-   `esphome.<panel_name>_command` action.
+   `esphome.<panel_name>_component_text_list` action.
+
+### Sending raw Nextion commands
+
+Raw display commands are sent with the `component_text_list` action, targeting the special
+memory namespace `page: mem`, `id: command`. Every non-empty element of `txt_list` is forwarded to
+the display as an individual Nextion command, in the order given:
+
+```yaml
+- action: esphome.<panel_name>_component_text_list
+  data:
+    page: mem
+    id: command
+    txt_list:
+      - "fill 4,52,442,248,6339"
+      - "xstr 12,60,200,32,3,65535,6339,0,1,1,\"Hello\""
+```
+
+> [!NOTE]
+> The former `command` action (with a single `cmd` parameter) is deprecated and must not be used
+> in new automations.
 
 ## Step 1 — Create a Home Assistant script to open the page
 
@@ -32,9 +52,12 @@ script:
   open_canvas:
     alias: Open canvas page
     sequence:
-      - action: esphome.<panel_name>_command
+      - action: esphome.<panel_name>_component_text_list
         data:
-          cmd: "page canvas"
+          page: mem
+          id: command
+          txt_list:
+            - "page canvas"
 ```
 
 You can now assign this script to any button in the project via the Blueprint's button
@@ -44,26 +67,30 @@ configuration. Pressing that button will open the canvas page.
 
 By default, pressing the close button on the canvas page returns to the home page.
 You can change the return destination by setting `back_page_id` to the numeric ID of the target
-page before navigating:
+page before navigating. Both commands can go in the same `txt_list`, since list elements are
+executed in order:
 
 ```yaml
 script:
   open_canvas_from_buttonpage:
     alias: Open canvas page (return to calling page)
     sequence:
-      - action: esphome.<panel_name>_command
+      - action: esphome.<panel_name>_component_text_list
         data:
-          cmd: "back_page_id=dp"  # dp = current page ID; use a numeric ID instead to return to a specific page
-      - action: esphome.<panel_name>_command
-        data:
-          cmd: "page canvas"
+          page: mem
+          id: command
+          txt_list:
+            # dp = current page ID; use a numeric ID instead to return to a specific page
+            - "back_page_id=dp"
+            - "page canvas"
 ```
 
 ## Step 2 — Draw content from a Home Assistant automation
 
 Create an automation triggered by the `sensor.<panel_name>_current_page` sensor changing to
-`canvas`. Inside the automation, call `esphome.<panel_name>_command` once per Nextion instruction,
-and use `esphome.<panel_name>_component_text` to set the header icon and title.
+`canvas`. Inside the automation, call `esphome.<panel_name>_component_text_list` with
+`page: mem` / `id: command` to issue the drawing instructions, and the same action targeting
+the page components to set the header icon and title.
 
 The Nextion display uses a simple drawing instruction set. The key commands are:
 
@@ -80,35 +107,45 @@ available in the [Nextion Instruction Set — GUI Designing Commands](https://ne
 <!-- markdownlint-disable MD028 -->
 > [!IMPORTANT]
 > Each command string sent to the display must be **under 255 bytes** after all variables are
-> substituted. Keep text strings short and avoid complex expressions inside a single `cmd` value.
+> substituted. This limit applies to each element of `txt_list` individually, not to the list as
+> a whole. Keep text strings short and avoid complex expressions inside a single element.
 
 > [!NOTE]
-> **Add small delays between commands.** Home Assistant dispatches actions faster than the ESP32
-> UART queue can drain them. Without delays, some commands arrive at the display out of order or
-> are rendered after subsequent commands have already painted over their area. A `delay` of
-> **10 ms between individual commands** and **50 ms between logical groups** (such as rows in a
-> table) is sufficient in practice.
+> **Group related commands, and add small delays between calls.** Commands within a single
+> `txt_list` are dispatched to the display in order, so no delay is needed between them. Ordering
+> is not guaranteed between separate action calls, so keep commands that must be painted in
+> sequence (a fill and the text drawn on top of it) inside the same list, and add a `delay` of
+> **50 ms between action calls**.
+>
+> There is no hard limit on the number of elements in a `txt_list`, but each one is sent to the
+> display as an individual command, so a very long list produces one long burst of UART traffic
+> during which the panel cannot react to touch. Split large drawings across several calls.
 <!-- markdownlint-enable MD028 -->
 
 ### Header components
 
-The canvas page header exposes two components you can set via `component_text`:
+The canvas page header exposes two components you can set via `component_text_list`:
 
 - `icon_state` — MDI icon, uses the icon font. Set to the icon's Unicode codepoint.
 - `page_label` — title text, displayed next to the icon.
 
+For component targets (as opposed to `page: mem`), only the **last** element of `txt_list` is
+applied, so pass a one-element list:
+
 ```yaml
-- action: esphome.<panel_name>_component_text
+- action: esphome.<panel_name>_component_text_list
   data:
     page: canvas
     id: icon_state
-    txt: "\uE159"  # mdi:bus
+    txt_list:
+      - "\uE159"  # mdi:bus
 
-- action: esphome.<panel_name>_component_text
+- action: esphome.<panel_name>_component_text_list
   data:
     page: canvas
     id: page_label
-    txt: "My title"
+    txt_list:
+      - "My title"
 ```
 
 ### `xstr` text background
@@ -121,7 +158,8 @@ sits on. If you draw a card rectangle first, use the card color as `bg` for all 
 
 This automation draws a departure board with a card background, a populated header, and up to
 5 rows of departures. All geometry and appearance values are in top-level variables for easy
-adjustment.
+adjustment. Each row is drawn with a single action call, so the badge fill and the text on top of
+it are guaranteed to be painted in the right order.
 
 > [!TIP]
 > The departure data below is hard-coded for demonstration purposes. In a real application,
@@ -136,9 +174,12 @@ script:
   canvas_bus_departures:
     alias: "Open bus departures"
     sequence:
-      - action: esphome.<panel_name>_command
+      - action: esphome.<panel_name>_component_text_list
         data:
-          cmd: "page canvas"
+          page: mem
+          id: command
+          txt_list:
+            - "page canvas"
 ```
 
 ### Automation to draw the board
@@ -188,28 +229,33 @@ automation:
           minutes: "12 min"
     actions:
       # Header icon (mdi:bus) and stop name
-      - action: esphome.<panel_name>_component_text
+      - action: esphome.<panel_name>_component_text_list
         data:
           page: canvas
           id: icon_state
-          txt: "\uE159"
+          txt_list:
+            - "\uE159"
 
-      - action: esphome.<panel_name>_component_text
+      - action: esphome.<panel_name>_component_text_list
         data:
           page: canvas
           id: page_label
-          txt: "Wyspianski"
+          txt_list:
+            - "Wyspianski"
 
       # Card background — drawn once before the loop
-      - action: esphome.<panel_name>_command
+      - action: esphome.<panel_name>_component_text_list
         data:
-          cmd: "fill {{ card_x }},{{ card_y }},{{ card_w }},{{ card_h }},{{ card_bg }}"
+          page: mem
+          id: command
+          txt_list:
+            - 'fill {{ card_x }},{{ card_y }},{{ card_w }},{{ card_h }},{{ card_bg }}'
 
       # Allow the card fill to complete before drawing text on top
       - delay:
-          milliseconds: 20
+          milliseconds: 50
 
-      # Rows
+      # Rows — one call per row keeps the badge fill and its text in order
       - repeat:
           count: "{{ [departures | count, max_rows] | min }}"
           sequence:
@@ -218,35 +264,19 @@ automation:
                 ry: "{{ table_y + (repeat.index - 1) * row_h }}"
                 badge_y: "{{ ry + (row_h - 36) // 2 }}"
 
-            # Route badge background
-            - action: esphome.<panel_name>_command
+            - action: esphome.<panel_name>_component_text_list
               data:
-                cmd: "fill {{ col_badge_x }},{{ badge_y }},44,36,{{ badge_color }}"
-
-            # Small delay to ensure fill completes before text is drawn on top
-            - delay:
-                milliseconds: 10
-
-            # Route number centred in badge
-            - action: esphome.<panel_name>_command
-              data:
-                cmd: "xstr {{ col_badge_x }},{{ badge_y }},44,36,{{ font }},65535,{{ badge_color }},1,1,1,\"{{ dep.route }}\""
-
-            - delay:
-                milliseconds: 10
-
-            # Destination label
-            - action: esphome.<panel_name>_command
-              data:
-                cmd: "xstr {{ col_dest_x }},{{ ry }},{{ col_time_x - col_dest_x - 4 }},{{ row_h }},{{ font }},65535,{{ card_bg }},0,1,1,\"{{ dep.destination }}\""
-
-            - delay:
-                milliseconds: 10
-
-            # Arrival time, right-aligned
-            - action: esphome.<panel_name>_command
-              data:
-                cmd: "xstr {{ col_time_x }},{{ ry }},{{ col_time_w }},{{ row_h }},{{ font }},65535,{{ card_bg }},2,1,1,\"{{ dep.minutes }}\""
+                page: mem
+                id: command
+                txt_list:
+                  # Route badge background
+                  - 'fill {{ col_badge_x }},{{ badge_y }},44,36,{{ badge_color }}'
+                  # Route number centred in badge
+                  - 'xstr {{ col_badge_x }},{{ badge_y }},44,36,{{ font }},65535,{{ badge_color }},1,1,1,"{{ dep.route }}"'
+                  # Destination label
+                  - 'xstr {{ col_dest_x }},{{ ry }},{{ col_time_x - col_dest_x - 4 }},{{ row_h }},{{ font }},65535,{{ card_bg }},0,1,1,"{{ dep.destination }}"'
+                  # Arrival time, right-aligned
+                  - 'xstr {{ col_time_x }},{{ ry }},{{ col_time_w }},{{ row_h }},{{ font }},65535,{{ card_bg }},2,1,1,"{{ dep.minutes }}"'
 
             # Allow the full row to render before starting the next one
             - delay:
