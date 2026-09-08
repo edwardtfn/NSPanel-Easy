@@ -4592,6 +4592,21 @@ blueprint:
       icon: mdi:cogs
       collapsed: true
       input:
+        esphome_version_check_bypass:
+          name: Version check - Ignore older ESPHome firmware
+          description: >-
+            By default the Blueprint stops when the panel's ESPHome firmware is older than the Blueprint,
+            because that firmware may not have registered all the API actions the Blueprint calls.
+
+
+            Enable this to keep the Blueprint running anyway. The panel will work partially while you
+            update the firmware, and any action the firmware does not implement will fail only for that call.
+
+
+            *The version mismatch notification is still created, so you do not forget to finish the update.*
+          default: false
+          selector:
+            boolean: {}
         value_hide_when_zero:
           name: Values - Hide when zero
           description: >-
@@ -4834,6 +4849,13 @@ variables:
             and esphome_version_parts[2] >= blueprint_version_parts[2])
       )
     }}
+  # User escape hatch for the version gate. When enabled, the Blueprint keeps
+  # running against an outdated firmware instead of stopping, accepting that
+  # individual action calls may fail until the firmware is updated.
+  esphome_version_check_bypass: !input esphome_version_check_bypass
+  # Effective gate: the run is only blocked when the versions are incompatible
+  # and the user has not opted out.
+  esphome_gate_ok: '{{ esphome_compatible or esphome_version_check_bypass }}'
 
   pages:
     current: '{{ states(currentpage) }}'
@@ -5767,9 +5789,9 @@ triggers:
 
 # yamllint disable rule:line-length
 conditions:
-  - >  # Prevent trigger when panel's versio is older, unless in speciall cases (handled later)
+  - >  # Prevent trigger when panel's version is older, unless bypassed or in special cases (handled later)
     {{
-      esphome_compatible or trigger.id in ["automation_reloaded", "ha_started", "nspanel_event"]
+      esphome_gate_ok or trigger.id in ["automation_reloaded", "ha_started", "nspanel_event"]
     }}
   - >  # Trigger is coming from panel's event or Device Name is available
     {{
@@ -6735,6 +6757,8 @@ actions:
     # Prevents calling API actions that an older firmware has not registered yet.
     # An unknown action raises ServiceNotFound, which HA surfaces as a repair issue
     # even when the call carries continue_on_error.
+    # The user can opt out via 'esphome_version_check_bypass', in which case the
+    # notification is still created but the run is allowed to continue.
     if: '{{ not esphome_compatible }}'
     then:
       - action: persistent_notification.create
@@ -6744,7 +6768,11 @@ actions:
           message: >
             {% if esphome_version_parts | count != 3 %}
             The ESPHome firmware version for the NSPanel **{{ nspanel_full_name }}** could not be determined,
+            {% if esphome_version_check_bypass %}
+            so API actions the firmware may not support can fail until this is resolved.
+            {% else %}
             so the Blueprint has stopped to avoid calling API actions the firmware may not support.
+            {% endif %}
 
             - Blueprint version: {{ blueprint_version }}
 
@@ -6762,8 +6790,12 @@ actions:
             [report this issue](https://github.com/edwardtfn/NSPanel-Easy/issues/new/choose),
             including the reported firmware version shown above.
             {% else %}
-            Your NSPanel Easy ESPHome firmware is older than the Blueprint, so the Blueprint has stopped
-            to avoid calling API actions this firmware does not implement yet.
+            Your NSPanel Easy ESPHome firmware is older than the Blueprint,
+            {% if esphome_version_check_bypass %}
+            so any action this firmware does not implement yet will fail until you finish the update.
+            {% else %}
+            so the Blueprint has stopped to avoid calling API actions this firmware does not implement yet.
+            {% endif %}
 
             - Panel: **{{ nspanel_full_name }}**
 
@@ -6787,7 +6819,9 @@ actions:
             [How to Update](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md).*
             {% endif %}
         continue_on_error: true
-      - stop: ESPHome firmware is older than the Blueprint
+      - if: '{{ not esphome_version_check_bypass }}'
+        then:
+          - stop: ESPHome firmware is older than the Blueprint
 
   - alias: Global anchor repository
     if: '{{ false }}'  # It should never execute directly
