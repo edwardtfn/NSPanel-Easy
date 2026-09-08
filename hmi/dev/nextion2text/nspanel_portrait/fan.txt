@@ -30,6 +30,11 @@ Page fan
             vis fanslider,0
             vis button_up,0
             vis button_down,0
+            vis mode_bt1,0
+            vis mode_bt2,0
+            vis mode_bt3,0
+            vis mode_bt4,0
+            vis mode_bt5,0
             // Light mode only: override HMI defaults (which target dark theme).
             // Dark theme uses the component defaults directly, so no else branch.
             if(theme==1)
@@ -462,6 +467,196 @@ Button button_back
     Events
         Touch Press Event
             page back_page_id
+        
+Dual-state Button mode_bt1
+    Attributes
+        ID                               : 16
+        Scope                            : local
+        Dragging                         : 0
+        Send Component ID                : on release
+        Opacity                          : 127
+        x coordinate                     : 100
+        y coordinate                     : 143
+        Width                            : 150
+        Height                           : 40
+        Effect                           : load
+        Effect Priority                  : 0
+        Effect Time                      : 300
+        Fill                             : image
+        Font ID                          : 2
+        Background Picture ID (Unpressed): 116
+        Back. Picture ID (Pressed)       : 114
+        Horizontal Alignment             : center
+        Vertical Alignment               : center
+        State                            : unpressed
+        Text                             : 
+        Max. Text Size                   : 20
+        Word wrap                        : disabled
+        Horizontal Spacing               : 0
+        Vertical Spacing                 : 0
+    
+    Events
+        Touch Release Event
+            mode_bt1.val=1
+            fansetting.txt="fan,preset_index,0"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints fansetting.txt,0
+            printh 00
+            printh FF FF FF
+        
+Dual-state Button mode_bt2
+    Attributes
+        ID                               : 17
+        Scope                            : local
+        Dragging                         : 0
+        Send Component ID                : on release
+        Opacity                          : 127
+        x coordinate                     : 100
+        y coordinate                     : 192
+        Width                            : 150
+        Height                           : 40
+        Effect                           : load
+        Effect Priority                  : 0
+        Effect Time                      : 300
+        Fill                             : image
+        Font ID                          : 2
+        Background Picture ID (Unpressed): 120
+        Back. Picture ID (Pressed)       : 118
+        Horizontal Alignment             : center
+        Vertical Alignment               : center
+        State                            : unpressed
+        Text                             : 
+        Max. Text Size                   : 20
+        Word wrap                        : disabled
+        Horizontal Spacing               : 0
+        Vertical Spacing                 : 0
+    
+    Events
+        Touch Release Event
+            mode_bt2.val=1
+            fansetting.txt="fan,preset_index,1"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints fansetting.txt,0
+            printh 00
+            printh FF FF FF
+        
+Dual-state Button mode_bt3
+    Attributes
+        ID                               : 18
+        Scope                            : local
+        Dragging                         : 0
+        Send Component ID                : on release
+        Opacity                          : 127
+        x coordinate                     : 100
+        y coordinate                     : 241
+        Width                            : 150
+        Height                           : 40
+        Effect                           : load
+        Effect Priority                  : 0
+        Effect Time                      : 300
+        Fill                             : image
+        Font ID                          : 2
+        Background Picture ID (Unpressed): 124
+        Back. Picture ID (Pressed)       : 122
+        Horizontal Alignment             : center
+        Vertical Alignment               : center
+        State                            : unpressed
+        Text                             : 
+        Max. Text Size                   : 20
+        Word wrap                        : disabled
+        Horizontal Spacing               : 0
+        Vertical Spacing                 : 0
+    
+    Events
+        Touch Release Event
+            mode_bt3.val=1
+            fansetting.txt="fan,preset_index,2"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints fansetting.txt,0
+            printh 00
+            printh FF FF FF
+        
+Dual-state Button mode_bt4
+    Attributes
+        ID                               : 19
+        Scope                            : local
+        Dragging                         : 0
+        Send Component ID                : on release
+        Opacity                          : 127
+        x coordinate                     : 100
+        y coordinate                     : 290
+        Width                            : 150
+        Height                           : 40
+        Effect                           : load
+        Effect Priority                  : 0
+        Effect Time                      : 300
+        Fill                             : image
+        Font ID                          : 2
+        Background Picture ID (Unpressed): 128
+        Back. Picture ID (Pressed)       : 126
+        Horizontal Alignment             : center
+        Vertical Alignment               : center
+        State                            : unpressed
+        Text                             : 
+        Max. Text Size                   : 20
+        Word wrap                        : disabled
+        Horizontal Spacing               : 0
+        Vertical Spacing                 : 0
+    
+    Events
+        Touch Release Event
+            mode_bt4.val=1
+            fansetting.txt="fan,preset_index,3"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints fansetting.txt,0
+            printh 00
+            printh FF FF FF
+        
+Dual-state Button mode_bt5
+    Attributes
+        ID                               : 20
+        Scope                            : local
+        Dragging                         : 0
+        Send Component ID                : on release
+        Opacity                          : 127
+        x coordinate                     : 100
+        y coordinate                     : 339
+        Width                            : 150
+        Height                           : 40
+        Effect                           : load
+        Effect Priority                  : 0
+        Effect Time                      : 300
+        Fill                             : image
+        Font ID                          : 2
+        Background Picture ID (Unpressed): 132
+        Back. Picture ID (Pressed)       : 130
+        Horizontal Alignment             : center
+        Vertical Alignment               : center
+        State                            : unpressed
+        Text                             : 
+        Max. Text Size                   : 20
+        Word wrap                        : disabled
+        Horizontal Spacing               : 0
+        Vertical Spacing                 : 0
+    
+    Events
+        Touch Release Event
+            mode_bt5.val=1
+            fansetting.txt="fan,preset_index,4"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints fansetting.txt,0
+            printh 00
+            printh FF FF FF
         
 Timer swipestore
     Attributes

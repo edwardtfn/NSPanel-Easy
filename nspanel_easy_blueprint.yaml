@@ -4766,6 +4766,10 @@ trigger_variables:
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_current_page$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_current_page" }}
 
+  background_type: >-
+    {%- set m = nspanel_entities | select("search", "^select\\..+_background_type$") | list %}
+    {{ m[0] if m | count > 0 else "select." ~ entity_prefix ~ "_background_type" }}
+
   nspaneltemp: >-
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_temperature$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_temperature" }}
@@ -8293,6 +8297,24 @@ actions:
                                 target:
                                   entity_id: '{{ nspanel_event.entity }}'
                                 continue_on_error: true
+                          - alias: "fan.set_preset_mode"
+                            # The display sends the index, as a mode name may contain the
+                            # separator used by the display protocol.
+                            conditions:
+                              - '{{ nspanel_event.action == "fan.set_preset_mode" }}'
+                              - '{{ nspanel_event.key == "preset_index" }}'
+                              - '{{ nspanel_event.value is defined }}'
+                            sequence:
+                              - variables:
+                                  fan_preset_modes: '{{ state_attr(nspanel_event.entity, "preset_modes") | default([], true) }}'
+                                  fan_preset_index: '{{ nspanel_event.value | int(-1) }}'
+                              - condition: '{{ fan_preset_index >= 0 and fan_preset_index < fan_preset_modes | count }}'
+                              - action: '{{ nspanel_event.action }}'
+                                data:
+                                  preset_mode: '{{ fan_preset_modes[fan_preset_index] }}'
+                                target:
+                                  entity_id: '{{ nspanel_event.entity }}'
+                                continue_on_error: true
                           - alias: "light.turn_on (rgb_color)"
                             conditions:
                               - '{{ nspanel_event.action == "light.turn_on" }}'
@@ -9253,21 +9275,26 @@ actions:
                                       if current_preset_mode_raw is defined and current_preset_mode_raw is string and current_preset_mode_raw | length > 0
                                       else ""
                                     }}
+                                  preset_modes_raw_attr: '{{ state_attr(entity_id, "preset_modes") }}'
+                              - variables:
+                                  preset_modes_raw: >
+                                    {{
+                                      preset_modes_raw_attr
+                                      if
+                                        preset_modes_raw_attr is defined and
+                                        preset_modes_raw_attr is iterable and
+                                        preset_modes_raw_attr is not string
+                                      else []
+                                    }}
+                              - variables:
+                                  # A fan without speed control leaves the slider area free, so the
+                                  # modes are shown as buttons there. The page has five of them,
+                                  # a longer list stays on the popup.
+                                  preset_buttons: '{{ not fan_speed_available and preset_modes_raw | length <= 5 }}'
 
                               ##### Construction-only: push options + show mode button #####
                               - if: '{{ page_constructor }}'
                                 then:
-                                  - variables:
-                                      preset_modes_raw_attr: '{{ state_attr(entity_id, "preset_modes") }}'
-                                      preset_modes_raw: >
-                                        {{
-                                          preset_modes_raw_attr
-                                          if
-                                            preset_modes_raw_attr is defined and
-                                            preset_modes_raw_attr is iterable and
-                                            preset_modes_raw_attr is not string
-                                          else []
-                                        }}
                                   - variables:
                                       preset_modes_truncated: >
                                         {%- if preset_modes_raw | length <= 8 -%}
@@ -9304,9 +9331,44 @@ actions:
                                       page: fan
                                       ids:
                                         - mode_button
-                                      visible: true
+                                      visible: '{{ not preset_buttons }}'
                                     continue_on_error: true
                                   - *delay_default
+
+                                  ##### Modes as buttons, for fans without speed control #####
+                                  - if: '{{ preset_buttons }}'
+                                    then:
+                                      - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                        data:
+                                          page: mem
+                                          id: command
+                                          txt_list: >-
+                                            {% set ns = namespace(items=[]) %}
+                                            {% for mode in preset_modes_raw %}
+                                              {% set label = mode | replace('"', "") %}
+                                              {% set ns.items = ns.items + ['mode_bt' ~ loop.index ~ '.txt="' ~ label ~ '"'] %}
+                                            {% endfor %}
+                                            {{ ns.items }}
+                                        continue_on_error: true
+                                      - *delay_default
+                                      - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                        data:
+                                          page: fan
+                                          ids: >-
+                                            {{ range(1, preset_modes_raw | length + 1) | map("string") | map("regex_replace", "^", "mode_bt") | list }}
+                                          visible: true
+                                        continue_on_error: true
+                                      - *delay_default
+                                      - if: '{{ preset_modes_raw | length < 5 }}'
+                                        then:
+                                          - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                            data:
+                                              page: fan
+                                              ids: >-
+                                                {{ range(preset_modes_raw | length + 1, 6) | map("string") | map("regex_replace", "^", "mode_bt") | list }}
+                                              visible: false
+                                            continue_on_error: true
+                                          - *delay_default
 
                               ##### Always (construction and updates): push current preset_mode #####
                               - action: 'esphome.{{ nspanel_name }}_component_text_list'
@@ -9316,6 +9378,30 @@ actions:
                                   txt_list:
                                     - '{{ current_preset_mode }}'
                                 continue_on_error: true
+
+                              ##### Always: paint the mode buttons, active one highlighted #####
+                              - if: '{{ preset_buttons }}'
+                                then:
+                                  - variables:
+                                      # Each button has its own pictures, as the generator bakes the
+                                      # background into the rounded corners: four slots per position,
+                                      # active and inactive in both themes.
+                                      panel_theme_light: '{{ states(background_type) | lower == "light" }}'
+                                  - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                    data:
+                                      page: mem
+                                      id: command
+                                      txt_list: >-
+                                        {% set ns = namespace(items=[]) %}
+                                        {% for mode in preset_modes_raw %}
+                                          {% set base = 114 + (loop.index0 * 4) %}
+                                          {% set slot = base + (0 if mode == current_preset_mode else 2) + (1 if panel_theme_light else 0) %}
+                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".picc=" ~ slot] %}
+                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".pco=65535"] %}
+                                        {% endfor %}
+                                        {{ ns.items }}
+                                    continue_on_error: true
+                                  - *delay_default
 
                       - alias: Media player settings page
                         conditions: '{{ nspanel_event.page == pages.media_player }}'

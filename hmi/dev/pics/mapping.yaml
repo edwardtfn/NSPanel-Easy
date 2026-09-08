@@ -273,6 +273,227 @@
     coordinates: "119,143"
     dimensions: "83x233"
 
+- id: fan_mode_1_active
+  src: fan/fan_mode_active.png
+  note: "Fan preset mode button 1 - active, dark theme"
+  dark: 114
+  light: null
+  landscape:
+    coordinates: "200,66"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,143"
+    dimensions: "150x40"
+- id: fan_mode_1_active_light
+  src: fan/fan_mode_active.png
+  note: "Fan preset mode button 1 - active, light theme"
+  dark: null
+  light: 115
+  landscape:
+    coordinates: "200,66"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,143"
+    dimensions: "150x40"
+- id: fan_mode_1_inactive
+  src: fan/fan_mode_inactive.png
+  note: "Fan preset mode button 1 - inactive, dark theme"
+  dark: 116
+  light: null
+  landscape:
+    coordinates: "200,66"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,143"
+    dimensions: "150x40"
+- id: fan_mode_1_inactive_light
+  src: fan/fan_mode_inactive.png
+  note: "Fan preset mode button 1 - inactive, light theme"
+  dark: null
+  light: 117
+  landscape:
+    coordinates: "200,66"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,143"
+    dimensions: "150x40"
+- id: fan_mode_2_active
+  src: fan/fan_mode_active.png
+  note: "Fan preset mode button 2 - active, dark theme"
+  dark: 118
+  light: null
+  landscape:
+    coordinates: "200,115"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,192"
+    dimensions: "150x40"
+- id: fan_mode_2_active_light
+  src: fan/fan_mode_active.png
+  note: "Fan preset mode button 2 - active, light theme"
+  dark: null
+  light: 119
+  landscape:
+    coordinates: "200,115"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,192"
+    dimensions: "150x40"
+- id: fan_mode_2_inactive
+  src: fan/fan_mode_inactive.png
+  note: "Fan preset mode button 2 - inactive, dark theme"
+  dark: 120
+  light: null
+  landscape:
+    coordinates: "200,115"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,192"
+    dimensions: "150x40"
+- id: fan_mode_2_inactive_light
+  src: fan/fan_mode_inactive.png
+  note: "Fan preset mode button 2 - inactive, light theme"
+  dark: null
+  light: 121
+  landscape:
+    coordinates: "200,115"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,192"
+    dimensions: "150x40"
+- id: fan_mode_3_active
+  src: fan/fan_mode_active.png
+  note: "Fan preset mode button 3 - active, dark theme"
+  dark: 122
+  light: null
+  landscape:
+    coordinates: "200,164"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,241"
+    dimensions: "150x40"
+- id: fan_mode_3_active_light
+  src: fan/fan_mode_active.png
+  note: "Fan preset mode button 3 - active, light theme"
+  dark: null
+  light: 123
+  landscape:
+    coordinates: "200,164"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,241"
+    dimensions: "150x40"
+- id: fan_mode_3_inactive
+  src: fan/fan_mode_inactive.png
+  note: "Fan preset mode button 3 - inactive, dark theme"
+  dark: 124
+  light: null
+  landscape:
+    coordinates: "200,164"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,241"
+    dimensions: "150x40"
+- id: fan_mode_3_inactive_light
+  src: fan/fan_mode_inactive.png
+  note: "Fan preset mode button 3 - inactive, light theme"
+  dark: null
+  light: 125
+  landscape:
+    coordinates: "200,164"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,241"
+    dimensions: "150x40"
+- id: fan_mode_4_active
+  src: fan/fan_mode_active.png
+  note: "Fan preset mode button 4 - active, dark theme"
+  dark: 126
+  light: null
+  landscape:
+    coordinates: "200,213"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,290"
+    dimensions: "150x40"
+- id: fan_mode_4_active_light
+  src: fan/fan_mode_active.png
+  note: "Fan preset mode button 4 - active, light theme"
+  dark: null
+  light: 127
+  landscape:
+    coordinates: "200,213"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,290"
+    dimensions: "150x40"
+- id: fan_mode_4_inactive
+  src: fan/fan_mode_inactive.png
+  note: "Fan preset mode button 4 - inactive, dark theme"
+  dark: 128
+  light: null
+  landscape:
+    coordinates: "200,213"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,290"
+    dimensions: "150x40"
+- id: fan_mode_4_inactive_light
+  src: fan/fan_mode_inactive.png
+  note: "Fan preset mode button 4 - inactive, light theme"
+  dark: null
+  light: 129
+  landscape:
+    coordinates: "200,213"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,290"
+    dimensions: "150x40"
+- id: fan_mode_5_active
+  src: fan/fan_mode_active.png
+  note: "Fan preset mode button 5 - active, dark theme"
+  dark: 130
+  light: null
+  landscape:
+    coordinates: "200,262"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,339"
+    dimensions: "150x40"
+- id: fan_mode_5_active_light
+  src: fan/fan_mode_active.png
+  note: "Fan preset mode button 5 - active, light theme"
+  dark: null
+  light: 131
+  landscape:
+    coordinates: "200,262"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,339"
+    dimensions: "150x40"
+- id: fan_mode_5_inactive
+  src: fan/fan_mode_inactive.png
+  note: "Fan preset mode button 5 - inactive, dark theme"
+  dark: 132
+  light: null
+  landscape:
+    coordinates: "200,262"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,339"
+    dimensions: "150x40"
+- id: fan_mode_5_inactive_light
+  src: fan/fan_mode_inactive.png
+  note: "Fan preset mode button 5 - inactive, light theme"
+  dark: null
+  light: 133
+  landscape:
+    coordinates: "200,262"
+    dimensions: "150x40"
+  portrait:
+    coordinates: "100,339"
+    dimensions: "150x40"
+
 # -----------------------------------------------------------------------------
 # Light page
 # -----------------------------------------------------------------------------
