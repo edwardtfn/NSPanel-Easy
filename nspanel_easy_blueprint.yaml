@@ -8854,6 +8854,17 @@ actions:
                                   )
                                 }}
                               effects_available: '{{ entity_domain_is_light and supported_features | bitwise_and(4) > 0 }}'
+                              # Single source of truth for "does a tap on this entity open its detail
+                              # card instead of performing the short-press action?" — shared by every
+                              # place that renders per-entity buttons (Home page, Buttons pages), so a
+                              # capability added for one can't silently miss the other.
+                              click_opens_details: >-
+                                {{
+                                  entity_domain in domains_functionality.detailed_only or
+                                  (entity_domain == "cover" and supported_features | bitwise_and(132) > 0) or
+                                  (entity_domain == "fan" and supported_features | bitwise_and(11) > 0) or
+                                  (entity_domain == "light" and (color_mode_brightness or color_mode_color or color_mode_temp))
+                                }}
 
                           ##### LIGHT State #####
                           - alias: Light brightness
@@ -11655,11 +11666,11 @@ actions:
                                 name: '{{ last_click_button.name if last_click_button.name is defined else None }}'
                           - condition: '{{ entity_id is string and entity_id | length >= 3 }}'
                           - *variable_entity
+                          - *variables_light_modes
                           - choose:
                               - alias: Long click
                                 conditions:
-                                  - '{{ nspanel_event.command == "long_click" or
-                                        entity_domain in domains_functionality.detailed_only }}'
+                                  - '{{ nspanel_event.command == "long_click" or click_opens_details }}'
                                   - '{{ entity_domain in domains_functionality.detailed }}'
                                   - >-
                                     {{
@@ -11669,7 +11680,7 @@ actions:
                                   - >-
                                     {{
                                       entity_domain != "fan" or
-                                      (state_attr(entity_id, "supported_features") | int(0) | bitwise_and(11) > 0)
+                                      (supported_features | bitwise_and(11) > 0)
                                     }}
                                 sequence:
                                   - variables:
@@ -11934,14 +11945,7 @@ actions:
                                 name: '{{ last_click_button.name if last_click_button.name is defined else None }}'
                           - *variables_light_modes
                           - condition: '{{ entity_id_valid }}'
-                          - if: >
-                              {{
-                                entity_domain in domains_functionality.detailed_only or
-                                (entity_domain == "cover" and supported_features | bitwise_and(132) > 0) or
-                                (entity_domain == "fan" and supported_features | bitwise_and(11) > 0) or
-                                (entity_domain == "light" and (color_mode_brightness or color_mode_color or color_mode_temp)) or
-                                (entity_domain == "timer")
-                              }}
+                          - if: '{{ click_opens_details or entity_domain == "timer" }}'
                             then:
                               - variables:
                                   back_page: '{{ pages.home }}'
