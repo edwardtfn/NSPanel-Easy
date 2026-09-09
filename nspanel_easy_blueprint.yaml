@@ -9344,9 +9344,13 @@ actions:
                                           id: command
                                           txt_list: >-
                                             {% set ns = namespace(items=[]) %}
+                                            {% set shift = 1 if states(background_type) | lower is match("light") else 0 %}
                                             {% for mode in preset_modes_raw %}
-                                              {% set label = mode | replace('"', "") %}
-                                              {% set ns.items = ns.items + ['mode_bt' ~ loop.index ~ '.txt="' ~ label ~ '"'] %}
+                                              {% set button = 'mode_bt' ~ loop.index %}
+                                              {% set base = 114 + (loop.index0 * 4) %}
+                                              {% set ns.items = ns.items + [button ~ '.txt="' ~ (mode | replace('"', "")) ~ '"'] %}
+                                              {% set ns.items = ns.items + [button ~ '.pic=' ~ (base + 2 + shift)] %}
+                                              {% set ns.items = ns.items + [button ~ '.pic2=' ~ (base + shift)] %}
                                             {% endfor %}
                                             {{ ns.items }}
                                         continue_on_error: true
@@ -9382,22 +9386,18 @@ actions:
                               ##### Always: paint the mode buttons, active one highlighted #####
                               - if: '{{ preset_buttons }}'
                                 then:
-                                  - variables:
-                                      # Each button has its own pictures, as the generator bakes the
-                                      # background into the rounded corners: four slots per position,
-                                      # active and inactive in both themes.
-                                      panel_theme_light: '{{ states(background_type) | lower == "light" }}'
+                                  # The pictures are pushed by the page constructor, so an update
+                                  # only has to move the state of each button.
                                   - action: 'esphome.{{ nspanel_name }}_component_text_list'
                                     data:
                                       page: mem
                                       id: command
                                       txt_list: >-
                                         {% set ns = namespace(items=[]) %}
+                                        {% set running = states(entity_id) == "on" %}
                                         {% for mode in preset_modes_raw %}
-                                          {% set base = 114 + (loop.index0 * 4) %}
-                                          {% set slot = base + (0 if mode == current_preset_mode else 2) + (1 if panel_theme_light else 0) %}
-                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".picc=" ~ slot] %}
-                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".pco=65535"] %}
+                                          {% set active = running and mode == current_preset_mode %}
+                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".val=" ~ (1 if active else 0)] %}
                                         {% endfor %}
                                         {{ ns.items }}
                                     continue_on_error: true
