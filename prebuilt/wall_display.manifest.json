@@ -1,6 +1,6 @@
 {
   "name": "NSPanel Easy - Wall Display",
-  "version": "2026.9.12",
+  "version": "2026.9.13",
   "home_assistant_domain": "esphome",
   "new_install_prompt_erase": false,
   "builds": [
@@ -8,9 +8,9 @@
       "chipFamily": "ESP32",
       "ota": {
         "path": "wall_display.bin",
-        "md5": "5b949f38285d58c4de8100217c1b56f1",
-        "summary": "NSPanel Easy Wall Display v2026.9.12",
-        "release_url": "https://github.com/edwardtfn/NSPanel-Easy/releases/tag/v2026.9.12"
+        "md5": "03fd32f0a7777359aba3a1ce2f55ee78",
+        "summary": "NSPanel Easy Wall Display v2026.9.13",
+        "release_url": "https://github.com/edwardtfn/NSPanel-Easy/releases/tag/v2026.9.13"
       }
     }
   ]
