@@ -153,6 +153,11 @@ api:
             else if (entity_id.domain == "input_button")        entity_id.domain = "button";
             else if (entity_id.domain == "input_select")        entity_id.domain = "select";
             else if (entity_id.domain == "lawn_mower")          entity_id.domain = "vacuum";
+            // Route humidifier entities to the climate page: it already has the
+            // current/target value dial and on/off controls a humidifier needs, so no
+            // dedicated page is required (unlike vacuum/lawn_mower, where the target
+            // entity turns out to be a humidifier).
+            else if (entity_id.domain == "humidifier")          entity_id.domain = "climate";
             #ifdef NSPANEL_EASY_ADDON_CLIMATE_BASE
             if (entity == "embedded_climate")                   entity_id.domain = "climate";
             #endif  // NSPANEL_EASY_ADDON_CLIMATE_BASE
