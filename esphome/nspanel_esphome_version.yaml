@@ -18,7 +18,7 @@ substitutions:
 
   # Minimum required TFT version for compatibility
   # Must be manually updated with Nextion Editor
-  min_tft_version: 21.1
+  min_tft_version: 21.2
 
   # Minimum required ESPHome compiler to run this
   # Versioning workflow will take care of updating this

@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.9.10)
+  name: NSPanel Easy Configuration (v2026.9.14)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -4660,6 +4660,25 @@ blueprint:
       icon: mdi:cogs
       collapsed: true
       input:
+        esphome_version_check_bypass:
+          name: Version check - Ignore older ESPHome firmware
+          description: >-
+            By default the Blueprint stops when the panel's ESPHome firmware is older than the Blueprint,
+            because that firmware may not have registered all the API actions the Blueprint calls.
+
+
+            Enable this to keep the Blueprint running anyway, so the panel stays usable while you update
+            your firmware.
+
+
+            **Attention!** Features added after your firmware version will not work, and a sequence that
+            reaches one of them stops at that point. Everything the firmware does support keeps working.
+
+
+            *The version mismatch notification is still created, so you do not forget to finish the update.*
+          default: false
+          selector:
+            boolean: {}
         value_hide_when_zero:
           name: Values - Hide when zero
           description: >-
@@ -4815,6 +4834,10 @@ trigger_variables:
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_current_page$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_current_page" }}
 
+  background_type: >-
+    {%- set m = nspanel_entities | select("search", "^select\\..+_background_type$") | list %}
+    {{ m[0] if m | count > 0 else "select." ~ entity_prefix ~ "_background_type" }}
+
   nspaneltemp: >-
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_temperature$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_temperature" }}
@@ -4857,7 +4880,7 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.9.10
+  blueprint_version: 2026.9.14
 
   # Firmware version as reported by the ESPHome integration in the device registry.
   # Format: "<project_version> (ESPHome <compiler_version>)", e.g. "2026.8.5 (ESPHome 2026.6.0)".
@@ -4902,6 +4925,13 @@ variables:
             and esphome_version_parts[2] >= blueprint_version_parts[2])
       )
     }}
+  # User escape hatch for the version gate. When enabled, the Blueprint keeps
+  # running against an outdated firmware instead of stopping, accepting that
+  # individual action calls may fail until the firmware is updated.
+  esphome_version_check_bypass: !input esphome_version_check_bypass
+  # Effective gate: the run is only blocked when the versions are incompatible
+  # and the user has not opted out.
+  esphome_gate_ok: '{{ esphome_compatible or esphome_version_check_bypass }}'
 
   pages:
     current: '{{ states(currentpage) }}'
@@ -5845,9 +5875,9 @@ triggers:
 
 # yamllint disable rule:line-length
 conditions:
-  - >  # Prevent trigger when panel's versio is older, unless in speciall cases (handled later)
+  - >  # Prevent trigger when panel's version is older, unless bypassed or in special cases (handled later)
     {{
-      esphome_compatible or trigger.id in ["automation_reloaded", "ha_started", "nspanel_event"]
+      esphome_gate_ok or trigger.id in ["automation_reloaded", "ha_started", "nspanel_event"]
     }}
   - >  # Trigger is coming from panel's event or Device Name is available
     {{
@@ -6823,6 +6853,8 @@ actions:
     # Prevents calling API actions that an older firmware has not registered yet.
     # An unknown action raises ServiceNotFound, which HA surfaces as a repair issue
     # even when the call carries continue_on_error.
+    # The user can opt out via 'esphome_version_check_bypass', in which case the
+    # notification is still created but the run is allowed to continue.
     if: '{{ not esphome_compatible }}'
     then:
       - action: persistent_notification.create
@@ -6832,7 +6864,11 @@ actions:
           message: >
             {% if esphome_version_parts | count != 3 %}
             The ESPHome firmware version for the NSPanel **{{ nspanel_full_name }}** could not be determined,
+            {% if esphome_version_check_bypass %}
+            so API actions the firmware may not support can fail until this is resolved.
+            {% else %}
             so the Blueprint has stopped to avoid calling API actions the firmware may not support.
+            {% endif %}
 
             - Blueprint version: {{ blueprint_version }}
 
@@ -6850,8 +6886,13 @@ actions:
             [report this issue](https://github.com/edwardtfn/NSPanel-Easy/issues/new/choose),
             including the reported firmware version shown above.
             {% else %}
-            Your NSPanel Easy ESPHome firmware is older than the Blueprint, so the Blueprint has stopped
-            to avoid calling API actions this firmware does not implement yet.
+            Your NSPanel Easy ESPHome firmware is older than the Blueprint,
+            {% if esphome_version_check_bypass %}
+            and the version check has been bypassed, so features added after your firmware version
+            will not work until you finish the update.
+            {% else %}
+            so the Blueprint has stopped to avoid calling API actions this firmware does not implement yet.
+            {% endif %}
 
             - Panel: **{{ nspanel_full_name }}**
 
@@ -6875,7 +6916,9 @@ actions:
             [How to Update](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md).*
             {% endif %}
         continue_on_error: true
-      - stop: ESPHome firmware is older than the Blueprint
+      - if: '{{ not esphome_version_check_bypass }}'
+        then:
+          - stop: ESPHome firmware is older than the Blueprint
 
   - alias: Global anchor repository
     if: '{{ false }}'  # It should never execute directly
@@ -8408,6 +8451,24 @@ actions:
                                 target:
                                   entity_id: '{{ nspanel_event.entity }}'
                                 continue_on_error: true
+                          - alias: "fan.set_preset_mode"
+                            # The display sends the index, as a mode name may contain the
+                            # separator used by the display protocol.
+                            conditions:
+                              - '{{ nspanel_event.action == "fan.set_preset_mode" }}'
+                              - '{{ nspanel_event.key == "preset_index" }}'
+                              - '{{ nspanel_event.value is defined }}'
+                            sequence:
+                              - variables:
+                                  fan_preset_modes: '{{ state_attr(nspanel_event.entity, "preset_modes") | default([], true) }}'
+                                  fan_preset_index: '{{ nspanel_event.value | int(-1) }}'
+                              - condition: '{{ fan_preset_index >= 0 and fan_preset_index < fan_preset_modes | count }}'
+                              - action: '{{ nspanel_event.action }}'
+                                data:
+                                  preset_mode: '{{ fan_preset_modes[fan_preset_index] }}'
+                                target:
+                                  entity_id: '{{ nspanel_event.entity }}'
+                                continue_on_error: true
                           - alias: "light.turn_on (rgb_color)"
                             conditions:
                               - '{{ nspanel_event.action == "light.turn_on" }}'
@@ -8947,6 +9008,17 @@ actions:
                                   )
                                 }}
                               effects_available: '{{ entity_domain_is_light and supported_features | bitwise_and(4) > 0 }}'
+                              # Single source of truth for "does a tap on this entity open its detail
+                              # card instead of performing the short-press action?" — shared by every
+                              # place that renders per-entity buttons (Home page, Buttons pages), so a
+                              # capability added for one can't silently miss the other.
+                              click_opens_details: >-
+                                {{
+                                  entity_domain in domains_functionality.detailed_only or
+                                  (entity_domain == "cover" and supported_features | bitwise_and(132) > 0) or
+                                  (entity_domain == "fan" and supported_features | bitwise_and(11) > 0) or
+                                  (entity_domain == "light" and (color_mode_brightness or color_mode_color or color_mode_temp))
+                                }}
 
                           ##### LIGHT State #####
                           - alias: Light brightness
@@ -9368,21 +9440,26 @@ actions:
                                       if current_preset_mode_raw is defined and current_preset_mode_raw is string and current_preset_mode_raw | length > 0
                                       else ""
                                     }}
+                                  preset_modes_raw_attr: '{{ state_attr(entity_id, "preset_modes") }}'
+                              - variables:
+                                  preset_modes_raw: >
+                                    {{
+                                      preset_modes_raw_attr
+                                      if
+                                        preset_modes_raw_attr is defined and
+                                        preset_modes_raw_attr is iterable and
+                                        preset_modes_raw_attr is not string
+                                      else []
+                                    }}
+                              - variables:
+                                  # A fan without speed control leaves the slider area free, so the
+                                  # modes are shown as buttons there. The page has five of them,
+                                  # a longer list stays on the popup.
+                                  preset_buttons: '{{ not fan_speed_available and preset_modes_raw | length <= 5 }}'
 
                               ##### Construction-only: push options + show mode button #####
                               - if: '{{ page_constructor }}'
                                 then:
-                                  - variables:
-                                      preset_modes_raw_attr: '{{ state_attr(entity_id, "preset_modes") }}'
-                                      preset_modes_raw: >
-                                        {{
-                                          preset_modes_raw_attr
-                                          if
-                                            preset_modes_raw_attr is defined and
-                                            preset_modes_raw_attr is iterable and
-                                            preset_modes_raw_attr is not string
-                                          else []
-                                        }}
                                   - variables:
                                       preset_modes_truncated: >
                                         {%- if preset_modes_raw | length <= 8 -%}
@@ -9419,9 +9496,48 @@ actions:
                                       page: fan
                                       ids:
                                         - mode_button
-                                      visible: true
+                                      visible: '{{ not preset_buttons }}'
                                     continue_on_error: true
                                   - *delay_default
+
+                                  ##### Modes as buttons, for fans without speed control #####
+                                  - if: '{{ preset_buttons }}'
+                                    then:
+                                      - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                        data:
+                                          page: mem
+                                          id: command
+                                          txt_list: >-
+                                            {% set ns = namespace(items=[]) %}
+                                            {% set shift = 1 if states(background_type) | lower is match("light") else 0 %}
+                                            {% for mode in preset_modes_raw %}
+                                              {% set button = 'mode_bt' ~ loop.index %}
+                                              {% set base = 114 + (loop.index0 * 4) %}
+                                              {% set ns.items = ns.items + [button ~ '.txt="' ~ (mode | replace('"', "")) ~ '"'] %}
+                                              {% set ns.items = ns.items + [button ~ '.pic=' ~ (base + 2 + shift)] %}
+                                              {% set ns.items = ns.items + [button ~ '.pic2=' ~ (base + shift)] %}
+                                            {% endfor %}
+                                            {{ ns.items }}
+                                        continue_on_error: true
+                                      - *delay_default
+                                      - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                        data:
+                                          page: fan
+                                          ids: >-
+                                            {{ range(1, preset_modes_raw | length + 1) | map("string") | map("regex_replace", "^", "mode_bt") | list }}
+                                          visible: true
+                                        continue_on_error: true
+                                      - *delay_default
+                                      - if: '{{ preset_modes_raw | length < 5 }}'
+                                        then:
+                                          - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                            data:
+                                              page: fan
+                                              ids: >-
+                                                {{ range(preset_modes_raw | length + 1, 6) | map("string") | map("regex_replace", "^", "mode_bt") | list }}
+                                              visible: false
+                                            continue_on_error: true
+                                          - *delay_default
 
                               ##### Always (construction and updates): push current preset_mode #####
                               - action: 'esphome.{{ nspanel_name }}_component_text_list'
@@ -9431,6 +9547,26 @@ actions:
                                   txt_list:
                                     - '{{ current_preset_mode }}'
                                 continue_on_error: true
+
+                              ##### Always: paint the mode buttons, active one highlighted #####
+                              - if: '{{ preset_buttons }}'
+                                then:
+                                  # The pictures are pushed by the page constructor, so an update
+                                  # only has to move the state of each button.
+                                  - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                    data:
+                                      page: mem
+                                      id: command
+                                      txt_list: >-
+                                        {% set ns = namespace(items=[]) %}
+                                        {% set running = states(entity_id) == "on" %}
+                                        {% for mode in preset_modes_raw %}
+                                          {% set active = running and mode == current_preset_mode %}
+                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".val=" ~ (1 if active else 0)] %}
+                                        {% endfor %}
+                                        {{ ns.items }}
+                                    continue_on_error: true
+                                  - *delay_default
 
                       - alias: Media player settings page
                         conditions: '{{ nspanel_event.page == pages.media_player }}'
@@ -11791,11 +11927,11 @@ actions:
                                 name: '{{ last_click_button.name if last_click_button.name is defined else None }}'
                           - condition: '{{ entity_id is string and entity_id | length >= 3 }}'
                           - *variable_entity
+                          - *variables_light_modes
                           - choose:
                               - alias: Long click
                                 conditions:
-                                  - '{{ nspanel_event.command == "long_click" or
-                                        entity_domain in domains_functionality.detailed_only }}'
+                                  - '{{ nspanel_event.command == "long_click" or click_opens_details }}'
                                   - '{{ entity_domain in domains_functionality.detailed }}'
                                   - >-
                                     {{
@@ -11805,7 +11941,7 @@ actions:
                                   - >-
                                     {{
                                       entity_domain != "fan" or
-                                      (state_attr(entity_id, "supported_features") | int(0) | bitwise_and(11) > 0)
+                                      (supported_features | bitwise_and(11) > 0)
                                     }}
                                 sequence:
                                   - variables:
@@ -12070,14 +12206,7 @@ actions:
                                 name: '{{ last_click_button.name if last_click_button.name is defined else None }}'
                           - *variables_light_modes
                           - condition: '{{ entity_id_valid }}'
-                          - if: >
-                              {{
-                                entity_domain in domains_functionality.detailed_only or
-                                (entity_domain == "cover" and supported_features | bitwise_and(132) > 0) or
-                                (entity_domain == "fan" and supported_features | bitwise_and(11) > 0) or
-                                (entity_domain == "light" and (color_mode_brightness or color_mode_color or color_mode_temp)) or
-                                (entity_domain == "timer")
-                              }}
+                          - if: '{{ click_opens_details or entity_domain == "timer" }}'
                             then:
                               - variables:
                                   back_page: '{{ pages.home }}'
