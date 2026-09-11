@@ -29,6 +29,7 @@ HMI_DIR="$(cd -- "${SCRIPT_DIR}/../.." &>/dev/null && pwd)"
 OUT_ROOT="${HMI_DIR}/dev/nextion2text"
 CACHE_DIR="${HMI_DIR}/dev/.cache"
 TOOL="${CACHE_DIR}/Nextion2Text-${NEXTION2TEXT_REF:0:7}.py"
+SHIM="${SCRIPT_DIR}/nextion2text_shim.py"
 
 PYTHON="${PYTHON:-python3}"
 
@@ -60,7 +61,7 @@ for hmi in "${HMI_FILES[@]}"; do
 
     # -d clears the output folder first, so removed pages disappear from the tree.
     # -p must come last: it takes a variable number of values.
-    "${PYTHON}" "${TOOL}" \
+    "${PYTHON}" "${SHIM}" "${TOOL}" \
         -i "${hmi}" \
         -o "${OUT_ROOT}/${name}" \
         -d \
