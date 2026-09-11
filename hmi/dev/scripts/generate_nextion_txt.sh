@@ -68,4 +68,17 @@ for hmi in "${HMI_FILES[@]}"; do
         -p visual unknown
 done  # for hmi
 
+# Drop output directories whose .hmi source no longer exists. Deliberately done
+# after every conversion succeeded, so an aborted run never deletes valid output.
+shopt -s nullglob
+for dir in "${OUT_ROOT}"/*/; do
+    name="$(basename "${dir}")"
+
+    if [[ ! -f "${HMI_DIR}/${name}.hmi" ]]; then
+        echo "Removing stale output for ${name}"
+        rm -rf "${dir}"
+    fi  # stale output
+done  # for dir
+shopt -u nullglob
+
 echo "Done. Output in ${OUT_ROOT}"
