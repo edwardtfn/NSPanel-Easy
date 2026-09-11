@@ -205,7 +205,7 @@ Text bt_reboot_icon
         Horizontal Alignment: right
         Vertical Alignment  : center
         Input Type          : character
-        Text                : îœˆ
+        Text                : 
         Max. Text Size      : 4
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -234,7 +234,7 @@ Text bt_sleep_icon
         Horizontal Alignment: right
         Vertical Alignment  : center
         Input Type          : character
-        Text                : î’±
+        Text                : 
         Max. Text Size      : 4
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -263,7 +263,7 @@ Text bt_theme_icon
         Horizontal Alignment: right
         Vertical Alignment  : center
         Input Type          : character
-        Text                : î”
+        Text                : 
         Max. Text Size      : 4
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -404,7 +404,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : î…˜
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

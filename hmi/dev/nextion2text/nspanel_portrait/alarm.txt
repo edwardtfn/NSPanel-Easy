@@ -114,7 +114,7 @@ Text icon_state
         Horizontal Alignment: center
         Vertical Alignment  : center
         Input Type          : character
-        Text                : î’—
+        Text                : 
         Max. Text Size      : 10
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -317,7 +317,7 @@ Text bt_home_icon
         Horizontal Alignment: center
         Vertical Alignment  : center
         Input Type          : character
-        Text                : îš‰
+        Text                : 
         Max. Text Size      : 3
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -346,7 +346,7 @@ Text bt_away_icon
         Horizontal Alignment: center
         Vertical Alignment  : center
         Input Type          : character
-        Text                : î¦œ
+        Text                : 
         Max. Text Size      : 3
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -375,7 +375,7 @@ Text bt_night_icon
         Horizontal Alignment: center
         Vertical Alignment  : center
         Input Type          : character
-        Text                : ï §
+        Text                : 
         Max. Text Size      : 3
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -404,7 +404,7 @@ Text bt_vacat_icon
         Horizontal Alignment: center
         Vertical Alignment  : center
         Input Type          : character
-        Text                : îšº
+        Text                : 
         Max. Text Size      : 3
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -433,7 +433,7 @@ Text bt_bypass_icon
         Horizontal Alignment: center
         Vertical Alignment  : center
         Input Type          : character
-        Text                : î¿
+        Text                : 
         Max. Text Size      : 3
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -462,7 +462,7 @@ Text bt_disarm_icon
         Horizontal Alignment: center
         Vertical Alignment  : center
         Input Type          : character
-        Text                : î¦
+        Text                : 
         Max. Text Size      : 3
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -589,7 +589,7 @@ Button button_back
         Horizontal Alignment      : center
         Vertical Alignment        : center
         State                     : unpressed
-        Text                      : î…˜
+        Text                      : 
         Max. Text Size            : 3
         Word wrap                 : disabled
         Horizontal Spacing        : 0

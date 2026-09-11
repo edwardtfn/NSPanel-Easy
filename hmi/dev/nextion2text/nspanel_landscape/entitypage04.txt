@@ -28,17 +28,17 @@ Page entitypage04
             {
                 if(is_entitypage01==1)
                 {
-                    page_index.txt+="â—‹"
+                    page_index.txt+="○"
                 }
                 if(is_entitypage02==1)
                 {
-                    page_index.txt+="â—‹"
+                    page_index.txt+="○"
                 }
                 if(is_entitypage03==1)
                 {
-                    page_index.txt+="â—‹"
+                    page_index.txt+="○"
                 }
-                page_index.txt+="â—"
+                page_index.txt+="●"
             }else
             {
                 vis page_index,0
@@ -781,7 +781,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : î…˜
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

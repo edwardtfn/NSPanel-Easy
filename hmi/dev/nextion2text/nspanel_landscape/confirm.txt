@@ -171,7 +171,7 @@ Button bclose
         Horizontal Alignment      : center
         Vertical Alignment        : top
         State                     : unpressed
-        Text                      : î…˜
+        Text                      : 
         Max. Text Size            : 10
         Word wrap                 : disabled
         Horizontal Spacing        : 0
@@ -206,7 +206,7 @@ Button bt_accept
         Horizontal Alignment      : center
         Vertical Alignment        : center
         State                     : unpressed
-        Text                      : î— 
+        Text                      : 
         Max. Text Size            : 3
         Word wrap                 : disabled
         Horizontal Spacing        : 0
@@ -248,7 +248,7 @@ Button bt_clear
         Horizontal Alignment      : center
         Vertical Alignment        : center
         State                     : unpressed
-        Text                      : î…™
+        Text                      : 
         Max. Text Size            : 10
         Word wrap                 : disabled
         Horizontal Spacing        : 0

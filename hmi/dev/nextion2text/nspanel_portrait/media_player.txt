@@ -25,20 +25,20 @@ Page media_player
             }
             // Page background
             media_player.pic=pic_background_main
-            // Top header text components â€” named because button_back (id 3)
+            // Top header text components — named because button_back (id 3)
             // sits between them and the volume range, breaking the sequence.
             page_label.picc=pic_background_main
             page_label.pco=color_pco_main
             icon_state.picc=pic_background_main
             icon_state.pco=color_pco_main
-            // Volume row text components (ids 5..8) â€” vol_slider (id 4) is
+            // Volume row text components (ids 5..8) — vol_slider (id 4) is
             // intentionally skipped; its colors are managed at design time.
             for(sys0=5;sys0<=8;sys0++)
             {
                 b[sys0].picc=pic_background_main
                 b[sys0].pco=color_pco_main
             }
-            // Track / artist / playback controls (ids 10..17) â€” time_progress
+            // Track / artist / playback controls (ids 10..17) — time_progress
             // (id 9) is intentionally skipped; its color is managed by the
             // ESPHome runtime which sets active blue or theme-aware dim per
             // playback state.
@@ -135,7 +135,7 @@ Text icon_state
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î„—
+        Text                    : 
         Max. Text Size          : 10
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -189,7 +189,7 @@ Text bt_vol_down
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -226,7 +226,7 @@ Text bt_vol_up
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : îœ
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -263,7 +263,7 @@ Text bt_mute
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : îž
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -415,7 +415,7 @@ Text bt_prev
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î’­
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -451,7 +451,7 @@ Text bt_play_pause
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -487,7 +487,7 @@ Text bt_next
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î’¬
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -523,7 +523,7 @@ Text bt_on_off
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î¤
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -616,7 +616,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : î…˜
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

@@ -183,7 +183,7 @@ Button bclose
         Horizontal Alignment      : center
         Vertical Alignment        : center
         State                     : unpressed
-        Text                      : î…˜
+        Text                      : 
         Max. Text Size            : 3
         Word wrap                 : disabled
         Horizontal Spacing        : 0
@@ -516,7 +516,7 @@ Button bclear
         Horizontal Alignment      : center
         Vertical Alignment        : center
         State                     : unpressed
-        Text                      : î™
+        Text                      : 
         Max. Text Size            : 3
         Word wrap                 : disabled
         Horizontal Spacing        : 0
@@ -590,7 +590,7 @@ Button benter
         Horizontal Alignment      : center
         Vertical Alignment        : center
         State                     : unpressed
-        Text                      : î„«
+        Text                      : 
         Max. Text Size            : 3
         Word wrap                 : disabled
         Horizontal Spacing        : 0
@@ -631,7 +631,7 @@ Button bview
         Horizontal Alignment      : center
         Vertical Alignment        : center
         State                     : unpressed
-        Text                      : îˆ‡
+        Text                      : 
         Max. Text Size            : 3
         Word wrap                 : disabled
         Horizontal Spacing        : 0

@@ -84,14 +84,14 @@ Variable (string) icon_play
     Attributes
         ID            : 21
         Scope         : local
-        Text          : î‰
+        Text          : 
         Max. Text Size: 3
     
 Variable (string) icon_pause
     Attributes
         ID            : 22
         Scope         : local
-        Text          : î£
+        Text          : 
         Max. Text Size: 3
     
 Text page_label
@@ -225,7 +225,7 @@ Text bt_play_icon
         Horizontal Alignment: center
         Vertical Alignment  : center
         Input Type          : character
-        Text                : î
+        Text                : 
         Max. Text Size      : 4
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -254,7 +254,7 @@ Text bt_cancel_icon
         Horizontal Alignment: center
         Vertical Alignment  : center
         Input Type          : character
-        Text                : î…•
+        Text                : 
         Max. Text Size      : 4
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -283,7 +283,7 @@ Text bt_finish_icon
         Horizontal Alignment: center
         Vertical Alignment  : center
         Input Type          : character
-        Text                : î„«
+        Text                : 
         Max. Text Size      : 4
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -359,7 +359,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : î…˜
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

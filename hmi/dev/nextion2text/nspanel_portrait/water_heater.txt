@@ -97,7 +97,7 @@ Variable (string) temp_unit
     Attributes
         ID            : 29
         Scope         : local
-        Text          : Â°
+        Text          : °
         Max. Text Size: 10
     
 Variable (int32) temp_gap
@@ -476,7 +476,7 @@ Text button01
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î¾‘
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -513,7 +513,7 @@ Text button02
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : îŒ©
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -550,7 +550,7 @@ Text button03
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : ïŠ
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -587,7 +587,7 @@ Text button04
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : îˆ·
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -624,7 +624,7 @@ Text button05
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : ï©‚
+        Text                    : 既
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -661,7 +661,7 @@ Text button06
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : ï©„
+        Text                    : 梅
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -698,7 +698,7 @@ Text button07
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î“„
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -735,7 +735,7 @@ Text button08
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î¤
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -846,7 +846,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : î…˜
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

@@ -182,7 +182,7 @@ Text bt_oscillate
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î©
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -213,7 +213,7 @@ Text power_button
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : î¤
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -244,7 +244,7 @@ Text mode_button
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : ï•
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -344,7 +344,7 @@ Button button_up
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : ï‘­
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -401,7 +401,7 @@ Button button_down
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : ï‘¬
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -458,7 +458,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : î…˜
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
