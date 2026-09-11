@@ -103,7 +103,7 @@ Variable (string) temp_unit
     Attributes
         ID            : 30
         Scope         : local
-        Text          : \xc2\xb0
+        Text          : Â°
         Max. Text Size: 10
     
 Variable (int32) temp_gap
@@ -476,7 +476,7 @@ Text button01
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\xbe\x91
+        Text                    : î¾‘
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -513,7 +513,7 @@ Text button02
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x8c\xa9
+        Text                    : îŒ©
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -550,7 +550,7 @@ Text button03
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xef\x90\x8a
+        Text                    : ïŠ
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -587,7 +587,7 @@ Text button04
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x88\xb7
+        Text                    : îˆ·
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -624,7 +624,7 @@ Text button05
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xef\xa9\x82
+        Text                    : ï©‚
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -661,7 +661,7 @@ Text button06
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xef\xa9\x84
+        Text                    : ï©„
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -698,7 +698,7 @@ Text button07
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x93\x84
+        Text                    : î“„
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -735,7 +735,7 @@ Text button08
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x90\xa4
+        Text                    : î¤
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -814,7 +814,7 @@ Slider slider
             target.txt+=temp_unit.txt
             timer0.en=1
         
-        Touch Move Event
+        codesslide
             temp_number0.val=slider.val*temp_step.val
             temp_number0.val+=temp_offset.val
             va0.val=temp_number0.val/10
@@ -846,7 +846,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x98
+        Text                                : î…˜
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

@@ -846,7 +846,7 @@ Text bt_qrcode
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x90\xb2
+        Text                    : î²
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -873,7 +873,7 @@ Text bt_entities
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\xb7\x8f
+        Text                    : î·
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -1212,7 +1212,7 @@ Text bt_utilities
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x8a\x99
+        Text                    : îŠ™
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -1293,7 +1293,7 @@ Text bt_icon
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x82\xae
+        Text                    : î‚®
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0

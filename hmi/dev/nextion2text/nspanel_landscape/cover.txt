@@ -305,7 +305,7 @@ Slider coverslider
             printh 00
             printh FF FF FF
         
-        Touch Move Event
+        codesslide
             covx coverslider.val,va1.txt,0,0
             cover_value.txt=va1.txt
             cover_value.txt+=home.units_sep.txt
@@ -349,7 +349,7 @@ Slider tiltslider
             printh 00
             printh FF FF FF
         
-        Touch Move Event
+        codesslide
             covx tiltslider.val,va1.txt,0,0
             tilt_value.txt=va1.txt
             tilt_value.txt+=home.units_sep.txt
@@ -393,7 +393,7 @@ Slider coverslider2
             printh 00
             printh FF FF FF
         
-        Touch Move Event
+        codesslide
             covx coverslider2.val,va1.txt,0,0
             cover_value_2.txt=va1.txt
             cover_value_2.txt+=home.units_sep.txt
@@ -421,7 +421,7 @@ Button cover_open
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xef\x84\x9d
+        Text                                : ï„
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -458,7 +458,7 @@ Button cover_close
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xef\x84\x9b
+        Text                                : ï„›
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -495,7 +495,7 @@ Button cover_stop
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x99\xa6
+        Text                                : î™¦
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -532,7 +532,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x98
+        Text                                : î…˜
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
