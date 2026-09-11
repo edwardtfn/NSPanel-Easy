@@ -19,47 +19,100 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  nextion2text:
+  # ===========================================================================
+  # Generation — executes pull request code, so it stays read-only
+  # ===========================================================================
+  generate:
     name: Regenerate text dumps from HMI
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.drift.outputs.changed }}
+    steps:
+      - name: Check out pull request head
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: '0'
+          repository: >-
+            ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      # Invoked through bash: the exec bit does not survive every Windows clone.
+      - name: Regenerate text dumps
+        run: bash hmi/dev/scripts/generate_nextion_txt.sh
+
+      # status, not diff: a new panel or page is untracked and invisible to diff.
+      - name: Detect drift
+        id: drift
+        run: |
+          if [ -z "$(git status --porcelain -- hmi/dev/nextion2text)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Nextion2Text output is up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git --no-pager status --short -- hmi/dev/nextion2text
+          fi
+
+      - name: Upload regenerated output
+        if: steps.drift.outputs.changed == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: nextion2text
+          path: hmi/dev/nextion2text
+          retention-days: 1
+
+  # ===========================================================================
+  # Write-back — never executes pull request code, so it may hold write access
+  # ===========================================================================
+  commit:
+    name: Commit regenerated output
+    needs: generate
+    if: >-
+      needs.generate.outputs.changed == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
+      - name: Check out pull request branch
         uses: actions/checkout@v7
         with:
           fetch-depth: '0'
           ref: ${{ github.head_ref }}
 
-      - name: Regenerate text dumps
-        run: hmi/dev/scripts/generate_nextion_txt.sh
+      # Wipe first so pages removed from the HMI disappear from the tree.
+      - name: Drop the previous output
+        run: rm -rf hmi/dev/nextion2text
 
-      - name: Detect drift
-        id: drift
-        run: |
-          if git diff --quiet -- hmi/dev/nextion2text; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Nextion2Text output is up to date."
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            git --no-pager diff --stat -- hmi/dev/nextion2text
-          fi
+      - name: Download regenerated output
+        uses: actions/download-artifact@v6
+        with:
+          name: nextion2text
+          path: hmi/dev/nextion2text
 
       - name: Commit regenerated output
-        if: >-
-          steps.drift.outputs.changed == 'true' &&
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.repository
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: Regenerate Nextion2Text output"
-          file_pattern: 'hmi/dev/nextion2text/**'
+          file_pattern: 'hmi/dev/nextion2text'
 
-      - name: Report drift that cannot be committed
-        if: >-
-          steps.drift.outputs.changed == 'true' &&
-          (github.event_name != 'pull_request' ||
-           github.event.pull_request.head.repo.full_name != github.repository)
+  # ===========================================================================
+  # Fork pull requests get a read-only token, so drift must be fixed by hand
+  # ===========================================================================
+  report:
+    name: Report uncommittable drift
+    needs: generate
+    if: >-
+      needs.generate.outputs.changed == 'true' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name != github.repository)
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report drift
         run: |
           echo "::error::Nextion2Text output is out of date. Run" \
                "hmi/dev/scripts/generate_nextion_txt.sh and commit the result."
