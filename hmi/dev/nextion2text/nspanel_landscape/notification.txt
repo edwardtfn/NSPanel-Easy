@@ -122,7 +122,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x98
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -154,7 +154,7 @@ Button bt_accept
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x97\xa0
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -182,7 +182,7 @@ Button bt_clear
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x99
+        Text                                : 
         Max. Text Size                      : 10
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

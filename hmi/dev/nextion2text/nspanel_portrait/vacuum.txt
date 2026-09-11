@@ -212,7 +212,7 @@ Text bt_start_pause
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x90\x8d
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -243,7 +243,7 @@ Text bt_stop
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x99\xa6
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -274,7 +274,7 @@ Text bt_return
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\xbe\x9b
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -322,7 +322,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x98
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

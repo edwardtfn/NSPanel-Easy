@@ -28,16 +28,16 @@ Page buttonpage03
             page_index.txt=""
             if(is_buttonpage01>0)
             {
-                page_index.txt+="\xe2\x97\x8b"
+                page_index.txt+="○"
             }
             if(is_buttonpage02>0)
             {
-                page_index.txt+="\xe2\x97\x8b"
+                page_index.txt+="○"
             }
-            page_index.txt+="\xe2\x97\x8f"  // Current page (filled)
+            page_index.txt+="●"  // Current page (filled)
             if(is_buttonpage04>0)
             {
-                page_index.txt+="\xe2\x97\x8b"
+                page_index.txt+="○"
             }
             // Light mode only: set background images and foreground colors
             if(theme==1)
@@ -1062,7 +1062,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x98
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

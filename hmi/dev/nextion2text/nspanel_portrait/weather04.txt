@@ -426,7 +426,7 @@ Text page_index
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xe2\x97\x8b\xe2\x97\x8b\xe2\x97\x8b\xe2\x97\x8f\xe2\x97\x8b
+        Text                    : ○○○●○
         Max. Text Size          : 15
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -470,7 +470,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x98
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

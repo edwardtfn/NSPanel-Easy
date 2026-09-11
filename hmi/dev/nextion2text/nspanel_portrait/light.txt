@@ -460,7 +460,7 @@ Text power_button
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x90\xa4
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -491,7 +491,7 @@ Text effect_button
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x99\xb3
+        Text                    : 
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -595,7 +595,7 @@ Slider lightslider
             printh 00
             printh FF FF FF
         
-        Touch Move Event
+        codesslide
             covx lightslider.val,va1.txt,0,0
             light_value.txt=va1.txt
             light_value.txt+=home.units_sep.txt
@@ -646,7 +646,7 @@ Slider tempslider
             printh 00
             printh FF FF FF
         
-        Touch Move Event
+        codesslide
             sys0=tempslider.minval+tempslider.maxval-tempslider.val
             covx sys0,va1.txt,0,0
             temp_value.txt=va1.txt
@@ -678,7 +678,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x98
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

@@ -2,3 +2,4 @@
 *.HMI binary
 *.sh text eol=lf
 *.yaml text eol=lf
+hmi/dev/nextion2text/**/*.txt text eol=lf

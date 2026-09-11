@@ -20,10 +20,10 @@ Page theme_apply
         Preinitialize Event
             if(display_mode==2)
             {
-                xstr 135,215,50,50,10,RED,BLACK,1,1,3,"\xee\x94\x8d"
+                xstr 135,215,50,50,10,RED,BLACK,1,1,3,""
             }else
             {
-                xstr 215,135,50,50,10,RED,BLACK,1,1,3,"\xee\x94\x8d"
+                xstr 215,135,50,50,10,RED,BLACK,1,1,3,""
             }
             if(theme==1)
             {

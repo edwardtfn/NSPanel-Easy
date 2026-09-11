@@ -205,7 +205,7 @@ Text home_icon
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xef\xa4\x83
+        Text                    : 賈
         Max. Text Size          : 4
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -313,7 +313,7 @@ Text grid_icon
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\xb4\xbd
+        Text                    : 
         Max. Text Size          : 4
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -421,7 +421,7 @@ Text group01_icon
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x98\xa4
+        Text                    : 
         Max. Text Size          : 4
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -529,7 +529,7 @@ Text group02_icon
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x98\xa4
+        Text                    : 
         Max. Text Size          : 4
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -637,7 +637,7 @@ Text group03_icon
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x98\xa4
+        Text                    : 
         Max. Text Size          : 4
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -745,7 +745,7 @@ Text group04_icon
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x98\xa4
+        Text                    : 
         Max. Text Size          : 4
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -853,7 +853,7 @@ Text group05_icon
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x98\xa4
+        Text                    : 
         Max. Text Size          : 4
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -961,7 +961,7 @@ Text group06_icon
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x98\xa4
+        Text                    : 
         Max. Text Size          : 4
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -1245,7 +1245,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x98
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

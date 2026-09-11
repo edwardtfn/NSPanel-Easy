@@ -205,7 +205,7 @@ Text bt_reboot_icon
         Horizontal Alignment: right
         Vertical Alignment  : center
         Input Type          : character
-        Text                : \xee\x9c\x88
+        Text                : 
         Max. Text Size      : 4
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -234,7 +234,7 @@ Text bt_sleep_icon
         Horizontal Alignment: right
         Vertical Alignment  : center
         Input Type          : character
-        Text                : \xee\x92\xb1
+        Text                : 
         Max. Text Size      : 4
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -263,7 +263,7 @@ Text bt_theme_icon
         Horizontal Alignment: right
         Vertical Alignment  : center
         Input Type          : character
-        Text                : \xee\x94\x8d
+        Text                : 
         Max. Text Size      : 4
         Word wrap           : disabled
         Horizontal Spacing  : 0
@@ -345,7 +345,7 @@ Slider brightslider
         Touch Release Event
             tm_bright.en=1
         
-        Touch Move Event
+        codesslide
             covx brightslider.val,bright_text.txt,0,0
             bright_text.txt+="%"
             dim=brightslider.val
@@ -378,7 +378,7 @@ Slider dimslider
         Touch Release Event
             tm_dim.en=1
         
-        Touch Move Event
+        codesslide
             covx dimslider.val,dim_text.txt,0,0
             dim_text.txt+="%"
         
@@ -404,7 +404,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x98
+        Text                                : 
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
