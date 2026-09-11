@@ -1,0 +1,67 @@
+---
+name: Generate Nextion2Text
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+    paths:
+      - 'hmi/**.hmi'
+      - 'hmi/dev/nextion2text/**'
+      - 'hmi/dev/scripts/generate_nextion_txt.sh'
+      - '.github/workflows/generate_nextion_txt.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nextion2text:
+    name: Regenerate text dumps from HMI
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: '0'
+          ref: ${{ github.head_ref }}
+
+      - name: Regenerate text dumps
+        run: hmi/dev/scripts/generate_nextion_txt.sh
+
+      - name: Detect drift
+        id: drift
+        run: |
+          if git diff --quiet -- hmi/dev/nextion2text; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Nextion2Text output is up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git --no-pager diff --stat -- hmi/dev/nextion2text
+          fi
+
+      - name: Commit regenerated output
+        if: >-
+          steps.drift.outputs.changed == 'true' &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: Regenerate Nextion2Text output"
+          file_pattern: 'hmi/dev/nextion2text/**'
+
+      - name: Report drift that cannot be committed
+        if: >-
+          steps.drift.outputs.changed == 'true' &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name != github.repository)
+        run: |
+          echo "::error::Nextion2Text output is out of date. Run" \
+               "hmi/dev/scripts/generate_nextion_txt.sh and commit the result."
+          exit 1
+...

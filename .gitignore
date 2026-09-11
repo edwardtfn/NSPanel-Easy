@@ -17,3 +17,6 @@ SyncNextion2TXT.cmd
 /components/nspanel_easy/__pycache__
 
 local
+
+# Pinned Nextion2Text copy fetched by generate_nextion_txt.sh
+/hmi/dev/.cache
