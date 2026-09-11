@@ -182,7 +182,7 @@ Text bt_oscillate
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x81\xa9
+        Text                    : î©
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -213,7 +213,7 @@ Text power_button
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xee\x90\xa4
+        Text                    : î¤
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -244,7 +244,7 @@ Text mode_button
         Horizontal Alignment    : center
         Vertical Alignment      : center
         Input Type              : character
-        Text                    : \xef\x95\x81
+        Text                    : ï•
         Max. Text Size          : 3
         Word wrap               : disabled
         Horizontal Spacing      : 0
@@ -301,7 +301,7 @@ Slider fanslider
             }
             timer0.en=1
         
-        Touch Move Event
+        codesslide
             sys0=100*fanslider.val/fanslider.maxval
             covx sys0,va0.txt,0,0
             fan_value.txt=va0.txt
@@ -344,7 +344,7 @@ Button button_up
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xef\x91\xad
+        Text                                : ï‘­
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -401,7 +401,7 @@ Button button_down
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xef\x91\xac
+        Text                                : ï‘¬
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -458,7 +458,7 @@ Button button_back
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x85\x98
+        Text                                : î…˜
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0

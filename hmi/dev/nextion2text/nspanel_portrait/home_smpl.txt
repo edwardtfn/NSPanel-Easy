@@ -460,7 +460,7 @@ Button b0
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x8c\xb4
+        Text                                : îŒ´
         Max. Text Size                      : 50
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -492,7 +492,7 @@ Button b1
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x82\xab
+        Text                                : î‚«
         Max. Text Size                      : 5
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -524,7 +524,7 @@ Button b2
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x8b\x8a
+        Text                                : î‹Š
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
@@ -556,7 +556,7 @@ Button b3
         Horizontal Alignment                : center
         Vertical Alignment                  : center
         State                               : unpressed
-        Text                                : \xee\x9a\x89
+        Text                                : îš‰
         Max. Text Size                      : 3
         Word wrap                           : disabled
         Horizontal Spacing                  : 0
