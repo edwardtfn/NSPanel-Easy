@@ -12231,14 +12231,24 @@ actions:
                                 name: '{{ last_click_button.name if last_click_button.name is defined else None }}'
                           - *variables_light_modes
                           - condition: '{{ entity_id_valid }}'
-                          - if: '{{ click_opens_details or entity_domain == "timer" }}'
-                            then:
-                              - variables:
-                                  back_page: '{{ pages.home }}'
-                              - *variable_entity
-                              - *entity_details_show
-                            else:
-                              - *short_press_action_call
+                          - choose:
+                              - alias: Long click
+                                conditions:
+                                  - '{{ nspanel_event.command == "long_click" or click_opens_details or entity_domain == "timer" }}'
+                                  - '{{ entity_domain in domains_functionality.detailed }}'
+                                  - '{{ entity_domain != "light" or light_has_details }}'
+                                  - '{{ entity_domain != "fan" or supported_features | bitwise_and(11) > 0 }}'
+                                sequence:
+                                  - variables:
+                                      back_page: '{{ pages.home }}'
+                                  - *variable_entity
+                                  - *entity_details_show
+                              - alias: Short click
+                                conditions:
+                                  - '{{ nspanel_event.command == "short_click" }}'
+                                  - '{{ entity_domain not in domains_functionality.detailed_only }}'
+                                sequence:
+                                  - *short_press_action_call
 
               - alias: Versions mismatch
                 conditions:
