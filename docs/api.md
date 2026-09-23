@@ -264,6 +264,12 @@ Also used by page modules that store list-shaped data in memory (e.g. the option
 >
 > - `command` — sends each non-empty element of `txt_list` to the display as a raw Nextion command,
 >   in the order given (provided by `nspanel_esphome_hw_display.yaml`, part of `nspanel_esphome_core.yaml`)
+> - `details_overlap` — sets the title and icon of the next entity details page opened with
+>   [`entity_details_show`](#entity-details-show-action-entity_details_show).
+>   `txt_list` is `[entity, title, icon]`, where `entity` must match the entity passed to `entity_details_show`,
+>   `title` is the page title and `icon` is an MDI icon (`mdi:<name>`); leave `title` or `icon` blank to use the entity's own.
+>   The values are reported back to the Blueprint when the page opens and are cleared when the panel leaves the entity details pages
+>   (provided by `nspanel_esphome_api.yaml`, part of `nspanel_esphome_core.yaml`)
 >
 > **Before using `page: mem` in your automations:**
 >
@@ -432,9 +438,28 @@ data:
   back_page: "buttonpage01"
 ```
 
+To show a custom title or icon on the details page, set them with `component_text_list` right before calling this action:
+
+```yaml
+action: esphome.<your_panel_name>_component_text_list
+data:
+  page: mem
+  id: details_overlap
+  txt_list:
+    - "light.living_room"
+    - "Reading light"
+    - "mdi:floor-lamp"
+```
+
+<!-- markdownlint-disable MD028 -->
+> [!NOTE]
+> The title and icon are rendered by the NSPanel Easy Blueprint when the page opens.
+> Without the Blueprint, or when the entity does not match, the entity's own name and icon are used.
+
 > [!NOTE]
 > Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
 > This setup provides a direct and user-friendly way to access and return from detailed entity information, enhancing the interface's usability.
+<!-- markdownlint-enable MD028 -->
 
 ### Hardware Button State Indication Action: `hw_button_state`
 

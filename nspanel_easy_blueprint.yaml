@@ -8463,6 +8463,31 @@ actions:
                         entity_id: '{{ entity_id }}'
                         entity_id_valid: '{{ entity_id_valid }}'
                         entity_domain: '{{ entity_id.split(".")[0] if entity_id_valid else "" }}'
+                      # Title and icon of the button that opened an entity details page. The click that
+                      # opened the page runs in a separate automation run, so the click run stores them
+                      # on the panel (`details_overlap` memory var) and the panel reports them back here,
+                      # only when they belong to the entity shown.
+                      details_overlap:
+                        icon: >-
+                          {{
+                            nspanel_event.icon
+                            if
+                              nspanel_event.icon is defined and
+                              nspanel_event.icon is string and
+                              nspanel_event.icon is match "mdi:" and
+                              nspanel_event.icon.split("mdi:")[1] in all_icons
+                            else None
+                          }}
+                        icon_color: '{{ None }}'
+                        name: >-
+                          {{
+                            nspanel_event.title
+                            if
+                              nspanel_event.title is defined and
+                              nspanel_event.title is string and
+                              nspanel_event.title | length > 0
+                            else None
+                          }}
 
                   - choose:
                       - alias: Home page
@@ -8851,6 +8876,14 @@ actions:
                             variables:
                               entity_id: '{{ original_state.entity_id }}'
                               entity_id_valid: '{{ original_state.entity_id_valid }}'
+                              # Set on every refresh, so the configured title and icon are not lost when
+                              # another step of this run reassigns `overlap`.
+                              overlap: >-
+                                {{
+                                  details_overlap
+                                  if details_overlap is defined
+                                  else {"icon": None, "icon_color": None, "name": None}
+                                }}
                           - *variable_entity
                           - &entity_details_title_with_icon
                             alias: Fill title of entity details page
@@ -9747,7 +9780,17 @@ actions:
                                 }}
                               hvac_modes: '{{ state_attr(climate_entity, "hvac_modes") if settings_entity_domain == "climate" }}'
                               friendly_name_raw: '{{ state_attr(climate_entity, "friendly_name") }}'
-                              friendly_name: '{{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}'
+                              friendly_name: >-
+                                {%- if
+                                      details_overlap is defined and
+                                      details_overlap.name is string and
+                                      details_overlap.name | length > 0 and
+                                      climate_entity == original_state.entity_id
+                                -%}
+                                  {{ details_overlap.name }}
+                                {%- else -%}
+                                  {{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}
+                                {%- endif -%}
                           - if:
                               - '{{ page_constructor }}'
                               - '{{ not embedded_climate }}'
@@ -10116,7 +10159,17 @@ actions:
                                   else []
                                 }}
                               friendly_name_raw: '{{ state_attr(water_heater_entity, "friendly_name") }}'
-                              friendly_name: '{{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}'
+                              friendly_name: >-
+                                {%- if
+                                      details_overlap is defined and
+                                      details_overlap.name is string and
+                                      details_overlap.name | length > 0 and
+                                      water_heater_entity == original_state.entity_id
+                                -%}
+                                  {{ details_overlap.name }}
+                                {%- else -%}
+                                  {{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}
+                                {%- endif -%}
 
                           - condition: '{{ settings_entity_domain == "water_heater" }}'
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
@@ -11643,6 +11696,36 @@ actions:
                                               back_page: '{{ pages.home }}'
                                           - &entity_details_show
                                             sequence:
+                                              # Store the title and icon of the button being opened on the panel. The
+                                              # panel reports them back with the page change, where the details page is
+                                              # rendered. Blank values clear an override left by a previous button.
+                                              - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                                data:
+                                                  page: mem
+                                                  id: details_overlap
+                                                  txt_list:
+                                                    - '{{ "embedded_climate" if entity_id == thermostat_embedded else entity_id }}'
+                                                    - >-
+                                                      {{
+                                                        overlap.name
+                                                        if
+                                                          overlap is defined and
+                                                          overlap.name is defined and
+                                                          overlap.name is string
+                                                        else ""
+                                                      }}
+                                                    - >-
+                                                      {{
+                                                        overlap.icon
+                                                        if
+                                                          overlap is defined and
+                                                          overlap.icon is defined and
+                                                          overlap.icon is string and
+                                                          overlap.icon is match "mdi:" and
+                                                          overlap.icon.split("mdi:")[1] in all_icons
+                                                        else ""
+                                                      }}
+                                                continue_on_error: true
                                               - action: 'esphome.{{ action_prefix }}_entity_details_show'
                                                 data:
                                                   entity: '{{ "embedded_climate" if entity_id == thermostat_embedded else entity_id }}'

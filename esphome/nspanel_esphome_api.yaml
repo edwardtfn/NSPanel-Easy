@@ -99,6 +99,19 @@ api:
               return;
             }
 
+            // Title and icon for the next entity details page: [entity, title, icon].
+            // Sent by the Blueprint right before `entity_details_show`, so it is stored here,
+            // synchronously, instead of in the queued script: a busy queue could otherwise
+            // store it after the page change that reports it back.
+            if (page == "mem" && id == "details_overlap") {
+              details_overlap.entity = txt_list[0];
+              details_overlap.title = (txt_list.size() > 1) ? txt_list[1] : "";
+              details_overlap.icon = (txt_list.size() > 2) ? txt_list[2] : "";
+              ESP_LOGV("${TAG_API}", "  details_overlap: '%s', '%s', '%s'", details_overlap.entity.c_str(),
+                       details_overlap.title.c_str(), details_overlap.icon.c_str());
+              return;
+            }  // if (page == "mem" && id == "details_overlap")
+
             action_component_text_list->execute(
               page.c_str(),
               id.c_str(),
