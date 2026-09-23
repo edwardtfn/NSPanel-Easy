@@ -19,6 +19,7 @@ substitutions:
   TAG_SUB: nspanel.api.sub
 
   api_subscribe_max: '128'               # Maximum number of bindings. Storage is allocated to the configured count, not this.
+  api_subscribe_entity_len: '96'         # Buffer size for an entity_id, including the null terminator. Raise it if a longer entity_id is truncated.
   api_subscribe_debounce: '10s'          # Seconds of quiet after the last binding before a restart is applied.
   api_subscribe_timeout: '120s'          # Seconds without an end marker before committing the push unverified.
 
@@ -26,6 +27,7 @@ esphome:
   build_flags:
     - -D NSPANEL_EASY_SUBSCRIBE
     - -D NSPANEL_EASY_SUB_MAX=${api_subscribe_max}
+    - -D NSPANEL_EASY_SUB_ENTITY_LEN=${api_subscribe_entity_len}
 
 api:
   homeassistant_states: true  # Required: enables USE_API_HOMEASSISTANT_STATES
