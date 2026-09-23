@@ -8463,6 +8463,38 @@ actions:
                         entity_id: '{{ entity_id }}'
                         entity_id_valid: '{{ entity_id_valid }}'
                         entity_domain: '{{ entity_id.split(".")[0] if entity_id_valid else "" }}'
+                      # Title and icon configured on the button that points to the entity shown on an
+                      # entity details page. The click that opened the page runs in a separate
+                      # automation run, so the button that was pressed is unknown here and the
+                      # override is resolved from the configuration by entity instead. Each field is
+                      # taken from the first button that sets it: Home page custom buttons first,
+                      # then button pages in order.
+                      details_overlap: >-
+                        {%- set ns = namespace(name=None, icon=None) -%}
+                        {%- if entity_id_valid and nspanel_event.page in pages.detailed_entity -%}
+                          {%- for button in home_page.custom_buttons + buttons_pages.buttons -%}
+                            {%- if button.entity is defined and button.entity is string and button.entity == entity_id -%}
+                              {%- if
+                                    ns.name is none and
+                                    button.name is defined and
+                                    button.name is string and
+                                    button.name | length > 0
+                              -%}
+                                {%- set ns.name = button.name -%}
+                              {%- endif -%}
+                              {%- if
+                                    ns.icon is none and
+                                    button.icon is defined and
+                                    button.icon is string and
+                                    button.icon is match "mdi:" and
+                                    button.icon.split("mdi:")[1] in all_icons
+                              -%}
+                                {%- set ns.icon = button.icon -%}
+                              {%- endif -%}
+                            {%- endif -%}
+                          {%- endfor -%}
+                        {%- endif -%}
+                        {{ {"icon": ns.icon, "icon_color": None, "name": ns.name} }}
 
                   - choose:
                       - alias: Home page
@@ -8851,6 +8883,14 @@ actions:
                             variables:
                               entity_id: '{{ original_state.entity_id }}'
                               entity_id_valid: '{{ original_state.entity_id_valid }}'
+                              # Set on every refresh, so the configured title and icon are not lost when
+                              # another step of this run reassigns `overlap`.
+                              overlap: >-
+                                {{
+                                  details_overlap
+                                  if details_overlap is defined
+                                  else {"icon": None, "icon_color": None, "name": None}
+                                }}
                           - *variable_entity
                           - &entity_details_title_with_icon
                             alias: Fill title of entity details page
@@ -9747,7 +9787,17 @@ actions:
                                 }}
                               hvac_modes: '{{ state_attr(climate_entity, "hvac_modes") if settings_entity_domain == "climate" }}'
                               friendly_name_raw: '{{ state_attr(climate_entity, "friendly_name") }}'
-                              friendly_name: '{{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}'
+                              friendly_name: >-
+                                {%- if
+                                      details_overlap is defined and
+                                      details_overlap.name is string and
+                                      details_overlap.name | length > 0 and
+                                      climate_entity == original_state.entity_id
+                                -%}
+                                  {{ details_overlap.name }}
+                                {%- else -%}
+                                  {{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}
+                                {%- endif -%}
                           - if:
                               - '{{ page_constructor }}'
                               - '{{ not embedded_climate }}'
@@ -10116,7 +10166,17 @@ actions:
                                   else []
                                 }}
                               friendly_name_raw: '{{ state_attr(water_heater_entity, "friendly_name") }}'
-                              friendly_name: '{{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}'
+                              friendly_name: >-
+                                {%- if
+                                      details_overlap is defined and
+                                      details_overlap.name is string and
+                                      details_overlap.name | length > 0 and
+                                      water_heater_entity == original_state.entity_id
+                                -%}
+                                  {{ details_overlap.name }}
+                                {%- else -%}
+                                  {{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}
+                                {%- endif -%}
 
                           - condition: '{{ settings_entity_domain == "water_heater" }}'
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
