@@ -356,6 +356,7 @@ script:
       - lambda: |-
           if (!display_entity_keep) {
             detailed_entity->publish_state("");
+            details_overlap = DetailsOverlap{};
             disp1->send_command_printf("back_page_id=%" PRIu8, get_page_id("home"));
           } else {  // Report detailed entity
             ESP_LOGD("${TAG_HW_DISPLAY}", "Entity shown: %s", detailed_entity->state.c_str());
@@ -370,10 +371,16 @@ script:
           // Report new page to Blueprint
           if (last_page_id != UINT8_MAX and last_page_id != new_page_id) {
             ESP_LOGV("${TAG_HW_DISPLAY}", "Report new page to Blueprint");
-            fire_ha_event("page_changed", {
+            std::map<std::string, std::string> event_data = {
               {"page", page_names[new_page_id]},
-              {"entity", detailed_entity->state.c_str()}
-            });
+              {"entity", detailed_entity->state}
+            };
+            // Title and icon of the button that opened this entity details page, if any
+            if (!details_overlap.entity.empty() and details_overlap.entity == detailed_entity->state) {
+              event_data["title"] = details_overlap.title;
+              event_data["icon"] = details_overlap.icon;
+            }  // if (details_overlap applies)
+            fire_ha_event("page_changed", event_data);
           }
 
           // A resync armed while the boot page was showing cannot be spent
