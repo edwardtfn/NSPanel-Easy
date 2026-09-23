@@ -33,9 +33,17 @@ SubRuntime *sub_runtime = nullptr;
 SubRenderFn *sub_renderers = nullptr;
 uint16_t sub_count = 0;
 
-/// @brief Header persisted alongside the binding chunks.
+/**
+ * @brief Header persisted alongside the binding chunks.
+ *
+ * version and entity_len together form the persistence contract. The chunk
+ * blobs are sized from SUB_ENTITY_LEN, so a build whose entity length differs
+ * from the stored one cannot read them; checking here turns that into one
+ * explicit discard-and-repush instead of a run of "chunk missing" warnings.
+ */
 struct SubHeader {
   uint8_t version;     ///< SUB_FORMAT_VERSION at the time of writing
+  uint8_t entity_len;  ///< SUB_ENTITY_LEN at the time of writing
   uint16_t count;      ///< Number of persisted bindings
   uint8_t unverified;  ///< Consecutive commits that never received an end marker
 };
@@ -97,14 +105,16 @@ static ESPPreferenceObject sub_chunk_pref(uint16_t chunk) {
  * @param dest Destination buffer.
  * @param size Size of the destination buffer.
  * @param src Source string, may be nullptr.
+ * @return true when the whole source fitted; false when it was truncated.
  */
-static void sub_copy(char *dest, size_t size, const char *src) {
+static bool sub_copy(char *dest, size_t size, const char *src) {
   if (src == nullptr) {
     dest[0] = '\0';
-    return;
+    return true;
   }
   strncpy(dest, src, size - 1);
   dest[size - 1] = '\0';
+  return strlen(src) < size;
 }
 
 /**
@@ -208,6 +218,13 @@ uint16_t sub_load() {
   if (header.version != SUB_FORMAT_VERSION) {
     ESP_LOGW(TAG, "Persisted bindings use format %" PRIu8 ", expected %" PRIu8 "; discarding", header.version,
              SUB_FORMAT_VERSION);
+    sub_unverified = 0;
+    return 0;
+  }
+  if (header.entity_len != SUB_ENTITY_LEN) {
+    // The chunk blobs are sized from SUB_ENTITY_LEN and cannot be reinterpreted.
+    ESP_LOGW(TAG, "Persisted bindings use entity length %" PRIu8 ", expected %" PRIu8 "; discarding", header.entity_len,
+             static_cast<uint8_t>(SUB_ENTITY_LEN));
     sub_unverified = 0;
     return 0;
   }
@@ -338,7 +355,15 @@ void sub_push_binding(const char *page, const char *component, const char *entit
   }
 
   SubBinding &staged = sub_staging[sub_staged];
-  sub_copy(staged.entity, sizeof(staged.entity), entity);
+  // A truncated entity_id names an entity that does not exist, so the binding
+  // subscribes to nothing and the component never updates. The slot is still
+  // staged: dropping it would desync the count sub_push_end() validates, which
+  // would discard the whole push instead of the one binding that cannot work.
+  if (!sub_copy(staged.entity, sizeof(staged.entity), entity)) {
+    ESP_LOGW(TAG, "%s.%s: entity_id is %zu chars, over the %" PRIu8 " limit; '%s' will not update", page, component,
+             strlen(entity), static_cast<uint8_t>(SUB_ENTITY_LEN - 1), entity);
+    ESP_LOGW(TAG, "Raise api_subscribe_entity_len to at least %zu to bind it", strlen(entity) + 1);
+  }
   sub_copy(staged.page, sizeof(staged.page), page);
   sub_copy(staged.component, sizeof(staged.component), component);
   sub_copy(staged.attribute, sizeof(staged.attribute), attribute);
@@ -379,7 +404,7 @@ bool sub_persist(bool verified) {
   // described the old set -- a reboot would then load a mixture. Publishing an
   // empty header first means any later failure leaves the panel with no
   // bindings: visibly wrong, but never silently inconsistent.
-  const SubHeader invalid{SUB_FORMAT_VERSION, 0, sub_unverified};
+  const SubHeader invalid{SUB_FORMAT_VERSION, SUB_ENTITY_LEN, 0, sub_unverified};
   if (!sub_header_pref().save(&invalid) || !global_preferences->sync()) {
     ESP_LOGE(TAG, "Could not invalidate the stored header; leaving the saved set untouched");
     return false;  // Nothing was written, so the previous set is still coherent
@@ -411,7 +436,7 @@ bool sub_persist(bool verified) {
   uint8_t committed_unverified = sub_unverified;
   if (ok) {
     committed_unverified = verified ? 0 : static_cast<uint8_t>(sub_unverified + 1);
-    const SubHeader header{SUB_FORMAT_VERSION, sub_staged, committed_unverified};
+    const SubHeader header{SUB_FORMAT_VERSION, SUB_ENTITY_LEN, sub_staged, committed_unverified};
     ok = sub_header_pref().save(&header);
   }
 
@@ -545,6 +570,7 @@ void sub_render_all() {
 void sub_dump_config() {
   ESP_LOGCONFIG(TAG, "Subscriptions");
   ESP_LOGCONFIG(TAG, "  Bindings: %" PRIu16 " of %" PRIu16, sub_count, SUB_MAX);
+  ESP_LOGCONFIG(TAG, "  Entity length: %" PRIu8 " chars", static_cast<uint8_t>(SUB_ENTITY_LEN - 1));
   if (sub_unverified > 0) {
     ESP_LOGCONFIG(TAG, "  Unverified commits: %" PRIu8, sub_unverified);
   }
