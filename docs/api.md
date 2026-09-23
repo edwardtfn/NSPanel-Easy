@@ -451,6 +451,7 @@ data:
     - "mdi:floor-lamp"
 ```
 
+<!-- markdownlint-disable MD028 -->
 > [!NOTE]
 > The title and icon are rendered by the NSPanel Easy Blueprint when the page opens.
 > Without the Blueprint, or when the entity does not match, the entity's own name and icon are used.
@@ -458,6 +459,7 @@ data:
 > [!NOTE]
 > Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
 > This setup provides a direct and user-friendly way to access and return from detailed entity information, enhancing the interface's usability.
+<!-- markdownlint-enable MD028 -->
 
 ### Hardware Button State Indication Action: `hw_button_state`
 
