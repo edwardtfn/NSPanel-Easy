@@ -181,7 +181,7 @@ script:
   # Order is:
   #   1. Write the page-dependent picker-local variables.
   #   2. Write the option labels into opt0..opt7.
-  #   3. Write the page indicator and navigation icons (only when there is more than one page).
+  #   3. Write the page indicator (only when there is more than one page).
   #   4. Trigger init timer (hides all, draws card, shows header, populated buttons and footer).
   - id: popup_select_render
     mode: queued
@@ -220,11 +220,10 @@ script:
             disp1->send_command_printf("opt%" PRIu8 ".txt=\"%s\"", i, escaped.c_str());
           }
 
-          // 3. Page indicator and navigation icons (footer is only shown by the display when paged).
+          // 3. Page indicator (footer is only shown by the display when paged).
+          //    The navigation icons (btn_prev/btn_next) are set on the TFT.
           if (page_count > 1) {
             disp1->send_command_printf("lbl_hint.txt=\"%" PRIu8 "/%" PRIu8 "\"", popup_select_page + 1, page_count);
-            disp1->send_command_printf("btn_prev.txt=\"%s\"", Icons::MDI_CHEVRON_UP);
-            disp1->send_command_printf("btn_next.txt=\"%s\"", Icons::MDI_CHEVRON_DOWN);
           }  // if (page_count > 1)
 
           // 4. Trigger init (hides all, draws card, shows header, populated opt buttons and footer, kicks render).
