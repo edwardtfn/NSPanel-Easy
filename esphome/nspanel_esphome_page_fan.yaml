@@ -40,6 +40,19 @@ display:
                     std::string("${LOCALIZATION[LANG].fan.select_preset_mode}")
                   );
                   break;
+                case 16:  // mode_bt1
+                case 17:  // mode_bt2
+                case 18:  // mode_bt3
+                case 19:  // mode_bt4
+                case 20:  // mode_bt5
+                  // Only report which slot was pressed; the Blueprint decides whether it
+                  // is a speed or a preset mode, based on the entity.
+                  fire_ha_event("button_click", {
+                    {"page", "fan"},
+                    {"component", "mode_bt" + std::to_string(component_id - 15)},
+                    {"entity", detailed_entity->state}
+                  });
+                  break;
               }
             }
 
@@ -81,33 +94,7 @@ script:
                 {"entity", detailed_entity->state.c_str()}
               });
             }
-          } else if (params[0] == "fan" and params[1] == "preset_index") {
-            // CSV Format: fan,preset_index,<index into preset_modes>
-            // An index is sent instead of the name, as a preset mode name may
-            // contain the separator this protocol uses.
-
-            if (params_count != 3) {
-              ESP_LOGW("${TAG_PAGE_FAN}", "Bad params");
-              return;
-            }
-
-            const std::string& value = params[2];
-            char* end = nullptr;
-            long index = strtol(value.c_str(), &end, 10);
-            if (end == value.c_str() || *end != '\0' || index < 0) {
-              ESP_LOGW("${TAG_PAGE_FAN}", "Bad preset index: %s", value.c_str());
-              return;
-            }
-
-            ESP_LOGV("${TAG_PAGE_FAN}", "Fan preset mode index: %ld", index);
-
-            fire_ha_event("action_call", {
-              {"action", "fan.set_preset_mode"},
-              {"key", "preset_index"},
-              {"value", value.c_str()},
-              {"entity", detailed_entity->state.c_str()}
-            });
-          }
+          }  // if (params[0] == "fan" and params[1] == "percentage")
 
   - id: !extend page_change
     then:

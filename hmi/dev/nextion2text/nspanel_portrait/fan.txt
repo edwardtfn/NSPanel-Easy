@@ -497,14 +497,16 @@ Dual-state Button mode_bt1
     
     Events
         Touch Release Event
-            mode_bt1.val=1
-            fansetting.txt="fan,preset_index,0"
-            printh 92
-            prints "localevent",0
-            printh 00
-            prints fansetting.txt,0
-            printh 00
-            printh FF FF FF
+            if(mode_bt1.val==0)
+            {
+                // Was already the confirmed button: restore it; nothing is pending
+                mode_bt1.val=1
+            }else
+            {
+                // Background stays on the confirmed state; the glyph marks the pending request
+                mode_bt1.val=0
+                mode_bt1.pco=color_pco_highlight
+            }
         
 Dual-state Button mode_bt2
     Attributes
@@ -535,14 +537,16 @@ Dual-state Button mode_bt2
     
     Events
         Touch Release Event
-            mode_bt2.val=1
-            fansetting.txt="fan,preset_index,1"
-            printh 92
-            prints "localevent",0
-            printh 00
-            prints fansetting.txt,0
-            printh 00
-            printh FF FF FF
+            if(mode_bt2.val==0)
+            {
+                // Was already the confirmed button: restore it; nothing is pending
+                mode_bt2.val=1
+            }else
+            {
+                // Background stays on the confirmed state; the glyph marks the pending request
+                mode_bt2.val=0
+                mode_bt2.pco=color_pco_highlight
+            }
         
 Dual-state Button mode_bt3
     Attributes
@@ -573,14 +577,16 @@ Dual-state Button mode_bt3
     
     Events
         Touch Release Event
-            mode_bt3.val=1
-            fansetting.txt="fan,preset_index,2"
-            printh 92
-            prints "localevent",0
-            printh 00
-            prints fansetting.txt,0
-            printh 00
-            printh FF FF FF
+            if(mode_bt3.val==0)
+            {
+                // Was already the confirmed button: restore it; nothing is pending
+                mode_bt3.val=1
+            }else
+            {
+                // Background stays on the confirmed state; the glyph marks the pending request
+                mode_bt3.val=0
+                mode_bt3.pco=color_pco_highlight
+            }
         
 Dual-state Button mode_bt4
     Attributes
@@ -611,14 +617,16 @@ Dual-state Button mode_bt4
     
     Events
         Touch Release Event
-            mode_bt4.val=1
-            fansetting.txt="fan,preset_index,3"
-            printh 92
-            prints "localevent",0
-            printh 00
-            prints fansetting.txt,0
-            printh 00
-            printh FF FF FF
+            if(mode_bt4.val==0)
+            {
+                // Was already the confirmed button: restore it; nothing is pending
+                mode_bt4.val=1
+            }else
+            {
+                // Background stays on the confirmed state; the glyph marks the pending request
+                mode_bt4.val=0
+                mode_bt4.pco=color_pco_highlight
+            }
         
 Dual-state Button mode_bt5
     Attributes
@@ -649,14 +657,16 @@ Dual-state Button mode_bt5
     
     Events
         Touch Release Event
-            mode_bt5.val=1
-            fansetting.txt="fan,preset_index,4"
-            printh 92
-            prints "localevent",0
-            printh 00
-            prints fansetting.txt,0
-            printh 00
-            printh FF FF FF
+            if(mode_bt5.val==0)
+            {
+                // Was already the confirmed button: restore it; nothing is pending
+                mode_bt5.val=1
+            }else
+            {
+                // Background stays on the confirmed state; the glyph marks the pending request
+                mode_bt5.val=0
+                mode_bt5.pco=color_pco_highlight
+            }
         
 Timer swipestore
     Attributes
