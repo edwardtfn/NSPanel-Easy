@@ -305,6 +305,8 @@ data:
     - "Twinkle"
 ```
 
+The `popup_select` picker accepts up to 32 options and shows them in pages of 8, navigated by swiping up or down on the list or with the arrow buttons below it. Options beyond the 32nd are discarded.
+
 > [!NOTE]
 > Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
 >

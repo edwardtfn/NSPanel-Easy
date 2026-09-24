@@ -9085,21 +9085,21 @@ actions:
                                           else []
                                         }}
 
-                                      # Truncation rule: current always included.
-                                      # If <=8: send all in HA order.
-                                      # If >8 and current in first 8: send first 8.
-                                      # If >8 and current in positions 8+: send [current] + first 7 excluding current.
+                                      # Truncation rule (the picker pages through up to 32 options): current always included.
+                                      # If <=32: send all in HA order.
+                                      # If >32 and current in first 32: send first 32.
+                                      # If >32 and current in positions 32+: send [current] + first 31 excluding current.
                                       effect_list_truncated: >
-                                        {%- if effect_list_raw | length <= 8 -%}
+                                        {%- if effect_list_raw | length <= 32 -%}
                                           {%- if current_effect | length == 0 or current_effect in effect_list_raw -%}
                                             {{ effect_list_raw }}
                                           {%- else -%}
-                                            {{ ([current_effect] + (effect_list_raw | list))[:8] }}
+                                            {{ ([current_effect] + (effect_list_raw | list))[:32] }}
                                           {%- endif -%}
-                                        {%- elif current_effect | length == 0 or current_effect in effect_list_raw[:8] -%}
-                                          {{ effect_list_raw[:8] }}
+                                        {%- elif current_effect | length == 0 or current_effect in effect_list_raw[:32] -%}
+                                          {{ effect_list_raw[:32] }}
                                         {%- else -%}
-                                          {{ [current_effect] + (effect_list_raw[:7] | reject("equalto", current_effect) | list) }}
+                                          {{ [current_effect] + (effect_list_raw[:31] | reject("equalto", current_effect) | list) }}
                                         {%- endif -%}
                                   - action: 'esphome.{{ action_prefix }}_component_text_list'
                                     data:
@@ -9534,13 +9534,14 @@ actions:
                               - if: '{{ page_constructor }}'
                                 then:
                                   - variables:
+                                      # The picker pages through up to 32 options; current is always included
                                       preset_modes_truncated: >
-                                        {%- if preset_modes_raw | length <= 8 -%}
+                                        {%- if preset_modes_raw | length <= 32 -%}
                                           {{ preset_modes_raw }}
-                                        {%- elif current_preset_mode | length == 0 or current_preset_mode in preset_modes_raw[:8] -%}
-                                          {{ preset_modes_raw[:8] }}
+                                        {%- elif current_preset_mode | length == 0 or current_preset_mode in preset_modes_raw[:32] -%}
+                                          {{ preset_modes_raw[:32] }}
                                         {%- else -%}
-                                          {{ [current_preset_mode] + (preset_modes_raw[:7] | reject("equalto", current_preset_mode) | list) }}
+                                          {{ [current_preset_mode] + (preset_modes_raw[:31] | reject("equalto", current_preset_mode) | list) }}
                                         {%- endif -%}
                                   - action: 'esphome.{{ nspanel_name }}_component_text_list'
                                     data:
@@ -11325,13 +11326,14 @@ actions:
                                       else []
                                     }}
                               - variables:
+                                  # The picker pages through up to 32 options; current is always included
                                   options_truncated: >
-                                    {%- if options_raw | length <= 8 -%}
+                                    {%- if options_raw | length <= 32 -%}
                                       {{ options_raw }}
-                                    {%- elif current_option | length == 0 or current_option in options_raw[:8] -%}
-                                      {{ options_raw[:8] }}
+                                    {%- elif current_option | length == 0 or current_option in options_raw[:32] -%}
+                                      {{ options_raw[:32] }}
                                     {%- else -%}
-                                      {{ [current_option] + (options_raw[:7] | reject("equalto", current_option) | list) }}
+                                      {{ [current_option] + (options_raw[:31] | reject("equalto", current_option) | list) }}
                                     {%- endif -%}
                               - action: 'esphome.{{ action_prefix }}_component_text_list'
                                 data:
