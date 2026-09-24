@@ -299,7 +299,8 @@ script:
             int(roundf(temp_step*10)),    // temp_step
             total_steps,                  // total_steps
             int(roundf(temp_offset*10)),  // temp_offset
-            ""                            // climate_icon
+            "",                           // climate_icon
+            ""                            // unit (embedded thermostat is always temperature-based)
           );
 
           // Update target temp icon
