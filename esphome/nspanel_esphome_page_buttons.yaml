@@ -12,6 +12,7 @@
 ---
 substitutions:
   BUTTON_LONG_PRESS_DELAY: 800ms
+  BUTTON_RENDER_QUEUE_TIMEOUT: 300ms  # Max wait for the Nextion queue to drain before rendering a button
   TAG_PAGE_BUTTONS: nspanel.page.buttons
   THEME_PAGE_BUTTONS_DARK_PIC_BUTTON: 46
   THEME_PAGE_BUTTONS_DARK_PIC_PRESSED: 47
@@ -93,6 +94,16 @@ script:
       icon_only: bool       # When true, the button is a single text component holding the glyph (climate custom buttons)
       available: bool       # When false, the bound entity is unavailable; `unavailable_behavior` decides what that looks like
     then:
+      # Wait for the Nextion queue to drain before rendering this button.
+      # Workaround for esphome/esphome#19018: with `command_spacing`, a command sent
+      # directly while spacing-deferred entries are still waiting is queued behind
+      # them, and its ack removes an entry that was never sent, so one component
+      # keeps its previous appearance. The timeout keeps a stuck entry from
+      # blocking the render.
+      - wait_until:
+          condition:
+            lambda: return disp1->queue_size() == 0;
+          timeout: ${BUTTON_RENDER_QUEUE_TIMEOUT}
       - lambda: |-
           if (current_page_id != page_id) return;
 
