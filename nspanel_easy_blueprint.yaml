@@ -9855,7 +9855,11 @@ actions:
                                       details_overlap is defined and
                                       details_overlap.name is string and
                                       details_overlap.name | length > 0 and
-                                      climate_entity == original_state.entity_id
+                                      (
+                                        "embedded_climate"
+                                        if climate_entity == thermostat_embedded
+                                        else climate_entity
+                                      ) == original_state.entity_id
                                 -%}
                                   {{ details_overlap.name }}
                                 {%- else -%}
