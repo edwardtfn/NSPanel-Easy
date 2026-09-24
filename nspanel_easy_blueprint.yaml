@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.9.20)
+  name: NSPanel Easy Configuration (v9999.99.9)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -4872,7 +4872,7 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.9.20
+  blueprint_version: 9999.99.9
 
   # Firmware version as reported by the ESPHome integration in the device registry.
   # Format: "<project_version> (ESPHome <compiler_version>)", e.g. "2026.8.5 (ESPHome 2026.6.0)".
@@ -5930,6 +5930,10 @@ actions:
         }}
 
       page_constructor: false
+      # True when an entity details page refresh was not triggered by an entity change:
+      # the entity stayed quiet until the wait timed out (settle pass or fallback refresh).
+      # Set per iteration by "Entity details pages refresh".
+      refresh_settled: false
 
       compact_unit_display: !input compact_unit_display
       units_separator: "{{ '' if compact_unit_display else ' ' }}"
@@ -8445,6 +8449,31 @@ actions:
                         entity_id: '{{ entity_id }}'
                         entity_id_valid: '{{ entity_id_valid }}'
                         entity_domain: '{{ entity_id.split(".")[0] if entity_id_valid else "" }}'
+                      # Title and icon of the button that opened an entity details page. The click that
+                      # opened the page runs in a separate automation run, so the click run stores them
+                      # on the panel (`details_overlap` memory var) and the panel reports them back here,
+                      # only when they belong to the entity shown.
+                      details_overlap:
+                        icon: >-
+                          {{
+                            nspanel_event.icon
+                            if
+                              nspanel_event.icon is defined and
+                              nspanel_event.icon is string and
+                              nspanel_event.icon is match "mdi:" and
+                              nspanel_event.icon.split("mdi:")[1] in all_icons
+                            else None
+                          }}
+                        icon_color: '{{ None }}'
+                        name: >-
+                          {{
+                            nspanel_event.title
+                            if
+                              nspanel_event.title is defined and
+                              nspanel_event.title is string and
+                              nspanel_event.title | length > 0
+                            else None
+                          }}
 
                   - choose:
                       - alias: Home page
@@ -8833,6 +8862,14 @@ actions:
                             variables:
                               entity_id: '{{ original_state.entity_id }}'
                               entity_id_valid: '{{ original_state.entity_id_valid }}'
+                              # Set on every refresh, so the configured title and icon are not lost when
+                              # another step of this run reassigns `overlap`.
+                              overlap: >-
+                                {{
+                                  details_overlap
+                                  if details_overlap is defined
+                                  else {"icon": None, "icon_color": None, "name": None}
+                                }}
                           - *variable_entity
                           - &entity_details_title_with_icon
                             alias: Fill title of entity details page
@@ -9441,17 +9478,25 @@ actions:
                                   - *delay_default
 
                               ##### Always: confirmed state, which also clears a pending press #####
+                              # A pending press is only cleared once its slot is the confirmed one, so
+                              # intermediate states reported during a transition keep it pending. The
+                              # page constructor and any redraw after the entity went quiet (settle
+                              # pass or fallback refresh) clear every slot, covering requests that
+                              # never make the pressed slot the active one.
                               - action: 'esphome.{{ nspanel_name }}_component_text_list'
                                 data:
                                   page: mem
                                   id: command
                                   txt_list: >-
                                     {% set ns = namespace(items=[]) %}
+                                    {% set clear_all_pending = page_constructor or refresh_settled %}
                                     {% for slot in range(1, speed_buttons_count + 1) %}
                                       {% set active = (speed_buttons_count - slot) == speed_index_active %}
                                       {% set ns.items = ns.items + ["mode_bt" ~ slot ~ ".val=" ~ (1 if active else 0)] %}
-                                      {% set ns.items = ns.items + ["mode_bt" ~ slot ~ ".pco=65535"] %}  {# nextion.color.white #}
-                                      {% set ns.items = ns.items + ["mode_bt" ~ slot ~ ".pco2=65535"] %}  {# nextion.color.white #}
+                                      {% if active or clear_all_pending %}
+                                        {% set ns.items = ns.items + ["mode_bt" ~ slot ~ ".pco=65535"] %}  {# nextion.color.white #}
+                                        {% set ns.items = ns.items + ["mode_bt" ~ slot ~ ".pco2=65535"] %}  {# nextion.color.white #}
+                                      {% endif %}  {# active or clear_all_pending #}
                                     {% endfor %}
                                     {{ ns.items }}
                                 continue_on_error: true
@@ -9582,7 +9627,11 @@ actions:
                                 then:
                                   # The pictures are pushed by the page constructor, so an update
                                   # only has to move the state of each button and clear the
-                                  # pending colour a press leaves behind.
+                                  # pending colour a press leaves behind. That colour is only
+                                  # cleared once its button is the confirmed one, or on the page
+                                  # constructor and any redraw after the entity went quiet (settle
+                                  # pass or fallback refresh), so intermediate states reported
+                                  # during a transition keep the press pending.
                                   - action: 'esphome.{{ nspanel_name }}_component_text_list'
                                     data:
                                       page: mem
@@ -9590,11 +9639,14 @@ actions:
                                       txt_list: >-
                                         {% set ns = namespace(items=[]) %}
                                         {% set running = states(entity_id) == "on" %}
+                                        {% set clear_all_pending = page_constructor or refresh_settled %}
                                         {% for mode in preset_modes_raw %}
                                           {% set active = running and mode == current_preset_mode %}
                                           {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".val=" ~ (1 if active else 0)] %}
-                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".pco=65535"] %}  {# nextion.color.white #}
-                                          {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".pco2=65535"] %}  {# nextion.color.white #}
+                                          {% if active or clear_all_pending %}
+                                            {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".pco=65535"] %}  {# nextion.color.white #}
+                                            {% set ns.items = ns.items + ["mode_bt" ~ loop.index ~ ".pco2=65535"] %}  {# nextion.color.white #}
+                                          {% endif %}  {# active or clear_all_pending #}
                                         {% endfor %}
                                         {{ ns.items }}
                                     continue_on_error: true
@@ -9817,7 +9869,21 @@ actions:
                                 }}
                               hvac_modes: '{{ state_attr(climate_entity, "hvac_modes") if settings_entity_domain == "climate" }}'
                               friendly_name_raw: '{{ state_attr(climate_entity, "friendly_name") }}'
-                              friendly_name: '{{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}'
+                              friendly_name: >-
+                                {%- if
+                                      details_overlap is defined and
+                                      details_overlap.name is string and
+                                      details_overlap.name | length > 0 and
+                                      (
+                                        "embedded_climate"
+                                        if climate_entity == thermostat_embedded
+                                        else climate_entity
+                                      ) == original_state.entity_id
+                                -%}
+                                  {{ details_overlap.name }}
+                                {%- else -%}
+                                  {{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}
+                                {%- endif -%}
                           - if:
                               - '{{ page_constructor }}'
                               - '{{ not embedded_climate }}'
@@ -10186,7 +10252,17 @@ actions:
                                   else []
                                 }}
                               friendly_name_raw: '{{ state_attr(water_heater_entity, "friendly_name") }}'
-                              friendly_name: '{{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}'
+                              friendly_name: >-
+                                {%- if
+                                      details_overlap is defined and
+                                      details_overlap.name is string and
+                                      details_overlap.name | length > 0 and
+                                      water_heater_entity == original_state.entity_id
+                                -%}
+                                  {{ details_overlap.name }}
+                                {%- else -%}
+                                  {{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}
+                                {%- endif -%}
 
                           - condition: '{{ settings_entity_domain == "water_heater" }}'
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
@@ -11565,6 +11641,12 @@ actions:
                   - variables:
                       page_constructor: false
                       entity_details_pages_max_refreshes: !input entity_details_pages_max_refreshes
+                      entity_details_pages_debounce_ms: !input entity_details_pages_debounce
+                      entity_details_pages_update_interval_s: !input entity_details_pages_update_interval
+                      # Cross-iteration state: the last redraw was driven by an entity change on a
+                      # page that keeps pending presses (fan), so the next wait is a short settle
+                      # pass that redraws once the entity has been quiet for the debounce time.
+                      refresh_pending_settle: false
                   - alias: Entity details pages refresh
                     repeat:
                       while: &conditions_entity_details_pages_loop >
@@ -11598,12 +11680,28 @@ actions:
                                 else ''
                               ) != entity_initial_stamp
                             }}
-                          timeout:
-                            seconds: !input entity_details_pages_update_interval
+                          # Settle pass: debounce time; otherwise the fallback refresh interval (seconds)
+                          timeout: >-
+                            {{
+                              (entity_details_pages_debounce_ms | int(1000)) / 1000
+                              if refresh_pending_settle
+                              else entity_details_pages_update_interval_s | int(60)
+                            }}
                           continue_on_timeout: true
                         - condition: *conditions_entity_details_pages_loop
                         - variables:
                             current_page_from_sensor: '{{ states(currentpage) }}'
+                            # No entity change before the timeout: settle pass or fallback refresh
+                            refresh_settled: '{{ not wait.completed }}'
+                        - variables:
+                            # Only the fan page keeps a press pending across intermediate states,
+                            # so the other pages skip the extra settle redraw.
+                            refresh_pending_settle: >-
+                              {{
+                                not refresh_settled and
+                                current_page_from_sensor == pages.fan and
+                                original_state.entity_domain in ["fan"]
+                              }}
                         - choose:
                             - alias: Alarm page
                               conditions:
@@ -11713,6 +11811,36 @@ actions:
                                               back_page: '{{ pages.home }}'
                                           - &entity_details_show
                                             sequence:
+                                              # Store the title and icon of the button being opened on the panel. The
+                                              # panel reports them back with the page change, where the details page is
+                                              # rendered. Blank values clear an override left by a previous button.
+                                              - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                                data:
+                                                  page: mem
+                                                  id: details_overlap
+                                                  txt_list:
+                                                    - '{{ "embedded_climate" if entity_id == thermostat_embedded else entity_id }}'
+                                                    - >-
+                                                      {{
+                                                        overlap.name
+                                                        if
+                                                          overlap is defined and
+                                                          overlap.name is defined and
+                                                          overlap.name is string
+                                                        else ""
+                                                      }}
+                                                    - >-
+                                                      {{
+                                                        overlap.icon
+                                                        if
+                                                          overlap is defined and
+                                                          overlap.icon is defined and
+                                                          overlap.icon is string and
+                                                          overlap.icon is match "mdi:" and
+                                                          overlap.icon.split("mdi:")[1] in all_icons
+                                                        else ""
+                                                      }}
+                                                continue_on_error: true
                                               - action: 'esphome.{{ action_prefix }}_entity_details_show'
                                                 data:
                                                   entity: '{{ "embedded_climate" if entity_id == thermostat_embedded else entity_id }}'

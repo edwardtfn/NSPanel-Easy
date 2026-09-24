@@ -43,7 +43,7 @@ enum class Visibility : uint8_t {
 };
 
 /// @brief Persisted format version. Bump whenever SubBinding's layout changes.
-static constexpr uint8_t SUB_FORMAT_VERSION = 3;  // 3: SubBinding gained the attribute field
+static constexpr uint8_t SUB_FORMAT_VERSION = 4;  // 4: SubHeader gained entity_len
 
 /// @brief Upper bound on bindings; storage is allocated to the configured count, not this.
 #ifndef NSPANEL_EASY_SUB_MAX
@@ -65,12 +65,34 @@ static constexpr uint16_t SUB_CHUNK_SIZE = 4;
 /// @brief Number of NVS chunks needed to hold SUB_MAX bindings.
 static constexpr uint16_t SUB_CHUNK_COUNT = (SUB_MAX + SUB_CHUNK_SIZE - 1) / SUB_CHUNK_SIZE;
 
-static constexpr uint8_t SUB_ATTR_LEN = 24;          ///< Longest stored attribute name
-static constexpr uint8_t SUB_COMPONENT_LEN = 16;     ///< Longest stored component name
-static constexpr uint8_t SUB_DEVICE_CLASS_LEN = 16;  ///< Longest device_class in use ("garage_door")
-static constexpr uint8_t SUB_ENTITY_LEN = 64;        ///< Longest stored entity_id
-static constexpr uint8_t SUB_PAGE_LEN = 12;          ///< Longest stored page name ("screensaver")
-static constexpr uint8_t SUB_STATE_LEN = 24;         ///< Longest state ("armed_custom_bypass" is 19)
+/**
+ * @brief Size of the stored entity_id buffer, including the null terminator.
+ *
+ * Configurable because it is the one field whose natural length is set by the
+ * user's Home Assistant rather than by this project: integrations that derive
+ * an entity_id from a location or a device name can exceed any fixed default.
+ * A truncated entity_id subscribes to an entity that does not exist, so the
+ * binding is silently dead. Raising this costs SUB_ENTITY_LEN bytes per live
+ * binding in RAM and widens every persisted chunk by four times the increase,
+ * which is why it is a per-installation knob rather than a generous constant.
+ *
+ * The value takes part in the persistence contract; see SubHeader::entity_len.
+ */
+#ifndef NSPANEL_EASY_SUB_ENTITY_LEN
+#define NSPANEL_EASY_SUB_ENTITY_LEN 96
+#endif  // NSPANEL_EASY_SUB_ENTITY_LEN
+
+static constexpr uint8_t SUB_ATTR_LEN = 24;                             ///< Longest stored attribute name
+static constexpr uint8_t SUB_COMPONENT_LEN = 16;                        ///< Longest stored component name
+static constexpr uint8_t SUB_DEVICE_CLASS_LEN = 16;                     ///< Longest device_class in use ("garage_door")
+static constexpr uint8_t SUB_ENTITY_LEN = NSPANEL_EASY_SUB_ENTITY_LEN;  ///< entity_id buffer, null included
+static constexpr uint8_t SUB_PAGE_LEN = 12;                             ///< Longest stored page name ("screensaver")
+static constexpr uint8_t SUB_STATE_LEN = 24;                            ///< Longest state ("armed_custom_bypass" is 19)
+
+// Held in a uint8_t in SubHeader, so the contract check cannot represent more.
+// The lower bound is the shortest buffer that still fits a realistic entity_id.
+static_assert(NSPANEL_EASY_SUB_ENTITY_LEN >= 32, "api_subscribe_entity_len must be at least 32");
+static_assert(NSPANEL_EASY_SUB_ENTITY_LEN <= 255, "api_subscribe_entity_len must not exceed 255");
 
 /// @brief Attribute subscribed alongside the state for climate bindings, unlike
 ///        SubBinding::attribute which is subscribed instead of the state.
