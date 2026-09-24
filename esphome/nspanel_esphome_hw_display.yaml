@@ -360,7 +360,12 @@ script:
             disp1->send_command_printf("back_page_id=%" PRIu8, get_page_id("home"));
           } else {  // Report detailed entity
             ESP_LOGD("${TAG_HW_DISPLAY}", "Entity shown: %s", detailed_entity->state.c_str());
-          }
+            // Moving between entity details pages keeps the override, so drop it once another
+            // entity is shown, or a later caller opening its entity would get a stale title and icon
+            if (details_overlap.entity != detailed_entity->state) {
+              details_overlap = DetailsOverlap{};
+            }  // if (details_overlap belongs to another entity)
+          }  // if (!display_entity_keep)
 
           // Reset timers
           if (current_page_id != ${PAGE_SCREENSAVER_ID}) {

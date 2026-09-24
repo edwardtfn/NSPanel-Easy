@@ -355,11 +355,13 @@ void sub_push_binding(const char *page, const char *component, const char *entit
   }
 
   SubBinding &staged = sub_staging[sub_staged];
-  // A truncated entity_id names an entity that does not exist, so the binding
-  // subscribes to nothing and the component never updates. The slot is still
+  // A truncated entity_id cannot be bound: its prefix may even name another
+  // existing entity, which would then drive this component. The entity is
+  // cleared so sub_subscribe_all() skips the binding, but the slot is still
   // staged: dropping it would desync the count sub_push_end() validates, which
   // would discard the whole push instead of the one binding that cannot work.
   if (!sub_copy(staged.entity, sizeof(staged.entity), entity)) {
+    staged.entity[0] = '\0';
     ESP_LOGW(TAG, "%s.%s: entity_id is %zu chars, over the %" PRIu8 " limit; '%s' will not update", page, component,
              strlen(entity), static_cast<uint8_t>(SUB_ENTITY_LEN - 1), entity);
     ESP_LOGW(TAG, "Raise api_subscribe_entity_len to at least %zu to bind it", strlen(entity) + 1);
