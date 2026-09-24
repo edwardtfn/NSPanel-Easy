@@ -174,8 +174,17 @@ api:
                 or entity == "embedded_climate"
                 #endif  // NSPANEL_EASY_ADDON_CLIMATE_BASE
                 ) {
+              const uint8_t details_page_id = get_page_id(entity_id.domain.c_str());
+              const bool entity_changed = (detailed_entity->state != entity);
               detailed_entity->publish_state(entity);
-              goto_page->execute(get_page_id(entity_id.domain.c_str()));
+              if (details_page_id != UINT8_MAX and details_page_id == current_page_id and entity_changed) {
+                // `goto_page` ignores requests for the current page, so reload it directly.
+                // The reload fires `on_page`, which reports the new entity to the Blueprint.
+                ESP_LOGD("${TAG_API}", "Reload page '%s' for '%s'", page_names[details_page_id], entity.c_str());
+                disp1->goto_page(details_page_id);
+              } else {
+                goto_page->execute(details_page_id);
+              }  // if (same page, different entity)
               // An empty `back_page` means "keep the current return target".
               // An unknown page name would resolve to UINT8_MAX, which is not a valid
               // page and would break the back button, so fall back to the home page.
