@@ -267,8 +267,9 @@ Also used by page modules that store list-shaped data in memory (e.g. the option
 > - `details_overlap` — sets the title and icon of the next entity details page opened with
 >   [`entity_details_show`](#entity-details-show-action-entity_details_show).
 >   `txt_list` is `[entity, title, icon]`, where `entity` must match the entity passed to `entity_details_show`,
->   `title` is the page title and `icon` is an MDI icon (`mdi:<name>`); leave `title` or `icon` blank to use the entity's own.
->   The values are reported back to the Blueprint when the page opens and are cleared when the panel leaves the entity details pages
+>   `title` is the page title and `icon` is an MDI icon name (`mdi:<name>`); leave `title` or `icon` blank to use the entity's own.
+>   The panel does not interpret these values: it stores them as-is and reports them back to the Blueprint when the page opens,
+>   and the Blueprint converts the icon to its glyph. The values are cleared when the panel leaves the entity details pages
 >   (provided by `nspanel_esphome_api.yaml`, part of `nspanel_esphome_core.yaml`)
 >
 > **Before using `page: mem` in your automations:**
@@ -453,7 +454,7 @@ data:
 
 <!-- markdownlint-disable MD028 -->
 > [!NOTE]
-> The title and icon are rendered by the NSPanel Easy Blueprint when the page opens.
+> The title and icon are rendered by the NSPanel Easy Blueprint when the page opens, so pass the icon as an MDI name (`mdi:<name>`), not as a glyph.
 > Without the Blueprint, or when the entity does not match, the entity's own name and icon are used.
 
 > [!NOTE]
