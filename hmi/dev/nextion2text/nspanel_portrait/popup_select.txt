@@ -55,6 +55,18 @@ Variable (int32) select_mode
         Scope: local
         Value: 0
     
+Variable (int32) press_y
+    Attributes
+        ID   : 23
+        Scope: local
+        Value: 0
+    
+Variable (int32) tap_slot
+    Attributes
+        ID   : 24
+        Scope: local
+        Value: 0
+    
 Text card
     Attributes
         ID                  : 1
@@ -184,10 +196,10 @@ Text lbl_hint
         Dragging            : 0
         Send Component ID   : disabled
         Opacity             : 127
-        x coordinate        : 248
-        y coordinate        : 44
-        Width               : 48
-        Height              : 32
+        x coordinate        : 86
+        y coordinate        : 392
+        Width               : 148
+        Height              : 36
         Effect              : load
         Effect Priority     : 0
         Effect Time         : 300
@@ -206,12 +218,70 @@ Text lbl_hint
         Horizontal Spacing  : 0
         Vertical Spacing    : 0
     
+Text btn_prev
+    Attributes
+        ID                  : 21
+        Scope               : local
+        Dragging            : 0
+        Send Component ID   : on release
+        Opacity             : 127
+        x coordinate        : 26
+        y coordinate        : 392
+        Width               : 60
+        Height              : 36
+        Effect              : load
+        Effect Priority     : 0
+        Effect Time         : 300
+        Fill                : solid color
+        Style               : flat
+        Associated Keyboard : none
+        Font ID             : 7
+        Back. Color         : 48665
+        Font Color          : 8486
+        Horizontal Alignment: center
+        Vertical Alignment  : center
+        Input Type          : character
+        Text                : \xee\x85\x82
+        Max. Text Size      : 3
+        Word wrap           : disabled
+        Horizontal Spacing  : 0
+        Vertical Spacing    : 0
+    
+Text btn_next
+    Attributes
+        ID                  : 22
+        Scope               : local
+        Dragging            : 0
+        Send Component ID   : on release
+        Opacity             : 127
+        x coordinate        : 234
+        y coordinate        : 392
+        Width               : 60
+        Height              : 36
+        Effect              : load
+        Effect Priority     : 0
+        Effect Time         : 300
+        Fill                : solid color
+        Style               : flat
+        Associated Keyboard : none
+        Font ID             : 7
+        Back. Color         : 48665
+        Font Color          : 8486
+        Horizontal Alignment: center
+        Vertical Alignment  : center
+        Input Type          : character
+        Text                : \xee\x84\xbf
+        Max. Text Size      : 3
+        Word wrap           : disabled
+        Horizontal Spacing  : 0
+        Vertical Spacing    : 0
+    
 Dual-state Button opt0
     Attributes
         ID                        : 6
         Scope                     : local
         Dragging                  : 0
-        Send Component ID         : on release
+        Send Component ID         : disabled
         Opacity                   : 127
         x coordinate              : 26
         y coordinate              : 79
@@ -238,28 +308,19 @@ Dual-state Button opt0
         Vertical Spacing          : 0
     
     Events
+        Touch Press Event
+            press_y.val=tch1
+        
         Touch Release Event
-            // Touch Release - mode 0
-            sys0=0  // bit position - replace per button (0..7)
-            sys1=sys0+6  // component id
-            if(select_mode.val==0)
-            {
-                if(b[sys1].val==1)
-                {
-                    selection_mask.val=1<<sys0
-                }else
-                {
-                    selection_mask.val=0
-                }
-            }
-            render.en=1
+            tap_slot.val=0
+            tap_eval.en=1
         
 Dual-state Button opt1
     Attributes
         ID                        : 7
         Scope                     : local
         Dragging                  : 0
-        Send Component ID         : on release
+        Send Component ID         : disabled
         Opacity                   : 127
         x coordinate              : 26
         y coordinate              : 118
@@ -286,28 +347,19 @@ Dual-state Button opt1
         Vertical Spacing          : 0
     
     Events
+        Touch Press Event
+            press_y.val=tch1
+        
         Touch Release Event
-            // Touch Release - mode 0
-            sys0=1  // bit position - replace per button (0..7)
-            sys1=sys0+6  // component id
-            if(select_mode.val==0)
-            {
-                if(b[sys1].val==1)
-                {
-                    selection_mask.val=1<<sys0
-                }else
-                {
-                    selection_mask.val=0
-                }
-            }
-            render.en=1
+            tap_slot.val=1
+            tap_eval.en=1
         
 Dual-state Button opt2
     Attributes
         ID                        : 8
         Scope                     : local
         Dragging                  : 0
-        Send Component ID         : on release
+        Send Component ID         : disabled
         Opacity                   : 127
         x coordinate              : 26
         y coordinate              : 157
@@ -334,28 +386,19 @@ Dual-state Button opt2
         Vertical Spacing          : 0
     
     Events
+        Touch Press Event
+            press_y.val=tch1
+        
         Touch Release Event
-            // Touch Release - mode 0
-            sys0=2  // bit position - replace per button (0..7)
-            sys1=sys0+6  // component id
-            if(select_mode.val==0)
-            {
-                if(b[sys1].val==1)
-                {
-                    selection_mask.val=1<<sys0
-                }else
-                {
-                    selection_mask.val=0
-                }
-            }
-            render.en=1
+            tap_slot.val=2
+            tap_eval.en=1
         
 Dual-state Button opt3
     Attributes
         ID                        : 9
         Scope                     : local
         Dragging                  : 0
-        Send Component ID         : on release
+        Send Component ID         : disabled
         Opacity                   : 127
         x coordinate              : 26
         y coordinate              : 196
@@ -382,28 +425,19 @@ Dual-state Button opt3
         Vertical Spacing          : 0
     
     Events
+        Touch Press Event
+            press_y.val=tch1
+        
         Touch Release Event
-            // Touch Release - mode 0
-            sys0=3  // bit position - replace per button (0..7)
-            sys1=sys0+6  // component id
-            if(select_mode.val==0)
-            {
-                if(b[sys1].val==1)
-                {
-                    selection_mask.val=1<<sys0
-                }else
-                {
-                    selection_mask.val=0
-                }
-            }
-            render.en=1
+            tap_slot.val=3
+            tap_eval.en=1
         
 Dual-state Button opt4
     Attributes
         ID                        : 10
         Scope                     : local
         Dragging                  : 0
-        Send Component ID         : on release
+        Send Component ID         : disabled
         Opacity                   : 127
         x coordinate              : 26
         y coordinate              : 235
@@ -430,28 +464,19 @@ Dual-state Button opt4
         Vertical Spacing          : 0
     
     Events
+        Touch Press Event
+            press_y.val=tch1
+        
         Touch Release Event
-            // Touch Release - mode 0
-            sys0=4  // bit position - replace per button (0..7)
-            sys1=sys0+6  // component id
-            if(select_mode.val==0)
-            {
-                if(b[sys1].val==1)
-                {
-                    selection_mask.val=1<<sys0
-                }else
-                {
-                    selection_mask.val=0
-                }
-            }
-            render.en=1
+            tap_slot.val=4
+            tap_eval.en=1
         
 Dual-state Button opt5
     Attributes
         ID                        : 11
         Scope                     : local
         Dragging                  : 0
-        Send Component ID         : on release
+        Send Component ID         : disabled
         Opacity                   : 127
         x coordinate              : 26
         y coordinate              : 274
@@ -478,28 +503,19 @@ Dual-state Button opt5
         Vertical Spacing          : 0
     
     Events
+        Touch Press Event
+            press_y.val=tch1
+        
         Touch Release Event
-            // Touch Release - mode 0
-            sys0=5  // bit position - replace per button (0..7)
-            sys1=sys0+6  // component id
-            if(select_mode.val==0)
-            {
-                if(b[sys1].val==1)
-                {
-                    selection_mask.val=1<<sys0
-                }else
-                {
-                    selection_mask.val=0
-                }
-            }
-            render.en=1
+            tap_slot.val=5
+            tap_eval.en=1
         
 Dual-state Button opt6
     Attributes
         ID                        : 12
         Scope                     : local
         Dragging                  : 0
-        Send Component ID         : on release
+        Send Component ID         : disabled
         Opacity                   : 127
         x coordinate              : 26
         y coordinate              : 313
@@ -526,28 +542,19 @@ Dual-state Button opt6
         Vertical Spacing          : 0
     
     Events
+        Touch Press Event
+            press_y.val=tch1
+        
         Touch Release Event
-            // Touch Release - mode 0
-            sys0=6  // bit position - replace per button (0..7)
-            sys1=sys0+6  // component id
-            if(select_mode.val==0)
-            {
-                if(b[sys1].val==1)
-                {
-                    selection_mask.val=1<<sys0
-                }else
-                {
-                    selection_mask.val=0
-                }
-            }
-            render.en=1
+            tap_slot.val=6
+            tap_eval.en=1
         
 Dual-state Button opt7
     Attributes
         ID                        : 13
         Scope                     : local
         Dragging                  : 0
-        Send Component ID         : on release
+        Send Component ID         : disabled
         Opacity                   : 127
         x coordinate              : 26
         y coordinate              : 352
@@ -574,21 +581,12 @@ Dual-state Button opt7
         Vertical Spacing          : 0
     
     Events
+        Touch Press Event
+            press_y.val=tch1
+        
         Touch Release Event
-            // Touch Release - mode 0
-            sys0=7  // bit position - replace per button (0..7)
-            sys1=sys0+6  // component id
-            if(select_mode.val==0)
-            {
-                if(b[sys1].val==1)
-                {
-                    selection_mask.val=1<<sys0
-                }else
-                {
-                    selection_mask.val=0
-                }
-            }
-            render.en=1
+            tap_slot.val=7
+            tap_eval.en=1
         
 Timer render
     Attributes
@@ -619,19 +617,35 @@ Timer init
         Timer Event
             // init timer event
             init.en=0
+            // Hide everything, so a page change repaints from a clean card
+            vis 255,0
+            // Card rows: all options up to 8 (keeps full height on a partial last page)
+            sys2=total_count.val
+            if(sys2>8)
+            {
+                sys2=8
+            }
             if(display_mode==2)
             {
                 // Portrait (card 280 wide, starts at 20,40)
-                sys0=opt_count.val*39
+                sys0=sys2*39
                 sys0+=41
+                if(total_count.val>8)
+                {
+                    sys0+=40  // footer row
+                }
                 fill 20,40,280,sys0,21197
                 sys1=sys0-8
                 fill 24,44,272,sys1,61310
             }else
             {
                 // Landscape (card 350 wide, starts at 50,20)
-                sys0=opt_count.val*28
+                sys0=sys2*28
                 sys0+=38
+                if(total_count.val>8)
+                {
+                    sys0+=30  // footer row
+                }
                 fill 50,20,350,sys0,21197
                 sys1=sys0-8
                 fill 54,24,342,sys1,61310
@@ -640,7 +654,13 @@ Timer init
             vis header_bg,1
             vis btn_back,1
             vis lbl_title,1
-            // lbl_hint stays hidden in v1 (scroll indicator not shown)
+            // Show footer (page navigation) only when paged
+            if(total_count.val>8)
+            {
+                vis btn_prev,1
+                vis lbl_hint,1
+                vis btn_next,1
+            }
             // Show populated opt buttons
             sys1=opt_count.val+6
             for(sys0=6;sys0<sys1;sys0++)
@@ -649,4 +669,53 @@ Timer init
             }
             // Kick render to paint selection state
             render.en=1
+        
+Timer tap_eval
+    Attributes
+        ID         : 25
+        Scope      : local
+        Period (ms): 50
+        Enabled    : no
+    
+    Events
+        Timer Event
+            // tap_eval timer event: tells a swipe from a tap on an option button
+            tap_eval.en=0
+            sys0=press_y.val-tch3  // positive: finger moved up
+            sys1=tch3-press_y.val  // positive: finger moved down
+            if(sys0>=40)
+            {
+                // Swipe up: next page, reported as a btn_next (22) release
+                printh 65
+                prints dp,1
+                printh 16 00 FF FF FF
+                render.en=1
+            }else if(sys1>=40)
+            {
+                // Swipe down: previous page, reported as a btn_prev (21) release
+                printh 65
+                prints dp,1
+                printh 15 00 FF FF FF
+                render.en=1
+            }else
+            {
+                // Tap: local feedback, then report the option button release
+                sys0=tap_slot.val
+                sys1=sys0+6  // component id
+                if(select_mode.val==0)
+                {
+                    if(b[sys1].val==1)
+                    {
+                        selection_mask.val=1<<sys0
+                    }else
+                    {
+                        selection_mask.val=0
+                    }
+                }
+                render.en=1
+                printh 65
+                prints dp,1
+                prints sys1,1
+                printh 00 FF FF FF
+            }
         

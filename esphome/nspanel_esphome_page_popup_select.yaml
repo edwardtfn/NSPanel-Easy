@@ -21,15 +21,33 @@ display:
             if (page_id != get_page_id("popup_select")) return;
             if (touch_event) return;
 
-            if (component_id < 6 || component_id > 13) {
+            // Page navigation (header buttons or swipe, which the display reports as these buttons)
+            if (component_id == POPUP_SELECT_ID_BTN_PREV || component_id == POPUP_SELECT_ID_BTN_NEXT) {
+              const uint8_t page_count = popup_select_page_count();
+              if (page_count <= 1) {
+                // Single page: nothing to navigate, just restore the selection state after a swipe
+                disp1->send_command("render.en=1");
+                return;
+              }  // if (page_count <= 1)
+              if (component_id == POPUP_SELECT_ID_BTN_NEXT) {
+                popup_select_page = (popup_select_page + 1) % page_count;
+              } else if (component_id == POPUP_SELECT_ID_BTN_PREV) {
+                popup_select_page = (popup_select_page + page_count - 1) % page_count;
+              }  // if (component_id == POPUP_SELECT_ID_BTN_NEXT)
+              popup_select_render->execute();
+              return;
+            }  // if (component_id == POPUP_SELECT_ID_BTN_PREV || component_id == POPUP_SELECT_ID_BTN_NEXT)
+
+            if (component_id < POPUP_SELECT_ID_OPT0 || component_id >= POPUP_SELECT_ID_OPT0 + POPUP_SELECT_SLOTS) {
               return;
             }
 
-            const uint8_t opt_index = component_id - 6;
+            const uint8_t slot = component_id - POPUP_SELECT_ID_OPT0;
+            const uint8_t opt_index = (popup_select_page * POPUP_SELECT_SLOTS) + slot;
             const auto& options = popup_select_cache_options;
             if (opt_index >= options.size()) {
-              ESP_LOGW("${TAG_PAGE_POPUP_SELECT}", "Tap on opt%" PRIu8 " but cache only has %zu options",
-                                                    opt_index, options.size());
+              ESP_LOGW("${TAG_PAGE_POPUP_SELECT}", "Tap on opt%" PRIu8 " (index %" PRIu8 ") but cache only has %zu options",
+                                                    slot, opt_index, options.size());
               return;
             }
 
@@ -97,9 +115,14 @@ script:
           if (page != "mem") return;
           if (component == "popup_select_options") {
             popup_select_cache_options = txt_list;
-            ESP_LOGV("${TAG_PAGE_POPUP_SELECT}", "Cached %zu options:", txt_list.size());
-            for (size_t i = 0; i < txt_list.size(); ++i) {
-              ESP_LOGV("${TAG_PAGE_POPUP_SELECT}", "  [%zu] '%s'", i, txt_list[i].c_str());
+            if (popup_select_cache_options.size() > POPUP_SELECT_MAX_OPTIONS) {
+              ESP_LOGW("${TAG_PAGE_POPUP_SELECT}", "Received %zu options, picker supports %" PRIu8 "; truncating",
+                                                    popup_select_cache_options.size(), POPUP_SELECT_MAX_OPTIONS);
+              popup_select_cache_options.resize(POPUP_SELECT_MAX_OPTIONS);
+            }
+            ESP_LOGV("${TAG_PAGE_POPUP_SELECT}", "Cached %zu options:", popup_select_cache_options.size());
+            for (size_t i = 0; i < popup_select_cache_options.size(); ++i) {
+              ESP_LOGV("${TAG_PAGE_POPUP_SELECT}", "  [%zu] '%s'", i, popup_select_cache_options[i].c_str());
             }
             return;
           }
@@ -116,10 +139,9 @@ script:
   # Second-stage: actually navigate to the page and push values.
   # Order is:
   #   1. Navigate to the page (triggers Preinitialize which hides all components).
-  #   2. Write all picker-local variables.
-  #   3. Write the option labels into opt0..opt7.
-  #   4. Write title
-  #   5. Trigger init timer (draws card, shows header, shows populated buttons).
+  #   2. Write the picker-local variables that don't change between option pages.
+  #   3. Write title.
+  #   4. Select the option page holding the current selection and render it.
   - id: goto_page_popup_select
     mode: queued
     max_runs: 2
@@ -128,34 +150,14 @@ script:
       title: string
     then:
       - lambda: |-
-          const auto& options = popup_select_cache_options;
-          const uint8_t opt_count = static_cast<uint8_t>(std::min(options.size(), static_cast<size_t>(8)));
-
           // 1. Navigate to popup_select. Preinitialize runs, hiding all components via vis 255,0.
           goto_page->execute(get_page_id("popup_select"));
 
           // 2. Write picker-local variables.
           disp1->send_command_printf("caller_page_id.val=%" PRIu8, caller_page_id);
           disp1->send_command_printf("select_mode.val=%" PRIu8, popup_select_cache_mode);
-          disp1->send_command_printf("opt_count.val=%" PRIu8, opt_count);
-          disp1->send_command_printf("total_count.val=%" PRIu8, opt_count);  // == opt_count in v1
-          disp1->send_command_printf("selection_mask.val=%" PRIu32, popup_select_cache_mask);
 
-          // 3. Option labels (opt0..opt7).
-          //    set_component_text doesn't support cross-page addressing, so use send_command_printf
-          //    with a constructed "page.component.txt=..." string.
-          for (uint8_t i = 0; i < opt_count; ++i) {
-            std::string escaped = options[i];
-            for (size_t pos = 0; (pos = escaped.find('\\', pos)) != std::string::npos; pos += 2) {
-              escaped.replace(pos, 1, "\\\\");
-            }
-            for (size_t pos = 0; (pos = escaped.find('"', pos)) != std::string::npos; pos += 2) {
-              escaped.replace(pos, 1, "\\\"");
-            }
-            disp1->send_command_printf("opt%" PRIu8 ".txt=\"%s\"", i, escaped.c_str());
-          }
-
-          // 4. Localized header title.
+          // 3. Localized header title.
           {
             std::string escaped = title;
             for (size_t pos = 0; (pos = escaped.find('\\', pos)) != std::string::npos; pos += 2) {
@@ -167,14 +169,71 @@ script:
             disp1->send_command_printf("lbl_title.txt=\"%s\"", escaped.c_str());
           }
 
-          // 5. Trigger init (draws card, shows header, shows populated opt buttons, kicks render).
+          // 4. Open on the option page holding the current selection.
+          popup_select_page = popup_select_selected_page();
+          popup_select_render->execute();
+
+          ESP_LOGD("${TAG_PAGE_POPUP_SELECT}", "Picker opened (caller=%" PRIu8 ", opts=%zu, mask=%" PRIu32 ")",
+                                                caller_page_id, popup_select_cache_options.size(), popup_select_cache_mask);
+
+  # Renders the current option page (popup_select_page) on the display.
+  # Used when the picker opens and on every page change (header buttons or swipe).
+  # Order is:
+  #   1. Write the page-dependent picker-local variables.
+  #   2. Write the option labels into opt0..opt7.
+  #   3. Write the page indicator (only when there is more than one page).
+  #   4. Trigger init timer (hides all, draws card, shows header, populated buttons and footer).
+  - id: popup_select_render
+    mode: queued
+    max_runs: 2
+    then:
+      - lambda: |-
+          const auto& options = popup_select_cache_options;
+          const uint8_t total_count = static_cast<uint8_t>(std::min(options.size(),
+                                                                    static_cast<size_t>(POPUP_SELECT_MAX_OPTIONS)));
+          const uint8_t page_count = popup_select_page_count();
+          if (popup_select_page >= page_count) {
+            popup_select_page = 0;
+          }  // if (popup_select_page >= page_count)
+          const uint8_t first = popup_select_page * POPUP_SELECT_SLOTS;
+          const uint8_t opt_count = (total_count > first) ?
+                                    std::min(static_cast<uint8_t>(total_count - first), POPUP_SELECT_SLOTS) : 0;
+          // Selection mask relative to this page, so the display's render timer needs no page awareness
+          const uint32_t page_mask = (popup_select_cache_mask >> first) & ((1u << POPUP_SELECT_SLOTS) - 1u);
+
+          // 1. Picker-local variables.
+          disp1->send_command_printf("opt_count.val=%" PRIu8, opt_count);
+          disp1->send_command_printf("total_count.val=%" PRIu8, total_count);
+          disp1->send_command_printf("selection_mask.val=%" PRIu32, page_mask);
+
+          // 2. Option labels (opt0..opt7).
+          //    set_component_text doesn't support cross-page addressing, so use send_command_printf
+          //    with a constructed "component.txt=..." string.
+          for (uint8_t i = 0; i < opt_count; ++i) {
+            std::string escaped = options[first + i];
+            for (size_t pos = 0; (pos = escaped.find('\\', pos)) != std::string::npos; pos += 2) {
+              escaped.replace(pos, 1, "\\\\");
+            }
+            for (size_t pos = 0; (pos = escaped.find('"', pos)) != std::string::npos; pos += 2) {
+              escaped.replace(pos, 1, "\\\"");
+            }
+            disp1->send_command_printf("opt%" PRIu8 ".txt=\"%s\"", i, escaped.c_str());
+          }
+
+          // 3. Page indicator (footer is only shown by the display when paged).
+          //    The navigation icons (btn_prev/btn_next) are set on the TFT.
+          if (page_count > 1) {
+            disp1->send_command_printf("lbl_hint.txt=\"%" PRIu8 "/%" PRIu8 "\"", popup_select_page + 1, page_count);
+          }  // if (page_count > 1)
+
+          // 4. Trigger init (hides all, draws card, shows header, populated opt buttons and footer, kicks render).
           //    Nextion timers cannot be page-prefixed — init.en=1 targets the current page's init timer.
           //    The pacer ensures page popup_select is acknowledged before this command is sent,
           //    so init refers to popup_select.init as intended.
           disp1->send_command("init.en=1");
 
-          ESP_LOGD("${TAG_PAGE_POPUP_SELECT}", "Picker opened (caller=%" PRIu8 ", opts=%" PRIu8 ", mask=%" PRIu32 ")",
-                                                caller_page_id, opt_count, popup_select_cache_mask);
+          ESP_LOGV("${TAG_PAGE_POPUP_SELECT}", "Picker page %" PRIu8 "/%" PRIu8 " rendered (opts=%" PRIu8 ", mask=%" PRIu32 ")",
+                                                popup_select_page + 1, page_count, opt_count, page_mask);
 
   - id: !extend page_change
     then:
@@ -235,12 +294,6 @@ script:
             ESP_LOGW("${TAG_PAGE_POPUP_SELECT}", "Cache has no options; picker would be empty, not navigating");
             return;
           }
-          if (options.size() > 8) {
-            ESP_LOGW("${TAG_PAGE_POPUP_SELECT}", "Cache has %zu options but picker supports 8; "
-                                                  "excess will be truncated by Blueprint",
-                                                  options.size());
-          }
-
           goto_page_popup_select->execute(caller_page_id, title.c_str());
 
   - id: !extend reset_globals
@@ -256,6 +309,7 @@ script:
           goto_page_popup_select->stop();
           picker_selected->stop();
           popup_select_open->stop();
+          popup_select_render->stop();
 
   - id: !extend stop_page_constructors
     then:
@@ -276,4 +330,5 @@ text_sensor:
             popup_select_cache_mask = 0;
             popup_select_cache_mode = UINT8_MAX;
             popup_select_cache_options.clear();
+            popup_select_page = 0;
 ...
