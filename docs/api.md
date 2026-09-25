@@ -425,6 +425,8 @@ ensuring they can easily access detailed information and return to their initial
   - `water_heater`
 
   Use the special value `embedded_climate` to open the built-in climate control page for the panel's relay-based thermostat.
+  If the details page for that domain is already shown for a different entity, the page is reloaded with the new entity.
+  Requests for the entity already shown are ignored.
 - `back_page` (string): The page identifier to return to after viewing entity details.
   Valid options are `home` for the home page or `buttonpage01` to `buttonpage04` for button pages.
   No other pages are supported to maintain navigation consistency.
