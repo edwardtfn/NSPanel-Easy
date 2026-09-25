@@ -48,9 +48,14 @@ Take note of the branch (`dev`, `beta`, or `main`) or version name exactly as it
 
     ![Image](pics/esphome_dashboard_yaml_ref_main.png)
 
-2. Change the value of `ref:` to the version you want to install, like `ref: dev` or `ref: v4.1.4`:
+2. Change the value of `ref:` to the version you want to install, like `ref: dev` or `ref: v2026.9.12`:
 
-    ![Image](pics/esphome_dashboard_yaml_ref_v414.png)
+    ```yaml
+    packages:
+      remote_package:
+        url: https://github.com/edwardtfn/NSPanel-Easy
+        ref: v2026.9.12
+    ```
 
 3. Save your settings and then install it.
 
