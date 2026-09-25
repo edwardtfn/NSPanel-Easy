@@ -437,7 +437,7 @@ Dual-state Button opt4
         ID                        : 10
         Scope                     : local
         Dragging                  : 0
-        Send Component ID         : on release
+        Send Component ID         : disabled
         Opacity                   : 127
         x coordinate              : 58
         y coordinate              : 166
