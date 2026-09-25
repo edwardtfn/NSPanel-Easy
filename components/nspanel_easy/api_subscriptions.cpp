@@ -259,6 +259,10 @@ uint16_t sub_load() {
     }
     for (uint16_t slot = 0; slot < SUB_CHUNK_SIZE && sub_count < header.count; ++slot) {
       sub_bindings[sub_count] = data.bindings[slot];
+      // The domain is a pure function of the entity_id, so re-derive it rather
+      // than trusting the persisted value: bindings stored by an older firmware
+      // then pick up any domain reclassification without needing a new push.
+      sub_bindings[sub_count].domain = static_cast<uint8_t>(parse_sub_domain(sub_bindings[sub_count].entity));
       sub_renderers[sub_count] = sub_resolve_renderer(sub_bindings[sub_count].page);
       if (sub_renderers[sub_count] == nullptr) {
         ESP_LOGW(TAG, "No renderer for page '%s'", sub_bindings[sub_count].page);

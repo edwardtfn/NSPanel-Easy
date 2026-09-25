@@ -202,7 +202,7 @@ api:
       variables:
         page: string       # Page name for visibility control (mandatory).
         id: string         # Identifier of the component.
-        icon: string       # Icon codepoint, e.g., "/uE6E8" for `mdi:lightbulb-on-outline`.
+        icon: string       # Icon codepoint, e.g., "\uE6E8" for `mdi:lightbulb-on-outline`.
         icon_color: int[]  # RGB color array for the icon, e.g., [0, 255, 0] for green.
         visible: bool      # Set to `true` for visible or `false` for hidden.
       then:
