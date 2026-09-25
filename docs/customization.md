@@ -445,6 +445,19 @@ The button event is still sent to Home Assistant as usual.
 
 This runs locally on the panel, so it neither requires the `wake_up` API action nor a Home Assistant automation.
 
+To wake the display at "Display Brightness Dimdown" instead of the regular "Display Brightness", also add:
+
+```yaml
+substitutions:
+  wakeup_with_button_press: true         # Wake the display when a hardware button is pressed
+  wakeup_with_button_press_dimmed: true  # ... at the dimmed brightness
+```
+
+With `wakeup_with_button_press_dimmed` enabled, the display is held at the dimmed brightness after a hardware button
+wake-up, including on page changes. Further hardware button presses on a dimmed display only reset the timers, without
+raising the brightness. A touch on the screen restores the regular brightness, and the hold is released when the display
+goes back to sleep.
+
 ### Set display as a light
 
 > [!NOTE]
