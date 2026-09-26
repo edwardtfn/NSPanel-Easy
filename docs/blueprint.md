@@ -225,7 +225,11 @@ Of course there is also the possibility to enter a label for each of the 4 pages
 
 ### Version check - Ignore older ESPHome firmware
 
-By default, the Blueprint stops when the panel's ESPHome firmware is older than the Blueprint, because that firmware may not have registered all the API actions the Blueprint calls. Enable this to keep the Blueprint running while you update your firmware. Features added after your firmware version will not work until the update is completed, and the version mismatch notification is still created.
+By default, the Blueprint stops when the panel's ESPHome firmware is older than the Blueprint,
+because that firmware may not have registered all the API actions the Blueprint calls.
+Enable this to keep the Blueprint running while you update your firmware.
+Features added after your firmware version will not work until the update is completed,
+and the version mismatch notification is still created.
 
 ### Custom actions for version mismatches (Optional)
 
@@ -233,13 +237,15 @@ For advanced users, the Blueprint can run your own actions when it detects a ver
 
 | Input | When it runs |
 | ----- | ------------ |
-| ESPHome firmware outdated | The firmware is older than the Blueprint. Runs when the automations are reloaded (e.g. after re-importing the Blueprint) or when Home Assistant starts. |
+| ESPHome firmware outdated | The firmware is older than the Blueprint. Runs when the automations are reloaded (e.g. after a Blueprint re-import) or Home Assistant starts. |
 | TFT file outdated | The TFT file is older than the firmware requires. Runs when the panel boots and reports its versions. |
 | Blueprint outdated | The firmware requires a newer Blueprint. Runs when the panel boots and reports its versions. |
 
-The Blueprint variables are available in your templates, including `blueprint_version`, `nspanel_name`, `nspanel_full_name` and `nspanel_deviceid`. The description of each input in the Blueprint lists the variables relevant to it.
+The Blueprint variables are available in your templates, including `blueprint_version`, `nspanel_name`, `nspanel_full_name` and `nspanel_deviceid`.
+The description of each input in the Blueprint lists the variables relevant to it.
 
-These actions run inside the Blueprint, so an error stops the current run, and waits or delays hold it. For long tasks, such as compiling and installing a new firmware, call a script with `script.turn_on`, which returns immediately:
+These actions run inside the Blueprint, so an error stops the current run, and waits or delays hold it.
+For long tasks, such as compiling and installing a new firmware, call a script with `script.turn_on`, which returns immediately:
 
 ```yaml
 action: script.turn_on
@@ -252,7 +258,10 @@ data:
 ```
 
 > [!NOTE]
-> Release tags use the format `v<version>`. To build the firmware from the same release as your Blueprint, reference the NSPanel Easy package with a substitution (e.g. `ref: ${nspanel_easy_ref}`, with a default such as `nspanel_easy_ref: latest` under `substitutions:`) and pass the tag when compiling: `esphome -s nspanel_easy_ref v<version> compile <config>.yaml`.
+> Release tags use the format `v<version>`. To build the firmware from the same release as your Blueprint,
+> reference the NSPanel Easy package with a substitution (e.g. `ref: ${nspanel_easy_ref}`,
+> with a default such as `nspanel_easy_ref: latest` under `substitutions:`)
+> and pass the tag when compiling: `esphome -s nspanel_easy_ref v<version> compile <config>.yaml`.
 > Do not name this substitution `version`, as that name is already used by NSPanel Easy for the firmware version.
 
 ## Advanced Settings
