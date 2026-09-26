@@ -4587,9 +4587,12 @@ blueprint:
               min: 100
               max: 10000
               unit_of_measurement: milliseconds
-    advanced_settings:
-      name: Advanced settings
-      icon: mdi:cogs
+    versioning:
+      name: Versioning
+      icon: mdi:update
+      description: >-
+        How the Blueprint handles version mismatches between the Blueprint, the ESPHome firmware and the TFT
+        file, with optional custom actions for advanced users.
       collapsed: true
       input:
         esphome_version_check_bypass:
@@ -4611,6 +4614,106 @@ blueprint:
           default: false
           selector:
             boolean: {}
+        versioning_esphome_outdated_action:
+          name: ESPHome firmware outdated - Custom action
+          description: >-
+            Optional action(s) to run when the panel's ESPHome firmware is older than this Blueprint.
+
+
+            This runs only when the automations are reloaded (e.g. after re-importing the Blueprint) or when
+            Home Assistant starts, and only while the mismatch persists. It does not run when the firmware
+            version cannot be determined.
+
+
+            Variables available in your templates:
+
+            - `blueprint_version`: this Blueprint's version, which is also the version the firmware should be
+            updated to (the matching release tag is `v{{ blueprint_version }}`).
+
+            - `esphome_version_string`: the firmware version currently reported by the panel.
+
+            - `nspanel_name`: the panel's ESPHome name, sanitized as used in its action names
+            (e.g. `nspanel_kitchen`).
+
+            - `nspanel_full_name`: the panel's display name in Home Assistant.
+
+            - `nspanel_deviceid`: the panel's device ID in Home Assistant.
+
+
+            **Attention!** These actions run inside the Blueprint: an error stops the current run, and waits
+            or delays hold it. For long tasks (e.g. compiling and installing a firmware), call a script with
+            `script.turn_on`, which returns immediately.
+          default: []
+          selector:
+            action: {}
+        versioning_tft_outdated_action:
+          name: TFT file outdated - Custom action
+          description: >-
+            Optional action(s) to run when the panel reports a TFT file older than its ESPHome firmware
+            requires.
+
+
+            This runs when the panel boots and reports its versions, after the Blueprint and the ESPHome
+            firmware versions are checked.
+
+
+            Variables available in your templates:
+
+            - `versions.tft`: the TFT version currently on the panel.
+
+            - `versions.tft_min`: the minimum TFT version required by the firmware.
+
+            - `versions.esphome`: the firmware version reported by the panel.
+
+            - `nspanel_name`, `nspanel_full_name` and `nspanel_deviceid`: the panel's identification, as
+            described in the ESPHome firmware action above.
+
+
+            *If the Upload TFT add-on is set to update the TFT automatically, the panel will already start an
+            update on its own. Use this action for notifications or your own integrations, not to start a
+            second upload.*
+
+
+            **Attention!** These actions run inside the Blueprint: an error stops the current run, and waits
+            or delays hold it. For long tasks, call a script with `script.turn_on`, which returns immediately.
+          default: []
+          selector:
+            action: {}
+        versioning_blueprint_outdated_action:
+          name: Blueprint outdated - Custom action
+          description: >-
+            Optional action(s) to run when the panel's ESPHome firmware requires a newer version of this
+            Blueprint.
+
+
+            This runs when the panel boots and reports its versions.
+
+
+            Variables available in your templates:
+
+            - `blueprint_version`: this Blueprint's version.
+
+            - `versions.blueprint_min`: the minimum Blueprint version required by the firmware.
+
+            - `versions.esphome`: the firmware version reported by the panel.
+
+            - `nspanel_name`, `nspanel_full_name` and `nspanel_deviceid`: the panel's identification, as
+            described in the ESPHome firmware action above.
+
+
+            *Home Assistant has no action to re-import a Blueprint, so this is mostly useful for notifications.*
+
+
+            **Attention!** These actions run inside the Blueprint: an error stops the current run, and waits
+            or delays hold it. For long tasks, call a script with `script.turn_on`, which returns immediately.
+          default: []
+          selector:
+            action: {}
+    advanced_settings:
+      name: Advanced settings
+      icon: mdi:cogs
+      collapsed: true
+      input:
         unavailable_behavior:
           name: Unavailable entities - Button appearance
           description: >-
@@ -6898,6 +7001,14 @@ actions:
             [How to Update](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md).*
             {% endif %}
         continue_on_error: true
+      - alias: Custom action - ESPHome firmware outdated
+        # Runs only on automation reload or HA start, and only when the firmware version is known.
+        # It is placed before the stop so it also runs when the gate blocks the Blueprint.
+        if:
+          - '{{ trigger.id in ["automation_reloaded", "ha_started"] }}'
+          - '{{ esphome_version_parts | count == 3 }}'
+        then:
+          - sequence: !input versioning_esphome_outdated_action
       - if: '{{ not esphome_version_check_bypass }}'
         then:
           - stop: ESPHome firmware is older than the Blueprint
@@ -12546,6 +12657,8 @@ actions:
 
                                 *For more detailed instructions, please refer to the online documentation: [How to Update Blueprint](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md#update-blueprint).*
                             continue_on_error: true
+                          - alias: Custom action - Blueprint outdated
+                            sequence: !input versioning_blueprint_outdated_action
 
                       - alias: TFT is older than expected
                         conditions:
@@ -12635,6 +12748,8 @@ actions:
                                     *For more detailed instructions, please refer to the online documentation:
                                     [How to Update TFT](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md#update-tft).*
                                 continue_on_error: true
+                          - alias: Custom action - TFT outdated
+                            sequence: !input versioning_tft_outdated_action
                       # yamllint disable rule:comments-indentation
                       # yamllint enable rule:line-length
                       # yamllint enable rule:comments-indentation
