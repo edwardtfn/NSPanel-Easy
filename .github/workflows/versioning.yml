@@ -6,7 +6,7 @@
 # 3. Resolves the "next" sentinel in min_blueprint_version, if set
 # 4. Updates min_esphome_compiler_version and blueprint homeassistant.min_version
 # 5. Updates the bug report template with current version placeholders
-# 6. Updates the blueprint version and display name
+# 6. Updates the blueprint version and display name, and resolves the "next" sentinel in its min_esphome_version
 # 7. Commits all version changes and pushes to main
 # 8. Builds pre-built firmware binaries in parallel (nspanel-easy, wall-display)
 # 9. Commits the compiled binaries, checksums, and manifests to main
@@ -167,12 +167,12 @@ jobs:
           VERSION_YEAR=$(echo "$CURRENT_VERSION" | awk -F. '{print $1}')
           VERSION_MONTH=$(echo "$CURRENT_VERSION" | awk -F. '{print $2}')
 
-          # Increment sequence or reset for a new month
+          # Increment sequence or reset to 0 for a new month (first release is YYYY.M.0)
           if [[ "$CURRENT_YEAR" == "$VERSION_YEAR" \
              && "$CURRENT_MONTH" == "$VERSION_MONTH" ]]; then
             NEXT_SEQ=$((CURRENT_SEQ + 1))
           else
-            NEXT_SEQ=1
+            NEXT_SEQ=0
           fi
 
           NEXT_VERSION="${CURRENT_YEAR}.${CURRENT_MONTH}.${NEXT_SEQ}"
@@ -306,6 +306,23 @@ jobs:
           if ! grep -q "^  blueprint_version: ${NEW_VERSION}$" "$BLUEPRINT"; then
             echo "ERROR: Failed to update blueprint_version in $BLUEPRINT"
             exit 1
+          fi
+
+          # If min_esphome_version is set to the sentinel "next", replace it with the
+          # actual version being released, tying the Blueprint's firmware requirement
+          # to this exact release. Otherwise the existing requirement is kept.
+          if grep -qE '^  min_esphome_version: next$' "$BLUEPRINT"; then
+            sed -i \
+              "s/^  min_esphome_version: .*/  min_esphome_version: ${NEW_VERSION}/" \
+              "$BLUEPRINT"
+            if ! grep -q "^  min_esphome_version: ${NEW_VERSION}$" "$BLUEPRINT"; then
+              echo "ERROR: Failed to resolve min_esphome_version sentinel in $BLUEPRINT"
+              exit 1
+            fi
+            echo "Resolved min_esphome_version sentinel to ${NEW_VERSION}"
+          else
+            MIN_ESPHOME=$(grep "^  min_esphome_version:" "$BLUEPRINT" | awk '{print $2}')
+            echo "min_esphome_version is already set to ${MIN_ESPHOME}, no sentinel to resolve"
           fi
 
           # Update the minimum Home Assistant version required to run this blueprint,

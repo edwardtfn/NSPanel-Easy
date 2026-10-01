@@ -1,0 +1,10 @@
+---
+substitutions:
+  backup_heater_relay: "2"
+
+packages:
+  idf_common: !include esphome_idf_common.yaml
+  basic_package: !include ../nspanel_esphome.yaml  # Core package
+  addon_climate_heat: !include ../esphome/nspanel_esphome_addon_climate_heat.yaml
+  addon_climate_backup: !include ../esphome/nspanel_esphome_addon_climate_backup.yaml
+...

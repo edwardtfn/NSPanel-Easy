@@ -289,6 +289,10 @@ To open this page, you have two options:
     The `reset_timer` parameter allows you to control the **Timeout sleep timer**.
     Setting it to `true` resets the timer, while `false` continues counting down from the current value.
 
+   > [!IMPORTANT]
+   > The `wake_up` action is not registered by default. To enable it, add `include_action_wake_up: true` to the substitutions in your ESPHome YAML.
+   > See [Reducing Registered API Actions](install.md#reducing-registered-api-actions) for details.
+
 The **Wake-up** action differs from a normal page call in that it only opens the wake-up page if the panel is in sleep mode.
 If the panel is already active, the current page remains displayed.
 This feature is particularly useful in conjunction with a motion sensor to wake up your panel automatically.

@@ -93,6 +93,50 @@ The following keys are available to be used in your `substitutions`:
 - For more details on the keys, see [ESPHome Base Climate Configurations](https://esphome.io/components/climate/index.html#base-climate-configuration)
   and [ESPHome Climate Thermostat - Additional actions behavior](https://esphome.io/components/climate/thermostat.html#additional-actions-behavior).
 
+## Backup mode (local control only when Home Assistant is unavailable)
+
+The optional `addon_climate_backup` package lets Home Assistant (or any other system) be the primary climate controller,
+while the embedded thermostat takes over one or two relays only when Home Assistant is unavailable.
+
+The embedded thermostat keeps running all the time on its normal relays (typically `heater_relay: "0"`, a dummy relay),
+so it has no effect while Home Assistant is connected.
+When Home Assistant has been unavailable for longer than `climate_backup_delay`, the backup relays start to follow the embedded thermostat.
+When Home Assistant is back, the backup relays are turned off and control returns to Home Assistant.
+
+> [!IMPORTANT]
+> This package requires one of the climate add-ons (`heat`, `cool` or `dual`) to be included as well; otherwise ESPHome reports `Source for extension of ID 'relay_0' was not found`.
+> The backup relays must be different from each other and from `heater_relay` / `cooler_relay`; this is checked at build time.
+> The embedded thermostat must be left in an active mode (e.g. preset `Home`), otherwise there is nothing to mirror during an outage.
+> The backup relay should be dedicated to this purpose. While the backup is active, any external change to it (e.g. from the hardware buttons) is reverted to match the embedded thermostat.
+> A reboot restarts the `climate_backup_delay` countdown. Without Home Assistant, the panel reboots after `api: reboot_timeout` (`60min` in this project),
+> and without Wi-Fi after `wifi: reboot_timeout` (`15min` by default in ESPHome). If longer outages are expected, consider increasing these (or setting them to `0s`) in your local yaml.
+
+<!-- markdownlint-disable MD013 -->
+| Key | Required | Supported values | Default | Description |
+| :- | :-: | :-: | :-: | :- |
+| backup_heater_relay | Optional | `0`, `1` or `2` | `0` (disabled) | Relay driven by the heat action while Home Assistant is unavailable. |
+| backup_cooler_relay | Optional | `0`, `1` or `2` | `0` (disabled) | Relay driven by the cool action while Home Assistant is unavailable. |
+| climate_backup_delay | Optional | Positive integer representing the number of seconds | `300` | Time without Home Assistant before the backup takes over. This also covers the time after a reboot. |
+
+<!-- markdownlint-enable MD013 -->
+
+```yaml
+substitutions:
+  ## Add-on climate
+  heater_relay: "0"         # The embedded thermostat drives a dummy relay while Home Assistant is available
+  backup_heater_relay: "2"  # Relay 2 is driven only when Home Assistant is unavailable
+
+packages:
+  remote_package:
+    url: https://github.com/edwardtfn/NSPanel-Easy
+    ref: latest
+    refresh: 300s
+    files:
+      - nspanel_esphome.yaml # Basic package
+      - esphome/nspanel_esphome_addon_climate_heat.yaml
+      - esphome/nspanel_esphome_addon_climate_backup.yaml
+```
+
 ## Examples
 
 ### Cooler

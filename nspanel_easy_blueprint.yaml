@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.9.21)
+  name: NSPanel Easy Configuration (v2026.10.0)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -17,7 +17,7 @@ blueprint:
   source_url: https://raw.githubusercontent.com/edwardtfn/NSPanel-Easy/refs/tags/latest/nspanel_easy_blueprint.yaml
   domain: automation
   homeassistant:
-    min_version: 2026.7.0
+    min_version: 2026.8.0
 
   input:
     nspanel_name:  # This key was kept with this name to support inputs from legacy versions where the panel name was used
@@ -4587,30 +4587,146 @@ blueprint:
               min: 100
               max: 10000
               unit_of_measurement: milliseconds
-    advanced_settings:
-      name: Advanced settings
-      icon: mdi:cogs
+    versioning:
+      name: Versioning
+      icon: mdi:update
+      description: >-
+        How the Blueprint handles version mismatches between the Blueprint, the ESPHome firmware and the TFT
+        file, with optional custom actions for advanced users.
       collapsed: true
       input:
         esphome_version_check_bypass:
           name: Version check - Ignore older ESPHome firmware
           description: >-
-            By default the Blueprint stops when the panel's ESPHome firmware is older than the Blueprint,
-            because that firmware may not have registered all the API actions the Blueprint calls.
+            By default the Blueprint stops when the panel's ESPHome firmware is older than the minimum
+            version this Blueprint requires, because that firmware may not have registered all the API
+            actions the Blueprint calls. Newer releases that keep compatibility with your firmware do not
+            stop the Blueprint.
 
 
             Enable this to keep the Blueprint running anyway, so the panel stays usable while you update
             your firmware.
 
 
-            **Attention!** Features added after your firmware version will not work, and a sequence that
-            reaches one of them stops at that point. Everything the firmware does support keeps working.
+            **Attention!** Features that need a newer firmware will not work, and a sequence that reaches
+            one of them stops at that point. Everything the firmware does support keeps working.
 
 
             *The version mismatch notification is still created, so you do not forget to finish the update.*
           default: false
           selector:
             boolean: {}
+        versioning_esphome_outdated_action:
+          name: ESPHome firmware outdated - Custom action
+          description: >-
+            Optional action(s) to run when the panel's ESPHome firmware is older than the minimum version
+            this Blueprint requires.
+
+
+            This runs only when the automations are reloaded (e.g. after re-importing the Blueprint) or when
+            Home Assistant starts, and only while the mismatch persists. It does not run when the firmware
+            version cannot be determined.
+
+
+            Variables available in your templates:
+
+            - `min_esphome_version_string`: the minimum firmware version this Blueprint requires.
+
+            - `api_version`: the API version this Blueprint uses, as `[major, minor]`.
+
+            - `esphome_api_version`: the API version reported by the firmware as `[major, minor]`, when
+            the run was started by a panel event (empty otherwise).
+
+            - `blueprint_version`: this Blueprint's version, the recommended version to update the firmware
+            to (the matching release tag is `v{{ blueprint_version }}`).
+
+            - `esphome_version_string`: the firmware version currently reported by the panel.
+
+            - `nspanel_name`: the panel's ESPHome name, sanitized as used in its action names
+            (e.g. `nspanel_kitchen`).
+
+            - `nspanel_full_name`: the panel's display name in Home Assistant.
+
+            - `nspanel_deviceid`: the panel's device ID in Home Assistant.
+
+
+            **Attention!** These actions run inside the Blueprint: an error stops the current run, and waits
+            or delays hold it. For long tasks (e.g. compiling and installing a firmware), call a script with
+            `script.turn_on`, which returns immediately.
+          default: []
+          selector:
+            action: {}
+        versioning_tft_outdated_action:
+          name: TFT file outdated - Custom action
+          description: >-
+            Optional action(s) to run when the panel reports a TFT file older than its ESPHome firmware
+            requires.
+
+
+            This runs when the panel boots and reports its versions, after the Blueprint and the ESPHome
+            firmware versions are checked.
+
+
+            Variables available in your templates:
+
+            - `versions.tft`: the TFT version currently on the panel.
+
+            - `versions.tft_min`: the minimum TFT version required by the firmware.
+
+            - `versions.esphome`: the firmware version reported by the panel.
+
+            - `nspanel_name`, `nspanel_full_name` and `nspanel_deviceid`: the panel's identification, as
+            described in the ESPHome firmware action above.
+
+
+            *If the Upload TFT add-on is set to update the TFT automatically, the panel will already start an
+            update on its own. Use this action for notifications or your own integrations, not to start a
+            second upload.*
+
+
+            **Attention!** These actions run inside the Blueprint: an error stops the current run, and waits
+            or delays hold it. For long tasks, call a script with `script.turn_on`, which returns immediately.
+          default: []
+          selector:
+            action: {}
+        versioning_blueprint_outdated_action:
+          name: Blueprint outdated - Custom action
+          description: >-
+            Optional action(s) to run when the panel's ESPHome firmware requires a newer version of this
+            Blueprint, or reports an API version this Blueprint no longer supports.
+
+
+            This runs when the panel boots and reports its versions.
+
+
+            Variables available in your templates:
+
+            - `blueprint_version`: this Blueprint's version.
+
+            - `versions.blueprint_min`: the minimum Blueprint version required by the firmware.
+
+            - `versions.esphome`: the firmware version reported by the panel.
+
+            - `api_version` and `esphome_api_version`: the API version used by this Blueprint and
+            the one reported by the firmware, as `[major, minor]`.
+
+            - `nspanel_name`, `nspanel_full_name` and `nspanel_deviceid`: the panel's identification, as
+            described in the ESPHome firmware action above.
+
+
+            *Home Assistant has no action to re-import a Blueprint, so this is mostly useful for notifications.*
+
+
+            **Attention!** These actions run inside the Blueprint: an error stops the current run, and waits
+            or delays hold it. For long tasks, call a script with `script.turn_on`, which returns immediately.
+          default: []
+          selector:
+            action: {}
+    advanced_settings:
+      name: Advanced settings
+      icon: mdi:cogs
+      collapsed: true
+      input:
         unavailable_behavior:
           name: Unavailable entities - Button appearance
           description: >-
@@ -4872,7 +4988,19 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.9.21
+  blueprint_version: 2026.10.0
+
+  # Minimum ESPHome firmware version required by this Blueprint (the Blueprint -> ESPHome contract).
+  # Set it to 'next' when a change makes the Blueprint depend on a newer firmware, e.g. a new API
+  # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
+  # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
+  min_esphome_version: 2026.10.0
+
+  # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
+  # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
+  # and MAJOR when it follows a firmware change that removed an action or changed its parameters.
+  # Kept as a list: Home Assistant would convert "1.10" to the number 1.1.
+  api_version: [1, 0]
 
   # Firmware version as reported by the ESPHome integration in the device registry.
   # Format: "<project_version> (ESPHome <compiler_version>)", e.g. "2026.8.5 (ESPHome 2026.6.0)".
@@ -4901,21 +5029,70 @@ variables:
     }}
   blueprint_version_parts: >-
     {{ (blueprint_version | string).split('.') | map('int') | list }}
-  # ESPHome must be equal to or newer than the Blueprint. The documented update
-  # order is ESPHome -> TFT -> Blueprint, so a Blueprint ahead of the firmware
-  # means the user skipped a step and new API actions may not exist yet.
-  # Fails closed: an unparseable version blocks all action calls.
+  # Parsed into an integer tuple. The unresolved 'next' sentinel (development
+  # builds) and any unparseable value fall back to this Blueprint's own version,
+  # the strictest requirement.
+  min_esphome_version_parts: >-
+    {{
+      (min_esphome_version | string).split('.') | map('int') | list
+      if (min_esphome_version | string).split('.') | count == 3
+      and (min_esphome_version | string).split('.') | select('match', '^[0-9]+$') | list | count == 3
+      else blueprint_version_parts
+    }}
+  # Resolved minimum version, for notifications and custom actions.
+  min_esphome_version_string: "{{ min_esphome_version_parts | join('.') }}"
+  # API version reported by the firmware, parsed into [MAJOR, MINOR]. Only panel
+  # events carry it, so it is empty for runs started by any other trigger, and for
+  # firmware that does not report it yet.
+  # Kept as a list: a rendered "1.10" would be converted to the number 1.1.
+  esphome_api_version: >-
+    {%- set raw = (
+      trigger.event.data.api_version | default('', true) | string
+      if trigger is defined and trigger.id == 'nspanel_event'
+      and trigger.event is defined and trigger.event.data is defined
+      else ''
+    ) -%}
+    {{
+      raw.split('.') | map('int') | list
+      if raw.split('.') | count == 2
+      and raw.split('.') | select('match', '^[0-9]+$') | list | count == 2
+      else []
+    }}
+  # The firmware provides an older API than this Blueprint uses (an action the
+  # Blueprint calls may not exist yet).
+  esphome_api_outdated: >-
+    {{
+      esphome_api_version | count == 2
+      and (
+        esphome_api_version[0] < api_version[0]
+        or (esphome_api_version[0] == api_version[0]
+            and esphome_api_version[1] < api_version[1])
+      )
+    }}
+  # The firmware removed or changed actions this Blueprint calls (a newer API
+  # MAJOR), so the Blueprint must be updated.
+  blueprint_api_outdated: >-
+    {{
+      esphome_api_version | count == 2
+      and esphome_api_version[0] > api_version[0]
+    }}
+  # ESPHome must be equal to or newer than min_esphome_version and, when reported,
+  # provide the API version this Blueprint uses. The documented update order is
+  # ESPHome -> TFT -> Blueprint, so a Blueprint requiring a newer firmware means
+  # the user skipped a step and new API actions may not exist yet.
+  # Fails closed: an unparseable firmware version blocks all action calls.
   esphome_compatible: >-
     {{
       esphome_version_parts | count == 3
       and (
-        esphome_version_parts[0] > blueprint_version_parts[0]
-        or (esphome_version_parts[0] == blueprint_version_parts[0]
-            and esphome_version_parts[1] > blueprint_version_parts[1])
-        or (esphome_version_parts[0] == blueprint_version_parts[0]
-            and esphome_version_parts[1] == blueprint_version_parts[1]
-            and esphome_version_parts[2] >= blueprint_version_parts[2])
+        esphome_version_parts[0] > min_esphome_version_parts[0]
+        or (esphome_version_parts[0] == min_esphome_version_parts[0]
+            and esphome_version_parts[1] > min_esphome_version_parts[1])
+        or (esphome_version_parts[0] == min_esphome_version_parts[0]
+            and esphome_version_parts[1] == min_esphome_version_parts[1]
+            and esphome_version_parts[2] >= min_esphome_version_parts[2])
       )
+      and not esphome_api_outdated
     }}
   # User escape hatch for the version gate. When enabled, the Blueprint keeps
   # running against an outdated firmware instead of stopping, accepting that
@@ -6854,6 +7031,8 @@ actions:
 
             - Blueprint version: {{ blueprint_version }}
 
+            - Required firmware version: {{ min_esphome_version_string }} or newer
+
             - Reported firmware version: {{ esphome_sw_version if esphome_sw_version | length > 0 else "Unknown" }}
 
             ---
@@ -6868,7 +7047,11 @@ actions:
             [report this issue](https://github.com/edwardtfn/NSPanel-Easy/issues/new/choose),
             including the reported firmware version shown above.
             {% else %}
-            Your NSPanel Easy ESPHome firmware is older than the Blueprint,
+            {% if esphome_api_outdated %}
+            Your NSPanel Easy ESPHome firmware provides an older API version than the Blueprint requires,
+            {% else %}
+            Your NSPanel Easy ESPHome firmware is older than the minimum version required by the Blueprint,
+            {% endif %}
             {% if esphome_version_check_bypass %}
             and the version check has been bypassed, so features added after your firmware version
             will not work until you finish the update.
@@ -6880,7 +7063,13 @@ actions:
 
             - Current ESPHome version: {{ esphome_version_string }}
 
-            - Required version: {{ blueprint_version }} or newer
+            - Required version: {{ blueprint_version if esphome_api_outdated else min_esphome_version_string }} or newer
+
+            - Recommended version: {{ blueprint_version }} (same as the Blueprint)
+            {% if esphome_api_version | count == 2 %}
+
+            - API version: {{ esphome_api_version | join('.') }} (Blueprint requires {{ api_version | join('.') }})
+            {% endif %}
 
             ---
 
@@ -6888,7 +7077,8 @@ actions:
 
             Components must be updated in this order: **ESPHome**, then **TFT**, then **Blueprint**.
 
-            1. Update your ESPHome configuration to reference version {{ blueprint_version }} or newer.
+            1. Update your ESPHome configuration to reference version {{ blueprint_version
+            }}{{ '' if esphome_api_outdated else ' (or at least ' ~ min_esphome_version_string ~ ')' }}.
 
             2. Install the new firmware on your panel.
 
@@ -6898,9 +7088,68 @@ actions:
             [How to Update](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md).*
             {% endif %}
         continue_on_error: true
+      - alias: Custom action - ESPHome firmware outdated
+        # Runs only on automation reload or HA start, and only when the firmware version is known.
+        # It is placed before the stop so it also runs when the gate blocks the Blueprint.
+        if:
+          - '{{ trigger.id in ["automation_reloaded", "ha_started"] }}'
+          - '{{ esphome_version_parts | count == 3 }}'
+        then:
+          - sequence: !input versioning_esphome_outdated_action
       - if: '{{ not esphome_version_check_bypass }}'
         then:
-          - stop: ESPHome firmware is older than the Blueprint
+          - stop: ESPHome firmware is older than required by the Blueprint (version or API)
+
+  - alias: API version gate - Blueprint outdated
+    # The firmware removed or changed API actions this Blueprint calls. Calling them
+    # would raise errors and repair issues in Home Assistant, so the run stops.
+    # Only runs started by a panel event carry the firmware's API version.
+    # There is no bypass: an outdated Blueprint cannot call the new actions.
+    if: '{{ blueprint_api_outdated }}'
+    then:
+      - action: persistent_notification.create
+        data:
+          notification_id: 'NSPanel_Easy_version_mismatch_{{ nspanel_name }}'
+          title: "NSPanel Easy - Version mismatch: Blueprint"
+          message: >
+            Your NSPanel Easy Blueprint is not compatible with the ESPHome firmware of the panel
+            **{{ nspanel_full_name }}**, so the Blueprint has stopped to avoid calling API actions this
+            firmware no longer supports.
+
+            - Current Blueprint version: {{ blueprint_version }} (API {{ api_version | join('.') }})
+
+            - ESPHome firmware version: {{ esphome_version_string if esphome_version_string | length > 0 else "Unknown" }} (API {{ esphome_api_version | join('.') }})
+
+            ---
+
+            **How to Resolve This Issue**
+
+            1. Navigate to your [Blueprint Dashboard](/config/blueprint/dashboard).
+
+            2. Locate the blueprint named "**NSPanel Easy Configuration**".
+
+            3. Click on the corresponding 3-dot menu.
+
+            4. Choose "**Re-import blueprint**".
+
+            5. Select the "**Re-import**" button.
+
+
+            *For more detailed instructions, please refer to the online documentation:
+            [How to Update Blueprint](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md#update-blueprint).*
+        continue_on_error: true
+      - alias: Custom action - Blueprint outdated
+        # Runs once per panel boot, on the version event, as in the version mismatch handler.
+        # It is placed before the stop, which also blocks that handler.
+        if: '{{ trigger.event.data.type | default("") == "version" }}'
+        then:
+          - variables:
+              versions:
+                blueprint: '{{ trigger.event.data.blueprint | default("") }}'
+                blueprint_min: '{{ trigger.event.data.min_blueprint_version | default("") }}'
+                esphome: '{{ trigger.event.data.esphome | default("") }}'
+          - sequence: !input versioning_blueprint_outdated_action
+      - stop: Blueprint API version is older than the ESPHome firmware API version
 
   - alias: Global anchor repository
     if: '{{ false }}'  # It should never execute directly
@@ -9085,21 +9334,21 @@ actions:
                                           else []
                                         }}
 
-                                      # Truncation rule: current always included.
-                                      # If <=8: send all in HA order.
-                                      # If >8 and current in first 8: send first 8.
-                                      # If >8 and current in positions 8+: send [current] + first 7 excluding current.
+                                      # Truncation rule (the picker pages through up to 32 options): current always included.
+                                      # If <=32: send all in HA order.
+                                      # If >32 and current in first 32: send first 32.
+                                      # If >32 and current in positions 32+: send [current] + first 31 excluding current.
                                       effect_list_truncated: >
-                                        {%- if effect_list_raw | length <= 8 -%}
+                                        {%- if effect_list_raw | length <= 32 -%}
                                           {%- if current_effect | length == 0 or current_effect in effect_list_raw -%}
                                             {{ effect_list_raw }}
                                           {%- else -%}
-                                            {{ ([current_effect] + (effect_list_raw | list))[:8] }}
+                                            {{ ([current_effect] + (effect_list_raw | list))[:32] }}
                                           {%- endif -%}
-                                        {%- elif current_effect | length == 0 or current_effect in effect_list_raw[:8] -%}
-                                          {{ effect_list_raw[:8] }}
+                                        {%- elif current_effect | length == 0 or current_effect in effect_list_raw[:32] -%}
+                                          {{ effect_list_raw[:32] }}
                                         {%- else -%}
-                                          {{ [current_effect] + (effect_list_raw[:7] | reject("equalto", current_effect) | list) }}
+                                          {{ [current_effect] + (effect_list_raw[:31] | reject("equalto", current_effect) | list) }}
                                         {%- endif -%}
                                   - action: 'esphome.{{ action_prefix }}_component_text_list'
                                     data:
@@ -9534,13 +9783,14 @@ actions:
                               - if: '{{ page_constructor }}'
                                 then:
                                   - variables:
+                                      # The picker pages through up to 32 options; current is always included
                                       preset_modes_truncated: >
-                                        {%- if preset_modes_raw | length <= 8 -%}
+                                        {%- if preset_modes_raw | length <= 32 -%}
                                           {{ preset_modes_raw }}
-                                        {%- elif current_preset_mode | length == 0 or current_preset_mode in preset_modes_raw[:8] -%}
-                                          {{ preset_modes_raw[:8] }}
+                                        {%- elif current_preset_mode | length == 0 or current_preset_mode in preset_modes_raw[:32] -%}
+                                          {{ preset_modes_raw[:32] }}
                                         {%- else -%}
-                                          {{ [current_preset_mode] + (preset_modes_raw[:7] | reject("equalto", current_preset_mode) | list) }}
+                                          {{ [current_preset_mode] + (preset_modes_raw[:31] | reject("equalto", current_preset_mode) | list) }}
                                         {%- endif -%}
                                   - action: 'esphome.{{ nspanel_name }}_component_text_list'
                                     data:
@@ -11325,13 +11575,14 @@ actions:
                                       else []
                                     }}
                               - variables:
+                                  # The picker pages through up to 32 options; current is always included
                                   options_truncated: >
-                                    {%- if options_raw | length <= 8 -%}
+                                    {%- if options_raw | length <= 32 -%}
                                       {{ options_raw }}
-                                    {%- elif current_option | length == 0 or current_option in options_raw[:8] -%}
-                                      {{ options_raw[:8] }}
+                                    {%- elif current_option | length == 0 or current_option in options_raw[:32] -%}
+                                      {{ options_raw[:32] }}
                                     {%- else -%}
-                                      {{ [current_option] + (options_raw[:7] | reject("equalto", current_option) | list) }}
+                                      {{ [current_option] + (options_raw[:31] | reject("equalto", current_option) | list) }}
                                     {%- endif -%}
                               - action: 'esphome.{{ action_prefix }}_component_text_list'
                                 data:
@@ -12546,6 +12797,8 @@ actions:
 
                                 *For more detailed instructions, please refer to the online documentation: [How to Update Blueprint](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md#update-blueprint).*
                             continue_on_error: true
+                          - alias: Custom action - Blueprint outdated
+                            sequence: !input versioning_blueprint_outdated_action
 
                       - alias: TFT is older than expected
                         conditions:
@@ -12635,6 +12888,8 @@ actions:
                                     *For more detailed instructions, please refer to the online documentation:
                                     [How to Update TFT](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md#update-tft).*
                                 continue_on_error: true
+                          - alias: Custom action - TFT outdated
+                            sequence: !input versioning_tft_outdated_action
                       # yamllint disable rule:comments-indentation
                       # yamllint enable rule:line-length
                       # yamllint enable rule:comments-indentation

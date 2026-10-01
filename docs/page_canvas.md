@@ -138,7 +138,7 @@ applied, so pass a one-element list:
     page: canvas
     id: icon_state
     txt_list:
-      - "\uE159"  # mdi:bus
+      - "\uE0E6"  # mdi:bus
 
 - action: esphome.<panel_name>_component_text_list
   data:
@@ -234,7 +234,7 @@ automation:
           page: canvas
           id: icon_state
           txt_list:
-            - "\uE159"
+            - "\uE0E6"
 
       - action: esphome.<panel_name>_component_text_list
         data:

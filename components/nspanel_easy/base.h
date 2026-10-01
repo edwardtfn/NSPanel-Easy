@@ -180,6 +180,14 @@ inline void feed_wdt_delay(uint32_t ms = 5) {
 extern std::string cached_device_name;
 
 /**
+ * @brief API version (MAJOR.MINOR) provided by this firmware.
+ *
+ * Set from the `api_version` substitution during boot (see nspanel_esphome_version.yaml).
+ * While set, fire_ha_event() adds it to every event, so the Blueprint can check it before calling any action.
+ */
+extern const char *firmware_api_version;
+
+/**
  * @brief How a button bound to an unavailable entity is rendered.
  *
  * Applies to every per-entity button surface: the button pages, the climate
@@ -213,10 +221,10 @@ extern bool unavailable_unhide_pending;
 /**
  * @brief Fire a Home Assistant event for NSPanel HA Blueprint
  *
- * Automatically adds device_name and type to the event data.
+ * Automatically adds device_name, type and, when available, api_version to the event data.
  *
  * @param type Event type (e.g., "button_click", "page_changed", "boot")
- * @param data Additional event data (device_name and type added automatically)
+ * @param data Additional event data (device_name, type and api_version added automatically)
  *
  * @note The event name is automatically set to "esphome.nspanel_easy"
  * @note Call init_device_name_cache() during boot before using this function

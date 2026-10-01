@@ -12,5 +12,5 @@
 # Note: ESPHome itself is intentionally absent — its version is resolved
 # dynamically by the workflow (latest/dev tracks) and must not be pinned.
 
-flake8==7.3.0
+flake8==7.4.1
 yamllint==1.38.0

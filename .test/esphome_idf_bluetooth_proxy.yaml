@@ -1,7 +1,6 @@
 ---
 packages:
   idf_common: !include esphome_idf_common.yaml
-  basic_package: !include ../nspanel_esphome.yaml  # Core package
-
-bluetooth_proxy:
+  basic_package: !include ../nspanel_esphome.yaml  # Basic package
+  bluetooth_proxy_package: !include ../esphome/nspanel_esphome_addon_bluetooth_proxy.yaml
 ...

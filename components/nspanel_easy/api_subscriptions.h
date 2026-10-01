@@ -118,11 +118,18 @@ enum SubEntityState : uint8_t {
 };
 
 /**
- * @brief Domains whose visible state set spans more than one state.
+ * @brief Domains that need on-device handling beyond the generic state lists.
  *
- * Only these need on-device icon and colour resolution. Every other domain has
- * a single visible state per polarity, so the blueprint resolves the appearance
- * once and pushes it, and ESPHome only toggles visibility.
+ * Most of these have a visible state set spanning more than one state, so they
+ * need on-device icon and colour resolution. SUB_DOMAIN_VALUE is the exception:
+ * its appearance comes from the blueprint like any generic entity, but its
+ * state is a free-form value that the generic on/off lists cannot classify.
+ * Every other domain has a single visible state per polarity, so the blueprint
+ * resolves the appearance once and pushes it, and ESPHome only toggles
+ * visibility.
+ *
+ * Values are appended only. Bindings persist the domain, and although it is
+ * re-derived on load, keeping the numbering stable avoids surprises.
  */
 enum SubDomain : uint8_t {
   SUB_DOMAIN_GENERIC = 0,   ///< Appearance supplied by the blueprint
@@ -131,6 +138,7 @@ enum SubDomain : uint8_t {
   SUB_DOMAIN_COVER,         ///< cover; device_class dependent
   SUB_DOMAIN_LOCK,          ///< lock
   SUB_DOMAIN_WATER_HEATER,  ///< water_heater
+  SUB_DOMAIN_VALUE,         ///< input_number, number, sensor; any usable value is active
 };
 
 /// @brief Icon and colour for a component in a given state.
@@ -239,8 +247,8 @@ static constexpr const char *SUB_UNAVAILABLE_STATES[] = {"unavailable"};
  * @brief Derive the domain from an entity_id.
  *
  * @param entity_id Full entity_id, e.g. "cover.garage_door".
- * @return Matching SubDomain, or SUB_DOMAIN_GENERIC when no on-device
- *         appearance resolution is needed.
+ * @return Matching SubDomain, or SUB_DOMAIN_GENERIC when neither on-device
+ *         appearance resolution nor value classification is needed.
  */
 inline SubDomain parse_sub_domain(const char *entity_id) {
   const char *dot = strchr(entity_id, '.');
@@ -257,7 +265,10 @@ inline SubDomain parse_sub_domain(const char *entity_id) {
       {"alarm_control_panel", SUB_DOMAIN_ALARM},
       {"climate", SUB_DOMAIN_CLIMATE},
       {"cover", SUB_DOMAIN_COVER},
+      {"input_number", SUB_DOMAIN_VALUE},
       {"lock", SUB_DOMAIN_LOCK},
+      {"number", SUB_DOMAIN_VALUE},
+      {"sensor", SUB_DOMAIN_VALUE},
       {"water_heater", SUB_DOMAIN_WATER_HEATER},
   };
   for (const DomainEntry &entry : DOMAINS) {
@@ -355,6 +366,13 @@ inline SubEntityState evaluate_sub_state(SubDomain domain, const char *state) {
       }
       return (strcmp(state, "off") == 0) ? SUB_STATE_OFF : SUB_STATE_NEITHER;
     }  // case SUB_DOMAIN_WATER_HEATER
+
+    case SUB_DOMAIN_VALUE: {
+      // A value entity has no on/off vocabulary: any usable value counts as
+      // active, matching the blueprint's entity_state_is_on. Unusable and
+      // unavailable states were already handled above.
+      return SUB_STATE_ON;
+    }  // case SUB_DOMAIN_VALUE
 
     case SUB_DOMAIN_GENERIC:
     default: {
@@ -540,6 +558,7 @@ inline SubAppearance resolve_sub_appearance(SubDomain domain, const char *device
       return {Icons::MDI_WATER_BOILER, color_on};
     }  // case SUB_DOMAIN_WATER_HEATER
 
+    case SUB_DOMAIN_VALUE:  // Appearance supplied by the blueprint, like a generic entity
     case SUB_DOMAIN_GENERIC:
     default:
       return {nullptr, color_on};  // Caller uses the blueprint-supplied appearance

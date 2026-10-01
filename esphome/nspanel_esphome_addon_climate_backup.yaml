@@ -1,0 +1,107 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHome Add-on for Climate control - Backup (only drives relays when HA is unavailable)   #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### ATTENTION: This requires one of the climate add-ons (heat, cool or dual) and the core.    #####
+#####################################################################################################
+---
+substitutions:
+  ##############################
+  ## Change only in your      ##
+  ## local yaml substitutions ##
+  ##############################
+  backup_heater_relay: "0"      # Relay (1 or 2) driven by heat actions while HA is unavailable, or "0" to disable
+  backup_cooler_relay: "0"      # Relay (1 or 2) driven by cool actions while HA is unavailable, or "0" to disable
+  climate_backup_delay: "300"   # Seconds without Home Assistant before the backup takes over, allows time for boot checks
+  TAG_ADDON_CLIMATE_BACKUP: nspanel.addon.climate.backup
+
+esphome:
+  build_flags:
+    - -D NSPANEL_EASY_ADDON_CLIMATE_BACKUP
+
+globals:
+  - id: climate_backup_active  # True while the backup relays follow the embedded thermostat
+    type: bool
+    restore_value: false
+    initial_value: 'false'  # Must be quoted: ESPHome expects the C++ initializer as a string
+  - id: climate_backup_last_ha_ms  # Last time (millis) Home Assistant was seen connected
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'  # Must be quoted: ESPHome expects the C++ initializer as a string
+
+climate:
+  - id: !extend thermostat_embedded
+    on_state:
+      then:
+        - script.execute: climate_backup_sync
+
+switch:
+  # While the backup is active, the thermostat owns the backup relays: revert any external change (e.g. hardware buttons)
+  - id: !extend relay_${backup_heater_relay}
+    on_state:
+      then:
+        - script.execute: climate_backup_sync
+  - id: !extend relay_${backup_cooler_relay}
+    on_state:
+      then:
+        - script.execute: climate_backup_sync
+
+script:
+  # Evaluated on API connect/disconnect and on every watchdog round
+  - id: !extend update_flag_api_ready
+    then:
+      - lambda: |-
+          const uint32_t now_ms = millis();
+          if (api_server->is_connected_with_state_subscription()) {
+            id(climate_backup_last_ha_ms) = now_ms;
+            if (id(climate_backup_active)) {
+              id(climate_backup_active) = false;
+              ESP_LOGW("${TAG_ADDON_CLIMATE_BACKUP}", "Home Assistant is back. Backup climate disengaged");
+              relay_${backup_heater_relay}->turn_off();
+              relay_${backup_cooler_relay}->turn_off();
+            }  // if (id(climate_backup_active))
+            return;
+          }  // if (api_server->is_connected_with_state_subscription())
+
+          if (id(climate_backup_active)) return;
+          const uint32_t elapsed_ms = now_ms - id(climate_backup_last_ha_ms);
+          if (elapsed_ms < (${climate_backup_delay} * 1000UL)) {
+            ESP_LOGD("${TAG_ADDON_CLIMATE_BACKUP}", "Home Assistant unavailable for %" PRIu32 "s", elapsed_ms / 1000);
+            return;
+          }  // if (elapsed_ms < (${climate_backup_delay} * 1000UL))
+
+          id(climate_backup_active) = true;
+          ESP_LOGW("${TAG_ADDON_CLIMATE_BACKUP}", "Home Assistant unavailable. Backup climate engaged");
+          climate_backup_sync->execute();
+
+  # Mirrors the embedded thermostat action to the backup relays while the backup is active
+  - id: climate_backup_sync
+    mode: queued
+    then:
+      - lambda: |-
+          // Build-time validation of the relay selection (0 means disabled)
+          static_assert((${backup_heater_relay} == 0) or (${backup_heater_relay} != ${backup_cooler_relay}),
+                        "backup_heater_relay and backup_cooler_relay must select different relays");
+          static_assert((${backup_heater_relay} == 0) or
+                            ((${backup_heater_relay} != ${heater_relay}) and (${backup_heater_relay} != ${cooler_relay})),
+                        "backup_heater_relay must not be used by heater_relay or cooler_relay");
+          static_assert((${backup_cooler_relay} == 0) or
+                            ((${backup_cooler_relay} != ${heater_relay}) and (${backup_cooler_relay} != ${cooler_relay})),
+                        "backup_cooler_relay must not be used by heater_relay or cooler_relay");
+          if (!id(climate_backup_active)) return;
+          const climate::ClimateAction action = thermostat_embedded->action;
+          const bool heating = (action == climate::CLIMATE_ACTION_HEATING);
+          const bool cooling = (action == climate::CLIMATE_ACTION_COOLING);
+          // Relay 0 is the dummy switch: skip it, as its state cannot be changed
+          if ((${backup_heater_relay} != 0) and (heating != relay_${backup_heater_relay}->state)) {
+            ESP_LOGI("${TAG_ADDON_CLIMATE_BACKUP}", "Heater relay: %s", heating ? "ON" : "OFF");
+            relay_${backup_heater_relay}->control(heating);
+          }  // if ((${backup_heater_relay} != 0) and (heating != relay_${backup_heater_relay}->state))
+          if ((${backup_cooler_relay} != 0) and (cooling != relay_${backup_cooler_relay}->state)) {
+            ESP_LOGI("${TAG_ADDON_CLIMATE_BACKUP}", "Cooler relay: %s", cooling ? "ON" : "OFF");
+            relay_${backup_cooler_relay}->control(cooling);
+          }  // if ((${backup_cooler_relay} != 0) and (cooling != relay_${backup_cooler_relay}->state))
+...

@@ -16,13 +16,21 @@ substitutions:
   # Versioning workflow will replace this by the new version being generated
   min_blueprint_version: 2026.9.19
 
+  # API version (MAJOR.MINOR) provided by this firmware, reported to the Blueprint in every event
+  # Keep it quoted: unquoted, YAML reads 1.10 as the number 1.1
+  # MINOR: bump when an API action is added, as older Blueprints keep working
+  # MAJOR: bump (and reset MINOR to 0) when an API action is removed or its parameters change,
+  #        and also set min_blueprint_version to 'next', as older Blueprints can no longer call it
+  # The Blueprint declares the API version it uses in its 'api_version' variable
+  api_version: "1.0"
+
   # Minimum required TFT version for compatibility
   # Must be manually updated with Nextion Editor
-  min_tft_version: 21.5
+  min_tft_version: 21.6
 
   # Minimum required ESPHome compiler to run this
   # Versioning workflow will take care of updating this
-  min_esphome_compiler_version: 2026.7.0
+  min_esphome_compiler_version: 2026.8.0
 
   TAG_VERSIONING: nspanel.versioning
 
@@ -51,6 +59,8 @@ script:
 
   - id: !extend boot_early_routines
     then:
+      - lambda: |-
+          firmware_api_version = "${api_version}";
       - text_sensor.template.publish:
           id: version_firmware
           state: ${version}

@@ -22,10 +22,10 @@ This document provides details on custom actions designed for integration with H
   - [Notification Show Action (`notification_show`)](#notification-show-action-notification_show): Displays a notification-message on the screen.
   - [QR Code Action (`qrcode`)](#qr-code-action-qrcode): Displays a QR code on the panel or updates the QR code information for local control.
   - [RTTTL Play Action (`rtttl_play`)](#rtttl-play-action-rtttl_play): Plays melodies encoded in the RTTTL format.
-  - [Upload TFT Action (`upload_tft`)](#tft-file-update-action-upload_tft): Enables TFT file updates from a URL, requiring the "Upload TFT" add-on.
+  - [Upload TFT Action (`upload_tft`)](#tft-file-update-action-upload_tft): Enables TFT file updates from a URL, requiring the "Upload TFT" add-on. Opt-in.
   - [Utilities Group Refresh Action (`utilities_group_refresh`)](#utilities-group-refresh-action-utilities_group_refresh): Updates utility group display values and direction indicators.
   - [Value Action (`value`)](#value-action-value): Updates an entity to display specific values.
-  - [Wake Up Action (`wake_up`)](#wake-up-action-wake_up): Activates the display from a screensaver or low-brightness state.
+  - [Wake Up Action (`wake_up`)](#wake-up-action-wake_up): Activates the display from a screensaver or low-brightness state. Opt-in.
   - [Alarm Settings Page Action (`page_alarm`)](#alarm-settings-page-action-page_alarm): Updates the Alarm page with current state information.
   - [Climate Page Action (`page_climate`)](#climate-page-action-page_climate): Updates the Climate page with current state information.
   - [Media Player Page Action (`page_media_player`)](#media-player-page-action-page_media_player): Updates the Media Player page with current state information.
@@ -82,10 +82,10 @@ You can look up the action names available on your Home Assistant instance under
 | [`page_media_player`](#media-player-page-action-page_media_player) | [Media Player Page Action](#media-player-page-action-page_media_player) | Updates the Media Player page with current state information. |
 | [`qrcode`](#qr-code-action-qrcode) | [QR Code Action](#qr-code-action-qrcode) | Displays a QR code on the panel or updates the QR code information for local control. |
 | [`rtttl_play`](#rtttl-play-action-rtttl_play) | [RTTTL Play Action](#rtttl-play-action-rtttl_play) | Plays melodies encoded in the RTTTL format. |
-| [`upload_tft`](#tft-file-update-action-upload_tft) | [Upload TFT Action](#tft-file-update-action-upload_tft) | Enables TFT file updates from a URL, requiring the "Upload TFT" add-on. |
+| [`upload_tft`](#tft-file-update-action-upload_tft) | [Upload TFT Action](#tft-file-update-action-upload_tft) | Enables TFT file updates from a URL, requiring the "Upload TFT" add-on. Opt-in. |
 | [`utilities_group_refresh`](#utilities-group-refresh-action-utilities_group_refresh) | [Utilities Group Refresh Action](#utilities-group-refresh-action-utilities_group_refresh) | Updates utility group display values and direction indicators. |
 | [`value`](#value-action-value) | [Value Action](#value-action-value) | Updates an entity to display specific values. |
-| [`wake_up`](#wake-up-action-wake_up) | [Wake Up Action](#wake-up-action-wake_up) | Activates the display from a screensaver or low-brightness state. |
+| [`wake_up`](#wake-up-action-wake_up) | [Wake Up Action](#wake-up-action-wake_up) | Activates the display from a screensaver or low-brightness state. Opt-in. |
 <!-- markdownlint-enable MD013 -->
 
 ### API Subscribe Actions: `api_subscribe`, `api_subscribe_end`
@@ -305,6 +305,8 @@ data:
     - "Twinkle"
 ```
 
+The `popup_select` picker accepts up to 32 options and shows them in pages of 8, navigated by swiping up or down on the list or with the arrow buttons below it. Options beyond the 32nd are discarded.
+
 > [!NOTE]
 > Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
 >
@@ -425,6 +427,8 @@ ensuring they can easily access detailed information and return to their initial
   - `water_heater`
 
   Use the special value `embedded_climate` to open the built-in climate control page for the panel's relay-based thermostat.
+  If the details page for that domain is already shown for a different entity, the page is reloaded with the new entity.
+  Requests for the entity already shown are ignored.
 - `back_page` (string): The page identifier to return to after viewing entity details.
   Valid options are `home` for the home page or `buttonpage01` to `buttonpage04` for button pages.
   No other pages are supported to maintain navigation consistency.
@@ -822,6 +826,10 @@ data:
 
 ### TFT File Update Action: `upload_tft`
 
+> [!IMPORTANT]
+> This action is not registered by default. To enable it, add `include_action_upload_tft: true` to the substitutions in your ESPHome YAML.
+> See [Reducing Registered API Actions](install.md#reducing-registered-api-actions) for details.
+
 Enables the remote update of the panel's TFT file from a specified URL or a default location,
 available exclusively with the "Upload TFT" add-on installed.
 This action is valuable for downloading alternative TFT files for customization or addressing file access issues.
@@ -908,7 +916,7 @@ Indicates the icon displayed next to the value.
 action: esphome.<your_panel_name>_value
 data:
   id: "sensor.temperature"
-  icon: "\uE6E8"           # Example for mdi:thermometer
+  icon: "\uE50E"           # Example for mdi:thermometer
   icon_color: [255, 0, 0]  # Red
   name: "Temperature"
   value: "75°F"
@@ -919,6 +927,10 @@ data:
 > Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
 
 ### Wake Up Action: `wake_up`
+
+> [!IMPORTANT]
+> This action is not registered by default. To enable it, add `include_action_wake_up: true` to the substitutions in your ESPHome YAML.
+> See [Reducing Registered API Actions](install.md#reducing-registered-api-actions) for details.
 
 Activates the display from a screensaver or low-power state, enabling dynamic interface adjustments based on user interactions or automated triggers.
 
@@ -943,8 +955,6 @@ data:
 > Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
 > This ensures the action executes correctly,
 > waking the display and optionally resetting timers based on the `reset_timer` parameter.
->
-> This action is not enabled by default. To enable it ensure you have `include_action_wake_up: true` in the substitutions in your yaml.
 
 **Practical Use Case: Motion Sensor Activation:**
 This action can be seamlessly integrated with a motion sensor to wake the display when motion is detected, making it instantly usable.

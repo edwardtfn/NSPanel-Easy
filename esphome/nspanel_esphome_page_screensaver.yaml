@@ -9,6 +9,7 @@
 ---
 substitutions:
   wakeup_with_button_press: false
+  wakeup_with_button_press_dimmed: false
   PAGE_SCREENSAVER_ID: 9  # Kept for back compatibility for users using customizations
   TAG_PAGE_SCREENSAVER: nspanel.page.screensaver
 
@@ -121,14 +122,22 @@ script:
   - id: !extend ha_button
     then:
       - lambda: |-
+          const bool is_hw_button = (component == "hw_bt_left" or component == "hw_bt_right");
+          const bool keep_dimmed = (is_hw_button and ${wakeup_with_button_press_dimmed | lower});
           if (current_page_id != get_page_id("screensaver")) {
+            // A dimmed display stays dimmed, only the timers are reset
+            if (keep_dimmed and brightness_current == static_cast<uint8_t>(display_dim_brightness->state)) {
+              brightness_dim_hold = true;
+            }  // if (keep_dimmed and display is dimmed)
             timer_reset_all->execute();
             return;
-          }
+          }  // if (current_page_id != screensaver)
           ESP_LOGV("${TAG_PAGE_SCREENSAVER}", "wakeup_with_button_press: ${wakeup_with_button_press}");
+          ESP_LOGV("${TAG_PAGE_SCREENSAVER}", "wakeup_with_button_press_dimmed: ${wakeup_with_button_press_dimmed}");
           if (${wakeup_with_button_press | lower}) {
+            brightness_dim_hold = keep_dimmed;
             wakeup->execute(true);
-          }
+          }  // if (wakeup_with_button_press)
 
   - id: !extend boot_nextion
     then:
@@ -155,6 +164,7 @@ script:
           page_screensaver_apply_settings->execute();
           if (id(screensaver_display_time)) refresh_datetime->execute();
           brightness_current = int(display_sleep_brightness->state);
+          brightness_dim_hold = false;  // The next wake-up decides on its own brightness
           page_screensaver_apply_settings_with_delay->execute();
 
   - id: page_screensaver_apply_settings

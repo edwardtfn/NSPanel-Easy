@@ -103,7 +103,10 @@ display:
     on_touch:
       then:
         - lambda: |-
-            if (touch_event) timer_reset_all->execute();  // Reset timers on touch, but not on release (to avoid two calls per touch)
+            if (touch_event) {  // Reset timers on touch, but not on release (to avoid two calls per touch)
+              brightness_dim_hold = false;  // A touch always restores the regular brightness
+              timer_reset_all->execute();
+            }  // if (touch_event)
 
 esphome:
   build_flags:
@@ -524,7 +527,9 @@ script:
   - id: timer_dim        # Handles the brightness dimming after a timeout
     mode: restart
     then:
-      - lambda: set_brightness->execute(display_brightness->state);
+      - lambda: |-
+          // Keep the display dimmed while a hardware button holds it (see `brightness_dim_hold`)
+          set_brightness->execute(brightness_dim_hold ? display_dim_brightness->state : display_brightness->state);
       - delay: !lambda return (int(timeout_dim->state) *1000);
       - lambda: |-
           if (

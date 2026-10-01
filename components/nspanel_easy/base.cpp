@@ -12,6 +12,9 @@ SystemFlags system_flags{};
 // Define the global blueprint status flags variable (starts with all flags false via default constructor)
 BlueprintStatusFlags blueprint_status_flags{};
 
+// API version provided by this firmware; not reported until set during boot
+const char *firmware_api_version = nullptr;
+
 // Cached device name to avoid repeated lookups and string copies
 std::string cached_device_name;
 
@@ -27,6 +30,10 @@ void fire_ha_event(const std::string &type, std::map<std::string, std::string> d
   // Add device name and type to the event data
   data["device_name"] = cached_device_name;
   data["type"] = type;
+  // Reported in every event, so the Blueprint can check it before calling any action
+  if (firmware_api_version != nullptr) {
+    data["api_version"] = firmware_api_version;
+  }  // if (firmware_api_version != nullptr)
 
   // Log the event being fired
   ESP_LOGD(TAG_COMPONENT_BASE, "Firing HA event: %s", type.c_str());

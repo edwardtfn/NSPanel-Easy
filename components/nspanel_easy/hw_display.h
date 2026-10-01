@@ -29,6 +29,15 @@ enum class ThemeMode : uint8_t {
 extern ThemeMode current_theme;  ///< Active display theme
 
 extern uint8_t brightness_current;
+/**
+ * @brief Holds the display at the dimmed brightness when timers are reset.
+ *
+ * Raised by a hardware button press when `wakeup_with_button_press_dimmed` is enabled, either
+ * while waking the display or while it is already dimmed. While raised, `timer_dim` restores the
+ * dimmed brightness instead of the regular one. Cleared by a touch on the screen or when the
+ * display goes to sleep.
+ */
+extern bool brightness_dim_hold;
 extern bool display_entity_keep;
 extern uint8_t display_mode_eeprom;
 extern bool display_portrait;
