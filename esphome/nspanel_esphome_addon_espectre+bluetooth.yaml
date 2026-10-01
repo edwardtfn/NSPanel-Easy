@@ -1,5 +1,13 @@
-# ESPectre co-existance with Bluetooth
-
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHOME ADD-ON - ESPECTRE WITH BLUETOOTH PROXY                                            #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### ESPectre co-existence with Bluetooth.                                                     #####
+#####################################################################################################
+---
 esp32:
   framework:
     type: esp-idf
@@ -21,7 +29,8 @@ esp32_ble_tracker:
 espectre:
   segmentation_window_size_ms: 1000
   evaluation_interval_ms: 250
-  
+
 packages:
-  espectre_package:  !include nspanel_esphome_addon_espectre.yaml
+  espectre_package: !include nspanel_esphome_addon_espectre.yaml
   bluetooth_package: !include nspanel_esphome_addon_bluetooth.yaml
+...

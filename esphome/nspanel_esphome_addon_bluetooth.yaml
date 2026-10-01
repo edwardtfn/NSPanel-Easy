@@ -1,6 +1,17 @@
-# Bluetooth Proxy with smart scanning (only when HA is connected)
-
-## not compaitble with ESPectre - use the espectre=bluetooth addon for that
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHOME ADD-ON - BLUETOOTH                                                                #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### Bluetooth Proxy with smart scanning (only when HA is connected).                          #####
+##### Not compatible with ESPectre - use the espectre+bluetooth add-on for that.                #####
+#####################################################################################################
+---
+esphome:
+  build_flags:
+    - -D NSPANEL_EASY_ADDON_BLUETOOTH
 
 bluetooth_proxy:
 
@@ -8,7 +19,7 @@ esp32_ble_tracker:
   scan_parameters:
     continuous: false
     active: true
-    
+
 api:
   on_client_connected:
     then:
@@ -17,7 +28,4 @@ api:
   on_client_disconnected:
     then:
       - esp32_ble_tracker.stop_scan:
-
-esphome:
-  build_flags:
-    - -D NSPANEL_EASY_ADDON_BLUETOOTH    
+...
