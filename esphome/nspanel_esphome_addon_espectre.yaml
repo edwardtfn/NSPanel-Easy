@@ -1,0 +1,79 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHOME ADD-ON - ESPECTRE MOTION DETECTION                                                #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### Include ESPectre CSI motion detection as a wake-up-the-screen add-on.                     #####
+#####################################################################################################
+---
+substitutions:
+  ##############################
+  ## Change only in your      ##
+  ## local yaml substitutions ##
+  ##############################
+  espectre_ref: "3.0.0-rc3"  # ESPectre release tag this add-on was tested with (override at your own risk, e.g. main or develop)
+esphome:
+  build_flags:
+    - -D NSPANEL_EASY_ADDON_ESPECTRE
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/francescopace/espectre
+      ref: ${espectre_ref}
+      path: src/cpp/frontend/esphome/components
+    components: [espectre]
+
+espectre:
+  id: espectre_csi
+  detection_algorithm: high_accuracy  # lightweight
+  traffic_generator_mode: wifi_raw
+  traffic_generator_target_ip: 192.168.1.2  # not the router, in case "internal" is selected - the default can overwhelm the router and kill the network
+  threshold_number:
+    name: "Motion Threshold"
+  motion_sensor:
+    id: espectre_motion
+    name: "ESPectre Motion"
+    on_press:
+      then:
+        - script.execute:
+            id: wakeup
+            reset_timer: true
+        - script.execute:
+            id: refresh_relays
+            relay_mask: 2
+    on_release:
+      then:
+        - script.execute:
+            id: refresh_relays
+            relay_mask: 2
+
+# wait until the platform is ready before starting
+script:
+  - id: !extend boot_early_routines
+    then:
+      - lambda: id(espectre_csi).set_sensing_runtime(false);
+
+  - id: !extend boot
+    then:
+      - lambda: |-
+          id(espectre_csi).set_sensing_runtime(true);
+
+  - id: !extend stop_all
+    then:
+      - lambda: if (system_flags.tft_upload_active) { id(espectre_csi).set_sensing_runtime(false); }
+
+  - id: !extend refresh_relays
+    then:
+      - lambda: |-
+          // chip_relay2 is repurposed to mirror the ESPectre motion sensor
+          // instead of relay 2's own state. This runs after the built-in
+          // lambda, so it overrides whatever that one just wrote.
+          if (!(relay_mask & 2)) return;
+          const bool motion = espectre_motion->state;
+          if (chip_states[CHIP_IDX_RELAY2].visible == motion) return;
+          chip_states[CHIP_IDX_RELAY2].visible = motion;
+          chip_render(CHIP_IDX_RELAY2);
+...
