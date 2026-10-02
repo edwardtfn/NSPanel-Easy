@@ -1,0 +1,45 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHOME ADD-ON - ESPECTRE WITH BLUETOOTH PROXY                                            #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### ESPectre co-existence with Bluetooth.                                                     #####
+#####################################################################################################
+---
+substitutions:
+  ##############################
+  ## Change only in your      ##
+  ## local yaml substitutions ##
+  ##############################
+  bluetooth_proxy_active_scan: "false"
+  # by default the bluetooth_package has this as "true", set to "false" here for improved coexistance with ESPectre
+
+esp32:
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP_COEX_SW_COEXIST_ENABLE: n
+      # With Wi-Fi enabled, software_coexistence: false only stops ESPHome from requesting software coexistence, and
+      # ESP-IDF still enables it by default when Wi-Fi and Bluetooth are both in use, so this sdkconfig option is needed.
+
+bluetooth_proxy:
+  active: false
+  # sets the initial value in Home Assistant, but can be over-ridden in Home Assistant and might have previously been
+  # set to true and that value remembered. Check the bluetooth settings for your panel, in Home Assistant, to be sure.
+
+esp32_ble_tracker:
+  software_coexistence: false
+  scan_parameters:
+    interval: 100ms
+    window: 5ms
+
+espectre:
+  segmentation_window_size_ms: 1000
+  evaluation_interval_ms: 250
+
+packages:
+  espectre_package: !include nspanel_esphome_addon_espectre.yaml
+  bluetooth_package: !include nspanel_esphome_addon_bluetooth_proxy.yaml
+...
