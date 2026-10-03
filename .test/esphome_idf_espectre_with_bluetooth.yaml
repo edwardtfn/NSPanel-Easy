@@ -1,0 +1,6 @@
+---
+packages:
+  idf_common: !include esphome_idf_common.yaml
+  basic_package: !include ../nspanel_esphome.yaml  # Basic package
+  combined_package: !include ../esphome/nspanel_esphome_addon_espectre_and_bluetooth.yaml
+...
