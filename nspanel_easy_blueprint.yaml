@@ -10893,7 +10893,8 @@ actions:
                                   is_target_temperature: '{{ is_target_temperature and target_temp > -999 }}'
                                   temp_step: >
                                     {% if is_humidifier %}
-                                      {% set target_temp_step = state_attr(water_heater_entity, "target_humidity_step") | float(1) %}
+                                      {# humidifier.set_humidity only accepts whole percentages, so the dial steps by whole numbers #}
+                                      {% set target_temp_step = state_attr(water_heater_entity, "target_humidity_step") | float(1) | abs | round(0) %}
                                     {% else %}
                                       {% set target_temp_step = state_attr(water_heater_entity, "target_temp_step") %}
                                       {% if not is_number(target_temp_step) %}
@@ -10901,8 +10902,9 @@ actions:
                                       {% endif %}
                                       {% set target_temp_step = target_temp_step | float(0.5) %}
                                     {% endif %}
-                                    {% set target_temp_step = target_temp_step | abs %}
-                                    {{ ((10 * target_temp_step) | round(0) | int) if is_number(target_temp_step) and target_temp_step > 0 else 10 }}
+                                    {# A step that rounds to zero would break the modulo below, so fall back to 1 unit #}
+                                    {% set step10 = (10 * (target_temp_step | abs)) | round(0) | int(0) %}
+                                    {{ step10 if step10 > 0 else 10 }}
                                   temp_offset_raw: >-
                                     {{
                                       (state_attr(water_heater_entity, "min_humidity" if is_humidifier else "min_temp")

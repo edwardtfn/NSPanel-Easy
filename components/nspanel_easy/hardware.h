@@ -103,7 +103,10 @@ struct HwButtonBarArea {
   uint16_t y;  ///< Top edge
   uint16_t w;  ///< Width
   uint16_t h;  ///< Height
-  /// @brief Whether the bar is vertical (US Landscape model, buttons on the side)
+  /**
+   * @brief Whether the bar is vertical (US Landscape model, buttons on the side)
+   * @return true when the bar is taller than wide (h > w), false otherwise
+   */
   constexpr bool is_vertical() const { return h > w; }
 };
 
