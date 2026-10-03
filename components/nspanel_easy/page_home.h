@@ -227,10 +227,6 @@ constexpr HMIComponent BT_QRCODE = {"home.bt_qrcode", 29};        ///< QR code b
 constexpr HMIComponent BT_ENTITIES = {"home.bt_entities", 30};    ///< Entities button (3 chars max)
 constexpr HMIComponent BT_UTILITIES = {"home.bt_utilities", 43};  ///< Utilities button (3 chars max)
 
-// Footer text components
-constexpr HMIComponent LEFT_BT_TEXT = {"home.left_bt_text", 9};     ///< Left button text (20 chars max)
-constexpr HMIComponent RIGHT_BT_TEXT = {"home.right_bt_text", 10};  ///< Right button text (20 chars max)
-
 // System indicators
 constexpr HMIComponent WIFI_ICON = {"home.wifi_icon", 26};  ///< WiFi status icon (5 chars max)
 constexpr HMIComponent BT_ICON = {"home.bt_icon", 46};      ///< Bluetooth/system icon (5 chars max)

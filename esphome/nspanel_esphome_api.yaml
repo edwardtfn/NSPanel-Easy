@@ -166,6 +166,9 @@ api:
             else if (entity_id.domain == "input_button")        entity_id.domain = "button";
             else if (entity_id.domain == "input_select")        entity_id.domain = "select";
             else if (entity_id.domain == "lawn_mower")          entity_id.domain = "vacuum";
+            // Humidifiers (and dehumidifiers) share the water heater page: one setpoint, a mode list
+            // and on/off. The Blueprint renders humidity on it and translates the page's actions.
+            else if (entity_id.domain == "humidifier")          entity_id.domain = "water_heater";
             #ifdef NSPANEL_EASY_ADDON_CLIMATE_BASE
             if (entity == "embedded_climate")                   entity_id.domain = "climate";
             #endif  // NSPANEL_EASY_ADDON_CLIMATE_BASE
