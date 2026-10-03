@@ -150,6 +150,25 @@ void home_sub_render(const SubBinding &binding, const SubRuntime &rt, const char
  */
 void home_button_repaint();
 
+/**
+ * @brief Track the Home Assistant connection for the subscribed home components.
+ *
+ * While disconnected, Home Assistant cannot report the bound indoor temperature
+ * entity, so its last value is stale. It is then treated as unusable and the
+ * component is handed back to the embedded sensor, as when the entity itself
+ * becomes unavailable.
+ *
+ * On reconnect, Home Assistant only re-sends states that differ from the cached
+ * ones, so an unchanged value would never be rendered again. The bindings are
+ * therefore re-applied from their cached state, but only after a disconnection
+ * actually invalidated something.
+ *
+ * Safe to call repeatedly with the same value; it runs on every watchdog round.
+ *
+ * @param connected Whether the API is connected with a state subscription.
+ */
+void home_api_connection_update(bool connected);
+
 #ifdef NSPANEL_EASY_USE_WEATHER
 
 /**
