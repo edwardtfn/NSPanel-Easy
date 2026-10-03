@@ -760,6 +760,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - humidifier
                   - input_boolean
                   - light
                   - lock
