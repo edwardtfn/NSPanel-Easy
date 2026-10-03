@@ -9262,6 +9262,8 @@ actions:
                                                       or temperature_units in ["F", "f", "°F", "°f", "K", "k"]
                                                 else 1)
                                             }}{{ temperature_units }}
+                                          {% elif entity_domain == "humidifier" and is_number(state_attr(entity_id, 'current_humidity')) %}
+                                            {{ state_attr(entity_id, 'current_humidity') | float | round(0) | int }}%
                                           {% else %} 0
                                           {% endif %}
                                         btn_icon: >
