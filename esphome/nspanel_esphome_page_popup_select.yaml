@@ -21,7 +21,7 @@ display:
             if (page_id != get_page_id("popup_select")) return;
             if (touch_event) return;
 
-            // Page navigation (header buttons or swipe, which the display reports as these buttons)
+            // Page navigation (footer hotspots, or a swipe, which the display reports as these hotspots)
             if (component_id == POPUP_SELECT_ID_BTN_PREV || component_id == POPUP_SELECT_ID_BTN_NEXT) {
               const uint8_t page_count = popup_select_page_count();
               if (page_count <= 1) {

@@ -16,10 +16,10 @@ constexpr uint8_t POPUP_SELECT_SLOTS = 8;
 constexpr uint8_t POPUP_SELECT_MAX_OPTIONS = 32;
 /// Nextion component ID of opt0; opt1..opt7 follow sequentially.
 constexpr uint8_t POPUP_SELECT_ID_OPT0 = 6;
-/// Nextion component ID of the previous-page button (btn_prev).
-constexpr uint8_t POPUP_SELECT_ID_BTN_PREV = 21;
-/// Nextion component ID of the next-page button (btn_next).
-constexpr uint8_t POPUP_SELECT_ID_BTN_NEXT = 22;
+/// Nextion component ID of the previous-page touch area (hotspot hs_prev, also reported on swipe down).
+constexpr uint8_t POPUP_SELECT_ID_BTN_PREV = 27;
+/// Nextion component ID of the next-page touch area (hotspot hs_next, also reported on swipe up).
+constexpr uint8_t POPUP_SELECT_ID_BTN_NEXT = 28;
 
 extern std::string popup_select_cache_entity;
 extern std::string popup_select_cache_context;

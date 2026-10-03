@@ -109,6 +109,11 @@ script:
       - lambda: |-
           if (current_page_id != page_id) return;
 
+          // Timeout reached without draining the queue: render anyway, but make it visible
+          const size_t queue_size = disp1->queue_size();
+          if (queue_size > 0)
+            ESP_LOGD("${TAG_PAGE_BUTTONS}", "Render queue wait timed out (%zu queued), id: %s", queue_size, button_id.c_str());
+
           // Availability is resolved once, here, for every button surface that
           // routes through this script. `indicate` forces the off appearance and
           // greys the glyph; `hide` suppresses the components entirely.

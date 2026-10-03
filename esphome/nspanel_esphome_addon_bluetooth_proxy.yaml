@@ -1,0 +1,66 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHOME ADD-ON - BLUETOOTH PROXY                                                          #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### ATTENTION: This add-on is memory intensive. BLE scanning runs only while Home Assistant   #####
+##### is connected.                                                                             #####
+#####################################################################################################
+---
+substitutions:
+  ##############################
+  ## Change only in your      ##
+  ## local yaml substitutions ##
+  ##############################
+  bluetooth_proxy_active_scan: "true"  # Request scan responses from advertisers (more data, more airtime)
+  TAG_ADDON_BLUETOOTH_PROXY: nspanel.addon.bluetooth_proxy
+
+esphome:
+  build_flags:
+    - -D NSPANEL_EASY_ADDON_BLUETOOTH_PROXY
+
+bluetooth_proxy:
+
+esp32_ble_tracker:
+  scan_parameters:
+    continuous: false  # Scanning is started/stopped based on the Home Assistant connection
+    active: ${bluetooth_proxy_active_scan}
+
+api:
+  on_client_connected:
+    then:
+      # Ignore clients not subscribing to states (e.g. logger-only connections from the dashboard)
+      - wait_until:
+          condition:
+            api.connected:
+              state_subscription_only: true
+          timeout: 30s
+      - if:
+          condition:
+            api.connected:
+              state_subscription_only: true
+          then:
+            - esp32_ble_tracker.start_scan:
+                continuous: true
+
+  on_client_disconnected:
+    then:
+      # Stop only when no Home Assistant client remains connected
+      - if:
+          condition:
+            not:
+              api.connected:
+                state_subscription_only: true
+          then:
+            - esp32_ble_tracker.stop_scan:
+
+script:
+  - id: !extend dump_config
+    then:
+      - lambda: |-
+          ESP_LOGCONFIG("${TAG_ADDON_BLUETOOTH_PROXY}", "Add-on Bluetooth proxy:");
+          ESP_LOGCONFIG("${TAG_ADDON_BLUETOOTH_PROXY}", "  Active scan: %s", YESNO(${bluetooth_proxy_active_scan}));
+          ESP_LOGCONFIG("${TAG_ADDON_BLUETOOTH_PROXY}", "  Scanning:    Only while Home Assistant is connected");
+...
