@@ -1201,6 +1201,94 @@ blueprint:
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
+    humidifier_page_settings:
+      name: Humidifier page
+      icon: mdi:air-humidifier
+      description: >-
+        Select what to display in the humidifier page.
+        Humidifiers and dehumidifiers use the water heater page layout, but with these values instead of the water heater ones.
+      collapsed: true
+      input:
+        humidifier_value01:
+          name: Humidifier page - Entity State 01 - Entity
+          description: *description_entity_displayed
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value01_icon:
+          name: Humidifier page - Entity State 01 - Icon
+          description: *description_icon_automatic_default
+          default: []
+          selector: *selector_icon
+        humidifier_value01_icon_color:
+          name: Humidifier page - Entity State 01 - Icon color
+          description: *description_icon_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value01_label_color:
+          name: Humidifier page - Entity State 01 - Text color
+          description: *description_text_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value02:
+          name: Humidifier page - Entity State 02 - Entity
+          description: *description_entity_displayed
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value02_icon:
+          name: Humidifier page - Entity State 02 - Icon
+          description: *description_icon_automatic_default
+          default: []
+          selector: *selector_icon
+        humidifier_value02_icon_color:
+          name: Humidifier page - Entity State 02 - Icon color
+          description: *description_icon_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value02_label_color:
+          name: Humidifier page - Entity State 02 - Text color
+          description: *description_text_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value03:
+          name: Humidifier page - Entity State 03 - Entity
+          description: *description_entity_displayed
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value03_icon:
+          name: Humidifier page - Entity State 03 - Icon
+          description: *description_icon_automatic_default
+          default: []
+          selector: *selector_icon
+        humidifier_value03_icon_color:
+          name: Humidifier page - Entity State 03 - Icon color
+          description: *description_icon_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value03_label_color:
+          name: Humidifier page - Entity State 03 - Text color
+          description: *description_text_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value04:
+          name: Humidifier page - Entity State 04 - Entity
+          description: *description_entity_displayed
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value04_icon:
+          name: Humidifier page - Entity State 04 - Icon
+          description: *description_icon_automatic_default
+          default: []
+          selector: *selector_icon
+        humidifier_value04_icon_color:
+          name: Humidifier page - Entity State 04 - Icon color
+          description: *description_icon_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value04_label_color:
+          name: Humidifier page - Entity State 04 - Text color
+          description: *description_text_color
+          default: [200, 204, 200]
+          selector: *color_selector
     qrcode_settings:
       name: QR code
       icon: mdi:qrcode-scan
@@ -5832,6 +5920,47 @@ triggers:
         for:
           seconds: 1
 
+  - triggers:  # Humidifier page
+      - alias: Value 01
+        id: trigger_humidifier_page_value_state
+        trigger: state
+        entity_id: !input humidifier_value01
+        not_to:
+          - unknown
+          - unavailable
+        for:
+          seconds: 1
+
+      - alias: Value 02
+        id: trigger_humidifier_page_value_state
+        trigger: state
+        entity_id: !input humidifier_value02
+        not_to:
+          - unknown
+          - unavailable
+        for:
+          seconds: 1
+
+      - alias: Value 03
+        id: trigger_humidifier_page_value_state
+        trigger: state
+        entity_id: !input humidifier_value03
+        not_to:
+          - unknown
+          - unavailable
+        for:
+          seconds: 1
+
+      - alias: Value 04
+        id: trigger_humidifier_page_value_state
+        trigger: state
+        entity_id: !input humidifier_value04
+        not_to:
+          - unknown
+          - unavailable
+        for:
+          seconds: 1
+
   - triggers:  # HW Buttons
       - alias: Left button - entity
         id: left_button_state
@@ -6058,7 +6187,7 @@ conditions:
   - >  # Do not update values when page water heater is not visible
     {{
       pages.current == pages.water_heater or
-      trigger.id not in ["trigger_water_heater_page_value_state"]
+      trigger.id not in ["trigger_water_heater_page_value_state", "trigger_humidifier_page_value_state"]
     }}
   - >  # Do not update values when page button is not visible
     {{
@@ -6919,6 +7048,33 @@ actions:
               color: "off"
               component: button08
 
+      ##### Humidifier page (rendered on the water heater page) #####
+      # Humidifier modes are free text (`available_modes`), so they are assigned to the mode
+      # buttons in the order the entity reports them. HA's standard modes get a matching icon,
+      # any other mode gets the fallback icon. The power button toggles the entity on/off.
+      page_humidifier:
+        buttons:
+          modes:
+            - button01
+            - button02
+            - button03
+            - button04
+            - button05
+            - button06
+            - button07
+          power: button08
+          mode_icons:
+            normal: water-percent
+            eco: leaf
+            away: account-arrow-right
+            boost: rocket-launch
+            comfort: sofa
+            home: home
+            sleep: sleep
+            auto: auto-mode
+            baby: baby-carriage
+          mode_icon_fallback: tune
+
       ###### MEDIA PLAYER REFRESH #####
       media_player_update_interval: !input 'media_player_update_interval'
       media_player_update_delay: !input 'media_player_update_delay'
@@ -6944,6 +7100,7 @@ actions:
           - climate
           - cover
           - fan
+          - humidifier
           - input_boolean
           - input_button
           - input_select
@@ -7316,6 +7473,18 @@ actions:
                     'high_demand': nextion.color.red
                   } -%}
                   {{ wh_color_map.get(wh_mode, entity_icon_color_tmp) }}
+                {%- elif entity_domain == "humidifier" -%}
+                  {#- `action` tells whether it is actually running, not only switched on -#}
+                  {%- set humidifier_action = state_attr(entity_id, "action") -%}
+                  {%- if entity_state == "off" or humidifier_action == "off" -%}
+                    {{ nextion.color.off }}
+                  {%- elif humidifier_action == "humidifying" -%}
+                    {{ nextion.color.blue }}
+                  {%- elif humidifier_action == "drying" -%}
+                    {{ nextion.color.orange }}
+                  {%- else -%}
+                    {{ entity_icon_color_tmp }}
+                  {%- endif -%}
                 {%- else -%}
                   {{ entity_icon_color_tmp }}
                 {%- endif -%}
@@ -8583,6 +8752,67 @@ actions:
                   - if: '{{ nspanel_event.key is defined and nspanel_event.key is string and nspanel_event.key | length > 0 }}'
                     then:
                       - choose:
+                          # The water heater page also shows humidifiers, but its buttons and slider always report the
+                          # water heater actions. Translate them here when the entity on the page is a humidifier.
+                          - alias: "water_heater.set_temperature (humidifier)"
+                            conditions:
+                              - '{{ nspanel_event.action == "water_heater.set_temperature" }}'
+                              - '{{ nspanel_event.entity.split(".")[0] == "humidifier" }}'
+                              - '{{ is_number(nspanel_event.value) }}'
+                            sequence:
+                              - variables:
+                                  set_humidity_srv: "humidifier.set_humidity"  # Templated to avoid unknown action warnings when humidifier isn't loaded
+                              - action: '{{ set_humidity_srv }}'
+                                data:
+                                  humidity: '{{ nspanel_event.value | float | round(0) | int }}'
+                                target:
+                                  entity_id: '{{ nspanel_event.entity }}'
+                                continue_on_error: true
+                          - alias: "water_heater.set_operation_mode (humidifier)"
+                            conditions:
+                              - '{{ nspanel_event.action == "water_heater.set_operation_mode" }}'
+                              - '{{ nspanel_event.entity.split(".")[0] == "humidifier" }}'
+                            sequence:
+                              - variables:
+                                  # The page reports the water heater mode bound to the pressed button, so map it back
+                                  # to the button, then to the humidifier mode assigned to that button when rendered.
+                                  humidifier_pressed_button: >-
+                                    {{
+                                      (page_water_heater.buttons.operation_mode
+                                        | selectattr("mode", "eq", nspanel_event.value)
+                                        | map(attribute="component")
+                                        | list
+                                      + [""]) | first
+                                    }}
+                                  humidifier_mode: >-
+                                    {%- set available_modes = state_attr(nspanel_event.entity, "available_modes") -%}
+                                    {%- set available_modes = available_modes if available_modes is list else [] -%}
+                                    {%- set ns = namespace(mode="") -%}
+                                    {%- for component in page_humidifier.buttons.modes -%}
+                                      {%- if component == humidifier_pressed_button and loop.index0 < available_modes | count -%}
+                                        {%- set ns.mode = available_modes[loop.index0] -%}
+                                      {%- endif -%}
+                                    {%- endfor -%}
+                                    {{ ns.mode }}
+                              - choose:
+                                  - alias: Power button
+                                    conditions: '{{ humidifier_pressed_button == page_humidifier.buttons.power }}'
+                                    sequence:
+                                      - action: '{{ "humidifier.turn_off" if is_state(nspanel_event.entity, "on") else "humidifier.turn_on" }}'
+                                        target:
+                                          entity_id: '{{ nspanel_event.entity }}'
+                                        continue_on_error: true
+                                  - alias: Mode button
+                                    conditions: '{{ humidifier_mode | length > 0 }}'
+                                    sequence:
+                                      - variables:
+                                          set_mode_srv: "humidifier.set_mode"  # Templated to avoid unknown action warnings when humidifier isn't loaded
+                                      - action: '{{ set_mode_srv }}'
+                                        data:
+                                          mode: '{{ humidifier_mode }}'
+                                        target:
+                                          entity_id: '{{ nspanel_event.entity }}'
+                                        continue_on_error: true
                           - alias: "climate.set_temperature"
                             conditions:
                               - '{{ nspanel_event.action == "climate.set_temperature" }}'
@@ -10519,6 +10749,8 @@ actions:
                                   if settings_entity_domain == "water_heater"
                                   else []
                                 }}
+                              # Humidifiers (and dehumidifiers) are shown on this page too, with humidity instead of temperature
+                              is_humidifier: '{{ settings_entity_domain == "humidifier" }}'
                               friendly_name_raw: '{{ state_attr(water_heater_entity, "friendly_name") }}'
                               friendly_name: >-
                                 {%- if
@@ -10532,7 +10764,7 @@ actions:
                                   {{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}
                                 {%- endif -%}
 
-                          - condition: '{{ settings_entity_domain == "water_heater" }}'
+                          - condition: '{{ settings_entity_domain in ["water_heater", "humidifier"] }}'
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
                             data:
                               page: ""
@@ -10570,10 +10802,37 @@ actions:
                                   label_color_rgb: !input water_heater_value04_label_color
                                   page: water_heater
                                   component: value04
+                          - &variables_humidifier_page
+                            variables:
+                              humidifier_page_entities:
+                                - entity: !input humidifier_value01
+                                  icon: !input humidifier_value01_icon
+                                  icon_color_rgb: !input humidifier_value01_icon_color
+                                  label_color_rgb: !input humidifier_value01_label_color
+                                  page: water_heater
+                                  component: value01
+                                - entity: !input humidifier_value02
+                                  icon: !input humidifier_value02_icon
+                                  icon_color_rgb: !input humidifier_value02_icon_color
+                                  label_color_rgb: !input humidifier_value02_label_color
+                                  page: water_heater
+                                  component: value02
+                                - entity: !input humidifier_value03
+                                  icon: !input humidifier_value03_icon
+                                  icon_color_rgb: !input humidifier_value03_icon_color
+                                  label_color_rgb: !input humidifier_value03_label_color
+                                  page: water_heater
+                                  component: value03
+                                - entity: !input humidifier_value04
+                                  icon: !input humidifier_value04_icon
+                                  icon_color_rgb: !input humidifier_value04_icon_color
+                                  label_color_rgb: !input humidifier_value04_label_color
+                                  page: water_heater
+                                  component: value04
                           - repeat:
                               for_each: >
                                 {{
-                                  water_heater_page_entities
+                                  (humidifier_page_entities if is_humidifier else water_heater_page_entities)
                                   | selectattr("entity", "defined")
                                   | rejectattr("entity", "eq", "")
                                   | rejectattr("entity", "eq", [])
@@ -10616,22 +10875,47 @@ actions:
                             alias: water_heater_update_slider
                             sequence:
                               - variables:
-                                  current_temp: '{{ state_attr(water_heater_entity, "current_temperature") | float(-999) | round(1) }}'
+                                  current_temp: >-
+                                    {{
+                                      state_attr(water_heater_entity, "current_humidity" if is_humidifier else "current_temperature")
+                                      | float(-999) | round(1)
+                                    }}
                                   supported_features: '{{ state_attr(water_heater_entity, "supported_features") | int(0) }}'
-                                  is_target_temperature: '{{ supported_features | bitwise_and(1) > 0 }}'
-                                  target_temp: '{{ state_attr(water_heater_entity, "temperature") | float(-999) | round(1) if is_target_temperature else -999 }}'
+                                  # Humidifiers always have a target humidity, water heaters only with TARGET_TEMPERATURE (bit 1)
+                                  is_target_temperature: '{{ is_humidifier or supported_features | bitwise_and(1) > 0 }}'
+                                  target_temp: >-
+                                    {{
+                                      state_attr(water_heater_entity, "humidity" if is_humidifier else "temperature")
+                                      | float(-999) | round(1)
+                                      if is_target_temperature else -999
+                                    }}
                               - variables:
                                   is_target_temperature: '{{ is_target_temperature and target_temp > -999 }}'
                                   temp_step: >
-                                    {% set target_temp_step = state_attr(water_heater_entity, "target_temp_step") %}
-                                    {% if not is_number(target_temp_step) %}
-                                      {% set target_temp_step = state_attr(water_heater_entity, "target_temperature_step") %}
+                                    {% if is_humidifier %}
+                                      {% set target_temp_step = state_attr(water_heater_entity, "target_humidity_step") | float(1) %}
+                                    {% else %}
+                                      {% set target_temp_step = state_attr(water_heater_entity, "target_temp_step") %}
+                                      {% if not is_number(target_temp_step) %}
+                                        {% set target_temp_step = state_attr(water_heater_entity, "target_temperature_step") %}
+                                      {% endif %}
+                                      {% set target_temp_step = target_temp_step | float(0.5) %}
                                     {% endif %}
-                                    {% set target_temp_step = target_temp_step | float(0.5) | abs %}
+                                    {% set target_temp_step = target_temp_step | abs %}
                                     {{ ((10 * target_temp_step) | round(0) | int) if is_number(target_temp_step) and target_temp_step > 0 else 10 }}
-                                  temp_offset_raw: '{{ (state_attr(water_heater_entity, "min_temp") | float(7) * 10) | round(0) | int }}'
+                                  temp_offset_raw: >-
+                                    {{
+                                      (state_attr(water_heater_entity, "min_humidity" if is_humidifier else "min_temp")
+                                        | float(0 if is_humidifier else 7) * 10)
+                                      | round(0) | int
+                                    }}
                                   temp_offset: '{{ temp_offset_raw if (temp_offset_raw % temp_step) == 0 else temp_offset_raw + temp_step - (temp_offset_raw % temp_step) }}'
-                                  max_temp: '{{ (state_attr(water_heater_entity, "max_temp") | float(35) * 10) | round(0) | int }}'
+                                  max_temp: >-
+                                    {{
+                                      (state_attr(water_heater_entity, "max_humidity" if is_humidifier else "max_temp")
+                                        | float(100 if is_humidifier else 35) * 10)
+                                      | round(0) | int
+                                    }}
                                   total_steps: >
                                     {{
                                       (((max_temp - temp_offset) / temp_step) | int)
@@ -10640,18 +10924,31 @@ actions:
                                   water_heater_state: '{{ states(water_heater_entity) | default("unavailable") if water_heater_entity is string else "unavailable" }}'
                                   operation_mode: '{{ state_attr(water_heater_entity, "operation_mode") | default(water_heater_state) }}'
                                   use_decimal: '{{ temp_step % 10 != 0 }}'
+                                  temperature_units: !input temperature_unit
+                                  slider_unit: '{{ "%" if is_humidifier else temperature_units }}'
                                   water_heater_icon: >
-                                    {%- set icon_map = {
-                                      'off': all_icons["water-boiler-off"],
-                                      'on': all_icons["water-boiler"],
-                                      'eco': all_icons.leaf,
-                                      'electric': all_icons["lightning-bolt"],
-                                      'gas': all_icons.fire,
-                                      'heat_pump': all_icons["heat-pump"],
-                                      'performance': all_icons["heat-wave"],
-                                      'high_demand': all_icons.speedometer
-                                    } -%}
-                                    {{ icon_map.get(operation_mode, all_icons["water-boiler"]) }}
+                                    {%- if is_humidifier -%}
+                                      {%- set humidifier_mode = state_attr(water_heater_entity, "mode") -%}
+                                      {%- if water_heater_state == "off" -%}
+                                        {{ all_icons["air-humidifier-off"] }}
+                                      {%- elif humidifier_mode is string and humidifier_mode in page_humidifier.buttons.mode_icons -%}
+                                        {{ all_icons[page_humidifier.buttons.mode_icons[humidifier_mode]] }}
+                                      {%- else -%}
+                                        {{ all_icons["air-humidifier"] }}
+                                      {%- endif -%}
+                                    {%- else -%}
+                                      {%- set icon_map = {
+                                        'off': all_icons["water-boiler-off"],
+                                        'on': all_icons["water-boiler"],
+                                        'eco': all_icons.leaf,
+                                        'electric': all_icons["lightning-bolt"],
+                                        'gas': all_icons.fire,
+                                        'heat_pump': all_icons["heat-pump"],
+                                        'performance': all_icons["heat-wave"],
+                                        'high_demand': all_icons.speedometer
+                                      } -%}
+                                      {{ icon_map.get(operation_mode, all_icons["water-boiler"]) }}
+                                    {%- endif -%}
                                   current_temp_text: >
                                     {%- if current_temp > -999 -%}
                                       {{ (("%.1f" | format(current_temp)) if use_decimal else ("%.0f" | format(current_temp))) }}
@@ -10673,7 +10970,7 @@ actions:
                                   id: command
                                   txt_list:
                                     ##### Slider configuration #####
-                                    - 'temp_unit.txt="{{ temp_unit }}"'
+                                    - 'temp_unit.txt="{{ slider_unit }}"'
                                     - 'slider.maxval={{ total_steps }}'
                                     - 'temp_offset.val={{ temp_offset }}'
                                     - 'temp_step.val={{ temp_step }}'
@@ -10723,17 +11020,44 @@ actions:
                                   visible: false
                                 continue_on_error: true
                               - *delay_default
+                              - variables:
+                                  # Buttons to show, as {component, icon, color}
+                                  page_buttons: >-
+                                    {%- set ns = namespace(items=[]) -%}
+                                    {%- if is_humidifier -%}
+                                      {#- Modes are assigned to the buttons in the order the entity reports them -#}
+                                      {%- set humidifier_mode = state_attr(water_heater_entity, "mode") -%}
+                                      {%- set humidifier_is_on = is_state(water_heater_entity, "on") -%}
+                                      {%- set humidifier_color = nextion.color.orange if is_state_attr(water_heater_entity, "device_class", "dehumidifier") else nextion.color.blue -%}
+                                      {%- set available_modes = state_attr(water_heater_entity, "available_modes") -%}
+                                      {%- set available_modes = available_modes[:page_humidifier.buttons.modes | count] if available_modes is list else [] -%}
+                                      {%- for mode in available_modes -%}
+                                        {%- set ns.items = ns.items + [{
+                                          "component": page_humidifier.buttons.modes[loop.index0],
+                                          "icon": page_humidifier.buttons.mode_icons.get(mode, page_humidifier.buttons.mode_icon_fallback),
+                                          "color": humidifier_color if humidifier_is_on and mode == humidifier_mode else nextion.color.disabled
+                                        }] -%}
+                                      {%- endfor -%}
+                                      {%- set ns.items = ns.items + [{
+                                        "component": page_humidifier.buttons.power,
+                                        "icon": "power",
+                                        "color": humidifier_color if humidifier_is_on else nextion.color.disabled
+                                      }] -%}
+                                    {%- else -%}
+                                      {%- for button in page_water_heater.buttons.operation_mode if button.mode in operation_list -%}
+                                        {%- set ns.items = ns.items + [{
+                                          "component": button.component,
+                                          "icon": button.icon,
+                                          "color": nextion.color[button.color] if operation_mode == button.mode else nextion.color.disabled
+                                        }] -%}
+                                      {%- endfor -%}
+                                    {%- endif -%}
+                                    {{ ns.items }}
                               - repeat:
-                                  for_each: '{{ page_water_heater.buttons.operation_mode }}'
+                                  for_each: '{{ page_buttons }}'
                                   sequence:
-                                    - condition: '{{ repeat.item.mode in operation_list }}'
                                     - variables:
-                                        color_rgb888: >-
-                                          {{
-                                            nextion.color[repeat.item.color]
-                                            if operation_mode == repeat.item.mode
-                                            else nextion.color.disabled
-                                          }}
+                                        color_rgb888: '{{ repeat.item.color }}'
                                         color_rgb565: >-
                                           {{
                                             int(
@@ -12030,7 +12354,7 @@ actions:
                             - alias: Water Heater page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.water_heater }}'
-                                - '{{ original_state.entity_domain in ["water_heater"] }}'
+                                - '{{ original_state.entity_domain in ["humidifier", "water_heater"] }}'
                               sequence: *refresh_page_water_heater
 
               - alias: Button click
@@ -13217,12 +13541,32 @@ actions:
           - condition: trigger
             id: trigger_water_heater_page_value_state
           - '{{ pages.current == pages.water_heater }}'
+          - '{{ states(detailed_entity).split(".")[0] == "water_heater" }}'  # The page may be showing a humidifier
         sequence:
           - *variables_water_heater_page
           - repeat:
               for_each: >
                 {{
                   water_heater_page_entities
+                  | selectattr("entity", "defined")
+                  | selectattr("entity", "eq", trigger.entity_id)
+                  | list
+                }}
+              sequence:
+                - *display_value
+
+      - alias: Update humidifier page values
+        conditions:
+          - condition: trigger
+            id: trigger_humidifier_page_value_state
+          - '{{ pages.current == pages.water_heater }}'  # Humidifiers are shown on the water heater page
+          - '{{ states(detailed_entity).split(".")[0] == "humidifier" }}'
+        sequence:
+          - *variables_humidifier_page
+          - repeat:
+              for_each: >
+                {{
+                  humidifier_page_entities
                   | selectattr("entity", "defined")
                   | selectattr("entity", "eq", trigger.entity_id)
                   | list
