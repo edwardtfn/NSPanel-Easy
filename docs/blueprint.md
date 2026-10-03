@@ -137,6 +137,13 @@ Choose the pages where the bars, indicating the status of entities linked to har
 By default, the bars are displayed only on the home page.
 If none of the selected pages is valid, the bars are displayed on the home page.
 
+### Labels Pages
+
+Choose the pages where the labels of the hardware buttons will be displayed.
+Currently available: Home (default) and Screen saver (sleep) page.
+If none of the selected pages is valid, the labels are displayed on the home page.
+The labels are not visible on the US landscape model.
+
 ### Activate Relay x local Fallback (Optional)
 
 Normally, the internal relays of the NSPanels are triggered via HA.
@@ -148,7 +155,7 @@ The entity that should be switched with the left/right hardware button.
 
 ### Left/Right Hardware Button Name - Label (Optional)
 
-Text on the screen above the corresponding hardware button (home screen).
+Text on the screen above the corresponding hardware button, shown on the pages selected in [Labels Pages](#labels-pages).
 
 ### Left/Right Hardware Button hold assignment - VALUE (optional)
 

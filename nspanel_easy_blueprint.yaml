@@ -1304,6 +1304,23 @@ blueprint:
                   value: 'confirm'
                 - label: "Keyboard pop-up page"
                   value: 'keyb_num'
+        hw_buttons_labels_pages:
+          name: Hardware Buttons - Labels Pages
+          description: >
+            Choose the pages where the labels of the hardware buttons will be displayed.
+
+            ***Note:** The labels are not visible on the US landscape model.*
+          default:
+            - 'home'
+          selector:
+            select:
+              multiple: true
+              options:
+                # Values are page names (comma-separated when an option covers more than one page)
+                - label: "Home (default)"
+                  value: 'home'
+                - label: "Screen saver (sleep) page"
+                  value: 'screensaver'
         hw_buttons_bar_color_on:
           name: Hardware Buttons - Bar color when `On`
           description: "Choose a color for the button's bars when the controlled entity is `On`."
@@ -8065,43 +8082,53 @@ actions:
                                   continue_on_error: true
                                 - *delay_boot
 
-                      - alias: NSPanel Left Button Name
-                        if: '{{ hardware.buttons.left.name | length > 0 }}'
-                        then:
-                          ### LABEL Font Color ###
+                      - alias: Hardware buttons labels
+                        sequence:
+                          - variables:
+                              hw_buttons_labels_pages: !input hw_buttons_labels_pages
+                          ### LABELS Pages ###
+                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: buttons_labels_pages
+                              # Each option may hold more than one page (comma-separated); an empty list is sent as ['']
+                              txt_list: >-
+                                {{
+                                  (hw_buttons_labels_pages | join(',')).split(',') | reject('eq', '') | list
+                                  if hw_buttons_labels_pages | count > 0
+                                  else ['']
+                                }}
+                            continue_on_error: true
+                          - *delay_boot
+                          ### LABELS Font Color ###
                           - action: 'esphome.{{ action_prefix }}_component_color'
                             data:
-                              page: home
-                              id: left_bt_text
+                              page: mem
+                              id: button_left_label_color
                               color: !input left_button_color
                             continue_on_error: true
                           - *delay_boot
-                          ### LABEL Font ###
+                          - action: 'esphome.{{ action_prefix }}_component_color'
+                            data:
+                              page: mem
+                              id: button_right_label_color
+                              color: !input right_button_color
+                            continue_on_error: true
+                          - *delay_boot
+                          ### LABELS Text ###
+                          # Always sent, so an empty label clears the one previously stored
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
                             data:
-                              page: home
-                              id: left_bt_text
+                              page: mem
+                              id: button_left_label
                               txt_list:
                                 - '{{ hardware.buttons.left.name }}'
                             continue_on_error: true
                           - *delay_boot
-
-                      - alias: NSPanel Right Button Name
-                        if: '{{ hardware.buttons.right.name | length > 0 }}'
-                        then:
-                          ### LABEL Font Color ###
-                          - action: 'esphome.{{ action_prefix }}_component_color'
-                            data:
-                              page: home
-                              id: right_bt_text
-                              color: !input right_button_color
-                            continue_on_error: true
-                          - *delay_boot
-                          ### LABEL Font ###
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
                             data:
-                              page: home
-                              id: right_bt_text
+                              page: mem
+                              id: button_right_label
                               txt_list:
                                 - '{{ hardware.buttons.right.name }}'
                             continue_on_error: true
