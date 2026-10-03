@@ -134,8 +134,19 @@ script:
               ESP_LOGW("${TAG_HW_BUTTONS}", "Buttons bars: no valid page selected, using 'home'");
               pages_mask = 1ULL << get_page_id("home");
             }  // if (has_page_names and pages_mask == 0)
+            // The bars on the current page must follow the new selection without waiting for a page load
+            const bool was_shown = current_page_id < PAGE_COUNT and
+                                   (id(buttons_bars_pages) & (1ULL << current_page_id)) != 0;
+            const bool is_shown = current_page_id < PAGE_COUNT and (pages_mask & (1ULL << current_page_id)) != 0;
             id(buttons_bars_pages) = pages_mask;
             blueprint_status_flags.hw_buttons_settings = true;
+            if (system_flags.tft_upload_active) return;  // Skip refresh if TFT update is in progress
+            if (was_shown and not is_shown) {
+              // Bars are drawn over the page, so the page is refreshed to clear them, whatever its background
+              disp1->send_command("ref 0");
+            } else if (is_shown and not was_shown) {
+              refresh_hardware_buttons_bars->execute(3, true);
+            }  // if (was_shown != is_shown)
             return;
           }  // if (component == "buttons_bars_pages")
 
