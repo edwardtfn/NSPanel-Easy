@@ -142,8 +142,26 @@ script:
             blueprint_status_flags.hw_buttons_settings = true;
             if (system_flags.tft_upload_active) return;  // Skip refresh if TFT update is in progress
             if (was_shown and not is_shown) {
-              // Bars are drawn over the page, so the page is refreshed to clear them, whatever its background
-              disp1->send_command("ref 0");
+              // Repaint the page background over the bar areas, keeping anything else drawn on the page
+              const uint8_t display_mode_index = display_model->active_index().value_or(UINT8_MAX);
+              if (display_mode_index >= 3) return;
+              const char *page_name = page_names[current_page_id];
+              // The fill type is static in the HMI: these pages use a solid color (or no background) and
+              // all the others a picture, which may change at runtime (e.g. theme)
+              const bool solid_background = current_page_id == get_page_id("alarm") or
+                                            current_page_id == get_page_id("confirm") or
+                                            current_page_id == get_page_id("keyb_num") or
+                                            current_page_id == get_page_id("screensaver");
+              for (const HwButtonBarArea &area : HW_BUTTON_BAR_AREAS[display_mode_index]) {
+                if (solid_background) {
+                  disp1->send_command_printf("fill %" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%s.bco", area.x,
+                                             area.y, area.w, area.h, page_name);
+                } else {
+                  disp1->send_command_printf("xpic %" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%" PRIu16
+                                             ",%" PRIu16 ",%s.pic",
+                                             area.x, area.y, area.w, area.h, area.x, area.y, page_name);
+                }  // if (solid_background)
+              }  // for (area : HW_BUTTON_BAR_AREAS)
             } else if (is_shown and not was_shown) {
               refresh_hardware_buttons_bars->execute(3, true);
             }  // if (was_shown != is_shown)
@@ -215,6 +233,18 @@ script:
           const uint8_t display_mode_index = display_model->active_index().value_or(UINT8_MAX);
           if (display_mode_index == UINT8_MAX) return;
           const uint8_t display_mode_idx = display_mode_index + 1;
+          if (display_mode_idx < 1 or display_mode_idx > 3) return;
+          // Draws a bar with rounded ends inside its area
+          auto draw_bar = [](const HwButtonBarArea &area, uint16_t color) {
+            if (area.is_vertical()) {
+              disp1->fill_area(area.x, area.y + 1, area.w, area.h - 2, color);
+              disp1->fill_area(area.x + 1, area.y, 1, area.h, color);
+            } else {
+              disp1->fill_area(area.x + 1, area.y, area.w - 2, area.h, color);
+              disp1->fill_area(area.x, area.y + 1, area.w, 1, color);
+            }  // if (area.is_vertical())
+          };
+
           // Left button
           if (button_mask & 1 and id(hardware_settings).button_left_enabled) {
             static uint16_t button_bar_text_left_last_color_sent;
@@ -226,20 +256,7 @@ script:
               button_bar_text_left_last_color_sent = button_bar_left_color;
               disp1->set_component_font_color(hmi::home::LEFT_BT_TEXT.name, button_bar_left_color);
             }
-            switch (display_mode_idx) {
-              case 1:  // EU model
-                disp1->fill_area(48, 312, 118, 3, button_bar_left_color);
-                disp1->fill_area(47, 313, 120, 1, button_bar_left_color);
-                break;
-              case 2:  // US Portrait
-                disp1->fill_area(17, 471, 118, 3, button_bar_left_color);
-                disp1->fill_area(16, 472, 120, 1, button_bar_left_color);
-                break;
-              case 3:  // US Landscape
-                disp1->fill_area(467, 174, 3, 118, button_bar_left_color);
-                disp1->fill_area(468, 173, 1, 120, button_bar_left_color);
-                break;
-            }
+            draw_bar(HW_BUTTON_BAR_AREAS[display_mode_idx - 1][0], button_bar_left_color);
           }
 
           // Right button
@@ -253,20 +270,7 @@ script:
               button_bar_text_right_last_color_sent = button_bar_right_color;
               disp1->set_component_font_color(hmi::home::RIGHT_BT_TEXT.name, button_bar_right_color);
             }
-            switch (display_mode_idx) {
-              case 1:  // EU model
-                disp1->fill_area(289, 312, 118, 3, button_bar_right_color);
-                disp1->fill_area(288, 313, 120, 1, button_bar_right_color);
-                break;
-              case 2:  // US Portrait
-                disp1->fill_area(184, 471, 118, 3, button_bar_right_color);
-                disp1->fill_area(183, 472, 120, 1, button_bar_right_color);
-                break;
-              case 3:  // US Landscape
-                disp1->fill_area(467, 28, 3, 118, button_bar_right_color);
-                disp1->fill_area(468, 27, 1, 120, button_bar_right_color);
-                break;
-            }
+            draw_bar(HW_BUTTON_BAR_AREAS[display_mode_idx - 1][1], button_bar_right_color);
           }
 
   - id: !extend stop_all
