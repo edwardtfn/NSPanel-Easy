@@ -508,6 +508,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - humidifier
                   - input_boolean
                   - input_button
                   - input_select
@@ -1465,6 +1466,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - humidifier
                   - input_boolean
                   - input_button
                   - input_select
@@ -1530,6 +1532,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - humidifier
                   - input_boolean
                   - input_select
                   - lawn_mower
@@ -1649,6 +1652,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - humidifier
                   - input_boolean
                   - input_button
                   - input_select
@@ -12498,7 +12502,7 @@ actions:
                                                   and last_click_button_entity_state in ["opening", "closing"]
                                                   and state_attr(last_click_button.entity, "supported_features") | int(0) | bitwise_and(4) == 0 %}
                                               cover.stop_cover
-                                            {% elif entity_domain in ["cover", "fan", "input_boolean", "light", "remote", "switch"] %}
+                                            {% elif entity_domain in ["cover", "fan", "humidifier", "input_boolean", "light", "remote", "switch"] %}
                                               {{ entity_domain }}.toggle
                                             {% elif entity_domain == "automation" %}
                                               automation.{{ domain_automation_button_action if domain_automation_button_action is string else "toggle"}}
