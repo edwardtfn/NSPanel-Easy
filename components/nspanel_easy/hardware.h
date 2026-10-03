@@ -92,4 +92,31 @@ inline void set_hardware_settings(uint8_t &raw_value, const HardwareSettings &se
   raw_value = to_raw(settings);
 }
 
+/**
+ * @brief Screen area (bounding box) of a hardware button bar
+ *
+ * The bar is drawn with rounded ends: the full box minus one pixel at each end of its length,
+ * plus a one-pixel line along its middle covering the full length.
+ */
+struct HwButtonBarArea {
+  uint16_t x;  ///< Left edge
+  uint16_t y;  ///< Top edge
+  uint16_t w;  ///< Width
+  uint16_t h;  ///< Height
+  /// @brief Whether the bar is vertical (US Landscape model, buttons on the side)
+  constexpr bool is_vertical() const { return h > w; }
+};
+
+/**
+ * @brief Hardware button bar areas, indexed by [display model][button]
+ *
+ * Display model: 0 = EU, 1 = US Portrait, 2 = US Landscape (display_mode - 1).
+ * Button: 0 = left, 1 = right.
+ */
+constexpr HwButtonBarArea HW_BUTTON_BAR_AREAS[3][2] = {
+    {{47, 312, 120, 3}, {288, 312, 120, 3}},  // EU
+    {{16, 471, 120, 3}, {183, 471, 120, 3}},  // US Portrait
+    {{467, 173, 3, 120}, {467, 27, 3, 120}},  // US Landscape
+};
+
 }  // namespace esphome::nspanel_easy
