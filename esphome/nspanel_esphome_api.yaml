@@ -552,20 +552,8 @@ script:
       - lambda: |-
           update_flag_api_ready->execute();
 
-          #ifdef NSPANEL_EASY_ADDON_CLIMATE_BASE
-          const bool climate_offline_safe = (current_page_id == get_page_id("climate") && climate_embedded_visible);
-          #else  // NSPANEL_EASY_ADDON_CLIMATE_BASE
-          constexpr bool climate_offline_safe = false;
-          #endif  // NSPANEL_EASY_ADDON_CLIMATE_BASE
-
           if (!api_server->is_connected_with_state_subscription() &&
-              current_page_id != get_page_id("boot")        &&
-              current_page_id != get_page_id("confirm")     &&
-              current_page_id != get_page_id("home")        &&
-              current_page_id != get_page_id("qrcode")      &&
-              current_page_id != get_page_id("screensaver") &&
-              current_page_id != get_page_id("settings")    &&
-              !climate_offline_safe) {
+              !is_page_offline_capable(current_page_id)) {
             ESP_LOGW("${TAG_API}", "API disconnected. Falling back to Home page.");
             goto_page->execute(get_page_id("home"));
           }

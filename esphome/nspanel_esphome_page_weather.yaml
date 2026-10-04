@@ -18,7 +18,6 @@ display:
         - lambda: |-
             if (touch_event) return;                            // Ignore the touch, so only the release will be used
             if (page_id == get_page_id("home") and              // Page `home`
-                api_server->is_connected() and                  // Is API available?
                 (component_id == hmi::home::WEATHER.id or       // Outdoor temperature
                 component_id == hmi::home::OUTDOOR_TEMP.id)) {  // Weather picture
               goto_page->execute(get_page_id("weather01"));

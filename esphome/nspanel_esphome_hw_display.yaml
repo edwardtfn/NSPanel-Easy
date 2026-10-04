@@ -212,8 +212,7 @@ script:
       - lambda: |-
           disp1->send_command_printf("button_back_font=%i", id(button_back_font));
           wakeup_page_id = get_page_id(wakeup_page_name->current_option().c_str());
-          if (wakeup_page_id != get_page_id("boot") and wakeup_page_id != get_page_id("screensaver"))
-            disp1->send_command_printf("wakeup_page_id=%" PRIu8, wakeup_page_id);
+          wakeup_page_update->execute();
 
 
   - id: !extend boot_wrap_up
@@ -296,6 +295,12 @@ script:
                 {"component", params[2].c_str()}
               });
               ESP_LOGV("${TAG_HW_DISPLAY}", "Event sent");
+            } else if (event == "page_unavailable") {
+              // CSV Format: <page>,page_unavailable,<target>
+              // The display refused a navigation because Home Assistant is not connected
+              ESP_LOGW("${TAG_HW_DISPLAY}", "Page '%s' needs Home Assistant",
+                                            params_count > 2 ? params[2].c_str() : "unknown");
+              page_unavailable_feedback->execute();
             } else if (page != "button" and
                         page != "home" and
                         page != "light" and
@@ -322,6 +327,12 @@ script:
           ESP_LOGV("${TAG_HW_DISPLAY}", "Go to page '%s' (id: %" PRIu8 ")", page_names[page_id], page_id);
           if (page_id == current_page_id) {
             ESP_LOGW("${TAG_HW_DISPLAY}", "Already the current page");
+            return;
+          }
+          // Refuse pages that would leave through their Preinitialize event right away
+          if (!api_server->is_connected_with_state_subscription() and !is_page_offline_capable(page_id)) {
+            ESP_LOGW("${TAG_HW_DISPLAY}", "Page '%s' needs Home Assistant", page_names[page_id]);
+            page_unavailable_feedback->execute();
             return;
           }
           ESP_LOGVV("${TAG_HW_DISPLAY}", "Send page id '%" PRIu8 "' to Nextion", page_id);
@@ -412,6 +423,15 @@ script:
             theme_applied->execute();
           }
 
+  - id: page_unavailable_feedback  # A navigation was refused because Home Assistant is not connected
+    mode: restart
+    then:
+      # Extended by:
+      # - hw_buzzer
+      # - hw_wifi
+      - lambda: |-
+          ESP_LOGD("${TAG_HW_DISPLAY}", "Page unavailable feedback");
+
   - id: reset_globals
     mode: restart
     parameters:
@@ -446,6 +466,7 @@ script:
           event_from_display->stop();
           goto_page->stop();
           page_change->stop();
+          page_unavailable_feedback->stop();
           reset_globals->stop();
           resync_display->stop();
           set_brightness->stop();
@@ -459,6 +480,7 @@ script:
           timer_reset_all->stop();
           wait_for_version_tft->stop();
           wakeup->stop();
+          wakeup_page_update->stop();
 
   - id: stop_page_constructors
     mode: single
@@ -575,6 +597,10 @@ script:
           timer_page->execute();
           timer_dim->execute();
 
+  - id: !extend update_flag_api_ready
+    then:
+      - script.execute: wakeup_page_update
+
   - id: wait_for_display
     mode: single
     then:
@@ -634,16 +660,18 @@ script:
       reset_timer: bool
     then:
       - lambda: |-
-          ESP_LOGV("${TAG_HW_DISPLAY}", "Wake-up (%s->%s)", page_names[current_page_id], page_names[wakeup_page_id]);
+          const uint8_t target_page_id = wakeup_page_resolve(api_server->is_connected_with_state_subscription(),
+                                                             id(is_embedded_thermostat));
+          ESP_LOGV("${TAG_HW_DISPLAY}", "Wake-up (%s->%s)", page_names[current_page_id], page_names[target_page_id]);
           ESP_LOGV("${TAG_HW_DISPLAY}", "  reset timer: %s", YESNO(reset_timer));
           if (version_tft->state.empty()) {
             ESP_LOGE("${TAG_HW_DISPLAY}", "TFT version invalid");
             return;
           }
           if (current_page_id == get_page_id("screensaver") or current_page_id == get_page_id("boot")) {
-            ESP_LOGD("${TAG_HW_DISPLAY}", "Wake-up on page %s", page_names[wakeup_page_id]);
+            ESP_LOGD("${TAG_HW_DISPLAY}", "Wake-up on page %s", page_names[target_page_id]);
             #ifdef NSPANEL_EASY_PAGE_CLIMATE
-            if (wakeup_page_id == get_page_id("climate")) {
+            if (target_page_id == get_page_id("climate")) {
               detailed_entity->publish_state((id(is_embedded_thermostat)) ? "embedded_climate" : "");
               disp1->send_command_printf("climate_embedded=%i", id(is_embedded_thermostat) ? 1 : 0);
             }
@@ -655,10 +683,10 @@ script:
               id(theme_pending_apply) = false;
               // Call page theme_apply
               id(theme_apply_running) = true;
-              disp1->send_command_printf("theme_apply.previous_page.val=%" PRIu8, wakeup_page_id);
+              disp1->send_command_printf("theme_apply.previous_page.val=%" PRIu8, target_page_id);
               disp1->send_command("page theme_apply");
             } else {
-              goto_page->execute(wakeup_page_id);
+              goto_page->execute(target_page_id);
             }
           }
           if (reset_timer) {
@@ -667,6 +695,15 @@ script:
             timer_sleep->execute();
             timer_dim->execute();
           }
+
+  - id: wakeup_page_update  # Sends the page the display wakes up to, as resolved for the current connection
+    mode: restart
+    then:
+      - lambda: |-
+          const uint8_t target_page_id = wakeup_page_resolve(api_server->is_connected_with_state_subscription(),
+                                                             id(is_embedded_thermostat));
+          if (target_page_id == get_page_id("boot") or target_page_id == get_page_id("screensaver")) return;
+          disp1->send_command_printf("wakeup_page_id=%" PRIu8, target_page_id);
 
   - id: !extend watchdog_round
     then:
@@ -746,8 +783,7 @@ select:
       then:
         - lambda: |-
             wakeup_page_id = get_page_id(x.c_str());
-            if (wakeup_page_id != get_page_id("boot") and wakeup_page_id != get_page_id("screensaver"))
-              disp1->send_command_printf("wakeup_page_id=%" PRIu8, wakeup_page_id);
+            wakeup_page_update->execute();
             wait_to_be_ready->execute();
         - script.wait: wait_to_be_ready
         # Extended by:
