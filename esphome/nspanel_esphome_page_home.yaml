@@ -18,6 +18,17 @@ substitutions:
   # RGB565 white: the default of every Blueprint colour input on this page.
   HOME_COLOR_UNSET: '65535'
 
+display:
+  - id: !extend disp1
+    on_custom_binary_sensor:
+      then:
+        - lambda: |-
+            // Sent by the home pages (`home`, `home_smpl`) when they refuse a navigation
+            // because Home Assistant is not connected
+            if (key != "home_page_unavailable" or !value) return;
+            ESP_LOGW("${TAG_PAGE_HOME}", "Page needs Home Assistant");
+            page_unavailable_feedback->execute();
+
 esphome:
   build_flags:
     - -D NSPANEL_EASY_PAGE_HOME

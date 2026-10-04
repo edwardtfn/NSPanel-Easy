@@ -296,12 +296,6 @@ script:
                 {"component", params[2].c_str()}
               });
               ESP_LOGV("${TAG_HW_DISPLAY}", "Event sent");
-            } else if (event == "page_unavailable") {
-              // CSV Format: <page>,page_unavailable,<target>
-              // The display refused a navigation because Home Assistant is not connected
-              ESP_LOGW("${TAG_HW_DISPLAY}", "Page '%s' needs Home Assistant",
-                                            params_count > 2 ? params[2].c_str() : "unknown");
-              page_unavailable_feedback->execute();
             } else if (page != "button" and
                         page != "home" and
                         page != "light" and
