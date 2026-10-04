@@ -50,7 +50,7 @@ rtttl:  # ENABLE RINGTONE MUSIC SUPPORT
   output: buzzer_out
 
 script:
-  - id: !extend page_unavailable_feedback
+  - id: !extend api_unavailable_feedback
     then:
       - lambda: |-
           // Only when the page unavailable sound is enabled

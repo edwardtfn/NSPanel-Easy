@@ -79,6 +79,14 @@ display:
     uart_id: tf_uart
     command_spacing: 1ms
     update_interval: never
+    on_custom_binary_sensor:
+      then:
+        - lambda: |-
+            // Sent by the display when something requiring Home Assistant is used while it is not connected
+            if (key != "api_unavailable" or !value) return;
+            ESP_LOGW("${TAG_HW_DISPLAY}", "Home Assistant needed on page '%s'", page_names[current_page_id]);
+            api_unavailable_feedback->execute();
+
     on_setup:
       then:
         - lambda: |-
@@ -207,6 +215,19 @@ script:
             return;
           }
 
+  - id: api_unavailable_feedback  # Something requiring Home Assistant was used while it is not connected
+    mode: restart
+    then:
+      # Extended by:
+      # - hw_buzzer
+      # - hw_wifi
+      - lambda: |-
+          ESP_LOGD("${TAG_HW_DISPLAY}", "Home Assistant unavailable feedback on page '%s'", page_names[current_page_id]);
+          // The home pages show the connection icon, which explains the refusal (see hw_wifi)
+          if (current_page_id == get_page_id("home") or current_page_id == get_page_id("home_smpl")) return;
+          // Leave any other page that cannot work without Home Assistant
+          if (!is_page_offline_capable(current_page_id)) goto_page->execute(home_page_id);
+
   - id: !extend boot_nextion
     then:
       - lambda: |-
@@ -327,7 +348,7 @@ script:
           // Refuse pages that would leave through their Preinitialize event right away
           if (!api_server->is_connected_with_state_subscription() and !is_page_offline_capable(page_id)) {
             ESP_LOGW("${TAG_HW_DISPLAY}", "Page '%s' needs Home Assistant", page_names[page_id]);
-            page_unavailable_feedback->execute();
+            api_unavailable_feedback->execute();
             return;
           }
           ESP_LOGVV("${TAG_HW_DISPLAY}", "Send page id '%" PRIu8 "' to Nextion", page_id);
@@ -418,15 +439,6 @@ script:
             theme_applied->execute();
           }
 
-  - id: page_unavailable_feedback  # A navigation was refused because Home Assistant is not connected
-    mode: restart
-    then:
-      # Extended by:
-      # - hw_buzzer
-      # - hw_wifi
-      - lambda: |-
-          ESP_LOGD("${TAG_HW_DISPLAY}", "Page unavailable feedback");
-
   - id: reset_globals
     mode: restart
     parameters:
@@ -458,10 +470,10 @@ script:
     then:
       - lambda: |-
           stop_page_constructors->execute();
+          api_unavailable_feedback->stop();
           event_from_display->stop();
           goto_page->stop();
           page_change->stop();
-          page_unavailable_feedback->stop();
           reset_globals->stop();
           resync_display->stop();
           set_brightness->stop();
