@@ -107,6 +107,9 @@ static char outdoor_temp_text[TEMP_TEXT_LEN] = {};
 /// @brief Whether the outdoor temperature component is currently shown.
 static Visibility outdoor_temp_shown = Visibility::UNKNOWN;
 
+/// @brief Whether a disconnection handed the indoor temperature to the embedded sensor.
+static bool indoor_temp_offline = false;
+
 /**
  * @brief Build the scoped Nextion name for a home custom button.
  *
@@ -328,6 +331,26 @@ static void home_indoor_temp_render(const char *state) {
   indoor_temp_text[sizeof(indoor_temp_text) - 1] = '\0';
 
   nextion_display->set_component_text(hmi::home::INDR_TEMP.name, indoor_temp_text);
+}
+
+void home_api_connection_update(bool connected) {
+  if (!connected) {
+    // Only a valid subscribed value needs handing back; otherwise the embedded
+    // sensor already owns the component.
+    if (indoor_temp_bound && indoor_temp_valid) {
+      ESP_LOGD(TAG, "API disconnected; indoor temperature value is stale");
+      indoor_temp_offline = true;
+      home_indoor_temp_render(SUB_UNAVAILABLE_STATES[0]);
+    }  // if (indoor_temp_bound && indoor_temp_valid)
+    return;
+  }  // if (!connected)
+
+  if (indoor_temp_offline) {
+    indoor_temp_offline = false;
+    // Renderers skip redundant writes, so re-applying every binding only
+    // repaints what the disconnection changed.
+    sub_render_all();
+  }  // if (indoor_temp_offline)
 }
 
 /**

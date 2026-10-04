@@ -308,6 +308,13 @@ script:
     then:
       - script.execute: home_colors_apply
 
+  - id: !extend update_flag_api_ready
+    then:
+      - lambda: |-
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          home_api_connection_update(api_server->is_connected_with_state_subscription());
+          #endif  // NSPANEL_EASY_SUBSCRIBE
+
 sun:
   id: sun_component
   time_id: time_provider
