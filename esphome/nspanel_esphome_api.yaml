@@ -195,7 +195,7 @@ api:
                 uint8_t back_page_id = get_page_id(back_page.c_str());
                 if (back_page_id == UINT8_MAX) {
                   ESP_LOGW("${TAG_API}", "Unknown back_page '%s', falling back to home", back_page.c_str());
-                  back_page_id = get_page_id("home");
+                  back_page_id = home_page_id;
                 }
                 disp1->send_command_printf("back_page_id=%" PRIu8, back_page_id);
               }
@@ -555,6 +555,6 @@ script:
           if (!api_server->is_connected_with_state_subscription() &&
               !is_page_offline_capable(current_page_id)) {
             ESP_LOGW("${TAG_API}", "API disconnected. Falling back to Home page.");
-            goto_page->execute(get_page_id("home"));
+            goto_page->execute(home_page_id);
           }
 ...

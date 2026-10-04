@@ -211,6 +211,7 @@ script:
     then:
       - lambda: |-
           disp1->send_command_printf("button_back_font=%i", id(button_back_font));
+          disp1->send_command_printf("home_page_id=%" PRIu8, home_page_id);
           wakeup_page_id = get_page_id(wakeup_page_name->current_option().c_str());
           wakeup_page_update->execute();
 
@@ -371,7 +372,7 @@ script:
           if (!display_entity_keep) {
             detailed_entity->publish_state("");
             details_overlap = DetailsOverlap{};
-            disp1->send_command_printf("back_page_id=%" PRIu8, get_page_id("home"));
+            disp1->send_command_printf("back_page_id=%" PRIu8, home_page_id);
           } else {  // Report detailed entity
             ESP_LOGD("${TAG_HW_DISPLAY}", "Entity shown: %s", detailed_entity->state.c_str());
             // Moving between entity details pages keeps the override, so drop it once another
@@ -571,11 +572,11 @@ script:
             ESP_LOGV("${TAG_HW_DISPLAY}", "Timed out on page: %s", page_names[current_page_id]);
             if (current_page_id != get_page_id("boot") and
                 current_page_id != get_page_id("confirm") and
-                current_page_id != get_page_id("home") and
+                current_page_id != home_page_id and
                 current_page_id != get_page_id("notification") and
                 current_page_id != get_page_id("screensaver")) {
               ESP_LOGD("${TAG_HW_DISPLAY}", "Fallback to page Home");
-              goto_page->execute(get_page_id("home"));
+              goto_page->execute(home_page_id);
             }
           }
 

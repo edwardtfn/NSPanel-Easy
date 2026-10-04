@@ -45,7 +45,6 @@ api:
             }
 
             const uint8_t qrcode_page_id = get_page_id("qrcode");
-            const uint8_t home_page_id = get_page_id("home");
             bool data_changed = false;
 
             if (qrcode.empty() and !id(qrcode_string).empty()) {
@@ -159,7 +158,7 @@ script:
       - lambda: |-
           if (current_page_id != get_page_id("qrcode")) return;  // Page QRcode not visible
           if (id(qrcode_string).empty()) {
-            goto_page->execute(get_page_id("home"));
+            goto_page->execute(home_page_id);
             return;
           }
           // Draw QRcode

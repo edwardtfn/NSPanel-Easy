@@ -34,6 +34,7 @@ static_assert(PAGE_COUNT <= UINT8_MAX, "PAGE_COUNT exceeds uint8_t range");
 
 // Global system flags - initialized to 0 (all flags false)
 extern uint8_t current_page_id;
+extern uint8_t home_page_id;  ///< Page used as home; every navigation to home uses this, never a literal page
 extern uint8_t last_page_id;
 extern uint8_t wakeup_page_id;
 
@@ -174,7 +175,7 @@ bool is_page_offline_capable(uint8_t page_id);
 /**
  * @brief Resolve the page the display should wake up to.
  *
- * Falls back to the home page when Home Assistant is not connected and the
+ * Falls back to home_page_id when Home Assistant is not connected and the
  * configured wake-up page would only bounce back.
  *
  * @param api_connected Whether the API is connected with a state subscription.
@@ -185,7 +186,7 @@ inline uint8_t wakeup_page_resolve(bool api_connected, bool climate_embedded) {
   if (api_connected || is_page_offline_capable(wakeup_page_id, climate_embedded)) {
     return wakeup_page_id;
   }
-  return get_page_id("home");
+  return home_page_id;
 }
 
 }  // namespace esphome::nspanel_easy
