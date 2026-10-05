@@ -34,6 +34,7 @@ static_assert(PAGE_COUNT <= UINT8_MAX, "PAGE_COUNT exceeds uint8_t range");
 
 // Global system flags - initialized to 0 (all flags false)
 extern uint8_t current_page_id;
+extern uint8_t home_page_id;  ///< Page used as home; every navigation to home uses this, never a literal page
 extern uint8_t last_page_id;
 extern uint8_t wakeup_page_id;
 
@@ -130,5 +131,62 @@ static_assert(get_page_id("weather02") != UINT8_MAX, "Missing required page: wea
 static_assert(get_page_id("weather03") != UINT8_MAX, "Missing required page: weather03");
 static_assert(get_page_id("weather04") != UINT8_MAX, "Missing required page: weather04");
 static_assert(get_page_id("weather05") != UINT8_MAX, "Missing required page: weather05");
+
+/**
+ * @brief Whether a page works without Home Assistant.
+ *
+ * Mirrors the TFT: every page not listed here leaves through its Preinitialize
+ * event while `api==0`. The climate page is the exception, as it only works
+ * offline when it shows the embedded thermostat.
+ *
+ * @param page_id Page to check.
+ * @param climate_embedded Whether the climate page would show the embedded thermostat.
+ * @return true when the page can be shown while Home Assistant is not connected.
+ */
+constexpr bool is_page_offline_capable(uint8_t page_id, bool climate_embedded) {
+  switch (page_id) {
+    case get_page_id("climate"):
+      return climate_embedded;
+    case get_page_id("boot"):
+    case get_page_id("confirm"):
+    case get_page_id("debug"):
+    case get_page_id("home"):
+    case get_page_id("home_smpl"):
+    case get_page_id("qrcode"):
+    case get_page_id("screensaver"):
+    case get_page_id("settings"):
+    case get_page_id("theme_apply"):
+      return true;
+    default:
+      return false;
+  }  // switch (page_id)
+}
+
+/**
+ * @brief Whether a page works without Home Assistant, as the display is now.
+ *
+ * Uses the current embedded thermostat state of the climate page.
+ *
+ * @param page_id Page to check.
+ * @return true when the page can be shown while Home Assistant is not connected.
+ */
+bool is_page_offline_capable(uint8_t page_id);
+
+/**
+ * @brief Resolve the page the display should wake up to.
+ *
+ * Falls back to home_page_id when Home Assistant is not connected and the
+ * configured wake-up page would only bounce back.
+ *
+ * @param api_connected Whether the API is connected with a state subscription.
+ * @param climate_embedded Whether the climate page would show the embedded thermostat.
+ * @return Page id to wake up to.
+ */
+inline uint8_t wakeup_page_resolve(bool api_connected, bool climate_embedded) {
+  if (api_connected || is_page_offline_capable(wakeup_page_id, climate_embedded)) {
+    return wakeup_page_id;
+  }
+  return home_page_id;
+}
 
 }  // namespace esphome::nspanel_easy

@@ -42,7 +42,7 @@ script:
             ESP_LOGV("${TAG_PAGE_KEYB_NUM}", "Navigating to: %s",
                       base_domain.empty() ? "home" : base_domain.c_str());
 
-            goto_page->execute(base_domain.empty() ? get_page_id("home") : get_page_id(base_domain.c_str()));
+            goto_page->execute(base_domain.empty() ? home_page_id : get_page_id(base_domain.c_str()));
           }  // endif params[0] == "keyb_num"
 
   - id: !extend page_change

@@ -293,6 +293,10 @@ To open this page, you have two options:
    > The `wake_up` action is not registered by default. To enable it, add `include_action_wake_up: true` to the substitutions in your ESPHome YAML.
    > See [Reducing Registered API Actions](install.md#reducing-registered-api-actions) for details.
 
+> [!NOTE]
+> While Home Assistant is disconnected, the panel wakes up to the home page if the selected wake-up page needs Home Assistant.
+> See [Feedback when Home Assistant is unavailable](customization.md#feedback-when-home-assistant-is-unavailable).
+
 The **Wake-up** action differs from a normal page call in that it only opens the wake-up page if the panel is in sleep mode.
 If the panel is already active, the current page remains displayed.
 This feature is particularly useful in conjunction with a motion sensor to wake up your panel automatically.

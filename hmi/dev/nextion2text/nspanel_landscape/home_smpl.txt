@@ -468,7 +468,13 @@ Button b0
     
     Events
         Touch Press Event
-            page buttonpage01
+            if(api==1)
+            {
+                page buttonpage01
+            }else
+            {
+                call report_api_unavailable
+            }
         
 Button b1
     Attributes
@@ -500,7 +506,13 @@ Button b1
     
     Events
         Touch Press Event
-            page buttonpage02
+            if(api==1)
+            {
+                page buttonpage02
+            }else
+            {
+                call report_api_unavailable
+            }
         
 Button b2
     Attributes
@@ -532,7 +544,13 @@ Button b2
     
     Events
         Touch Press Event
-            page buttonpage03
+            if(api==1)
+            {
+                page buttonpage03
+            }else
+            {
+                call report_api_unavailable
+            }
         
 Button b3
     Attributes
@@ -564,7 +582,13 @@ Button b3
     
     Events
         Touch Press Event
-            page alarm
+            if(api==1)
+            {
+                page alarm
+            }else
+            {
+                call report_api_unavailable
+            }
         
 Timer swipestore
     Attributes
@@ -619,10 +643,6 @@ TouchCap swipe
             dim=brightness // Set brightness to saved value (from HA)
         
         Touch Release Event
-            if(api==0)
-            {
-                page home
-            }
             swipestore.en=0
             // Touch has ended, x
             if(tch0==0)
@@ -632,7 +652,10 @@ TouchCap swipe
                 if(swipec>swipedx)
                 {
                     // Navigate back based on active status
-                    if(is_buttonpage04>0)
+                    if(api==0)
+                    {
+                        call report_api_unavailable
+                    }else if(is_buttonpage04>0)
                     {
                         page buttonpage04
                     }else if(is_buttonpage03>0)
@@ -651,7 +674,10 @@ TouchCap swipe
                 if(swipec<swipec2)
                 {
                     // Navigate back based on active status
-                    if(is_buttonpage01>0)
+                    if(api==0)
+                    {
+                        call report_api_unavailable
+                    }else if(is_buttonpage01>0)
                     {
                         page buttonpage01
                     }else if(is_buttonpage02>0)
@@ -673,7 +699,10 @@ TouchCap swipe
                 // From Up to Down
                 if(swipec>100)
                 {
-                    if(is_buttonpage04>0&&is_buttonpage03>0)
+                    if(api==0)
+                    {
+                        call report_api_unavailable
+                    }else if(is_buttonpage04>0&&is_buttonpage03>0)
                     {
                         page buttonpage03
                     }else if(is_buttonpage04>0&&is_buttonpage02>0)
@@ -698,7 +727,10 @@ TouchCap swipe
                 if(swipec<-100)
                 {
                     // Navigate back up the sequence based on active status
-                    if(is_buttonpage01>0&&is_buttonpage02>0)
+                    if(api==0)
+                    {
+                        call report_api_unavailable
+                    }else if(is_buttonpage01>0&&is_buttonpage02>0)
                     {
                         page buttonpage02
                     }else if(is_buttonpage01>0&&is_buttonpage03>0)

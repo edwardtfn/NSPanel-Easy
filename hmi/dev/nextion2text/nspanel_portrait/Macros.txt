@@ -1,0 +1,6 @@
+Macros
+    Macro report_api_unavailable
+        // Report to ESPHome that Home Assistant is needed
+        printh 93
+        prints "api_unavailable",0
+        printh 00 01 FF FF FF

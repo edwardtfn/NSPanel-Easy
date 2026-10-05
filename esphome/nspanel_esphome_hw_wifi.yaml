@@ -55,6 +55,10 @@ script:
             ESP_LOGE("${TAG_HW_WIFI}", "WiFi: DISCONNECTED");
           }
 
+  - id: !extend api_unavailable_feedback
+    then:
+      - script.execute: wifi_icon_blink
+
   - id: refresh_wifi_icon
     mode: single
     parameters:
@@ -121,6 +125,7 @@ script:
       - lambda: |-
           refresh_wifi_icon->stop();
           wait_for_wifi->stop();
+          wifi_icon_blink->stop();
 
   - id: wait_for_wifi
     mode: single
@@ -155,6 +160,21 @@ script:
       - lambda: |-
           wait_for_wifi->execute();
           refresh_wifi_icon->execute(false);
+
+  - id: wifi_icon_blink  # Draws attention to the connection icon, which shows why a page is unavailable
+    mode: restart
+    then:
+      - repeat:
+          count: 3
+          then:
+            - lambda: |-
+                if (current_page_id != get_page_id("home") and current_page_id != get_page_id("home_smpl")) return;
+                disp1->set_component_visibility("wifi_icon", false);
+            - delay: 150ms
+            - lambda: |-
+                if (current_page_id != get_page_id("home") and current_page_id != get_page_id("home_smpl")) return;
+                disp1->set_component_visibility("wifi_icon", true);
+            - delay: 150ms
 
 text_sensor:
   - id: device_name  # Device name - Used by blueprint to find service's names

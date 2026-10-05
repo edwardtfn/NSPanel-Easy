@@ -901,7 +901,7 @@ For local Blueprint modifications:
 
 All `.HMI` source files are available in the repository for custom TFT development:
 
-1. **Download Nextion Editor**: [Nextion Editor](https://nextion.tech/nextion-editor/)
+1. **Download Nextion Editor**: [Nextion Editor](https://nextion.tech/nextion-editor/) v1.68.2 or later is required, as the project uses macros
 2. **Modify `.HMI` files**: Customize the user interface according to your needs
 3. **Compile to `.TFT`**: Generate custom TFT files for your specific requirements
 4. **Host the file**: Make it accessible via HTTP for your panel
