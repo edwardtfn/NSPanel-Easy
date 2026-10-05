@@ -10986,7 +10986,6 @@ actions:
                                     - 'temp_offset.val={{ temp_offset }}'
                                     - 'temp_step.val={{ temp_step }}'
                                     ##### Current temperature #####
-                                    - 'dec_separator.txt="{{ decimal_separator }}"'
                                     - 'current_temp.txt="{{ current_temp_text }}"'
                                 continue_on_error: true
                               - *delay_default
