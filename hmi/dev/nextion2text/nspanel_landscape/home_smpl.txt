@@ -649,13 +649,13 @@ TouchCap swipe
             {
                 swipec=swipex-tch2
                 // From Left to Right
-                if(api==0)
-                {
-                    call report_api_unavailable
-                }else if(swipec>swipedx)
+                if(swipec>swipedx)
                 {
                     // Navigate back based on active status
-                    if(is_buttonpage04>0)
+                    if(api==0)
+                    {
+                        call report_api_unavailable
+                    }else if(is_buttonpage04>0)
                     {
                         page buttonpage04
                     }else if(is_buttonpage03>0)
