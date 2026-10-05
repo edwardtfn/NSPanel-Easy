@@ -249,6 +249,26 @@ api:
   reboot_timeout: 15min
 ```
 
+### Feedback when Home Assistant is unavailable
+
+While Home Assistant is disconnected, the panel does not open pages that need it:
+
+- On the home page, the Wi-Fi icon blinks to point at the cause.
+- On any other page that needs Home Assistant, the panel returns to the home page.
+- When waking up, the panel opens the home page if the selected **Wake-up page** needs Home Assistant.
+
+The pages that work without Home Assistant are the home page, settings, QR code, and the climate page when it shows the embedded thermostat.
+
+You can also play a tone when this happens. It is disabled by default:
+
+```yaml
+substitutions:
+  # Play a tone when something requiring Home Assistant is used while it is disconnected
+  page_unavailable_sound: true
+  # Optional: replace the default tone (RTTTL)
+  tone_page_unavailable: "unavailable:d=16,o=5,b=160:a5,e5"
+```
+
 ### Manual IP
 
 Set IP address manually.
