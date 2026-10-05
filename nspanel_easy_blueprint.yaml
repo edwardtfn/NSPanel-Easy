@@ -10961,13 +10961,13 @@ actions:
                                     {%- endif -%}
                                   current_temp_text: >
                                     {%- if current_temp > -999 -%}
-                                      {{ (("%.1f" | format(current_temp)) if use_decimal else ("%.0f" | format(current_temp))) }}
+                                      {{ (("%.1f" | format(current_temp)) if use_decimal else ("%.0f" | format(current_temp))) ~ ("" if compact_unit_display else " ") ~ slider_unit }}
                                     {%- else -%}
                                       {{ "_{_unavailable_}_" }}
                                     {%- endif -%}
                                   target_temp_text: >
                                     {%- if is_target_temperature -%}
-                                      {{ (("%.1f" | format(target_temp)) if use_decimal else ("%.0f" | format(target_temp))) }}
+                                      {{ (("%.1f" | format(target_temp)) if use_decimal else ("%.0f" | format(target_temp))) ~ ("" if compact_unit_display else " ") ~ slider_unit }}
                                     {%- else -%}
 
                                     {%- endif -%}
@@ -10980,7 +10980,7 @@ actions:
                                   id: command
                                   txt_list:
                                     ##### Slider configuration #####
-                                    - 'temp_unit.txt="{{ slider_unit }}"'
+                                    - 'temp_unit.txt="{{ "" if compact_unit_display else " " }}{{ slider_unit }}"'
                                     - 'slider.maxval={{ total_steps }}'
                                     - 'temp_offset.val={{ temp_offset }}'
                                     - 'temp_step.val={{ temp_step }}'
