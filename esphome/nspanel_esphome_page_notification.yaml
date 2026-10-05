@@ -69,7 +69,7 @@ display:
               case 8:  // bt_clear
                 ha_button->execute("notification", "bt_clear", "released");
                 notification_refresh->execute(false);
-                goto_page->execute(get_page_id("home"));
+                goto_page->execute(home_page_id);
                 break;
             }
 
@@ -102,7 +102,7 @@ script:
     then:
       - lambda: |-
           if (current_page_id == get_page_id("notification"))
-            goto_page->execute(get_page_id("home"));
+            goto_page->execute(home_page_id);
           notification_label = "";
           notification_text = "";
           notification_refresh->execute(false);

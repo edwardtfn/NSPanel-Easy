@@ -166,6 +166,9 @@ api:
             else if (entity_id.domain == "input_button")        entity_id.domain = "button";
             else if (entity_id.domain == "input_select")        entity_id.domain = "select";
             else if (entity_id.domain == "lawn_mower")          entity_id.domain = "vacuum";
+            // Humidifiers (and dehumidifiers) share the water heater page: one setpoint, a mode list
+            // and on/off. The Blueprint renders humidity on it and translates the page's actions.
+            else if (entity_id.domain == "humidifier")          entity_id.domain = "water_heater";
             #ifdef NSPANEL_EASY_ADDON_CLIMATE_BASE
             if (entity == "embedded_climate")                   entity_id.domain = "climate";
             #endif  // NSPANEL_EASY_ADDON_CLIMATE_BASE
@@ -192,7 +195,7 @@ api:
                 uint8_t back_page_id = get_page_id(back_page.c_str());
                 if (back_page_id == UINT8_MAX) {
                   ESP_LOGW("${TAG_API}", "Unknown back_page '%s', falling back to home", back_page.c_str());
-                  back_page_id = get_page_id("home");
+                  back_page_id = home_page_id;
                 }
                 disp1->send_command_printf("back_page_id=%" PRIu8, back_page_id);
               }
@@ -251,6 +254,16 @@ api:
               target_is_home_page,
               target_is_current_page
             );
+
+display:
+  - id: !extend disp1
+    on_custom_binary_sensor:
+      then:
+        - lambda: |-
+            // Sent by the display when something requiring Home Assistant is used while it is not connected
+            if (key != "api_unavailable" or !value) return;
+            ESP_LOGW("${TAG_API}", "Home Assistant needed on page '%s'", page_names[current_page_id]);
+            api_unavailable_feedback->execute();
 
 esphome:
   build_flags:
@@ -498,6 +511,19 @@ script:
           // the target page is the current one.
           action_component_visibility->execute(component.page, component.component_id, visible);
 
+  - id: api_unavailable_feedback  # Something requiring Home Assistant was used while it is not connected
+    mode: restart
+    then:
+      # Extended by:
+      # - hw_buzzer
+      # - hw_wifi
+      - lambda: |-
+          ESP_LOGD("${TAG_API}", "Home Assistant unavailable feedback on page '%s'", page_names[current_page_id]);
+          // The home pages show the connection icon, which explains the refusal (see hw_wifi)
+          if (current_page_id == get_page_id("home") or current_page_id == get_page_id("home_smpl")) return;
+          // Leave any other page that cannot work without Home Assistant
+          if (!is_page_offline_capable(current_page_id)) goto_page->execute(home_page_id);
+
   - id: !extend dump_config
     then:
       - lambda: |-
@@ -536,6 +562,7 @@ script:
           action_component_text_list->stop();
           action_component_val->stop();
           action_component_visibility->stop();
+          api_unavailable_feedback->stop();
           ha_button->stop();
           update_flag_api_ready->stop();
 
@@ -549,21 +576,9 @@ script:
       - lambda: |-
           update_flag_api_ready->execute();
 
-          #ifdef NSPANEL_EASY_ADDON_CLIMATE_BASE
-          const bool climate_offline_safe = (current_page_id == get_page_id("climate") && climate_embedded_visible);
-          #else  // NSPANEL_EASY_ADDON_CLIMATE_BASE
-          constexpr bool climate_offline_safe = false;
-          #endif  // NSPANEL_EASY_ADDON_CLIMATE_BASE
-
           if (!api_server->is_connected_with_state_subscription() &&
-              current_page_id != get_page_id("boot")        &&
-              current_page_id != get_page_id("confirm")     &&
-              current_page_id != get_page_id("home")        &&
-              current_page_id != get_page_id("qrcode")      &&
-              current_page_id != get_page_id("screensaver") &&
-              current_page_id != get_page_id("settings")    &&
-              !climate_offline_safe) {
+              !is_page_offline_capable(current_page_id)) {
             ESP_LOGW("${TAG_API}", "API disconnected. Falling back to Home page.");
-            goto_page->execute(get_page_id("home"));
+            goto_page->execute(home_page_id);
           }
 ...

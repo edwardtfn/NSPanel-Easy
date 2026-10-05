@@ -150,6 +150,25 @@ void home_sub_render(const SubBinding &binding, const SubRuntime &rt, const char
  */
 void home_button_repaint();
 
+/**
+ * @brief Track the Home Assistant connection for the subscribed home components.
+ *
+ * While disconnected, Home Assistant cannot report the bound indoor temperature
+ * entity, so its last value is stale. It is then treated as unusable and the
+ * component is handed back to the embedded sensor, as when the entity itself
+ * becomes unavailable.
+ *
+ * On reconnect, Home Assistant only re-sends states that differ from the cached
+ * ones, so an unchanged value would never be rendered again. The bindings are
+ * therefore re-applied from their cached state, but only after a disconnection
+ * actually invalidated something.
+ *
+ * Safe to call repeatedly with the same value; it runs on every watchdog round.
+ *
+ * @param connected Whether the API is connected with a state subscription.
+ */
+void home_api_connection_update(bool connected);
+
 #ifdef NSPANEL_EASY_USE_WEATHER
 
 /**
@@ -226,10 +245,6 @@ constexpr HMIComponent BT_NOTIFIC = {"home.bt_notific", 28};      ///< Notificat
 constexpr HMIComponent BT_QRCODE = {"home.bt_qrcode", 29};        ///< QR code button (3 chars max)
 constexpr HMIComponent BT_ENTITIES = {"home.bt_entities", 30};    ///< Entities button (3 chars max)
 constexpr HMIComponent BT_UTILITIES = {"home.bt_utilities", 43};  ///< Utilities button (3 chars max)
-
-// Footer text components
-constexpr HMIComponent LEFT_BT_TEXT = {"home.left_bt_text", 9};     ///< Left button text (20 chars max)
-constexpr HMIComponent RIGHT_BT_TEXT = {"home.right_bt_text", 10};  ///< Right button text (20 chars max)
 
 // System indicators
 constexpr HMIComponent WIFI_ICON = {"home.wifi_icon", 26};  ///< WiFi status icon (5 chars max)

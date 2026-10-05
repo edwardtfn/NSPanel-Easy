@@ -14,7 +14,7 @@ substitutions:
   # Minimum required blueprint version for compatibility
   # Select 'next' or '${version}' when you change the "contract" between ESPHome and Blueprint
   # Versioning workflow will replace this by the new version being generated
-  min_blueprint_version: 2026.9.19
+  min_blueprint_version: next
 
   # API version (MAJOR.MINOR) provided by this firmware, reported to the Blueprint in every event
   # Keep it quoted: unquoted, YAML reads 1.10 as the number 1.1
@@ -26,7 +26,7 @@ substitutions:
 
   # Minimum required TFT version for compatibility
   # Must be manually updated with Nextion Editor
-  min_tft_version: 21.6
+  min_tft_version: 22.0
 
   # Minimum required ESPHome compiler to run this
   # Versioning workflow will take care of updating this

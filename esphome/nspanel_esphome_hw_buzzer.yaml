@@ -15,6 +15,10 @@ substitutions:
   # RTTTL format: name:d=duration,o=octave,b=tempo:notes
   # d=32 (32nd note), o=5 (octave 5), b=100 (tempo 100)
   tone_boot: "two short:d=4,o=5,b=100:16e6,16e6"
+  # Played when a page is refused because Home Assistant is not connected (opt-in)
+  page_unavailable_sound: false
+  _PAGE_UNAVAILABLE_SOUND: ${ 1 if page_unavailable_sound else 0 }
+  tone_page_unavailable: "unavailable:d=16,o=5,b=160:a5,e5"
   # tone_volume_change: "scale_up:d=32,o=5,b=100:c,c#,d#,e,f#,g#,a#,b"  # Use "none" to disable sound
 
 api:
@@ -46,6 +50,14 @@ rtttl:  # ENABLE RINGTONE MUSIC SUPPORT
   output: buzzer_out
 
 script:
+  - id: !extend api_unavailable_feedback
+    then:
+      - lambda: |-
+          // Only when the page unavailable sound is enabled
+          #if ${_PAGE_UNAVAILABLE_SOUND}
+          buzzer->play("${tone_page_unavailable}");
+          #endif  // _PAGE_UNAVAILABLE_SOUND
+
   - id: !extend wait_for_page_boot_exit
     then:
       - lambda: |-

@@ -419,6 +419,7 @@ ensuring they can easily access detailed information and return to their initial
   - `climate`
   - `cover`
   - `fan`
+  - `humidifier` (shown on the water heater page)
   - `input_boolean`
   - `input_button`
   - `light`

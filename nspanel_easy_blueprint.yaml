@@ -508,6 +508,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - humidifier
                   - input_boolean
                   - input_button
                   - input_select
@@ -759,6 +760,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - humidifier
                   - input_boolean
                   - light
                   - lock
@@ -1201,6 +1203,94 @@ blueprint:
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
+    humidifier_page_settings:
+      name: Humidifier page
+      icon: mdi:air-humidifier
+      description: >-
+        Select what to display in the humidifier page.
+        Humidifiers and dehumidifiers use the water heater page layout, but with these values instead of the water heater ones.
+      collapsed: true
+      input:
+        humidifier_value01:
+          name: Humidifier page - Entity State 01 - Entity
+          description: *description_entity_displayed
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value01_icon:
+          name: Humidifier page - Entity State 01 - Icon
+          description: *description_icon_automatic_default
+          default: []
+          selector: *selector_icon
+        humidifier_value01_icon_color:
+          name: Humidifier page - Entity State 01 - Icon color
+          description: *description_icon_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value01_label_color:
+          name: Humidifier page - Entity State 01 - Text color
+          description: *description_text_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value02:
+          name: Humidifier page - Entity State 02 - Entity
+          description: *description_entity_displayed
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value02_icon:
+          name: Humidifier page - Entity State 02 - Icon
+          description: *description_icon_automatic_default
+          default: []
+          selector: *selector_icon
+        humidifier_value02_icon_color:
+          name: Humidifier page - Entity State 02 - Icon color
+          description: *description_icon_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value02_label_color:
+          name: Humidifier page - Entity State 02 - Text color
+          description: *description_text_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value03:
+          name: Humidifier page - Entity State 03 - Entity
+          description: *description_entity_displayed
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value03_icon:
+          name: Humidifier page - Entity State 03 - Icon
+          description: *description_icon_automatic_default
+          default: []
+          selector: *selector_icon
+        humidifier_value03_icon_color:
+          name: Humidifier page - Entity State 03 - Icon color
+          description: *description_icon_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value03_label_color:
+          name: Humidifier page - Entity State 03 - Text color
+          description: *description_text_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value04:
+          name: Humidifier page - Entity State 04 - Entity
+          description: *description_entity_displayed
+          default: *selector_entity_single_default_empty
+          selector: *selector_value_entity
+        humidifier_value04_icon:
+          name: Humidifier page - Entity State 04 - Icon
+          description: *description_icon_automatic_default
+          default: []
+          selector: *selector_icon
+        humidifier_value04_icon_color:
+          name: Humidifier page - Entity State 04 - Icon color
+          description: *description_icon_color
+          default: [200, 204, 200]
+          selector: *color_selector
+        humidifier_value04_label_color:
+          name: Humidifier page - Entity State 04 - Text color
+          description: *description_text_color
+          default: [200, 204, 200]
+          selector: *color_selector
     qrcode_settings:
       name: QR code
       icon: mdi:qrcode-scan
@@ -1257,68 +1347,70 @@ blueprint:
       description: Select how the physical buttons will behave.
       collapsed: true
       input:
-        hw_buttons_bars_pages:
+        hw_buttons_bars_visible_pages:
           name: Hardware Buttons - Visibility Pages
           description: >
             Choose the pages where the bars, indicating the status of entities linked to hardware buttons, will be displayed.
 
             ***Attention!** Overlapping of button bars with other components may occur on some pages. Please proceed with caution.*
           default:
-            - '2'
-            - '61440'
-            - '3932160'
-            - '65536'
-            - '131072'
-            - '512'
-            - '256'
-            - '134217728'
-            - '124'
-            - '8388608'
-            - '128'
-            - '2048'
-            - '4194304'
-            - '1024'
-            - '33554432'
-            - '67108864'
-            - '16777216'
+            - 'home'
           selector:
             select:
               multiple: true
               options:
+                # Values are page names (comma-separated when an option covers more than one page)
                 - label: "Home (default)"
-                  value: '2'                          # 2^1
+                  value: 'home'
                 - label: "Buttons pages"
-                  value: '61440'                      # 2^12 + 2^12 + 2^14 + 2^15
+                  value: 'buttonpage01,buttonpage02,buttonpage03,buttonpage04'
                 - label: "Entities pages"
-                  value: '3932160'                    # 2^18 + 2^19 + 2^20 + 2^21
+                  value: 'entitypage01,entitypage02,entitypage03,entitypage04'
                 - label: "Notification page"
-                  value: '65536'                      # 2^16
+                  value: 'notification'
                 - label: "QR code page"
-                  value: '131072'                     # 2^17
+                  value: 'qrcode'
                 - label: "Screen saver (sleep) page"
-                  value: '512'                        # 2^9
+                  value: 'screensaver'
                 - label: "Settings page"
-                  value: '256'                        # 2^8
+                  value: 'settings'
                 - label: "Utilities page"
-                  value: '134217728'                  # 2^27
+                  value: 'utilities'
                 - label: "Weather pages"
-                  value: '124'                        # 2^2 + 2^3 + 2^4 + 2^5 + 2^6
+                  value: 'weather01,weather02,weather03,weather04,weather05'
                 - label: "Alarm control panel page"
-                  value: '8388608'                    # 2^23
+                  value: 'alarm'
                 - label: "Climate page"
-                  value: '128'                        # 2^7
+                  value: 'climate'
                 - label: "Cover page"
-                  value: '2048'                       # 2^11
+                  value: 'cover'
                 - label: "Fan page"
-                  value: '4194304'                    # 2^22
+                  value: 'fan'
                 - label: "Light page"
-                  value: '1024'                       # 2^10
+                  value: 'light'
                 - label: "Media player page"
-                  value: '33554432'                   # 2^25
+                  value: 'media_player'
                 - label: "Confirm pop-up page"
-                  value: '67108864'                   # 2^26
+                  value: 'confirm'
                 - label: "Keyboard pop-up page"
-                  value: '16777216'                   # 2^24
+                  value: 'keyb_num'
+        hw_buttons_labels_pages:
+          name: Hardware Buttons - Labels Pages
+          description: >
+            Choose the pages where the labels of the hardware buttons will be displayed.
+
+            ***Note:** The labels are not visible on the US landscape model.*
+          default:
+            - 'home'
+          selector:
+            select:
+              multiple: true
+              options:
+                # Values are page names (comma-separated when an option covers more than one page)
+                - label: "Home (default)"
+                  value: 'home'
+                - label: "Screen saver (sleep) page"
+                  value: 'screensaver'
         hw_buttons_bar_color_on:
           name: Hardware Buttons - Bar color when `On`
           description: "Choose a color for the button's bars when the controlled entity is `On`."
@@ -1375,6 +1467,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - humidifier
                   - input_boolean
                   - input_button
                   - input_select
@@ -1440,6 +1533,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - humidifier
                   - input_boolean
                   - input_select
                   - lawn_mower
@@ -1559,6 +1653,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - humidifier
                   - input_boolean
                   - input_button
                   - input_select
@@ -4994,7 +5089,7 @@ variables:
   # Set it to 'next' when a change makes the Blueprint depend on a newer firmware, e.g. a new API
   # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
   # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
-  min_esphome_version: 2026.10.0
+  min_esphome_version: next
 
   # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
@@ -5830,6 +5925,47 @@ triggers:
         for:
           seconds: 1
 
+  - triggers:  # Humidifier page
+      - alias: Value 01
+        id: trigger_humidifier_page_value_state
+        trigger: state
+        entity_id: !input humidifier_value01
+        not_to:
+          - unknown
+          - unavailable
+        for:
+          seconds: 1
+
+      - alias: Value 02
+        id: trigger_humidifier_page_value_state
+        trigger: state
+        entity_id: !input humidifier_value02
+        not_to:
+          - unknown
+          - unavailable
+        for:
+          seconds: 1
+
+      - alias: Value 03
+        id: trigger_humidifier_page_value_state
+        trigger: state
+        entity_id: !input humidifier_value03
+        not_to:
+          - unknown
+          - unavailable
+        for:
+          seconds: 1
+
+      - alias: Value 04
+        id: trigger_humidifier_page_value_state
+        trigger: state
+        entity_id: !input humidifier_value04
+        not_to:
+          - unknown
+          - unavailable
+        for:
+          seconds: 1
+
   - triggers:  # HW Buttons
       - alias: Left button - entity
         id: left_button_state
@@ -6056,7 +6192,7 @@ conditions:
   - >  # Do not update values when page water heater is not visible
     {{
       pages.current == pages.water_heater or
-      trigger.id not in ["trigger_water_heater_page_value_state"]
+      trigger.id not in ["trigger_water_heater_page_value_state", "trigger_humidifier_page_value_state"]
     }}
   - >  # Do not update values when page button is not visible
     {{
@@ -6113,7 +6249,8 @@ actions:
       refresh_settled: false
 
       compact_unit_display: !input compact_unit_display
-      units_separator: "{{ '' if compact_unit_display else ' ' }}"
+      # Home Assistant strips whitespace from rendered templates, so a variable holding only a space would always be empty.
+      # The separator is built inline with ("" if compact_unit_display else " ") wherever a value and its unit are joined.
 
       # yamllint disable rule:line-length rule:braces
       device_class_icons:
@@ -6917,6 +7054,33 @@ actions:
               color: "off"
               component: button08
 
+      ##### Humidifier page (rendered on the water heater page) #####
+      # Humidifier modes are free text (`available_modes`), so they are assigned to the mode
+      # buttons in the order the entity reports them. HA's standard modes get a matching icon,
+      # any other mode gets the fallback icon. The power button toggles the entity on/off.
+      page_humidifier:
+        buttons:
+          modes:
+            - button01
+            - button02
+            - button03
+            - button04
+            - button05
+            - button06
+            - button07
+          power: button08
+          mode_icons:
+            normal: water-percent
+            eco: leaf
+            away: account-arrow-right
+            boost: rocket-launch
+            comfort: sofa
+            home: home
+            sleep: sleep
+            auto: auto-mode
+            baby: baby-carriage
+          mode_icon_fallback: tune
+
       ###### MEDIA PLAYER REFRESH #####
       media_player_update_interval: !input 'media_player_update_interval'
       media_player_update_delay: !input 'media_player_update_delay'
@@ -6942,6 +7106,7 @@ actions:
           - climate
           - cover
           - fan
+          - humidifier
           - input_boolean
           - input_button
           - input_select
@@ -7314,6 +7479,18 @@ actions:
                     'high_demand': nextion.color.red
                   } -%}
                   {{ wh_color_map.get(wh_mode, entity_icon_color_tmp) }}
+                {%- elif entity_domain == "humidifier" -%}
+                  {#- `action` tells whether it is actually running, not only switched on -#}
+                  {%- set humidifier_action = state_attr(entity_id, "action") -%}
+                  {%- if entity_state == "off" or humidifier_action == "off" -%}
+                    {{ nextion.color.off }}
+                  {%- elif humidifier_action == "humidifying" -%}
+                    {{ nextion.color.blue }}
+                  {%- elif humidifier_action == "drying" -%}
+                    {{ nextion.color.orange }}
+                  {%- else -%}
+                    {{ entity_icon_color_tmp }}
+                  {%- endif -%}
                 {%- else -%}
                   {{ entity_icon_color_tmp }}
                 {%- endif -%}
@@ -7781,7 +7958,7 @@ actions:
                               page: mem
                               id: units_separator
                               txt_list:
-                                - '{{ units_separator }}'
+                                - '{{ "none" if compact_unit_display else "space" }}'
                             continue_on_error: true
                           - *delay_boot
 
@@ -8080,43 +8257,53 @@ actions:
                                   continue_on_error: true
                                 - *delay_boot
 
-                      - alias: NSPanel Left Button Name
-                        if: '{{ hardware.buttons.left.name | length > 0 }}'
-                        then:
-                          ### LABEL Font Color ###
+                      - alias: Hardware buttons labels
+                        sequence:
+                          - variables:
+                              hw_buttons_labels_pages: !input hw_buttons_labels_pages
+                          ### LABELS Pages ###
+                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: buttons_labels_pages
+                              # Each option may hold more than one page (comma-separated); an empty list is sent as ['']
+                              txt_list: >-
+                                {{
+                                  (hw_buttons_labels_pages | join(',')).split(',') | reject('eq', '') | list
+                                  if hw_buttons_labels_pages | count > 0
+                                  else ['']
+                                }}
+                            continue_on_error: true
+                          - *delay_boot
+                          ### LABELS Font Color ###
                           - action: 'esphome.{{ action_prefix }}_component_color'
                             data:
-                              page: home
-                              id: left_bt_text
+                              page: mem
+                              id: button_left_label_color
                               color: !input left_button_color
                             continue_on_error: true
                           - *delay_boot
-                          ### LABEL Font ###
+                          - action: 'esphome.{{ action_prefix }}_component_color'
+                            data:
+                              page: mem
+                              id: button_right_label_color
+                              color: !input right_button_color
+                            continue_on_error: true
+                          - *delay_boot
+                          ### LABELS Text ###
+                          # Always sent, so an empty label clears the one previously stored
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
                             data:
-                              page: home
-                              id: left_bt_text
+                              page: mem
+                              id: button_left_label
                               txt_list:
                                 - '{{ hardware.buttons.left.name }}'
                             continue_on_error: true
                           - *delay_boot
-
-                      - alias: NSPanel Right Button Name
-                        if: '{{ hardware.buttons.right.name | length > 0 }}'
-                        then:
-                          ### LABEL Font Color ###
-                          - action: 'esphome.{{ action_prefix }}_component_color'
-                            data:
-                              page: home
-                              id: right_bt_text
-                              color: !input right_button_color
-                            continue_on_error: true
-                          - *delay_boot
-                          ### LABEL Font ###
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
                             data:
-                              page: home
-                              id: right_bt_text
+                              page: mem
+                              id: button_right_label
                               txt_list:
                                 - '{{ hardware.buttons.right.name }}'
                             continue_on_error: true
@@ -8355,15 +8542,21 @@ actions:
                             continue_on_error: true
                           - *delay_boot
 
-                          - alias: hw_buttons_bars_pages
+                          - alias: hw_buttons_bars_visible_pages
                             sequence:
                               - variables:
-                                  hw_buttons_bars_pages: !input hw_buttons_bars_pages
-                              - action: 'esphome.{{ action_prefix }}_component_val'
+                                  hw_buttons_bars_visible_pages: !input hw_buttons_bars_visible_pages
+                              - action: 'esphome.{{ action_prefix }}_component_text_list'
                                 data:
                                   page: mem
                                   id: buttons_bars_pages
-                                  val: '{{ hw_buttons_bars_pages | map("int") | sum }}'
+                                  # Each option may hold more than one page (comma-separated); an empty list is sent as ['']
+                                  txt_list: >-
+                                    {{
+                                      (hw_buttons_bars_visible_pages | join(',')).split(',') | reject('eq', '') | list
+                                      if hw_buttons_bars_visible_pages | count > 0
+                                      else ['']
+                                    }}
                                 continue_on_error: true
                               - *delay_boot
 
@@ -8565,6 +8758,67 @@ actions:
                   - if: '{{ nspanel_event.key is defined and nspanel_event.key is string and nspanel_event.key | length > 0 }}'
                     then:
                       - choose:
+                          # The water heater page also shows humidifiers, but its buttons and slider always report the
+                          # water heater actions. Translate them here when the entity on the page is a humidifier.
+                          - alias: "water_heater.set_temperature (humidifier)"
+                            conditions:
+                              - '{{ nspanel_event.action == "water_heater.set_temperature" }}'
+                              - '{{ nspanel_event.entity.split(".")[0] == "humidifier" }}'
+                              - '{{ is_number(nspanel_event.value) }}'
+                            sequence:
+                              - variables:
+                                  set_humidity_srv: "humidifier.set_humidity"  # Templated to avoid unknown action warnings when humidifier isn't loaded
+                              - action: '{{ set_humidity_srv }}'
+                                data:
+                                  humidity: '{{ nspanel_event.value | float | round(0) | int }}'
+                                target:
+                                  entity_id: '{{ nspanel_event.entity }}'
+                                continue_on_error: true
+                          - alias: "water_heater.set_operation_mode (humidifier)"
+                            conditions:
+                              - '{{ nspanel_event.action == "water_heater.set_operation_mode" }}'
+                              - '{{ nspanel_event.entity.split(".")[0] == "humidifier" }}'
+                            sequence:
+                              - variables:
+                                  # The page reports the water heater mode bound to the pressed button, so map it back
+                                  # to the button, then to the humidifier mode assigned to that button when rendered.
+                                  humidifier_pressed_button: >-
+                                    {{
+                                      (page_water_heater.buttons.operation_mode
+                                        | selectattr("mode", "eq", nspanel_event.value)
+                                        | map(attribute="component")
+                                        | list
+                                      + [""]) | first
+                                    }}
+                                  humidifier_mode: >-
+                                    {%- set available_modes = state_attr(nspanel_event.entity, "available_modes") -%}
+                                    {%- set available_modes = available_modes if available_modes is list else [] -%}
+                                    {%- set ns = namespace(mode="") -%}
+                                    {%- for component in page_humidifier.buttons.modes -%}
+                                      {%- if component == humidifier_pressed_button and loop.index0 < available_modes | count -%}
+                                        {%- set ns.mode = available_modes[loop.index0] -%}
+                                      {%- endif -%}
+                                    {%- endfor -%}
+                                    {{ ns.mode }}
+                              - choose:
+                                  - alias: Power button
+                                    conditions: '{{ humidifier_pressed_button == page_humidifier.buttons.power }}'
+                                    sequence:
+                                      - action: '{{ "humidifier.turn_off" if is_state(nspanel_event.entity, "on") else "humidifier.turn_on" }}'
+                                        target:
+                                          entity_id: '{{ nspanel_event.entity }}'
+                                        continue_on_error: true
+                                  - alias: Mode button
+                                    conditions: '{{ humidifier_mode | length > 0 }}'
+                                    sequence:
+                                      - variables:
+                                          set_mode_srv: "humidifier.set_mode"  # Templated to avoid unknown action warnings when humidifier isn't loaded
+                                      - action: '{{ set_mode_srv }}'
+                                        data:
+                                          mode: '{{ humidifier_mode }}'
+                                        target:
+                                          entity_id: '{{ nspanel_event.entity }}'
+                                        continue_on_error: true
                           - alias: "climate.set_temperature"
                             conditions:
                               - '{{ nspanel_event.action == "climate.set_temperature" }}'
@@ -8857,7 +9111,7 @@ actions:
                                                       (
                                                         (
                                                           states(entity_id, rounded=true) ~ (
-                                                            units_separator ~ unit_of_measurement
+                                                            ("" if compact_unit_display else " ") ~ unit_of_measurement
                                                             if unit_of_measurement is string and unit_of_measurement | length > 0
                                                             else ""
                                                           )
@@ -9009,6 +9263,8 @@ actions:
                                                       or temperature_units in ["F", "f", "°F", "°f", "K", "k"]
                                                 else 1)
                                             }}{{ temperature_units }}
+                                          {% elif entity_domain == "humidifier" and is_number(state_attr(entity_id, 'current_humidity')) %}
+                                            {{ state_attr(entity_id, 'current_humidity') | float | round(0) | int }}%
                                           {% else %} 0
                                           {% endif %}
                                         btn_icon: >
@@ -9262,8 +9518,8 @@ actions:
                                   id: command
                                   txt_list:
                                     - 'lightslider.val={{ curr_brightness }}'
-                                    - 'light_value.txt="{{ curr_brightness ~ units_separator }}%"'
-                                    - 'light_value_2.txt="{{ curr_brightness ~ units_separator }}%"'
+                                    - 'light_value.txt="{{ curr_brightness ~ ("" if compact_unit_display else " ") }}%"'
+                                    - 'light_value_2.txt="{{ curr_brightness ~ ("" if compact_unit_display else " ") }}%"'
                                     - 'power_button.pco=50712'  # [192, 192, 192]
                                 continue_on_error: true
                               - *delay_default
@@ -9417,9 +9673,9 @@ actions:
                                     # slider and one centered for covers without tilt. Only one of
                                     # them is visible, both are written.
                                     - 'coverslider.val={{ current_position }}'
-                                    - 'cover_value.txt="{{ current_position ~ units_separator }}%"'
+                                    - 'cover_value.txt="{{ current_position ~ ("" if compact_unit_display else " ") }}%"'
                                     - 'coverslider2.val={{ current_position }}'
-                                    - 'cover_value_2.txt="{{ current_position ~ units_separator }}%"'
+                                    - 'cover_value_2.txt="{{ current_position ~ ("" if compact_unit_display else " ") }}%"'
                                 continue_on_error: true
                               - *delay_default
 
@@ -9436,7 +9692,7 @@ actions:
                                   id: command
                                   txt_list:
                                     - 'tiltslider.val={{ current_tilt }}'
-                                    - 'tilt_value.txt="{{ current_tilt ~ units_separator }}%"'
+                                    - 'tilt_value.txt="{{ current_tilt ~ ("" if compact_unit_display else " ") }}%"'
                                 continue_on_error: true
                               - *delay_default
 
@@ -9556,7 +9812,7 @@ actions:
                                   page: mem
                                   id: command
                                   txt_list:
-                                    - 'battery_value.txt="{{ battery_level ~ units_separator }}%"'
+                                    - 'battery_value.txt="{{ battery_level ~ ("" if compact_unit_display else " ") }}%"'
                                     - 'battery_icon.txt="{{ all_icons[battery_icon] }}"'
                                     - 'battery_icon.pco=52857'  # nextion.color.grey_super_light
                                 continue_on_error: true
@@ -9655,7 +9911,7 @@ actions:
                                       page: mem
                                       id: command
                                       txt_list:
-                                        - 'fan_value.txt="{{ fan.percentage ~ units_separator }}%"'
+                                        - 'fan_value.txt="{{ fan.percentage ~ ("" if compact_unit_display else " ") }}%"'
                                         - 'fanslider.val={{ ((fan.percentage / 100) * fan.steps) | round(0) | int(0) }}'
                                         - 'fanslider.maxval={{ fan.steps }}'
                                         - 'button_up.pco={{ color_rgb565.grey_white if fan.percentage < 100 else color_rgb565.grey_dark }}'
@@ -10501,6 +10757,8 @@ actions:
                                   if settings_entity_domain == "water_heater"
                                   else []
                                 }}
+                              # Humidifiers (and dehumidifiers) are shown on this page too, with humidity instead of temperature
+                              is_humidifier: '{{ settings_entity_domain == "humidifier" }}'
                               friendly_name_raw: '{{ state_attr(water_heater_entity, "friendly_name") }}'
                               friendly_name: >-
                                 {%- if
@@ -10514,7 +10772,7 @@ actions:
                                   {{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}
                                 {%- endif -%}
 
-                          - condition: '{{ settings_entity_domain == "water_heater" }}'
+                          - condition: '{{ settings_entity_domain in ["water_heater", "humidifier"] }}'
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
                             data:
                               page: ""
@@ -10552,10 +10810,37 @@ actions:
                                   label_color_rgb: !input water_heater_value04_label_color
                                   page: water_heater
                                   component: value04
+                          - &variables_humidifier_page
+                            variables:
+                              humidifier_page_entities:
+                                - entity: !input humidifier_value01
+                                  icon: !input humidifier_value01_icon
+                                  icon_color_rgb: !input humidifier_value01_icon_color
+                                  label_color_rgb: !input humidifier_value01_label_color
+                                  page: water_heater
+                                  component: value01
+                                - entity: !input humidifier_value02
+                                  icon: !input humidifier_value02_icon
+                                  icon_color_rgb: !input humidifier_value02_icon_color
+                                  label_color_rgb: !input humidifier_value02_label_color
+                                  page: water_heater
+                                  component: value02
+                                - entity: !input humidifier_value03
+                                  icon: !input humidifier_value03_icon
+                                  icon_color_rgb: !input humidifier_value03_icon_color
+                                  label_color_rgb: !input humidifier_value03_label_color
+                                  page: water_heater
+                                  component: value03
+                                - entity: !input humidifier_value04
+                                  icon: !input humidifier_value04_icon
+                                  icon_color_rgb: !input humidifier_value04_icon_color
+                                  label_color_rgb: !input humidifier_value04_label_color
+                                  page: water_heater
+                                  component: value04
                           - repeat:
                               for_each: >
                                 {{
-                                  water_heater_page_entities
+                                  (humidifier_page_entities if is_humidifier else water_heater_page_entities)
                                   | selectattr("entity", "defined")
                                   | rejectattr("entity", "eq", "")
                                   | rejectattr("entity", "eq", [])
@@ -10598,22 +10883,50 @@ actions:
                             alias: water_heater_update_slider
                             sequence:
                               - variables:
-                                  current_temp: '{{ state_attr(water_heater_entity, "current_temperature") | float(-999) | round(1) }}'
+                                  current_temp: >-
+                                    {{
+                                      state_attr(water_heater_entity, "current_humidity" if is_humidifier else "current_temperature")
+                                      | float(-999) | round(1)
+                                    }}
                                   supported_features: '{{ state_attr(water_heater_entity, "supported_features") | int(0) }}'
-                                  is_target_temperature: '{{ supported_features | bitwise_and(1) > 0 }}'
-                                  target_temp: '{{ state_attr(water_heater_entity, "temperature") | float(-999) | round(1) if is_target_temperature else -999 }}'
+                                  # Humidifiers always have a target humidity, water heaters only with TARGET_TEMPERATURE (bit 1)
+                                  is_target_temperature: '{{ is_humidifier or supported_features | bitwise_and(1) > 0 }}'
+                                  target_temp: >-
+                                    {{
+                                      state_attr(water_heater_entity, "humidity" if is_humidifier else "temperature")
+                                      | float(-999) | round(1)
+                                      if is_target_temperature else -999
+                                    }}
                               - variables:
                                   is_target_temperature: '{{ is_target_temperature and target_temp > -999 }}'
                                   temp_step: >
-                                    {% set target_temp_step = state_attr(water_heater_entity, "target_temp_step") %}
-                                    {% if not is_number(target_temp_step) %}
-                                      {% set target_temp_step = state_attr(water_heater_entity, "target_temperature_step") %}
+                                    {% if is_humidifier %}
+                                      {# humidifier.set_humidity only accepts whole percentages, so the dial steps by whole numbers #}
+                                      {% set target_temp_step = state_attr(water_heater_entity, "target_humidity_step") | float(1) | abs | round(0) %}
+                                    {% else %}
+                                      {% set target_temp_step = state_attr(water_heater_entity, "target_temp_step") %}
+                                      {% if not is_number(target_temp_step) %}
+                                        {% set target_temp_step = state_attr(water_heater_entity, "target_temperature_step") %}
+                                      {% endif %}
+                                      {% set target_temp_step = target_temp_step | float(0.5) %}
                                     {% endif %}
-                                    {% set target_temp_step = target_temp_step | float(0.5) | abs %}
-                                    {{ ((10 * target_temp_step) | round(0) | int) if is_number(target_temp_step) and target_temp_step > 0 else 10 }}
-                                  temp_offset_raw: '{{ (state_attr(water_heater_entity, "min_temp") | float(7) * 10) | round(0) | int }}'
+                                    {# A step that rounds to zero would break the modulo below, so fall back to 1 unit #}
+                                    {% set step10 = (10 * (target_temp_step | abs)) | round(0) | int(0) %}
+                                    {{ step10 if step10 > 0 else 10 }}
+                                  temp_offset_raw: >-
+                                    {#- Limits are rounded inward, so the slider never offers a value outside the entity's range -#}
+                                    {{
+                                      (state_attr(water_heater_entity, "min_humidity" if is_humidifier else "min_temp")
+                                        | float(0 if is_humidifier else 7) * 10)
+                                      | round(3) | round(0, "ceil") | int
+                                    }}
                                   temp_offset: '{{ temp_offset_raw if (temp_offset_raw % temp_step) == 0 else temp_offset_raw + temp_step - (temp_offset_raw % temp_step) }}'
-                                  max_temp: '{{ (state_attr(water_heater_entity, "max_temp") | float(35) * 10) | round(0) | int }}'
+                                  max_temp: >-
+                                    {{
+                                      (state_attr(water_heater_entity, "max_humidity" if is_humidifier else "max_temp")
+                                        | float(100 if is_humidifier else 35) * 10)
+                                      | round(3) | round(0, "floor") | int
+                                    }}
                                   total_steps: >
                                     {{
                                       (((max_temp - temp_offset) / temp_step) | int)
@@ -10622,27 +10935,40 @@ actions:
                                   water_heater_state: '{{ states(water_heater_entity) | default("unavailable") if water_heater_entity is string else "unavailable" }}'
                                   operation_mode: '{{ state_attr(water_heater_entity, "operation_mode") | default(water_heater_state) }}'
                                   use_decimal: '{{ temp_step % 10 != 0 }}'
+                                  temperature_units: !input temperature_unit
+                                  slider_unit: '{{ "%" if is_humidifier else temperature_units }}'
                                   water_heater_icon: >
-                                    {%- set icon_map = {
-                                      'off': all_icons["water-boiler-off"],
-                                      'on': all_icons["water-boiler"],
-                                      'eco': all_icons.leaf,
-                                      'electric': all_icons["lightning-bolt"],
-                                      'gas': all_icons.fire,
-                                      'heat_pump': all_icons["heat-pump"],
-                                      'performance': all_icons["heat-wave"],
-                                      'high_demand': all_icons.speedometer
-                                    } -%}
-                                    {{ icon_map.get(operation_mode, all_icons["water-boiler"]) }}
+                                    {%- if is_humidifier -%}
+                                      {%- set humidifier_mode = state_attr(water_heater_entity, "mode") -%}
+                                      {%- if water_heater_state == "off" -%}
+                                        {{ all_icons["air-humidifier-off"] }}
+                                      {%- elif humidifier_mode is string and humidifier_mode in page_humidifier.buttons.mode_icons -%}
+                                        {{ all_icons[page_humidifier.buttons.mode_icons[humidifier_mode]] }}
+                                      {%- else -%}
+                                        {{ all_icons["air-humidifier"] }}
+                                      {%- endif -%}
+                                    {%- else -%}
+                                      {%- set icon_map = {
+                                        'off': all_icons["water-boiler-off"],
+                                        'on': all_icons["water-boiler"],
+                                        'eco': all_icons.leaf,
+                                        'electric': all_icons["lightning-bolt"],
+                                        'gas': all_icons.fire,
+                                        'heat_pump': all_icons["heat-pump"],
+                                        'performance': all_icons["heat-wave"],
+                                        'high_demand': all_icons.speedometer
+                                      } -%}
+                                      {{ icon_map.get(operation_mode, all_icons["water-boiler"]) }}
+                                    {%- endif -%}
                                   current_temp_text: >
                                     {%- if current_temp > -999 -%}
-                                      {{ (("%.1f" | format(current_temp)) if use_decimal else ("%.0f" | format(current_temp))) }}
+                                      {{ (("%.1f" | format(current_temp)) if use_decimal else ("%.0f" | format(current_temp))) ~ ("" if compact_unit_display else " ") ~ slider_unit }}
                                     {%- else -%}
                                       {{ "_{_unavailable_}_" }}
                                     {%- endif -%}
                                   target_temp_text: >
                                     {%- if is_target_temperature -%}
-                                      {{ (("%.1f" | format(target_temp)) if use_decimal else ("%.0f" | format(target_temp))) }}
+                                      {{ (("%.1f" | format(target_temp)) if use_decimal else ("%.0f" | format(target_temp))) ~ ("" if compact_unit_display else " ") ~ slider_unit }}
                                     {%- else -%}
 
                                     {%- endif -%}
@@ -10655,7 +10981,7 @@ actions:
                                   id: command
                                   txt_list:
                                     ##### Slider configuration #####
-                                    - 'temp_unit.txt="{{ temp_unit }}"'
+                                    - 'temp_unit.txt="{{ "" if compact_unit_display else " " }}{{ slider_unit }}"'
                                     - 'slider.maxval={{ total_steps }}'
                                     - 'temp_offset.val={{ temp_offset }}'
                                     - 'temp_step.val={{ temp_step }}'
@@ -10705,17 +11031,44 @@ actions:
                                   visible: false
                                 continue_on_error: true
                               - *delay_default
+                              - variables:
+                                  # Buttons to show, as {component, icon, color}
+                                  page_buttons: >-
+                                    {%- set ns = namespace(items=[]) -%}
+                                    {%- if is_humidifier -%}
+                                      {#- Modes are assigned to the buttons in the order the entity reports them -#}
+                                      {%- set humidifier_mode = state_attr(water_heater_entity, "mode") -%}
+                                      {%- set humidifier_is_on = is_state(water_heater_entity, "on") -%}
+                                      {%- set humidifier_color = nextion.color.orange if is_state_attr(water_heater_entity, "device_class", "dehumidifier") else nextion.color.blue -%}
+                                      {%- set available_modes = state_attr(water_heater_entity, "available_modes") -%}
+                                      {%- set available_modes = available_modes[:page_humidifier.buttons.modes | count] if available_modes is list else [] -%}
+                                      {%- for mode in available_modes -%}
+                                        {%- set ns.items = ns.items + [{
+                                          "component": page_humidifier.buttons.modes[loop.index0],
+                                          "icon": page_humidifier.buttons.mode_icons.get(mode, page_humidifier.buttons.mode_icon_fallback),
+                                          "color": humidifier_color if humidifier_is_on and mode == humidifier_mode else nextion.color.disabled
+                                        }] -%}
+                                      {%- endfor -%}
+                                      {%- set ns.items = ns.items + [{
+                                        "component": page_humidifier.buttons.power,
+                                        "icon": "power",
+                                        "color": humidifier_color if humidifier_is_on else nextion.color.disabled
+                                      }] -%}
+                                    {%- else -%}
+                                      {%- for button in page_water_heater.buttons.operation_mode if button.mode in operation_list -%}
+                                        {%- set ns.items = ns.items + [{
+                                          "component": button.component,
+                                          "icon": button.icon,
+                                          "color": nextion.color[button.color] if operation_mode == button.mode else nextion.color.disabled
+                                        }] -%}
+                                      {%- endfor -%}
+                                    {%- endif -%}
+                                    {{ ns.items }}
                               - repeat:
-                                  for_each: '{{ page_water_heater.buttons.operation_mode }}'
+                                  for_each: '{{ page_buttons }}'
                                   sequence:
-                                    - condition: '{{ repeat.item.mode in operation_list }}'
                                     - variables:
-                                        color_rgb888: >-
-                                          {{
-                                            nextion.color[repeat.item.color]
-                                            if operation_mode == repeat.item.mode
-                                            else nextion.color.disabled
-                                          }}
+                                        color_rgb888: '{{ repeat.item.color }}'
                                         color_rgb565: >-
                                           {{
                                             int(
@@ -11247,34 +11600,36 @@ actions:
                                       parameters:
                                         - name: hours_of_sun
                                           visibility: '{{ is_number(hours_of_sun) }}'
-                                          value: '{{ (hours_of_sun ~ units_separator ~ weather_units.hours_of_sun) if is_number(hours_of_sun) }}'
+                                          value: '{{ (hours_of_sun ~ ("" if compact_unit_display else " ") ~ weather_units.hours_of_sun) if is_number(hours_of_sun) }}'
                                           icon: '{{ nextion.icon.weather.sun }}'
                                         - name: thunderstorm_probability
                                           visibility: '{{ is_number(thunderstorm_probability) }}'
-                                          value: '{{ (thunderstorm_probability ~ units_separator ~ weather_units.thunderstorm_probability) if is_number(thunderstorm_probability) }}'
+                                          value: >-
+                                            {{ (thunderstorm_probability ~ ("" if compact_unit_display else " ") ~ weather_units.thunderstorm_probability)
+                                               if is_number(thunderstorm_probability) }}
                                           icon: '{{ nextion.icon.weather.lightning }}'
                                         - name: precipitation
                                           visibility: '{{ is_number(precipitation) or is_number(precipitation_probability) }}'
                                           value: >
-                                            {{ (precipitation ~ units_separator ~ weather_units.precipitation) if is_number(precipitation) }}
+                                            {{ (precipitation ~ ("" if compact_unit_display else " ") ~ weather_units.precipitation) if is_number(precipitation) }}
                                             {{ "-" if is_number(precipitation) and is_number(precipitation_probability) }}
-                                            {{ (precipitation_probability ~ units_separator ~ weather_units.precipitation_probability) if is_number(precipitation_probability) }}
+                                            {{ (precipitation_probability ~ ("" if compact_unit_display else " ") ~ weather_units.precipitation_probability) if is_number(precipitation_probability) }}
                                           icon: '{{ nextion.icon.weather.rain }}'
                                         - name: uv_index
                                           visibility: '{{ is_number(uv_index) }}'
-                                          value: '{{ (uv_index ~ units_separator ~ weather_units.uv_index) if is_number(uv_index) }}'
+                                          value: '{{ (uv_index ~ ("" if compact_unit_display else " ") ~ weather_units.uv_index) if is_number(uv_index) }}'
                                           icon: '{{ nextion.icon.weather.protect }}'
                                         - name: wind_speed
                                           visibility: '{{ is_number(wind_speed) }}'
-                                          value: '{{ (wind_speed ~ units_separator ~ weather_units.wind_speed) if is_number(wind_speed) }}'
+                                          value: '{{ (wind_speed ~ ("" if compact_unit_display else " ") ~ weather_units.wind_speed) if is_number(wind_speed) }}'
                                           icon: '{{ nextion.icon.weather.wind }}'
                                         - name: humidity
                                           visibility: '{{ is_number(humidity) }}'
-                                          value: '{{ (humidity ~ units_separator ~ weather_units.humidity) if is_number(humidity) }}'
+                                          value: '{{ (humidity ~ ("" if compact_unit_display else " ") ~ weather_units.humidity) if is_number(humidity) }}'
                                           icon: '{{ all_icons["water-percent"] }}'
                                         - name: pressure
                                           visibility: '{{ is_number(pressure) }}'
-                                          value: '{{ (pressure ~ units_separator ~ weather_units.pressure) if is_number(pressure) }}'
+                                          value: '{{ (pressure ~ ("" if compact_unit_display else " ") ~ weather_units.pressure) if is_number(pressure) }}'
                                           icon: '{{ nextion.icon.weather.gauge }}'
 
                                   ##### Display weather PIC when available
@@ -11308,9 +11663,9 @@ actions:
                                           else temperature_units
                                         }}
                                       temperature_string: >
-                                        {{ (temp_min | round(0) ~ units_separator ~ weather_temp_units) if is_number(temp_min) }}
+                                        {{ (temp_min | round(0) ~ ("" if compact_unit_display else " ") ~ weather_temp_units) if is_number(temp_min) }}
                                         {{ "/" if is_number(temp_min) and is_number(temp_max) and temp_min != temp_max }}
-                                        {{ (temp_max | round(0) ~ units_separator ~ weather_temp_units) if is_number(temp_max) and temp_min != temp_max }}
+                                        {{ (temp_max | round(0) ~ ("" if compact_unit_display else " ") ~ weather_temp_units) if is_number(temp_max) and temp_min != temp_max }}
                                   - if: '{{ (is_number(temp_min) or is_number(temp_max)) and temperature_string is string and temperature_string | length > 0 }}'
                                     then:
                                       - action: 'esphome.{{ action_prefix }}_component_text_list'
@@ -11461,7 +11816,10 @@ actions:
                                         value1_val: &utilities_value_with_unit_and_translations >
                                           {{
                                             (
-                                              (states(entity_id, rounded=true) ~ (units_separator ~ unit_of_measurement if unit_of_measurement is string and unit_of_measurement | length > 0 else ""))
+                                              (states(entity_id, rounded=true) ~ (
+                                                ("" if compact_unit_display else " ") ~ unit_of_measurement
+                                                if unit_of_measurement is string and unit_of_measurement | length > 0 else ""
+                                              ))
                                               if is_number(entity_state)
                                               else state_translated(entity_id)
                                             ) | regex_replace('\s+', ' ') | trim
@@ -12012,7 +12370,7 @@ actions:
                             - alias: Water Heater page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.water_heater }}'
-                                - '{{ original_state.entity_domain in ["water_heater"] }}'
+                                - '{{ original_state.entity_domain in ["humidifier", "water_heater"] }}'
                               sequence: *refresh_page_water_heater
 
               - alias: Button click
@@ -12154,7 +12512,7 @@ actions:
                                                   and last_click_button_entity_state in ["opening", "closing"]
                                                   and state_attr(last_click_button.entity, "supported_features") | int(0) | bitwise_and(4) == 0 %}
                                               cover.stop_cover
-                                            {% elif entity_domain in ["cover", "fan", "input_boolean", "light", "remote", "switch"] %}
+                                            {% elif entity_domain in ["cover", "fan", "humidifier", "input_boolean", "light", "remote", "switch"] %}
                                               {{ entity_domain }}.toggle
                                             {% elif entity_domain == "automation" %}
                                               automation.{{ domain_automation_button_action if domain_automation_button_action is string else "toggle"}}
@@ -13199,12 +13557,32 @@ actions:
           - condition: trigger
             id: trigger_water_heater_page_value_state
           - '{{ pages.current == pages.water_heater }}'
+          - '{{ states(detailed_entity).split(".")[0] == "water_heater" }}'  # The page may be showing a humidifier
         sequence:
           - *variables_water_heater_page
           - repeat:
               for_each: >
                 {{
                   water_heater_page_entities
+                  | selectattr("entity", "defined")
+                  | selectattr("entity", "eq", trigger.entity_id)
+                  | list
+                }}
+              sequence:
+                - *display_value
+
+      - alias: Update humidifier page values
+        conditions:
+          - condition: trigger
+            id: trigger_humidifier_page_value_state
+          - '{{ pages.current == pages.water_heater }}'  # Humidifiers are shown on the water heater page
+          - '{{ states(detailed_entity).split(".")[0] == "humidifier" }}'
+        sequence:
+          - *variables_humidifier_page
+          - repeat:
+              for_each: >
+                {{
+                  humidifier_page_entities
                   | selectattr("entity", "defined")
                   | selectattr("entity", "eq", trigger.entity_id)
                   | list

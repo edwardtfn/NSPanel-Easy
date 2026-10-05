@@ -118,20 +118,6 @@ globals:
     restore_value: true
     initial_value: ${button_back_font}
 
-  - id: theme_pending_apply
-    type: bool
-    restore_value: false
-    initial_value: 'false'
-
-  # Raised while the `theme_apply` page is on its way. That page repaints every
-  # themed component from the theme palette, discarding whatever colour the
-  # Blueprint pushed before it, so the next page change spends this flag on
-  # `theme_applied` to let each module restore what it owns.
-  - id: theme_apply_running
-    type: bool
-    restore_value: false
-    initial_value: 'false'
-
 nspanel_easy:
   detailed_entity_id: detailed_entity
   nextion_id: disp1
@@ -211,9 +197,9 @@ script:
     then:
       - lambda: |-
           disp1->send_command_printf("button_back_font=%i", id(button_back_font));
+          disp1->send_command_printf("home_page_id=%" PRIu8, home_page_id);
           wakeup_page_id = get_page_id(wakeup_page_name->current_option().c_str());
-          if (wakeup_page_id != get_page_id("boot") and wakeup_page_id != get_page_id("screensaver"))
-            disp1->send_command_printf("wakeup_page_id=%" PRIu8, wakeup_page_id);
+          wakeup_page_update->execute();
 
 
   - id: !extend boot_wrap_up
@@ -324,6 +310,12 @@ script:
             ESP_LOGW("${TAG_HW_DISPLAY}", "Already the current page");
             return;
           }
+          // Refuse pages that would leave through their Preinitialize event right away
+          if (!api_server->is_connected_with_state_subscription() and !is_page_offline_capable(page_id)) {
+            ESP_LOGW("${TAG_HW_DISPLAY}", "Page '%s' needs Home Assistant", page_names[page_id]);
+            api_unavailable_feedback->execute();
+            return;
+          }
           ESP_LOGVV("${TAG_HW_DISPLAY}", "Send page id '%" PRIu8 "' to Nextion", page_id);
           disp1->goto_page(page_id);
 
@@ -360,7 +352,7 @@ script:
           if (!display_entity_keep) {
             detailed_entity->publish_state("");
             details_overlap = DetailsOverlap{};
-            disp1->send_command_printf("back_page_id=%" PRIu8, get_page_id("home"));
+            disp1->send_command_printf("back_page_id=%" PRIu8, home_page_id);
           } else {  // Report detailed entity
             ESP_LOGD("${TAG_HW_DISPLAY}", "Entity shown: %s", detailed_entity->state.c_str());
             // Moving between entity details pages keeps the override, so drop it once another
@@ -403,13 +395,6 @@ script:
 
           if (resync_now) {
             resync_display->execute();
-          }
-
-          // `theme_apply` carries no `sendme`, so this page change is the first
-          // observable point after it has run and handed the display back.
-          if (id(theme_apply_running)) {
-            id(theme_apply_running) = false;
-            theme_applied->execute();
           }
 
   - id: reset_globals
@@ -459,6 +444,7 @@ script:
           timer_reset_all->stop();
           wait_for_version_tft->stop();
           wakeup->stop();
+          wakeup_page_update->stop();
 
   - id: stop_page_constructors
     mode: single
@@ -487,14 +473,18 @@ script:
       - script.wait: theme_update_light
 
       - lambda: |-
-          if (current_page_id == get_page_id("boot")) {
-            id(theme_pending_apply) = true;
-            return;
-          }
-          // Call page theme_apply
-          id(theme_apply_running) = true;
-          disp1->send_command("theme_apply.previous_page.val=dp");
-          disp1->send_command("page theme_apply");
+          // `theme_apply` is a TFT macro: it repaints every themed component
+          // from the theme palette in place, without leaving the current page.
+          disp1->send_command("call theme_apply");
+          // The boot page has no themed component, and reloading it would rerun
+          // its boot sequence. Any other page reloads to show the new palette.
+          if (current_page_id != get_page_id("boot")) {
+            disp1->send_command("page dp");
+          }  // if (current_page_id != boot)
+          // The macro discards whatever colour the Blueprint pushed before it.
+          // The display runs serial commands in order, so anything sent from
+          // here lands after the repaint: let each module restore what it owns.
+          theme_applied->execute();
 
   - id: theme_update_all
     mode: restart
@@ -549,11 +539,11 @@ script:
             ESP_LOGV("${TAG_HW_DISPLAY}", "Timed out on page: %s", page_names[current_page_id]);
             if (current_page_id != get_page_id("boot") and
                 current_page_id != get_page_id("confirm") and
-                current_page_id != get_page_id("home") and
+                current_page_id != home_page_id and
                 current_page_id != get_page_id("notification") and
                 current_page_id != get_page_id("screensaver")) {
               ESP_LOGD("${TAG_HW_DISPLAY}", "Fallback to page Home");
-              goto_page->execute(get_page_id("home"));
+              goto_page->execute(home_page_id);
             }
           }
 
@@ -574,6 +564,10 @@ script:
           ESP_LOGV("${TAG_HW_DISPLAY}", "Reset timers");
           timer_page->execute();
           timer_dim->execute();
+
+  - id: !extend update_flag_api_ready
+    then:
+      - script.execute: wakeup_page_update
 
   - id: wait_for_display
     mode: single
@@ -634,32 +628,23 @@ script:
       reset_timer: bool
     then:
       - lambda: |-
-          ESP_LOGV("${TAG_HW_DISPLAY}", "Wake-up (%s->%s)", page_names[current_page_id], page_names[wakeup_page_id]);
+          const uint8_t target_page_id = wakeup_page_resolve(api_server->is_connected_with_state_subscription(),
+                                                             id(is_embedded_thermostat));
+          ESP_LOGV("${TAG_HW_DISPLAY}", "Wake-up (%s->%s)", page_names[current_page_id], page_names[target_page_id]);
           ESP_LOGV("${TAG_HW_DISPLAY}", "  reset timer: %s", YESNO(reset_timer));
           if (version_tft->state.empty()) {
             ESP_LOGE("${TAG_HW_DISPLAY}", "TFT version invalid");
             return;
           }
           if (current_page_id == get_page_id("screensaver") or current_page_id == get_page_id("boot")) {
-            ESP_LOGD("${TAG_HW_DISPLAY}", "Wake-up on page %s", page_names[wakeup_page_id]);
+            ESP_LOGD("${TAG_HW_DISPLAY}", "Wake-up on page %s", page_names[target_page_id]);
             #ifdef NSPANEL_EASY_PAGE_CLIMATE
-            if (wakeup_page_id == get_page_id("climate")) {
+            if (target_page_id == get_page_id("climate")) {
               detailed_entity->publish_state((id(is_embedded_thermostat)) ? "embedded_climate" : "");
               disp1->send_command_printf("climate_embedded=%i", id(is_embedded_thermostat) ? 1 : 0);
             }
             #endif  // NSPANEL_EASY_PAGE_CLIMATE
-            if (id(theme_pending_apply)) {
-              // A theme change deferred from the boot page. Spend it here: the
-              // flag is one-shot, and leaving it raised would route every later
-              // wake-up through `theme_apply`.
-              id(theme_pending_apply) = false;
-              // Call page theme_apply
-              id(theme_apply_running) = true;
-              disp1->send_command_printf("theme_apply.previous_page.val=%" PRIu8, wakeup_page_id);
-              disp1->send_command("page theme_apply");
-            } else {
-              goto_page->execute(wakeup_page_id);
-            }
+            goto_page->execute(target_page_id);
           }
           if (reset_timer) {
             timer_reset_all->execute();
@@ -667,6 +652,15 @@ script:
             timer_sleep->execute();
             timer_dim->execute();
           }
+
+  - id: wakeup_page_update  # Sends the page the display wakes up to, as resolved for the current connection
+    mode: restart
+    then:
+      - lambda: |-
+          const uint8_t target_page_id = wakeup_page_resolve(api_server->is_connected_with_state_subscription(),
+                                                             id(is_embedded_thermostat));
+          if (target_page_id == get_page_id("boot") or target_page_id == get_page_id("screensaver")) return;
+          disp1->send_command_printf("wakeup_page_id=%" PRIu8, target_page_id);
 
   - id: !extend watchdog_round
     then:
@@ -746,8 +740,7 @@ select:
       then:
         - lambda: |-
             wakeup_page_id = get_page_id(x.c_str());
-            if (wakeup_page_id != get_page_id("boot") and wakeup_page_id != get_page_id("screensaver"))
-              disp1->send_command_printf("wakeup_page_id=%" PRIu8, wakeup_page_id);
+            wakeup_page_update->execute();
             wait_to_be_ready->execute();
         - script.wait: wait_to_be_ready
         # Extended by:

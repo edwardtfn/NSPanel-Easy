@@ -15,7 +15,7 @@ substitutions:
   invalid_cooldown: 100ms
   buttons_color_on: ${COLOR_CYAN_BRIGHT}
   buttons_color_off: ${COLOR_BLUE_INDIGO}
-  buttons_bar_text_follow_color: false
+  buttons_bar_text_follow_color: false  # Labels' font color follows the bar color
   GPIO_BUTTON_LEFT_PIN:
     number: 14
     inverted: true
@@ -92,10 +92,40 @@ globals:
     restore_value: true
     initial_value: '${buttons_color_off}'
 
+  # Bitmask of the pages (by page id) where the buttons bars are drawn - home page by default
   - id: buttons_bars_pages
-    type: uint32_t
+    type: uint64_t
     restore_value: true
-    initial_value: '1'
+    initial_value: '1ULL << get_page_id("home")'
+
+  # Hardware buttons labels, drawn by ESPHome on the pages selected in `buttons_labels_pages`
+  - id: button_left_label
+    type: std::string
+    restore_value: true
+    max_restore_data_length: 64
+    initial_value: ''
+
+  - id: button_left_label_color
+    type: uint16_t
+    restore_value: true
+    initial_value: '${COLOR_GRAY_LIGHT}'
+
+  - id: button_right_label
+    type: std::string
+    restore_value: true
+    max_restore_data_length: 64
+    initial_value: ''
+
+  - id: button_right_label_color
+    type: uint16_t
+    restore_value: true
+    initial_value: '${COLOR_GRAY_LIGHT}'
+
+  # Bitmask of the pages (by page id) where the labels are drawn - home page by default
+  - id: buttons_labels_pages
+    type: uint64_t
+    restore_value: true
+    initial_value: '1ULL << get_page_id("home")'
 
 script:
   - id: !extend action_component_color
@@ -106,8 +136,119 @@ script:
               id(buttons_color_on) = color;
             } else if (component == "button_bar_color_off") {
               id(buttons_color_off) = color;
+            } else if (component == "button_left_label_color") {
+              if (id(button_left_label_color) == color) return;
+              id(button_left_label_color) = color;
+              refresh_hardware_buttons_labels->execute(false);
+            } else if (component == "button_right_label_color") {
+              if (id(button_right_label_color) == color) return;
+              id(button_right_label_color) = color;
+              refresh_hardware_buttons_labels->execute(false);
             }
           }
+
+  - id: !extend action_component_text_list
+    then:
+      - lambda: |-
+          if (page != "mem") return;
+          if (component == "buttons_bars_pages") {
+            // Page names are resolved to page ids here, so the selection doesn't depend on the page order
+            static_assert(PAGE_COUNT <= 64, "buttons_bars_pages cannot hold all pages");
+            uint64_t pages_mask = 0;
+            bool has_page_names = false;
+            for (const auto &page_name : txt_list) {
+              if (page_name.empty()) continue;  // An empty list is sent as a single empty element
+              has_page_names = true;
+              const uint8_t page_id = get_page_id(page_name.c_str());
+              if (page_id == UINT8_MAX) {
+                ESP_LOGW("${TAG_HW_BUTTONS}", "Buttons bars: unknown page '%s'", page_name.c_str());
+                continue;
+              }  // if (page_id == UINT8_MAX)
+              pages_mask |= (1ULL << page_id);
+            }  // for (page_name : txt_list)
+            if (has_page_names and pages_mask == 0) {
+              // Pages were selected, but none is valid - fall back to the default instead of hiding the bars
+              ESP_LOGW("${TAG_HW_BUTTONS}", "Buttons bars: no valid page selected, using 'home'");
+              pages_mask = 1ULL << get_page_id("home");
+            }  // if (has_page_names and pages_mask == 0)
+            // The bars on the current page must follow the new selection without waiting for a page load
+            const bool was_shown = current_page_id < PAGE_COUNT and
+                                   (id(buttons_bars_pages) & (1ULL << current_page_id)) != 0;
+            const bool is_shown = current_page_id < PAGE_COUNT and (pages_mask & (1ULL << current_page_id)) != 0;
+            id(buttons_bars_pages) = pages_mask;
+            blueprint_status_flags.hw_buttons_settings = true;
+            if (system_flags.tft_upload_active) return;  // Skip refresh if TFT update is in progress
+            if (was_shown and not is_shown) {
+              // Repaint the page background over the bar areas, keeping anything else drawn on the page
+              const uint8_t display_mode_index = display_model->active_index().value_or(UINT8_MAX);
+              if (display_mode_index >= 3) return;
+              const char *page_name = page_names[current_page_id];
+              // The fill type is static in the HMI: these pages use a solid color (or no background) and
+              // all the others a picture, which may change at runtime (e.g. theme)
+              const bool solid_background = current_page_id == get_page_id("alarm") or
+                                            current_page_id == get_page_id("confirm") or
+                                            current_page_id == get_page_id("keyb_num") or
+                                            current_page_id == get_page_id("screensaver");
+              for (const HwButtonBarArea &area : HW_BUTTON_BAR_AREAS[display_mode_index]) {
+                if (solid_background) {
+                  disp1->send_command_printf("fill %" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%s.bco", area.x,
+                                             area.y, area.w, area.h, page_name);
+                } else {
+                  disp1->send_command_printf("xpic %" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%" PRIu16
+                                             ",%" PRIu16 ",%s.pic",
+                                             area.x, area.y, area.w, area.h, area.x, area.y, page_name);
+                }  // if (solid_background)
+              }  // for (area : HW_BUTTON_BAR_AREAS)
+            } else if (is_shown and not was_shown) {
+              refresh_hardware_buttons_bars->execute(3, true);
+            }  // if (was_shown != is_shown)
+            return;
+          }  // if (component == "buttons_bars_pages")
+          if (component == "button_left_label" or component == "button_right_label") {
+            static constexpr size_t BUTTON_LABEL_MAX_BYTES = 60;  // Within max_restore_data_length
+            std::string label = txt_list.back();
+            if (label.size() > BUTTON_LABEL_MAX_BYTES) {
+              // Truncate on a UTF-8 character boundary (skip back over continuation bytes)
+              size_t length = BUTTON_LABEL_MAX_BYTES;
+              while (length > 0 and (static_cast<uint8_t>(label[length]) & 0xC0) == 0x80) --length;
+              label.resize(length);
+              ESP_LOGW("${TAG_HW_BUTTONS}", "Label for %s truncated to %zu bytes", component.c_str(), length);
+            }  // if (label.size() > BUTTON_LABEL_MAX_BYTES)
+            std::string &stored_label = (component == "button_left_label") ? id(button_left_label)
+                                                                            : id(button_right_label);
+            if (stored_label == label) return;
+            stored_label = label;
+            refresh_hardware_buttons_labels->execute(false);
+            return;
+          }  // if (component == "button_left_label" or component == "button_right_label")
+          if (component == "buttons_labels_pages") {
+            // Page names are resolved to page ids here, so the selection doesn't depend on the page order
+            static_assert(PAGE_COUNT <= 64, "buttons_labels_pages cannot hold all pages");
+            uint64_t pages_mask = 0;
+            bool has_page_names = false;
+            for (const auto &page_name : txt_list) {
+              if (page_name.empty()) continue;  // An empty list is sent as a single empty element
+              has_page_names = true;
+              const uint8_t page_id = get_page_id(page_name.c_str());
+              if (page_id == UINT8_MAX) {
+                ESP_LOGW("${TAG_HW_BUTTONS}", "Labels: unknown page '%s'", page_name.c_str());
+                continue;
+              }  // if (page_id == UINT8_MAX)
+              pages_mask |= (1ULL << page_id);
+            }  // for (page_name : txt_list)
+            if (has_page_names and pages_mask == 0) {
+              // Pages were selected, but none is valid - fall back to the default instead of hiding the labels
+              ESP_LOGW("${TAG_HW_BUTTONS}", "Labels: no valid page selected, using 'home'");
+              pages_mask = 1ULL << get_page_id("home");
+            }  // if (has_page_names and pages_mask == 0)
+            if (id(buttons_labels_pages) == pages_mask) return;
+            // Labels already drawn on the current page must be cleared if it's no longer selected
+            const bool was_shown = current_page_id < PAGE_COUNT and
+                                   (id(buttons_labels_pages) & (1ULL << current_page_id)) != 0;
+            id(buttons_labels_pages) = pages_mask;
+            refresh_hardware_buttons_labels->execute(was_shown);
+            return;
+          }  // if (component == "buttons_labels_pages")
 
   - id: !extend action_component_val
     then:
@@ -119,9 +260,6 @@ script:
             } else if (component == "hw_bt_right") {
               id(hardware_settings).button_right_state = (val != 0);
               refresh_hardware_buttons_bars->execute(2, false);
-            } else if (component == "buttons_bars_pages") {
-              id(buttons_bars_pages) = val;
-              blueprint_status_flags.hw_buttons_settings = true;
             } else if (component == "button_left") {
               id(hardware_settings).button_left_enabled = (val != 0);
             } else if (component == "button_right") {
@@ -164,72 +302,151 @@ script:
           if (system_flags.tft_upload_active) return;  // Skip refresh if TFT update is in progress
           ESP_LOGV("${TAG_HW_BUTTONS}", "Script: refresh_hardware_buttons_bars");
           ESP_LOGV("${TAG_HW_BUTTONS}", "  Page:               %s", page_names[current_page_id]);
-          ESP_LOGV("${TAG_HW_BUTTONS}", "  buttons_bars_pages: %" PRIu32, id(buttons_bars_pages));
+          ESP_LOGV("${TAG_HW_BUTTONS}", "  buttons_bars_pages: 0x%016" PRIX64, id(buttons_bars_pages));
           ESP_LOGV("${TAG_HW_BUTTONS}", "  button_mask:");
           ESP_LOGV("${TAG_HW_BUTTONS}", "    left_enabled:     %s", YESNO(id(hardware_settings).button_left_enabled));
           ESP_LOGV("${TAG_HW_BUTTONS}", "    left_state:       %s", ONOFF(id(hardware_settings).button_left_state));
           ESP_LOGV("${TAG_HW_BUTTONS}", "    right_enabled:    %s", YESNO(id(hardware_settings).button_right_enabled));
           ESP_LOGV("${TAG_HW_BUTTONS}", "    right_state:      %s", ONOFF(id(hardware_settings).button_right_state));
-          if ((id(buttons_bars_pages) & (1 << current_page_id)) == 0) {
+          // Labels' font color follows the bar color: redraw the labels when a bar color changes
+          if (${'true' if buttons_bar_text_follow_color else 'false'}) {
+            static uint16_t labels_last_color_left;
+            static uint16_t labels_last_color_right;
+            const uint16_t color_left = id(hardware_settings).button_left_state ? id(buttons_color_on)
+                                                                                : id(buttons_color_off);
+            const uint16_t color_right = id(hardware_settings).button_right_state ? id(buttons_color_on)
+                                                                                  : id(buttons_color_off);
+            if (force or color_left != labels_last_color_left or color_right != labels_last_color_right) {
+              labels_last_color_left = color_left;
+              labels_last_color_right = color_right;
+              refresh_hardware_buttons_labels->execute(false);
+            }  // if (bar color changed)
+          }  // if (buttons_bar_text_follow_color)
+
+          if (current_page_id >= PAGE_COUNT or (id(buttons_bars_pages) & (1ULL << current_page_id)) == 0) {
             ESP_LOGV("${TAG_HW_BUTTONS}", "Buttons bars not visible");
             return;
           }
           const uint8_t display_mode_index = display_model->active_index().value_or(UINT8_MAX);
           if (display_mode_index == UINT8_MAX) return;
           const uint8_t display_mode_idx = display_mode_index + 1;
+          if (display_mode_idx < 1 or display_mode_idx > 3) return;
+          // Draws a bar with rounded ends inside its area
+          auto draw_bar = [](const HwButtonBarArea &area, uint16_t color) {
+            if (area.is_vertical()) {
+              disp1->fill_area(area.x, area.y + 1, area.w, area.h - 2, color);
+              disp1->fill_area(area.x + 1, area.y, 1, area.h, color);
+            } else {
+              disp1->fill_area(area.x + 1, area.y, area.w - 2, area.h, color);
+              disp1->fill_area(area.x, area.y + 1, area.w, 1, color);
+            }  // if (area.is_vertical())
+          };
+
           // Left button
           if (button_mask & 1 and id(hardware_settings).button_left_enabled) {
-            static uint16_t button_bar_text_left_last_color_sent;
             const uint16_t button_bar_left_color = id(hardware_settings).button_left_state
                                                   ? id(buttons_color_on)
                                                   : id(buttons_color_off);
-            if (${'true' if buttons_bar_text_follow_color else 'false'} and
-                (force or button_bar_left_color != button_bar_text_left_last_color_sent)) {
-              button_bar_text_left_last_color_sent = button_bar_left_color;
-              disp1->set_component_font_color(hmi::home::LEFT_BT_TEXT.name, button_bar_left_color);
-            }
-            switch (display_mode_idx) {
-              case 1:  // EU model
-                disp1->fill_area(48, 312, 118, 3, button_bar_left_color);
-                disp1->fill_area(47, 313, 120, 1, button_bar_left_color);
-                break;
-              case 2:  // US Portrait
-                disp1->fill_area(17, 471, 118, 3, button_bar_left_color);
-                disp1->fill_area(16, 472, 120, 1, button_bar_left_color);
-                break;
-              case 3:  // US Landscape
-                disp1->fill_area(467, 174, 3, 118, button_bar_left_color);
-                disp1->fill_area(468, 173, 1, 120, button_bar_left_color);
-                break;
-            }
+            draw_bar(HW_BUTTON_BAR_AREAS[display_mode_idx - 1][0], button_bar_left_color);
           }
 
           // Right button
           if (button_mask & 2 and id(hardware_settings).button_right_enabled) {
-            static uint16_t button_bar_text_right_last_color_sent;
             const uint16_t button_bar_right_color = id(hardware_settings).button_right_state
                                                   ? id(buttons_color_on)
                                                   : id(buttons_color_off);
-            if (${'true' if buttons_bar_text_follow_color else 'false'} and
-                (force or button_bar_right_color != button_bar_text_right_last_color_sent)) {
-              button_bar_text_right_last_color_sent = button_bar_right_color;
-              disp1->set_component_font_color(hmi::home::RIGHT_BT_TEXT.name, button_bar_right_color);
-            }
-            switch (display_mode_idx) {
-              case 1:  // EU model
-                disp1->fill_area(289, 312, 118, 3, button_bar_right_color);
-                disp1->fill_area(288, 313, 120, 1, button_bar_right_color);
-                break;
-              case 2:  // US Portrait
-                disp1->fill_area(184, 471, 118, 3, button_bar_right_color);
-                disp1->fill_area(183, 472, 120, 1, button_bar_right_color);
-                break;
-              case 3:  // US Landscape
-                disp1->fill_area(467, 28, 3, 118, button_bar_right_color);
-                disp1->fill_area(468, 27, 1, 120, button_bar_right_color);
-                break;
-            }
+            draw_bar(HW_BUTTON_BAR_AREAS[display_mode_idx - 1][1], button_bar_right_color);
           }
+
+  # Draws the hardware buttons labels directly on the screen (no Nextion components), as this
+  # is drawn on top of the page, it must be called whenever the page is loaded
+  - id: refresh_hardware_buttons_labels
+    mode: restart
+    parameters:
+      clear: bool  # Clear the labels if the current page isn't selected (e.g. it was just removed)
+    then:
+      - script.wait: page_change
+      - lambda: |-
+          if (system_flags.tft_upload_active) return;  // Skip refresh if TFT update is in progress
+          if (current_page_id >= PAGE_COUNT) return;
+          const bool show = (id(buttons_labels_pages) & (1ULL << current_page_id)) != 0;
+          if (not show and not clear) return;
+
+          const uint8_t display_mode_index = display_model->active_index().value_or(UINT8_MAX);
+          if (display_mode_index == UINT8_MAX) return;
+          const uint8_t display_mode_idx = display_mode_index + 1;
+          const bool is_eu = (display_mode_idx == 1);
+          if (display_mode_idx != 1 and display_mode_idx != 2) return;  // Not shown on US Landscape
+
+          // Page background: the label area is repainted with it before the text is drawn
+          static constexpr uint8_t XSTR_FILL_CROP_IMAGE = 0;
+          static constexpr uint8_t XSTR_FILL_SOLID_COLOR = 1;
+          const char *background;  // Picture id (crop image) or color (solid color), as a Nextion variable or literal
+          uint8_t fill;
+          struct LabelPosition {
+            uint16_t x;
+            uint16_t y;
+          };
+          LabelPosition left;
+          LabelPosition right;
+          if (current_page_id == get_page_id("home")) {
+            background = "pic_background_main";
+            fill = XSTR_FILL_CROP_IMAGE;
+            left = is_eu ? LabelPosition{47, 288} : LabelPosition{16, 448};
+            right = is_eu ? LabelPosition{288, 288} : LabelPosition{184, 448};
+          } else if (current_page_id == get_page_id("home_smpl")) {
+            background = "0";
+            fill = XSTR_FILL_CROP_IMAGE;
+            left = is_eu ? LabelPosition{46, 282} : LabelPosition{16, 443};
+            right = is_eu ? LabelPosition{287, 280} : LabelPosition{184, 443};
+          } else if (current_page_id == get_page_id("screensaver")) {
+            background = "screensaver_bco";
+            fill = XSTR_FILL_SOLID_COLOR;
+            left = is_eu ? LabelPosition{47, 288} : LabelPosition{16, 448};
+            right = is_eu ? LabelPosition{288, 288} : LabelPosition{184, 448};
+          } else {
+            if (show) ESP_LOGW("${TAG_HW_BUTTONS}", "Labels not supported on page '%s'", page_names[current_page_id]);
+            return;
+          }  // if (current_page_id)
+
+          // Labels' font color follows the bar color, when enabled
+          const bool follow_color = ${'true' if buttons_bar_text_follow_color else 'false'};
+          uint16_t color_left = id(button_left_label_color);
+          uint16_t color_right = id(button_right_label_color);
+          if (follow_color and id(hardware_settings).button_left_enabled) {
+            color_left = id(hardware_settings).button_left_state ? id(buttons_color_on) : id(buttons_color_off);
+          }  // if (follow_color and button_left_enabled)
+          if (follow_color and id(hardware_settings).button_right_enabled) {
+            color_right = id(hardware_settings).button_right_state ? id(buttons_color_on) : id(buttons_color_off);
+          }  // if (follow_color and button_right_enabled)
+
+          static constexpr uint16_t LABEL_WIDTH = 120;
+          static constexpr uint16_t LABEL_HEIGHT = 20;
+          static constexpr uint8_t LABEL_FONT_ID = 1;
+          auto draw_label = [&](const LabelPosition &position, const std::string &label, uint16_t color) {
+            std::string escaped = label;
+            for (size_t pos = 0; (pos = escaped.find('\\', pos)) != std::string::npos; pos += 2) {
+              escaped.replace(pos, 1, "\\\\");
+            }
+            for (size_t pos = 0; (pos = escaped.find('"', pos)) != std::string::npos; pos += 2) {
+              escaped.replace(pos, 1, "\\\"");
+            }
+            // xstr x,y,w,h,font,pco,bco,xcenter,ycenter,fill,"text" - an empty text clears the area
+            disp1->send_command_printf("xstr %" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%" PRIu8 ",%" PRIu16
+                                       ",%s,1,1,%" PRIu8 ",\"%s\"",
+                                       position.x, position.y, LABEL_WIDTH, LABEL_HEIGHT, LABEL_FONT_ID, color,
+                                       background, fill, escaped.c_str());
+          };
+          // An empty text only repaints the background, clearing the labels
+          static const std::string NO_LABEL;
+          draw_label(left, show ? id(button_left_label) : NO_LABEL, color_left);
+          draw_label(right, show ? id(button_right_label) : NO_LABEL, color_right);
+
+  - id: !extend page_change
+    then:
+      - script.execute:
+          id: refresh_hardware_buttons_labels
+          clear: false
 
   - id: !extend stop_all
     then:
@@ -241,4 +458,5 @@ script:
           button_right_press_short->stop();
           button_right_release->stop();
           refresh_hardware_buttons_bars->stop();
+          refresh_hardware_buttons_labels->stop();
 ...
