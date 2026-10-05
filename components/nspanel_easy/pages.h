@@ -22,12 +22,12 @@ namespace esphome::nspanel_easy {
  * such as settings, home, weather information, and more.
  */
 constexpr const char *const page_names[] = {
-    "boot",         "home",         "screensaver",  "alarm",        "button",  "buttonpage01", "buttonpage02",
-    "buttonpage03", "buttonpage04", "canvas",       "climate",      "confirm", "cover",        "debug",
-    "entitypage01", "entitypage02", "entitypage03", "entitypage04", "fan",     "home_smpl",    "keyb_num",
-    "light",        "media_player", "notification", "popup_select", "qrcode",  "select",       "settings",
-    "switch",       "theme_apply",  "timer",        "utilities",    "vacuum",  "water_heater", "weather01",
-    "weather02",    "weather03",    "weather04",    "weather05"};
+    "boot",         "home",         "screensaver",  "alarm",        "button",       "buttonpage01", "buttonpage02",
+    "buttonpage03", "buttonpage04", "canvas",       "climate",      "confirm",      "cover",        "debug",
+    "entitypage01", "entitypage02", "entitypage03", "entitypage04", "fan",          "home_smpl",    "keyb_num",
+    "light",        "media_player", "notification", "popup_select", "qrcode",       "select",       "settings",
+    "switch",       "timer",        "utilities",    "vacuum",       "water_heater", "weather01",    "weather02",
+    "weather03",    "weather04",    "weather05"};
 
 constexpr size_t PAGE_COUNT = sizeof(page_names) / sizeof(page_names[0]);
 static_assert(PAGE_COUNT <= UINT8_MAX, "PAGE_COUNT exceeds uint8_t range");
@@ -122,7 +122,6 @@ static_assert(get_page_id("screensaver") != UINT8_MAX, "Missing required page: s
 static_assert(get_page_id("settings") != UINT8_MAX, "Missing required page: settings");
 static_assert(get_page_id("select") != UINT8_MAX, "Missing required page: select");
 static_assert(get_page_id("switch") != UINT8_MAX, "Missing required page: switch");
-static_assert(get_page_id("theme_apply") != UINT8_MAX, "Missing required page: theme_apply");
 static_assert(get_page_id("timer") != UINT8_MAX, "Missing required page: timer");
 static_assert(get_page_id("utilities") != UINT8_MAX, "Missing required page: utilities");
 static_assert(get_page_id("water_heater") != UINT8_MAX, "Missing required page: water_heater");
@@ -155,7 +154,6 @@ constexpr bool is_page_offline_capable(uint8_t page_id, bool climate_embedded) {
     case get_page_id("qrcode"):
     case get_page_id("screensaver"):
     case get_page_id("settings"):
-    case get_page_id("theme_apply"):
       return true;
     default:
       return false;
