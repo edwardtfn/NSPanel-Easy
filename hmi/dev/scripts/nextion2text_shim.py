@@ -30,6 +30,10 @@ container entry, "comcode.sn", which the pinned tool does not read. After the
 tool finishes, this shim exports them to Macros.txt in the same output folder,
 using the same indented layout as Program.s.txt.
 
+Native macro export is proposed upstream in MMMZZZZ/Nextion2Text#20
+(https://github.com/MMMZZZZ/Nextion2Text/pull/20), with the same output. Once
+it is merged, move the pin past it and drop the macro export from this shim.
+
 Usage:
     python3 nextion2text_shim.py <Nextion2Text.py> [tool arguments...]
 """
