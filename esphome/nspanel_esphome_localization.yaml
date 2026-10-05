@@ -4503,8 +4503,16 @@ script:
             return;
           }
           if (component == "units_separator") {
-            id(units_separator) = txt;
-            disp1->set_component_text("home.units_sep", txt.c_str());
+            // Home Assistant strips whitespace from rendered templates, so a single space cannot be sent as is.
+            // The Blueprint sends "space" or "none" instead; any other text is used as the separator itself.
+            if (txt == "space") {
+              id(units_separator) = " ";
+            } else if (txt == "none") {
+              id(units_separator) = "";
+            } else {
+              id(units_separator) = txt;
+            }  // if (txt == "space")
+            disp1->set_component_text("home.units_sep", id(units_separator).c_str());
             localization_units_separator_update->execute();
             return;
           }

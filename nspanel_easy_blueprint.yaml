@@ -6249,7 +6249,8 @@ actions:
       refresh_settled: false
 
       compact_unit_display: !input compact_unit_display
-      units_separator: "{{ '' if compact_unit_display else ' ' }}"
+      # Home Assistant strips whitespace from rendered templates, so a variable holding only a space would always be empty.
+      # The separator is built inline with ("" if compact_unit_display else " ") wherever a value and its unit are joined.
 
       # yamllint disable rule:line-length rule:braces
       device_class_icons:
@@ -7957,7 +7958,7 @@ actions:
                               page: mem
                               id: units_separator
                               txt_list:
-                                - '{{ units_separator }}'
+                                - '{{ "none" if compact_unit_display else "space" }}'
                             continue_on_error: true
                           - *delay_boot
 
@@ -9110,7 +9111,7 @@ actions:
                                                       (
                                                         (
                                                           states(entity_id, rounded=true) ~ (
-                                                            units_separator ~ unit_of_measurement
+                                                            ("" if compact_unit_display else " ") ~ unit_of_measurement
                                                             if unit_of_measurement is string and unit_of_measurement | length > 0
                                                             else ""
                                                           )
@@ -9517,8 +9518,8 @@ actions:
                                   id: command
                                   txt_list:
                                     - 'lightslider.val={{ curr_brightness }}'
-                                    - 'light_value.txt="{{ curr_brightness ~ units_separator }}%"'
-                                    - 'light_value_2.txt="{{ curr_brightness ~ units_separator }}%"'
+                                    - 'light_value.txt="{{ curr_brightness ~ ("" if compact_unit_display else " ") }}%"'
+                                    - 'light_value_2.txt="{{ curr_brightness ~ ("" if compact_unit_display else " ") }}%"'
                                     - 'power_button.pco=50712'  # [192, 192, 192]
                                 continue_on_error: true
                               - *delay_default
@@ -9672,9 +9673,9 @@ actions:
                                     # slider and one centered for covers without tilt. Only one of
                                     # them is visible, both are written.
                                     - 'coverslider.val={{ current_position }}'
-                                    - 'cover_value.txt="{{ current_position ~ units_separator }}%"'
+                                    - 'cover_value.txt="{{ current_position ~ ("" if compact_unit_display else " ") }}%"'
                                     - 'coverslider2.val={{ current_position }}'
-                                    - 'cover_value_2.txt="{{ current_position ~ units_separator }}%"'
+                                    - 'cover_value_2.txt="{{ current_position ~ ("" if compact_unit_display else " ") }}%"'
                                 continue_on_error: true
                               - *delay_default
 
@@ -9691,7 +9692,7 @@ actions:
                                   id: command
                                   txt_list:
                                     - 'tiltslider.val={{ current_tilt }}'
-                                    - 'tilt_value.txt="{{ current_tilt ~ units_separator }}%"'
+                                    - 'tilt_value.txt="{{ current_tilt ~ ("" if compact_unit_display else " ") }}%"'
                                 continue_on_error: true
                               - *delay_default
 
@@ -9811,7 +9812,7 @@ actions:
                                   page: mem
                                   id: command
                                   txt_list:
-                                    - 'battery_value.txt="{{ battery_level ~ units_separator }}%"'
+                                    - 'battery_value.txt="{{ battery_level ~ ("" if compact_unit_display else " ") }}%"'
                                     - 'battery_icon.txt="{{ all_icons[battery_icon] }}"'
                                     - 'battery_icon.pco=52857'  # nextion.color.grey_super_light
                                 continue_on_error: true
@@ -9910,7 +9911,7 @@ actions:
                                       page: mem
                                       id: command
                                       txt_list:
-                                        - 'fan_value.txt="{{ fan.percentage ~ units_separator }}%"'
+                                        - 'fan_value.txt="{{ fan.percentage ~ ("" if compact_unit_display else " ") }}%"'
                                         - 'fanslider.val={{ ((fan.percentage / 100) * fan.steps) | round(0) | int(0) }}'
                                         - 'fanslider.maxval={{ fan.steps }}'
                                         - 'button_up.pco={{ color_rgb565.grey_white if fan.percentage < 100 else color_rgb565.grey_dark }}'
@@ -11599,34 +11600,36 @@ actions:
                                       parameters:
                                         - name: hours_of_sun
                                           visibility: '{{ is_number(hours_of_sun) }}'
-                                          value: '{{ (hours_of_sun ~ units_separator ~ weather_units.hours_of_sun) if is_number(hours_of_sun) }}'
+                                          value: '{{ (hours_of_sun ~ ("" if compact_unit_display else " ") ~ weather_units.hours_of_sun) if is_number(hours_of_sun) }}'
                                           icon: '{{ nextion.icon.weather.sun }}'
                                         - name: thunderstorm_probability
                                           visibility: '{{ is_number(thunderstorm_probability) }}'
-                                          value: '{{ (thunderstorm_probability ~ units_separator ~ weather_units.thunderstorm_probability) if is_number(thunderstorm_probability) }}'
+                                          value: >-
+                                            {{ (thunderstorm_probability ~ ("" if compact_unit_display else " ") ~ weather_units.thunderstorm_probability)
+                                               if is_number(thunderstorm_probability) }}
                                           icon: '{{ nextion.icon.weather.lightning }}'
                                         - name: precipitation
                                           visibility: '{{ is_number(precipitation) or is_number(precipitation_probability) }}'
                                           value: >
-                                            {{ (precipitation ~ units_separator ~ weather_units.precipitation) if is_number(precipitation) }}
+                                            {{ (precipitation ~ ("" if compact_unit_display else " ") ~ weather_units.precipitation) if is_number(precipitation) }}
                                             {{ "-" if is_number(precipitation) and is_number(precipitation_probability) }}
-                                            {{ (precipitation_probability ~ units_separator ~ weather_units.precipitation_probability) if is_number(precipitation_probability) }}
+                                            {{ (precipitation_probability ~ ("" if compact_unit_display else " ") ~ weather_units.precipitation_probability) if is_number(precipitation_probability) }}
                                           icon: '{{ nextion.icon.weather.rain }}'
                                         - name: uv_index
                                           visibility: '{{ is_number(uv_index) }}'
-                                          value: '{{ (uv_index ~ units_separator ~ weather_units.uv_index) if is_number(uv_index) }}'
+                                          value: '{{ (uv_index ~ ("" if compact_unit_display else " ") ~ weather_units.uv_index) if is_number(uv_index) }}'
                                           icon: '{{ nextion.icon.weather.protect }}'
                                         - name: wind_speed
                                           visibility: '{{ is_number(wind_speed) }}'
-                                          value: '{{ (wind_speed ~ units_separator ~ weather_units.wind_speed) if is_number(wind_speed) }}'
+                                          value: '{{ (wind_speed ~ ("" if compact_unit_display else " ") ~ weather_units.wind_speed) if is_number(wind_speed) }}'
                                           icon: '{{ nextion.icon.weather.wind }}'
                                         - name: humidity
                                           visibility: '{{ is_number(humidity) }}'
-                                          value: '{{ (humidity ~ units_separator ~ weather_units.humidity) if is_number(humidity) }}'
+                                          value: '{{ (humidity ~ ("" if compact_unit_display else " ") ~ weather_units.humidity) if is_number(humidity) }}'
                                           icon: '{{ all_icons["water-percent"] }}'
                                         - name: pressure
                                           visibility: '{{ is_number(pressure) }}'
-                                          value: '{{ (pressure ~ units_separator ~ weather_units.pressure) if is_number(pressure) }}'
+                                          value: '{{ (pressure ~ ("" if compact_unit_display else " ") ~ weather_units.pressure) if is_number(pressure) }}'
                                           icon: '{{ nextion.icon.weather.gauge }}'
 
                                   ##### Display weather PIC when available
@@ -11660,9 +11663,9 @@ actions:
                                           else temperature_units
                                         }}
                                       temperature_string: >
-                                        {{ (temp_min | round(0) ~ units_separator ~ weather_temp_units) if is_number(temp_min) }}
+                                        {{ (temp_min | round(0) ~ ("" if compact_unit_display else " ") ~ weather_temp_units) if is_number(temp_min) }}
                                         {{ "/" if is_number(temp_min) and is_number(temp_max) and temp_min != temp_max }}
-                                        {{ (temp_max | round(0) ~ units_separator ~ weather_temp_units) if is_number(temp_max) and temp_min != temp_max }}
+                                        {{ (temp_max | round(0) ~ ("" if compact_unit_display else " ") ~ weather_temp_units) if is_number(temp_max) and temp_min != temp_max }}
                                   - if: '{{ (is_number(temp_min) or is_number(temp_max)) and temperature_string is string and temperature_string | length > 0 }}'
                                     then:
                                       - action: 'esphome.{{ action_prefix }}_component_text_list'
@@ -11813,7 +11816,10 @@ actions:
                                         value1_val: &utilities_value_with_unit_and_translations >
                                           {{
                                             (
-                                              (states(entity_id, rounded=true) ~ (units_separator ~ unit_of_measurement if unit_of_measurement is string and unit_of_measurement | length > 0 else ""))
+                                              (states(entity_id, rounded=true) ~ (
+                                                ("" if compact_unit_display else " ") ~ unit_of_measurement
+                                                if unit_of_measurement is string and unit_of_measurement | length > 0 else ""
+                                              ))
                                               if is_number(entity_state)
                                               else state_translated(entity_id)
                                             ) | regex_replace('\s+', ' ') | trim
