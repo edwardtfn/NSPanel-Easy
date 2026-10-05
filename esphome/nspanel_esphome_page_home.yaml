@@ -41,7 +41,7 @@ globals:
     initial_value: 'NAN'
 
   ##### Blueprint-owned colours #####
-  # The `theme_apply` page repaints all of these from the theme palette, and a
+  # The `theme_apply` macro repaints all of these from the theme palette, and a
   # display restart drops them back to their design-time value. The Blueprint
   # pushes each one only once, at boot, so they are shadowed here and restored
   # by `home_colors_apply`.
@@ -225,7 +225,7 @@ script:
     then:
       - lambda: |-
           // Scoped names throughout: this also runs while another page is
-          // showing, right after `theme_apply` has handed the display back.
+          // showing, right after the `theme_apply` macro has repainted it.
           ESP_LOGV("${TAG_PAGE_HOME}", "Restore home page colors");
           const auto restore = [](const char *component, uint16_t color) {
             if (color == ${HOME_COLOR_UNSET}) {

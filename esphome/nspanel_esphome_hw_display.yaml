@@ -118,20 +118,6 @@ globals:
     restore_value: true
     initial_value: ${button_back_font}
 
-  - id: theme_pending_apply
-    type: bool
-    restore_value: false
-    initial_value: 'false'
-
-  # Raised while the `theme_apply` page is on its way. That page repaints every
-  # themed component from the theme palette, discarding whatever colour the
-  # Blueprint pushed before it, so the next page change spends this flag on
-  # `theme_applied` to let each module restore what it owns.
-  - id: theme_apply_running
-    type: bool
-    restore_value: false
-    initial_value: 'false'
-
 nspanel_easy:
   detailed_entity_id: detailed_entity
   nextion_id: disp1
@@ -411,13 +397,6 @@ script:
             resync_display->execute();
           }
 
-          // `theme_apply` carries no `sendme`, so this page change is the first
-          // observable point after it has run and handed the display back.
-          if (id(theme_apply_running)) {
-            id(theme_apply_running) = false;
-            theme_applied->execute();
-          }
-
   - id: reset_globals
     mode: restart
     parameters:
@@ -494,14 +473,18 @@ script:
       - script.wait: theme_update_light
 
       - lambda: |-
-          if (current_page_id == get_page_id("boot")) {
-            id(theme_pending_apply) = true;
-            return;
-          }
-          // Call page theme_apply
-          id(theme_apply_running) = true;
-          disp1->send_command("theme_apply.previous_page.val=dp");
-          disp1->send_command("page theme_apply");
+          // `theme_apply` is a TFT macro: it repaints every themed component
+          // from the theme palette in place, without leaving the current page.
+          disp1->send_command("call theme_apply");
+          // The boot page has no themed component, and reloading it would rerun
+          // its boot sequence. Any other page reloads to show the new palette.
+          if (current_page_id != get_page_id("boot")) {
+            disp1->send_command("page dp");
+          }  // if (current_page_id != boot)
+          // The macro discards whatever colour the Blueprint pushed before it.
+          // The display runs serial commands in order, so anything sent from
+          // here lands after the repaint: let each module restore what it owns.
+          theme_applied->execute();
 
   - id: theme_update_all
     mode: restart
@@ -661,18 +644,7 @@ script:
               disp1->send_command_printf("climate_embedded=%i", id(is_embedded_thermostat) ? 1 : 0);
             }
             #endif  // NSPANEL_EASY_PAGE_CLIMATE
-            if (id(theme_pending_apply)) {
-              // A theme change deferred from the boot page. Spend it here: the
-              // flag is one-shot, and leaving it raised would route every later
-              // wake-up through `theme_apply`.
-              id(theme_pending_apply) = false;
-              // Call page theme_apply
-              id(theme_apply_running) = true;
-              disp1->send_command_printf("theme_apply.previous_page.val=%" PRIu8, target_page_id);
-              disp1->send_command("page theme_apply");
-            } else {
-              goto_page->execute(target_page_id);
-            }
+            goto_page->execute(target_page_id);
           }
           if (reset_timer) {
             timer_reset_all->execute();
