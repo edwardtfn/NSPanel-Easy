@@ -64,7 +64,7 @@ namespace hmi::utilities {
  * @namespace utilities
  * @brief Components for the Utilities dashboard page.
  *
- * Component ID mapping for the Utilities page (index 27 in page_names array)
+ * Component ID mapping for the Utilities page (page id from `get_page_id("utilities")`)
  * Based on the typical Nextion HMI design patterns.
  */
 
