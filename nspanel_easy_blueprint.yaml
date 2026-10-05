@@ -10913,17 +10913,18 @@ actions:
                                     {% set step10 = (10 * (target_temp_step | abs)) | round(0) | int(0) %}
                                     {{ step10 if step10 > 0 else 10 }}
                                   temp_offset_raw: >-
+                                    {#- Limits are rounded inward, so the slider never offers a value outside the entity's range -#}
                                     {{
                                       (state_attr(water_heater_entity, "min_humidity" if is_humidifier else "min_temp")
                                         | float(0 if is_humidifier else 7) * 10)
-                                      | round(0) | int
+                                      | round(3) | round(0, "ceil") | int
                                     }}
                                   temp_offset: '{{ temp_offset_raw if (temp_offset_raw % temp_step) == 0 else temp_offset_raw + temp_step - (temp_offset_raw % temp_step) }}'
                                   max_temp: >-
                                     {{
                                       (state_attr(water_heater_entity, "max_humidity" if is_humidifier else "max_temp")
                                         | float(100 if is_humidifier else 35) * 10)
-                                      | round(0) | int
+                                      | round(3) | round(0, "floor") | int
                                     }}
                                   total_steps: >
                                     {{
