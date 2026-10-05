@@ -4517,6 +4517,12 @@ script:
             return;
           }
 
+  - id: !extend boot_nextion
+    then:
+      - lambda: |-
+          // Restored units separator, so values are formatted correctly before Home Assistant connects
+          disp1->set_component_text("home.units_sep", id(units_separator).c_str());
+
   - id: !extend dump_config
     then:
       - lambda: >-
