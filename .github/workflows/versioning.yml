@@ -92,7 +92,7 @@ jobs:
 
       - name: Set up yq
         if: steps.skip_check.outputs.skip == 'false'
-        uses: mikefarah/yq@v4.53.6
+        uses: mikefarah/yq@v4.54.1
 
       - name: Get PR information
         id: pr_info
