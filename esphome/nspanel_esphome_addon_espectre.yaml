@@ -1,0 +1,100 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHOME ADD-ON - ESPECTRE MOTION DETECTION                                                #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### Include ESPectre CSI motion detection as a wake-up-the-screen add-on.                     #####
+#####################################################################################################
+---
+substitutions:
+  TAG_ADDON_ESPECTRE: nspanel.addon.espectre
+  ##############################
+  ## Change only in your      ##
+  ## local yaml substitutions ##
+  ##############################
+  espectre_ref: "3.0.0"  # ESPectre release this add-on was tested with (override at your own risk)
+  espectre_traffic_generator_mode: "wifi_raw"   # wifi_raw, external, etc.
+  espectre_detection_algorithm: "high_accuracy"   # high_accuracy, lightweight
+  espectre_direct_api: "true"  # see ESPectre documentation
+
+esphome:
+  build_flags:
+    - -D NSPANEL_EASY_ADDON_ESPECTRE
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/francescopace/espectre
+      ref: ${espectre_ref}
+      path: src/cpp/frontend/esphome/components
+    components: [espectre]
+
+espectre:
+  id: espectre_csi
+  detection_algorithm: ${espectre_detection_algorithm}
+  traffic_generator_mode: ${espectre_traffic_generator_mode}
+  direct_api: ${espectre_direct_api}
+
+  threshold_number:
+    name: "Motion Threshold"
+
+  motion_sensor:
+    id: espectre_motion
+    name: "ESPectre Motion"
+    on_press:
+      then:
+        # wake the screen
+        - script.execute:
+            id: wakeup
+            reset_timer: true
+        # display the motion sensor icon
+        - script.execute:
+            id: refresh_relays
+            relay_mask: 2
+    on_release:
+      then:
+        # hide the motion sensor icon
+        - script.execute:
+            id: refresh_relays
+            relay_mask: 2
+
+script:
+  - id: !extend dump_config
+    then:
+      - lambda: |-
+          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "Add-on 'ESPectre motion detection' release %s", "${espectre_ref}");
+          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "  Traffic generator: %s", "${espectre_traffic_generator_mode}");
+          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "  Dectection algorithm: %s", "${espectre_detection_algorithm}");
+          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "  Direct API: %s", YESNO("${espectre_direct_api}"));
+
+  # wait until platform ready - pause sensing in early boot
+  - id: !extend boot_early_routines
+    then:
+      - lambda: id(espectre_csi).set_sensing_runtime(false);
+
+  # wait until platform ready - enable sensing in late boot
+  - id: !extend boot
+    then:
+      - lambda: |-
+          id(espectre_csi).set_sensing_runtime(true);
+
+  # reduce pressure on system during OTA and TFT uploads
+  - id: !extend stop_all
+    then:
+      - lambda: if (system_flags.tft_upload_active|system_flags.ota_in_progress) { id(espectre_csi).set_sensing_runtime(false); }
+
+  # display/hide the motion sensor icon in chip relay_2
+  - id: !extend refresh_relays
+    then:
+      - lambda: |-
+          // chip_relay2 is repurposed to mirror the ESPectre motion sensor
+          // instead of relay 2's own state. This runs after the built-in
+          // lambda, so it overrides whatever that one just wrote.
+          if (!(relay_mask & 2)) return;
+          const bool motion = espectre_motion->state;
+          if (chip_states[CHIP_IDX_RELAY2].visible == motion) return;
+          chip_states[CHIP_IDX_RELAY2].visible = motion;
+          chip_render(CHIP_IDX_RELAY2);
+...
