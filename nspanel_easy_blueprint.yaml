@@ -7369,7 +7369,7 @@ actions:
             {{
               (
                 entity_state in enum.states.on or
-                (entity_domain in ["input_number", "number", "sensor"] and entity_has_value) or
+                (entity_domain in ["input_number", "number", "sensor"] and entity_has_value and entity_state not in ["off", "false", "False"]) or
                 (entity_domain in enum.states and entity_state in enum.states[entity_domain].on)
               ) if entity_id_valid
             }}

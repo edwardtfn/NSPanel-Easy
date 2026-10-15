@@ -138,7 +138,7 @@ enum SubDomain : uint8_t {
   SUB_DOMAIN_COVER,         ///< cover; device_class dependent
   SUB_DOMAIN_LOCK,          ///< lock
   SUB_DOMAIN_WATER_HEATER,  ///< water_heater
-  SUB_DOMAIN_VALUE,         ///< input_number, number, sensor; any usable value is active
+  SUB_DOMAIN_VALUE,         ///< input_number, number, sensor; any usable non-false value is active
 };
 
 /// @brief Icon and colour for a component in a given state.
@@ -369,9 +369,12 @@ inline SubEntityState evaluate_sub_state(SubDomain domain, const char *state) {
 
     case SUB_DOMAIN_VALUE: {
       // A value entity has no on/off vocabulary: any usable value counts as
-      // active, matching the blueprint's entity_state_is_on. Unusable and
-      // unavailable states were already handled above.
-      return SUB_STATE_ON;
+      // active, matching the blueprint's entity_state_is_on. The exception is a
+      // boolean-like value, as reported by a template sensor rendering a
+      // condition, which must still hide the component when false. Unusable
+      // and unavailable states were already handled above.
+      static constexpr const char *OFF_STATES[] = {"off", "false", "False"};
+      return sub_state_in(state, OFF_STATES) ? SUB_STATE_OFF : SUB_STATE_ON;
     }  // case SUB_DOMAIN_VALUE
 
     case SUB_DOMAIN_GENERIC:

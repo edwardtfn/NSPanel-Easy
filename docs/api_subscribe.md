@@ -282,6 +282,7 @@ polarities. An entity that drops off the network never lights an inverted compon
 | `cover` | `open` | `opening`, `closing` | `closed` |
 | `lock` | `unlocked`, `open`, `jammed` | `locking`, `unlocking`, `opening` | `locked` |
 | `water_heater` | `on`, `eco`, `electric`, `gas`, `heat_pump`, `high_demand`, `performance` | — | `off` |
+| `input_number`, `number`, `sensor` | any other usable value | — | `off`, `false` |
 | everything else | `on`, `true`, `1`, `active`, `home`, `playing` | — | `off`, `false`, `0`, `not_home`, `idle`, `standby`, `paused` |
 
 `climate` bindings subscribe to both the state and the `hvac_action` attribute. When `hvac_action`
@@ -347,9 +348,10 @@ Celsius and is converted when the panel is compiled for Fahrenheit.
 - **The panel refuses to commit unverified pushes indefinitely.** After three consecutive pushes
   with no end marker, the panel keeps its last good set and logs an error rather than restarting in
   a loop.
-- **Numeric sensors are not classified.** A `sensor` state such as `23.4` matches neither the active
-  nor inactive list, so a chip or custom button bound to it stays hidden. The two temperature
-  components are the exception: they parse the number directly rather than classifying it.
+- **Value entities are active whenever they hold a usable value.** An `input_number`, `number` or
+  `sensor` state such as `23.4` or `heating` shows a chip or custom button bound to it. Only a
+  boolean-like `off` or `false`, as reported by a template sensor rendering a condition, counts as
+  inactive. The two temperature components parse the number directly rather than classifying it.
 
 ## Troubleshooting
 
