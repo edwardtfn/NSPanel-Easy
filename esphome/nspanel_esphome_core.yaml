@@ -93,8 +93,17 @@ script:  # Scripts
   - id: !extend action_component_text
     then:
       - lambda: |-
-          if (page == "mem" && component == "decimal_separator" && !txt.empty())
+          if (page == "mem" && component == "decimal_separator" && !txt.empty()) {
             id(mui_decimal_separator) = txt[0];
+            // Global used by the display's format_tenths macro
+            disp1->set_component_text("home.dec_sep", id(mui_decimal_separator).c_str());
+          }  // if (page == "mem" && component == "decimal_separator" && !txt.empty())
+
+  - id: !extend boot_nextion
+    then:
+      - lambda: |-
+          // Restored decimal separator, so values are formatted correctly before Home Assistant connects
+          disp1->set_component_text("home.dec_sep", id(mui_decimal_separator).c_str());
 
   - id: !extend dump_config
     then:

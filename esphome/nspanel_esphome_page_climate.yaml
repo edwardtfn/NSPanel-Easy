@@ -137,11 +137,7 @@ script:
     then:
       - lambda: |-
           if (current_page_id != get_page_id("climate")) return;
-          const std::string& sep = id(mui_decimal_separator);
-          const char dec_sep = sep.empty() ? '.' : sep[0];
-          const char dec_separator_str[2] = {dec_sep, '\0'};
           disp1->set_component_text("temp_unit", (id(units_separator) + "${temp_units}").c_str());
-          disp1->set_component_text("dec_separator", dec_separator_str);
 
   - id: !extend page_change
     then:
@@ -213,8 +209,6 @@ script:
           disp1->set_component_text("temp_unit",                (id(units_separator) + "${temp_units}").c_str());
           const std::string& sep = id(mui_decimal_separator);
           const char dec_sep = sep.empty() ? '.' : sep[0];
-          const char dec_separator_str[2] = {dec_sep, '\0'};
-          disp1->set_component_text("dec_separator",            dec_separator_str);
           disp1->show_component("current_temp");
           char buffer[15];
           const bool useDecimal = (temp_step % 10 != 0);
