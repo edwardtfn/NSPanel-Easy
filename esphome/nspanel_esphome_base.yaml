@@ -19,6 +19,12 @@ substitutions:
   GPIO_PSRAM_CS_PIN: '18'
   name: ${device_name}
   ota_password: ""
+  # The OTA password is only compiled when one is set, so an empty password saves flash and RAM
+  # and leaves room for the OTA encryption (which cannot be combined with a password)
+  _pkg_ota_password:
+    ota:
+      - id: !extend ota_std
+        password: ${ota_password}
   project_tag: nspanel_easy
   TAG_BASE: nspanel.base
   ref_url: https://github.com/edwardtfn/NSPanel-Easy
@@ -82,7 +88,7 @@ nspanel_easy:  # Adds custom library for NSPanel HA Blueprint project
 ota:
   - id: ota_std
     platform: esphome
-    password: ${ota_password}
+    # The password is added by the `ota_password` package below, only when one is set
     on_begin:
       then:
         - lambda: |-
@@ -95,6 +101,9 @@ ota:
     on_error:
       then:
         - lambda: system_flags.ota_in_progress = false;
+
+packages:
+  ota_password: ${ _pkg_ota_password if ota_password else {} }
 
 safe_mode:
   id: safe_mode_component

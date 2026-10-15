@@ -9,6 +9,7 @@ Table of contents:
 - [Examples](#examples)
   - [API encryption](#api-encryption)
   - [Custom OTA password](#custom-ota-password)
+  - [OTA encryption](#ota-encryption)
   - [Web server credentials](#web-server-credentials)
   - [Reboot when API fails](#reboot-when-api-fails)
   - [Manual IP](#manual-ip)
@@ -197,15 +198,18 @@ api:
 
 ### Custom OTA password
 
-By default, the OTA password is blank and if first installed with that, your panel will reject an OTA with a password set.
-In order to bypass that, follow these steps:
-
-First, you need to change the default password using this code.
+By default, the OTA password is blank and the password check is not included in the firmware.
+A panel without a password accepts the next OTA update with or without a password, so you can set your password directly:
 
 ```yaml
 substitutions:
-  ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
+  ota_password: !secret ota_password
+```
 
+To change an existing password, the panel must receive the current password for the next update and then start using the new one.
+First, keep your current password in `ota_password` and add this code:
+
+```yaml
 # change OTA password, remove after flashing
 esphome:
   on_boot:
@@ -215,11 +219,46 @@ esphome:
             id(ota_std).set_auth_password("New password");
 ```
 
-After flashing the device, you must remove the `on_boot` code above and replace it with the code below to start using this customization.
+After flashing the device, remove the `on_boot` code above and set `ota_password` to the new password.
+
+Previous versions of this guide used the `on_boot` code above with a blank `ota_password`.
+That combination no longer compiles, as the password check is only included in the firmware when `ota_password` is set.
+If your configuration still has it, remove the `on_boot` code and set `ota_password` to the password used in that code.
+
+> [!NOTE]
+> If you use [API encryption](#api-encryption), consider using [OTA encryption](#ota-encryption) instead of a password.
+
+### OTA encryption
+
+The OTA update can be encrypted with the same key used by the [API encryption](#api-encryption).
+This keeps the firmware image confidential in transit and also authenticates the uploader, so no OTA password is needed.
+It requires ESPHome 2026.9.0 or newer.
+
+> [!IMPORTANT]
+> Once a panel runs firmware with OTA encryption required, it refuses plaintext OTA updates.
+> If the key is lost, the panel can only be recovered with a serial flash.
+
+Enable it in two steps, as described in ESPHome's
+[Enabling Encryption on an Existing Device](https://esphome.io/components/ota/esphome/#enabling-encryption-on-an-existing-device) guide:
+
+1. **Install a firmware that offers encryption.**
+   Add the [API encryption](#api-encryption) if you don't have it yet, keep your current `ota_password`, and flash your panel.
+   The device log should show `Encryption: offered, plaintext accepted`.
+2. **Require encryption.**
+   Set `ota_password` to blank, add the code below, and flash your panel again.
+   The device log should show `Encryption: required`.
 
 ```yaml
 substitutions:
-  ota_password: !secret ota_password
+  ota_password: ""  # A password cannot be combined with the OTA encryption
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - id: !extend ota_std
+    encryption:
 ```
 
 ### Web server credentials
