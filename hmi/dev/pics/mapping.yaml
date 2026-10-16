@@ -563,7 +563,7 @@
   portrait:
     coordinates: "134,71"
     dimensions: "50x50"
-- id: light_colorwheel  # Light page - color wheel (slot 17)
+- id: light_colorwheel # Light page - color wheel (slot 17)
   src: light/light_colorwheel.png
   note: "Circular color picker wheel"
   dark: 17
@@ -1120,6 +1120,18 @@
 - id: unused_34
   note: "Unused - replaced with 1x1 placeholder to reclaim HMI flash space."
   dark: 34
+  light: null
+  copy: true
+  placeholder: true
+- id: unused_65
+  note: "Unused - replaced with 1x1 placeholder to reclaim HMI flash space."
+  dark: 65
+  light: null
+  copy: true
+  placeholder: true
+- id: unused_66
+  note: "Unused - replaced with 1x1 placeholder to reclaim HMI flash space."
+  dark: 66
   light: null
   copy: true
   placeholder: true
