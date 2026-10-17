@@ -22,7 +22,7 @@ The following keys are available to be used in your `substitutions`:
 | Key | Required | Supported values | Default | Description |
 | :- | :-: | :-: | :-: | :- |
 | `BAUD_RATE` | Optional | `921600`, `115200`, `9600`, `230400`, `57600`, `38400`, `256000`, `512000`, `250000`, `19200`, `31250`, `4800`, `2400` | `921600` | Target operating baud rate between the ESP32 and the Nextion display. The TFT firmware shipped with NSPanel Easy enforces this rate on every boot, so changing it requires reflashing the TFT after the change. See [`BAUD_RATE` behaviour](#baud_rate-behaviour). |
-| `BAUD_RATE_TIMEOUT` | Optional | ESPHome duration string | `41s` | Time the panel waits for the display to respond at `BAUD_RATE` before triggering the [boot baud rate scan](#boot-baud-rate-scan). Also applied between retries in the reboot loop when the scan finds no responsive rate. |
+| `BAUD_RATE_TIMEOUT` | Optional | ESPHome duration string | `11s` | Time the panel waits for the display to respond at `BAUD_RATE` after power-cycling it, before triggering the [boot baud rate scan](#boot-baud-rate-scan). Also applied between retries in the reboot loop when the scan finds no responsive rate. |
 | `BAUD_RATE_DELAY_AFTER_POWER_ON` | Optional | ESPHome duration string | `2s` | Delay between powering the display on and starting the first probe inside the baud rate scan. Increase if your hardware needs longer to initialize before responding. |
 | `BAUD_RATE_PROBE_MS` | Optional | Positive integer (milliseconds) | `1500` | Per-rate probe window during the [boot baud rate scan](#boot-baud-rate-scan) and the diagnostic [Scan baud rate button](addon_upload_tft.md#include_button_scan_baud_rate-behaviour). Increase only if your hardware shows marginal UART timing on a given rate. |
 | `uart_debug` | Optional | `true`/`false` | `false` | Logs detailed UART traffic. |
@@ -45,14 +45,17 @@ realigns the two sides.
 
 ## Boot baud rate scan
 
-If the display does not respond at `BAUD_RATE` within 41 seconds of boot, the
-panel automatically scans Nextion-supported baud rates to find one where the
-display answers.
+The display is checked on every watchdog round (the first one about 89 seconds
+after boot, then every 89 seconds). If the display is not detected, the panel
+power-cycles it, waits `BAUD_RATE_TIMEOUT` (11 seconds by default) for it to
+respond at `BAUD_RATE`, and then automatically scans Nextion-supported baud
+rates to find one where the display answers.
 
 ### When the scan triggers
 
-- The display does not complete its initial setup handshake within 41 seconds
-  at the configured `BAUD_RATE`.
+- The display is not detected on a watchdog round and does not complete its
+  setup handshake at the configured `BAUD_RATE` within `BAUD_RATE_TIMEOUT`
+  after being power-cycled.
 - Power-cycle and retry loops also re-trigger the scan if the display continues
   to be unresponsive.
 
@@ -83,7 +86,7 @@ legacy TFTs.
 
 ### Timing
 
-With the default settings (`BAUD_RATE_TIMEOUT=41s`, `BAUD_RATE_DELAY_AFTER_POWER_ON=2s`,
+With the default settings (`BAUD_RATE_TIMEOUT=11s`, `BAUD_RATE_DELAY_AFTER_POWER_ON=2s`,
 `BAUD_RATE_PROBE_MS=1500`), scan duration is roughly:
 
 - Best case (display answers at `BAUD_RATE`): ~1.5 seconds
