@@ -207,7 +207,29 @@ script:
             - lambda: return (disp1->queue_size() < 1) and (tf_uart->available() < 1);
           timeout: 10s
       - delay: 2s
+      # A manual upload can start before the display was ever detected (e.g. a
+      # TFT at another rate during the first seconds after boot). Find the
+      # display's rate first, otherwise the upload would be sent blindly.
+      - if:
+          condition:
+            - lambda: return disp1->is_detected();
+          then:
+            - lambda: |-
+                ESP_LOGD("${TAG_UPLOAD_TFT}", "Display detected - no baud rate scan needed");
+          else:
+            - lambda: |-
+                ESP_LOGW("${TAG_UPLOAD_TFT}", "Display not detected - scanning baud rates before upload");
+            - script.execute:
+                id: baud_scan
+                target_rate: 0
+            - script.wait: baud_scan
       - lambda: |-
+          if (!disp1->is_detected() && !system_flags.baud_scan_success) {
+            ESP_LOGE("${TAG_UPLOAD_TFT}", "TFT upload aborted: display not responding at any baud rate");
+            tft_upload_result = false;
+            return;
+          }
+
           // Always upload at the currently negotiated rate. The new TFT will
           // enforce ${BAUD_RATE} on its next boot regardless of the upload rate.
           const uint32_t upload_baud = tf_uart->get_baud_rate();

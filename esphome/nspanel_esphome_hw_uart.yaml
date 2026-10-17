@@ -224,9 +224,47 @@ script:
           }
           ESP_LOGCONFIG("${TAG_HW_UART}", "  Queue size: %d", tf_uart->available());
 
+  - id: !extend boot_preparation
+    then:
+      - script.execute: baud_check_at_boot
+
+  # ---------------------------------------------------------------------------
+  # baud_check_at_boot
+  #
+  # Gives the display ${BAUD_RATE_TIMEOUT} after boot to answer at ${BAUD_RATE}.
+  # If it is still not detected, runs baud_scan right away instead of waiting
+  # for the first watchdog round (about 89 s after boot), so panels running a
+  # TFT at another rate (e.g. stock firmware at 115200 bps) are recovered early.
+  #
+  # Runs in parallel with the boot sequence and never blocks it.
+  # Retries after a failed scan are left to wait_for_display (watchdog rounds).
+  # ---------------------------------------------------------------------------
+  - id: baud_check_at_boot
+    mode: single
+    then:
+      - wait_until:
+          condition:
+            - lambda: return disp1->is_detected();
+          timeout: ${BAUD_RATE_TIMEOUT}
+      - if:
+          condition:
+            - lambda: return disp1->is_detected();
+          then:
+            - lambda: |-
+                ESP_LOGD("${TAG_HW_UART}", "Display detected at %" PRIu32 " bps", tf_uart->get_baud_rate());
+          else:
+            - lambda: |-
+                ESP_LOGW("${TAG_HW_UART}", "Display not detected at %" PRIu32 " bps - scanning baud rates",
+                                           tf_uart->get_baud_rate());
+            - script.execute:
+                id: baud_scan
+                target_rate: 0
+            - script.wait: baud_scan
+
   - id: !extend stop_all
     then:
       - lambda: |-
+          baud_check_at_boot->stop();
           baud_scan->stop();
           wait_for_uart_drain->stop();
 

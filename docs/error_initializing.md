@@ -73,7 +73,7 @@ You can use this button to force a reboot of your panel. This button is availabl
 | Possible causes | Suggestions |
 | :-- | :-- |
 | You may have an older version of ESPHome installed or ESPHome is not installed. | Make sure you have the latest version of ESPHome and flash your device again. |
-| Baud rate mismatch. | The default baud rate for this project is 921600 bps. The panel will automatically scan all supported rates if the display does not respond within 41 seconds. If the scan does not resolve the issue, check that your display firmware was built for this project. |
+| Baud rate mismatch. | The default baud rate for this project is 921600 bps. The panel will automatically scan all supported rates if the display does not respond within 11 seconds after boot. If the scan does not resolve the issue, check that your display firmware was built for this project. |
 <!-- markdownlint-enable MD013 MD033 -->
 
 ### Blueprint is not detected
