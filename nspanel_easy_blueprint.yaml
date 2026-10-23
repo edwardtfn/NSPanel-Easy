@@ -414,6 +414,30 @@ blueprint:
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
+        home_value01_graph:
+          name: Home page - Entity State 01 - Graph
+          description: &description_home_value_graph >-
+            When enabled, tapping this value (or its icon) opens a graph of the entity over the last 24 hours,
+            drawn from the 5-minute means of the Home Assistant recorder statistics.
+
+
+            *Only sensors with a `state_class` (e.g. `measurement`) have statistics. For other entities the value is not tappable.*
+          default: false
+          selector: &selector_home_value_graph
+            boolean: {}
+        home_value01_graph_min:
+          name: Home page - Entity State 01 - Graph minimum
+          description: &description_home_value_graph_min >-
+            Fixed lower bound of the graph. Leave empty for an automatic bound, from the lowest value of the last 24 hours.
+          default: ""
+          selector: &selector_home_value_graph_bound
+            text: {}
+        home_value01_graph_max:
+          name: Home page - Entity State 01 - Graph maximum
+          description: &description_home_value_graph_max >-
+            Fixed upper bound of the graph. Leave empty for an automatic bound, from the highest value of the last 24 hours.
+          default: ""
+          selector: *selector_home_value_graph_bound
         home_value02:
           name: Home page - Entity State 02 - Entity
           description: *description_entity_displayed
@@ -434,6 +458,21 @@ blueprint:
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
+        home_value02_graph:
+          name: Home page - Entity State 02 - Graph
+          description: *description_home_value_graph
+          default: false
+          selector: *selector_home_value_graph
+        home_value02_graph_min:
+          name: Home page - Entity State 02 - Graph minimum
+          description: *description_home_value_graph_min
+          default: ""
+          selector: *selector_home_value_graph_bound
+        home_value02_graph_max:
+          name: Home page - Entity State 02 - Graph maximum
+          description: *description_home_value_graph_max
+          default: ""
+          selector: *selector_home_value_graph_bound
         home_value03:
           name: Home page - Entity State 03 - Entity
           description: *description_entity_displayed
@@ -454,6 +493,21 @@ blueprint:
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
+        home_value03_graph:
+          name: Home page - Entity State 03 - Graph
+          description: *description_home_value_graph
+          default: false
+          selector: *selector_home_value_graph
+        home_value03_graph_min:
+          name: Home page - Entity State 03 - Graph minimum
+          description: *description_home_value_graph_min
+          default: ""
+          selector: *selector_home_value_graph_bound
+        home_value03_graph_max:
+          name: Home page - Entity State 03 - Graph maximum
+          description: *description_home_value_graph_max
+          default: ""
+          selector: *selector_home_value_graph_bound
         home_value04:
           name: Home page - Entity State 04 - Entity
           description: *description_entity_displayed
@@ -474,6 +528,21 @@ blueprint:
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
+        home_value04_graph:
+          name: Home page - Entity State 04 - Graph
+          description: *description_home_value_graph
+          default: false
+          selector: *selector_home_value_graph
+        home_value04_graph_min:
+          name: Home page - Entity State 04 - Graph minimum
+          description: *description_home_value_graph_min
+          default: ""
+          selector: *selector_home_value_graph_bound
+        home_value04_graph_max:
+          name: Home page - Entity State 04 - Graph maximum
+          description: *description_home_value_graph_max
+          default: ""
+          selector: *selector_home_value_graph_bound
     home_page_custom_buttons:
       name: Home page - Custom buttons
       icon: mdi:home
@@ -5136,7 +5205,7 @@ variables:
   # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
   # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
   # While it is 'next' (development builds), the minimum firmware check is skipped.
-  min_esphome_version: 2026.10.7
+  min_esphome_version: next
 
   # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
@@ -5269,6 +5338,7 @@ variables:
       - "entitypage03"
       - "entitypage04"
     fan: "fan"
+    graph: "graph"
     home: "home"
     keyb_num: "keyb_num"
     light: "light"
@@ -6226,7 +6296,7 @@ conditions:
       trigger.id in ["automation_reloaded", "ha_started", "nspanel_event"] or has_value(device_name_sensor)
     }}
   - >  # Update page Home only when visible or home_page_background_update is enabled
-    {{ trigger.id not in ["home_values_state"] or home_page_background_update or pages.current == pages.home }}
+    {{ trigger.id not in ["home_values_state"] or home_page_background_update or pages.current in [pages.home, pages.graph] }}
   - >  # Do not update values when page utilities is not visible
     {{ trigger.id != "utilities_page" or pages.current == pages.utilities }}
   - >  # Do not update values when page entities is not visible
@@ -6473,24 +6543,36 @@ actions:
             icon: !input home_value01_icon
             icon_color_rgb: !input home_value01_icon_color
             label_color_rgb: !input home_value01_label_color
+            graph: !input home_value01_graph
+            graph_min: !input home_value01_graph_min
+            graph_max: !input home_value01_graph_max
             page: home
             component: value01
           - entity: !input home_value02
             icon: !input home_value02_icon
             icon_color_rgb: !input home_value02_icon_color
             label_color_rgb: !input home_value02_label_color
+            graph: !input home_value02_graph
+            graph_min: !input home_value02_graph_min
+            graph_max: !input home_value02_graph_max
             page: home
             component: value02
           - entity: !input home_value03
             icon: !input home_value03_icon
             icon_color_rgb: !input home_value03_icon_color
             label_color_rgb: !input home_value03_label_color
+            graph: !input home_value03_graph
+            graph_min: !input home_value03_graph_min
+            graph_max: !input home_value03_graph_max
             page: home
             component: value03
           - entity: !input home_value04
             icon: !input home_value04_icon
             icon_color_rgb: !input home_value04_icon_color
             label_color_rgb: !input home_value04_label_color
+            graph: !input home_value04_graph
+            graph_min: !input home_value04_graph_min
+            graph_max: !input home_value04_graph_max
             page: home
             component: value04
 
@@ -8320,6 +8402,27 @@ actions:
                                       - '{{ all_icons[repeat.item.icon.split("mdi:")[1]] }}'
                                   continue_on_error: true
                                 - *delay_boot
+
+                      - alias: Home page - Values with a graph
+                        sequence:
+                          - variables:
+                              graph_entities: >-
+                                {%- set ns = namespace(entities=[]) -%}
+                                {%- for value in home_page.entity_value -%}
+                                  {%- set entity = value.entity if value.entity is string else "" -%}
+                                  {%- set has_graph = value.graph | default(false, true) and "." in entity
+                                        and states[entity] is not none
+                                        and state_attr(entity, "state_class") is not none -%}
+                                  {%- set ns.entities = ns.entities + [entity if has_graph else ""] -%}
+                                {%- endfor -%}
+                                {{ ns.entities }}
+                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: graph_entities
+                              txt_list: '{{ graph_entities }}'
+                            continue_on_error: true
+                          - *delay_boot
 
                       - alias: Hardware buttons labels
                         sequence:
@@ -12517,6 +12620,140 @@ actions:
                             continue_on_error: true
                           - *delay_default
 
+                      - alias: Graph page
+                        conditions: '{{ nspanel_event.page == pages.graph }}'
+                        sequence: &refresh_page_graph
+                          - variables:
+                              # Settings of the Home page value that opened the graph
+                              graph_value: >-
+                                {{
+                                  home_page.entity_value
+                                  | selectattr("entity", "defined")
+                                  | selectattr("entity", "eq", entity_id)
+                                  | list
+                                  | first
+                                  | default({}, true)
+                                }}
+                              overlap:
+                                icon: >
+                                  {{
+                                    graph_value.icon
+                                    if
+                                      graph_value.icon is defined and
+                                      graph_value.icon is string and
+                                      graph_value.icon is match "mdi:" and
+                                      graph_value.icon.split("mdi:")[1] in all_icons
+                                    else
+                                      None
+                                  }}
+                          - *variable_entity
+                          - condition: '{{ entity_id_valid }}'
+                          - &condition_graph_enabled
+                            alias: Only an entity with the graph enabled on a Home page value
+                            condition: template
+                            value_template: >-
+                              {{
+                                home_page.entity_value
+                                | selectattr("entity", "defined")
+                                | selectattr("entity", "eq", entity_id)
+                                | selectattr("graph", "defined")
+                                | selectattr("graph", "eq", true)
+                                | list | count > 0
+                              }}
+                          - variables:
+                              unit_of_measurement_raw: '{{ state_attr(entity_id, "unit_of_measurement") | default("") }}'
+                              unit_of_measurement: >
+                                {{
+                                  unit_of_measurement_raw
+                                  if unit_of_measurement_raw and unit_of_measurement_raw is string and unit_of_measurement_raw | length > 0
+                                  else ""
+                                }}
+                              # Fixed bounds; a comma is accepted as decimal separator, and an empty or non-numeric field means automatic
+                              graph_min: >-
+                                {%- set bound = (graph_value.graph_min | default("") | string | trim).replace(",", ".") -%}
+                                {{ bound if is_number(bound) else "" }}
+                              graph_max: >-
+                                {%- set bound = (graph_value.graph_max | default("") | string | trim).replace(",", ".") -%}
+                                {{ bound if is_number(bound) else "" }}
+                              # Same decimals as the value shown on the Home page
+                              graph_decimals: >-
+                                {%- set rounded = states(entity_id, rounded=true) | string -%}
+                                {{ rounded.split(".")[1] | length if is_number(rounded) and "." in rounded else 0 }}
+                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: graph_config
+                              txt_list:
+                                - '{{ entity.name }}'
+                                - '{{ entity.icon }}'
+                                - '{{ unit_of_measurement }}'
+                                - '{{ graph_min }}'
+                                - '{{ graph_max }}'
+                                - '{{ graph_decimals }}'
+                            continue_on_error: true
+                          - *delay_default
+                          - &graph_value_now
+                            action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: graph_value_now
+                              txt_list: *value_with_unit_and_translations
+                            continue_on_error: true
+                          - *delay_default
+                          - variables: &variables_graph_period
+                              # The newest complete 5-minute period; the recorder compiles it a few seconds after it ends
+                              graph_end_ts: '{{ ((as_timestamp(now()) - 60) // 300 * 300) | int }}'
+                              graph_start_ts: >-
+                                {{
+                                  [graph_end_ts - 288 * 300, (graph_since | int(0)) + 300] | max
+                                  if graph_since is defined
+                                  else graph_end_ts - 288 * 300
+                                }}
+                          # A missing recorder integration is not caught by continue_on_error, so this run stops here
+                          - &graph_get_statistics
+                            action: recorder.get_statistics
+                            data:
+                              statistic_ids:
+                                - '{{ entity_id }}'
+                              start_time: '{{ graph_start_ts | int | as_datetime | string }}'
+                              end_time: '{{ graph_end_ts | int | as_datetime | string }}'
+                              period: 5minute
+                              types:
+                                - mean
+                            response_variable: graph_response
+                            continue_on_error: true
+                          - variables: &variables_graph_values
+                              # `[start, v0, v1, ...]`: one value per period, oldest first, "" for a period without data
+                              graph_values: >-
+                                {%- set rows = graph_response.statistics[entity_id]
+                                      if graph_response is defined and graph_response.statistics is defined
+                                        and entity_id in graph_response.statistics
+                                      else [] -%}
+                                {%- set rows = rows | selectattr("mean", "number") | list -%}
+                                {%- set slots = ((graph_end_ts - graph_start_ts) // 300) | int -%}
+                                {%- set ns = namespace(out=[graph_start_ts | string], row=0) -%}
+                                {%- for slot in range(slots) -%}
+                                  {%- set slot_ts = graph_start_ts + slot * 300 -%}
+                                  {#- Periods start on 5-minute boundaries, so a row is either in this slot or a later one -#}
+                                  {%- if ns.row < rows | count and as_timestamp(rows[ns.row].start) | int < slot_ts -%}
+                                    {%- set ns.row = ns.row + 1 -%}
+                                  {%- endif -%}
+                                  {%- if ns.row < rows | count and as_timestamp(rows[ns.row].start) | int == slot_ts -%}
+                                    {%- set ns.out = ns.out + ["%.6g" | format(rows[ns.row].mean)] -%}
+                                    {%- set ns.row = ns.row + 1 -%}
+                                  {%- else -%}
+                                    {%- set ns.out = ns.out + [""] -%}
+                                  {%- endif -%}
+                                {%- endfor -%}
+                                {{ ns.out }}
+                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: graph_history
+                              txt_list: '{{ graph_values }}'
+                            continue_on_error: true
+                          - *delay_default
+
                   - condition:
                       - '{{ detailed_entity | length > 0 }}'
                       - '{{ original_state.entity_id_valid }}'
@@ -13566,6 +13803,33 @@ actions:
                           - *variable_entity
                           - *entity_details_show
 
+                      - alias: Graph page - Newest values
+                        conditions:
+                          - '{{ nspanel_event.page == pages.graph }}'
+                          - '{{ nspanel_event.component == "graph" }}'
+                          - '{{ nspanel_event.event == "refresh" }}'
+                        sequence:
+                          - variables:
+                              entity_id: '{{ nspanel_event.entity | default("", true) }}'
+                              entity_id_valid: *variable_entity_id_valid
+                              # Start of the newest period the panel already shows
+                              graph_since: '{{ nspanel_event.value | int(0) }}'
+                          - condition: '{{ entity_id_valid }}'
+                          # The entity the panel shows, with the graph enabled
+                          - condition: '{{ states(detailed_entity) == entity_id }}'
+                          - *condition_graph_enabled
+                          - variables: *variables_graph_period
+                          - condition: '{{ graph_end_ts > graph_start_ts }}'
+                          - *graph_get_statistics
+                          - variables: *variables_graph_values
+                          - condition: '{{ graph_values | count > 1 }}'
+                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: graph_append
+                              txt_list: '{{ graph_values }}'
+                            continue_on_error: true
+
       - alias: Automation reloaded
         conditions:
           - condition: trigger
@@ -13813,6 +14077,23 @@ actions:
                 }}
               sequence:
                 - *display_value
+          - alias: Graph page - Current value
+            if:
+              - '{{ pages.current == pages.graph }}'
+              - '{{ states(detailed_entity) == trigger.entity_id }}'
+            then:
+              - variables:
+                  entity_id: '{{ trigger.entity_id }}'
+              - *variable_entity
+              - variables:
+                  unit_of_measurement_raw: '{{ state_attr(entity_id, "unit_of_measurement") | default("") }}'
+                  unit_of_measurement: >
+                    {{
+                      unit_of_measurement_raw
+                      if unit_of_measurement_raw and unit_of_measurement_raw is string and unit_of_measurement_raw | length > 0
+                      else ""
+                    }}
+              - *graph_value_now
 
       - alias: Update QR code
         conditions:
