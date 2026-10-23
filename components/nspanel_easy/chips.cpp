@@ -10,6 +10,8 @@
 #include <string>
 
 #ifdef NSPANEL_EASY_SUBSCRIBE
+#include "base.h"
+
 #include "esphome/core/log.h"
 #endif  // NSPANEL_EASY_SUBSCRIBE
 
@@ -63,9 +65,11 @@ void chip_sub_render(const SubBinding &binding, const SubRuntime &rt, const char
     return;
   }
 
+  // A chip reports what is happening now, so a stale state is not shown at all.
+  const bool shown = visible && !api_stale;
   bool changed = false;
 
-  if (visible) {
+  if (shown) {
     const bool active = (rt.last_state == SUB_STATE_ON);
     const char *icon = active ? rt.icon_on : rt.icon_off;
     uint16_t color = active ? rt.color_on : rt.color_off;
@@ -95,10 +99,10 @@ void chip_sub_render(const SubBinding &binding, const SubRuntime &rt, const char
       the_chip.color = color;
       changed = true;
     }
-  }  // if visible — appearance is left untouched while hidden
+  }  // if (shown) — appearance is left untouched while hidden
 
-  if (the_chip.visible != visible) {
-    the_chip.visible = visible;
+  if (the_chip.visible != shown) {
+    the_chip.visible = shown;
     changed = true;
   }
 

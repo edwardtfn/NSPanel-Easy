@@ -7287,17 +7287,16 @@ actions:
 
             **How to Resolve This Issue**
 
-            Components must be updated in this order: **ESPHome**, then **TFT**, then **Blueprint**.
+            To fix this, update the firmware on your panel:
 
-            1. Update your ESPHome configuration to reference version {{ blueprint_version
-            }}{{ '' if esphome_api_outdated else ' (or at least ' ~ min_esphome_version_string ~ ')' }}.
+            1. Open the ESPHome dashboard, find your panel and click **Install**.
 
-            2. Install the new firmware on your panel.
+            2. After the panel restarts, wait about one minute: the display is updated automatically.
 
-            3. Let the panel upload the matching TFT file and reboot.
+            This notification clears itself once everything is up to date.
 
             *For more detailed instructions, please refer to the online documentation:
-            [How to Update](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md).*
+            [How to Update the Firmware](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md#update-esphome).*
             {% endif %}
         continue_on_error: true
       - alias: Custom action - ESPHome firmware outdated

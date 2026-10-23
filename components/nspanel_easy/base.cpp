@@ -25,6 +25,9 @@ UnavailableBehavior unavailable_behavior = UnavailableBehavior::INDICATE;
 // Pending visibility restore after leaving HIDE; see base.h.
 bool unavailable_unhide_pending = false;
 
+// Whether the Home Assistant values on display are stale; see base.h.
+bool api_stale = false;
+
 // Fire a Home Assistant event for NSPanel HA Blueprint
 void fire_ha_event(const std::string &type, std::map<std::string, std::string> data) {
   // Add device name and type to the event data

@@ -4,6 +4,9 @@
         "pattern": "^http://homeassistant\\.local.*$"
       },
       {
+        "pattern": "^https://community\\.home-assistant\\.io/.*$"
+      },
+      {
         "pattern": "^https://sonoff.tech/product/central-control-panel/nspanel/$"
       },
       {

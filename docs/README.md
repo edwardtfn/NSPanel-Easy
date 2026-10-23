@@ -61,6 +61,8 @@ Optional packages that extend the base firmware:
   Home Assistant entity states, without an automation running per state change.
 - [Alarm Control Panel](alarm.md) — configure and secure alarm control from
   the panel.
+- [ESPHome Substitutions](substitutions.md) — every compile-time setting
+  available in your panel's YAML, with its default and what it changes.
 - [Customization](customization.md) — advanced examples: API encryption, custom
   OTA passwords, static IPs, reboot-on-API-failure, and more.
 - [MDI Icons Cheatsheet](https://edwardtfn.github.io/NSPanel-Easy/icons/cheatsheet.html)
@@ -87,12 +89,18 @@ Optional packages that extend the base firmware:
 - **GitHub Issues** — [bug reports and feature requests](https://github.com/edwardtfn/NSPanel-Easy/issues).
 - **Home Assistant Community forum** — [NSPanel Easy thread](https://community.home-assistant.io/t/nspanel-easy-blueprint-configured-nspanel-customization/1005033)
   for longer-form discussion.
+- **AI usage** — [How AI Is Used in This Project](ai_usage.md) explains what is
+  automated, how to identify AI-assisted posts, and how your data is handled.
 
 ## Contributing
 
 Contributions of all kinds are welcome — code, documentation, translations, and
 testing. See [CONTRIBUTING.md](https://github.com/edwardtfn/NSPanel-Easy/blob/main/CONTRIBUTING.md)
 for guidelines, branching conventions, and how to run the local linters.
+All community spaces follow the
+[Code of Conduct](https://github.com/edwardtfn/NSPanel-Easy?tab=coc-ov-file), and security
+vulnerabilities must be reported privately, as described in the
+[Security Policy](https://github.com/edwardtfn/NSPanel-Easy/security/policy).
 
 Not a developer? You can still help by improving the docs, translating
 strings, testing open [pull requests](https://github.com/edwardtfn/NSPanel-Easy/pulls),

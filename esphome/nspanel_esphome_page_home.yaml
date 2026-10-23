@@ -104,6 +104,11 @@ script:
               id(home_outdoor_temp_color) = color;
               return;
             }
+            if (home_value_color_store(component.c_str(), color)) {
+              // Painted grey instead while the values are stale; the shadow is restored once fresh
+              if (api_stale) home_values_paint();
+              return;
+            }
             return;
           }  // page == "home"
           if (page != "mem") return;
@@ -237,7 +242,17 @@ script:
           restore(hmi::home::DATE.name, id(home_date_color));
           restore(hmi::home::INDR_TEMP.name, id(home_indr_temp_color));
           restore(hmi::home::INDR_TEMP_ICON.name, id(home_indr_temp_icon_color));
-          restore(hmi::home::OUTDOOR_TEMP.name, id(home_outdoor_temp_color));
+
+          // The outdoor temperature and the values are greyed out while stale (see api_stale)
+          if (api_stale) {
+            disp1->set_component_font_color(hmi::home::OUTDOOR_TEMP.name, Colors::RGB565_GRAY_DARK);
+          } else if (id(home_outdoor_temp_color) == ${HOME_COLOR_UNSET}) {
+            // Never customised: back to the theme colour, as the `theme_apply` macro paints it
+            disp1->send_command("home.outdoor_temp.pco=color_pco_main");
+          } else {
+            restore(hmi::home::OUTDOOR_TEMP.name, id(home_outdoor_temp_color));
+          }  // if (api_stale)
+          home_values_paint();
 
   - id: !extend page_change
     then:
@@ -308,12 +323,14 @@ script:
     then:
       - script.execute: home_colors_apply
 
-  - id: !extend update_flag_api_ready
+  - id: !extend api_stale_changed
     then:
       - lambda: |-
-          #ifdef NSPANEL_EASY_SUBSCRIBE
-          home_api_connection_update(api_server->is_connected_with_state_subscription());
-          #endif  // NSPANEL_EASY_SUBSCRIBE
+          // The subscribed components are rendered again by the API subscriptions package
+          #if defined(NSPANEL_EASY_SUBSCRIBE) && defined(NSPANEL_EASY_USE_WEATHER)
+          home_weather_resolve();  // Rendered only on a condition change, so not by the subscriptions
+          #endif  // NSPANEL_EASY_SUBSCRIBE && NSPANEL_EASY_USE_WEATHER
+      - script.execute: home_colors_apply
 
 sun:
   id: sun_component
