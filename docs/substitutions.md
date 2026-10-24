@@ -32,7 +32,9 @@ substitutions:
 | `device_name` | `nspanel` | Device name in ESPHome, also used to build the entity IDs. See [Installation and Setup](install.md). |
 | `friendly_name` | `${device_name}` | Name shown in Home Assistant. |
 | `name` | `${device_name}` | Legacy device name, kept for configurations created with older Home Assistant versions. Prefer `device_name`. |
-| `ota_password` | `""` | Password required for OTA updates. Empty disables the password. See [Customization](customization.md#custom-ota-password). |
+| `api_encryption_key` | `""` | Key to encrypt the communication with Home Assistant. Empty disables the encryption. See [Customization](customization.md#api-encryption). |
+| `ota_encryption` | `false` | Encrypts the OTA updates with the API encryption key, and requires it for every update. Recommended. See [Customization](customization.md#ota-encryption). |
+| `ota_password` | `""` | Password required for OTA updates. Empty disables the password. When `ota_encryption` is enabled, used only to migrate a panel that still expects a password. See [Customization](customization.md#custom-ota-password). |
 | `language` | `en` | Language compiled into the firmware. Only the selected language's strings are stored on the panel. See [Localization](localization.md#setting-your-language). |
 | `temp_units` | `°C` | Temperature unit used by everything the panel renders locally: `°C` or `°F`. The Blueprint must be set to the same unit. See [Localization](localization.md#temperature-unit). |
 <!-- markdownlint-enable MD013 -->

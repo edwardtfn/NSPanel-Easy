@@ -96,7 +96,9 @@ Follow these steps to add a new device in the ESPHome Dashboard:
 5. Locate your newly created device in the ESPHome Dashboard and click **Edit**.  
    ![Edit Device](pics/ha_esphome_dashboard_new_device_04.png)
 
-6. (Optional) For enhanced security, consider copying the `api:` entry to your panel's yaml file while adding the key itself to the secrets file
+6. Copy the API encryption `key:` value and add it to your secrets file (e.g. as `api_encryption_key`).
+   It encrypts the communication with Home Assistant and the OTA updates.
+   Only the key is needed: the `api:` block itself is provided by this project.
    ![API Section](pics/ha_esphome_dashboard_new_device_05.png)
 
    which can be edited clicking `secrets` at the top right of your ESPHome menu.
@@ -115,8 +117,9 @@ Follow these steps to add a new device in the ESPHome Dashboard:
      friendly_name: "Your panel's friendly name"
      wifi_ssid: !secret wifi_ssid
      wifi_password: !secret wifi_password
-     ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
-     language: en      # Language code - see docs/localization.md for all supported codes
+     api_encryption_key: !secret api_encryption_key  # The key from step 6
+     ota_encryption: true                            # Encrypt the OTA updates with the API encryption key
+     language: en                                    # Language code - see docs/localization.md for all supported codes
      boot_sound: false
      # Add-on configuration (if needed)
      ## Upload TFT
@@ -161,7 +164,10 @@ Learn about secrets in ESPHome: [Home Assistant Secrets in ESPHome](https://www.
     > HTTPS support for TFT transfers can be unstable, particularly with the `arduino` framework.
     > Use HTTP whenever possible for local servers.
 
-12. (Optional) Enhance security with API encryption by adding the copied key from step 6 to the **My Customization** area.
+12. Make sure `api_encryption_key` in your secrets file has the key copied in step 6.
+    Each panel should have its own key, so use a different secret name for each panel.
+    Keep the key safe: with `ota_encryption: true`, the panel refuses OTA updates without it.
+    For more details, see [OTA encryption](customization.md#ota-encryption).
     > [!TIP]
     > You can get a new randomly generated valid key from [ESPHome Native API Component](https://esphome.io/components/api/#configuration-variables) page.
 
@@ -513,8 +519,8 @@ substitutions:
   friendly_name: "Your Panel Name"
   wifi_ssid: !secret wifi_ssid
   wifi_password: !secret wifi_password
-  ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
-  language: en      # Language code - see docs/localization.md for all supported codes
+  ota_encryption: false  # Recommended: set to true with the API encryption (see docs/customization.md#ota-encryption)
+  language: en           # Language code - see docs/localization.md for all supported codes
   boot_sound: false
   # Add-on configuration (if needed)
   ## Upload TFT
@@ -611,8 +617,8 @@ substitutions:
   friendly_name: "Your Panel Name"
   wifi_ssid: !secret wifi_ssid
   wifi_password: !secret wifi_password
-  ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
-  language: en      # Language code - see docs/localization.md for all supported codes
+  ota_encryption: false  # Recommended: set to true with the API encryption (see docs/customization.md#ota-encryption)
+  language: en           # Language code - see docs/localization.md for all supported codes
   boot_sound: false
   # Add-on configuration (if needed)
   ## Upload TFT
