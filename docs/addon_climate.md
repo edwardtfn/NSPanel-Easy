@@ -5,6 +5,9 @@
 This add-on enables the use of your panel's relays to act as a thermostat (either cooler or heater)
 using the internal temperature sensor and independent of the network availability.
 
+For slow systems such as water underfloor heating, a PI/PWM control is available as an alternative to the on/off control,
+see [PID mode](#pid-mode-pipwm-control-for-slow-systems).
+
 ### Attention
 
 1. The NSPanel is limited to 2A per relay.
@@ -177,6 +180,213 @@ packages:
       - nspanel_esphome.yaml # Basic package
       - esphome/nspanel_esphome_addon_climate_heat.yaml
       - esphome/nspanel_esphome_addon_climate_backup.yaml
+```
+
+## PID mode (PI/PWM control for slow systems)
+
+The optional PID packages replace the two-point (on/off with hysteresis) control of the climate add-ons
+with a PI controller and slow PWM output.
+This suits slow systems with a high thermal mass, such as water underfloor heating:
+instead of opening the valve fully until the target is reached (and overshooting while the screed keeps releasing heat),
+the controller opens it for a share of each PWM cycle that matches the actual heat demand.
+
+Two variants are available:
+
+<!-- markdownlint-disable MD013 -->
+| Package | Setpoints | Heat/cool selection | Relays | Display UI |
+| :- | :-: | :- | :- | :-: |
+| `nspanel_esphome_addon_climate_pid_single.yaml` | One | Central, from a Home Assistant entity (e.g. switched together with the heat pump) | One shared relay (`valve_relay`) for heating and cooling | Heat |
+| `nspanel_esphome_addon_climate_pid_dual.yaml` | Two (low/high) | On the panel, through the thermostat mode (`heat`, `cool`, `heat_cool`) | Separate relays (`heater_relay`, `cooler_relay`) | Dual |
+
+<!-- markdownlint-enable MD013 -->
+
+How it works:
+
+- The embedded thermostat (`thermostat_embedded`) stays in place as the user interface and setpoint holder,
+  so the climate page, the climate chip and the Blueprint work as usual. It only switches the dummy relay `relay_0`.
+- Two internal PID controllers (heat and cool) do the actual control and are synced with the thermostat every `pid_sync_interval` seconds.
+- The controller output (0-100 %) is turned into on/off cycles of the panel relay by a `slow_pwm` output.
+- The regulation runs entirely on the panel and keeps working without Home Assistant.
+- *Single only:* the thermostat offers the modes `off` and `heat`, which act as "room off/on".
+  The operating mode (heat or cool) is read from `pid_mode_entity` and stored in flash,
+  so the panel keeps the last mode while Home Assistant is unavailable.
+  When the operating mode changes, the integral terms are reset and the valve is closed before the other controller takes over.
+  The display follows the operating mode: the climate chip and the icon on the climate page show a fire (heat) or a snowflake (cool),
+  colored while the valve is driven and gray while idle. On the climate page, the mode button shows heat or cool accordingly;
+  both buttons only switch the room on, the operating mode itself is changed in Home Assistant.
+
+> [!IMPORTANT]
+> Include **only one** climate package: either `pid_single` or `pid_dual`, not together with `climate_heat`, `climate_cool`, `climate_dual` or each other.
+> The PID packages include the climate base themselves.
+> The `climate_backup` add-on must not be combined with the PID packages, as both would switch the same relays.
+> The integral term is not stored in flash; after a reboot the controller needs some time to settle again (see `pid_starting_integral`).
+> Without Home Assistant the panel reboots after `api: reboot_timeout`, and without Wi-Fi after `wifi: reboot_timeout`.
+> For autonomous operation, set both to `0s` in your local yaml.
+> Thermostatic radiator heads, if present, must be set well above the target temperature, otherwise two controllers fight each other.
+
+### PID configuration
+
+The following keys are available in your `substitutions`, in addition to the common climate keys above
+(`temp_units`, `temp_min`, `temp_max`, `target_low`, `target_high`, `heat_deadband`, `heat_overrun`, `cool_deadband`, `cool_overrun`).
+In PID mode, the deadband and overrun keys of the thermostat only affect the activity shown on the display, not the relays.
+
+<!-- markdownlint-disable MD013 MD033 -->
+| Key | Package | Required | Supported values | Default | Description |
+| :- | :-: | :-: | :-: | :-: | :- |
+| valve_relay | single | Optional | `1` or `2` | `1` | Relay switching the valve actuators, used for heating and cooling. |
+| pid_mode_entity | single | Optional | Entity ID in Home Assistant | `input_select.climate_mode` | Entity holding the central operating mode. |
+| pid_mode_heat_state | single | Optional | String | `Heat` | State of `pid_mode_entity` that selects heating. |
+| pid_mode_cool_state | single | Optional | String | `Cool` | State of `pid_mode_entity` that selects cooling. Any other state is ignored. |
+| heater_relay | dual | Mandatory | `1` or `2` | `0` (disabled) | Relay driven by the heat controller. |
+| cooler_relay | dual | Mandatory | `1` or `2` | `0` (disabled) | Relay driven by the cool controller. |
+| pid_kp | both | Optional | Number | `0.3` | Proportional gain: output share per Kelvin of error (`0.3` = 30 %/K). Seed for the first boot only. |
+| pid_tn | both | Optional | Minutes | `180` | Integral time Tn. Seed for the first boot only; `ki` is calculated as `kp / (Tn × 60)`. |
+| pid_kd | both | Optional | Number | `0.0` | Derivative term, usually not useful for slow systems. |
+| pid_deadband | both | Optional | Number in Kelvin | `0.25` | Deadband around the setpoint. Inside it, the proportional term is disabled and the integral term is slowed down. Also in Kelvin when `temp_units` is `°F`. Seed for the first boot only. |
+| pwm_period | both | Optional | Seconds | `1200` | PWM cycle time. Seed for the first boot only. |
+| pid_starting_integral | both | Optional | `0.0` to `1.0` | `0.0` | Integral term after a boot, e.g. the typical average output in winter, to shorten settling after a reboot. |
+| pid_sync_interval | both | Optional | Seconds | `10` | Interval for syncing the thermostat to the controllers. |
+| pid_boost_duration | single | Optional | Minutes | `30` | Boost duration. Seed for the first boot only. |
+| pid_boost_chip | single | Optional | `chip01` to `chip07` or `""` | `chip07` | User chip on the home page taken over for the boost. It can no longer be configured in the Blueprint. `""` disables the boost chip. |
+| pid_number_mode | both | Optional | `box` or `slider` | `box` | Input mode of the number entities in Home Assistant: type a value or use a slider. |
+| pid_name_* | both | Optional | String | English names, see below | Entity names, e.g. to localize them or to keep existing entity IDs. |
+
+<!-- markdownlint-enable MD013 MD033 -->
+
+### PID entities
+
+After the first boot, the tuning entities are the source of the parameters (`restore_value`).
+Changes are applied immediately, without reflashing.
+
+<!-- markdownlint-disable MD013 -->
+| Entity (default name) | Name key | Category | Description |
+| :- | :- | :-: | :- |
+| PID kp | `pid_name_kp` | Config | Proportional gain (`0.05` to `1.0`). Applies to both controllers. |
+| PID Tn | `pid_name_tn` | Config | Integral time in minutes (`10` to `600`). Applies to both controllers. |
+| PID PWM period | `pid_name_pwm_period` | Config | PWM cycle time in seconds (`300` to `3600`). |
+| PID Deadband | `pid_name_deadband` | Config | Deadband in Kelvin (`0.0` to `1.0`). |
+| PID Reset integral | `pid_name_reset_integral` | Config | Button resetting the integral terms of both controllers. |
+| PID Heat output | `pid_name_heat_output` | Diagnostic | Output of the heat controller (0-100 %). |
+| PID Cool output | `pid_name_cool_output` | Diagnostic | Output of the cool controller (0-100 %). |
+| PID Heat integral | `pid_name_heat_integral` | Diagnostic | Integral term of the heat controller. |
+| PID Cool integral | `pid_name_cool_integral` | Diagnostic | Integral term of the cool controller. |
+| PID Operating mode | `pid_name_mode` | Diagnostic | *Single only:* operating mode currently used by the panel. |
+| PID Boost | `pid_name_boost` | - | *Single only:* switch opening the valve fully for the boost duration, see below. |
+| PID Boost duration | `pid_name_boost_duration` | Config | *Single only:* boost duration in minutes (`5` to `240`). |
+| PID Boost end | `pid_name_boost_end` | - | *Single only:* end of the running boost as timestamp, shown as a countdown in Home Assistant; unknown while no boost is running. |
+
+<!-- markdownlint-enable MD013 -->
+
+### PID boost (single only)
+
+The `PID Boost` switch opens the valve fully for `PID Boost duration` minutes, bypassing the controller.
+In cooling mode, this means full cooling.
+The controllers keep running in the background; when the boost ends, the valve is handed back to the controller of the active operating mode.
+Turning the switch off ends the boost early, turning it on again restarts the duration.
+The boost is ignored while the room is off, and it ends when the room is switched off or the operating mode changes.
+On the display, the boost has its own chip (rocket, orange when heating, blue when cooling) in the user chip slot set by `pid_boost_chip`.
+The chip is driven by the panel itself and also works without Home Assistant; that slot is no longer available in the Blueprint.
+On the climate page, a rocket button starts and stops the boost, and the remaining time is shown in minutes next to an hourglass while it runs.
+The climate chip keeps showing the active fire or snowflake, as the valve is open.
+The `PID Boost end` sensor holds the end time; Home Assistant shows it as a live countdown (e.g. "in 25 minutes").
+It needs a synchronized clock and stays unknown if the panel has no time from Home Assistant yet.
+
+> [!NOTE]
+> The integral term keeps working during the boost. As the room approaches the setpoint faster,
+> it usually builds up less than without the boost, but a slight overshoot after the boost is possible.
+
+### PID tuning
+
+- Start with the defaults and observe the output and the room temperature over one or two days.
+- Slow systems (underfloor heating in screed) need a lower `kp` and a longer `Tn` than radiators.
+- If the room oscillates around the setpoint, reduce `kp` or increase `Tn`.
+- If the room approaches the setpoint very slowly, increase `kp` or reduce `Tn`.
+- With a weather-compensated flow temperature, the output also shows whether the heating curve fits:
+  an output close to 100 % for a long time means the flow temperature is too low, a very low output means it is too high.
+- Avoid smoothing filters on the temperature sensor with time windows longer than one minute; they delay the reaction of an already slow system.
+
+### Example: single setpoint with central operating mode
+
+Home Assistant (e.g. in a package):
+
+```yaml
+input_select:
+  climate_mode:
+    name: Climate operating mode
+    options:
+      - Heat
+      - Cool
+```
+
+Panel:
+
+```yaml
+substitutions:
+  # Settings - Editable values
+  device_name: "YOUR_NSPANEL_NAME"
+  friendly_name: "Your panel's friendly name"
+  wifi_ssid: !secret wifi_ssid
+  wifi_password: !secret wifi_password
+
+  ## Add-on climate PID
+  valve_relay: "1"
+  pid_mode_entity: input_select.climate_mode
+
+# Customization area
+##### My customization - Start #####
+api:
+  reboot_timeout: 0s  # Keep regulating without Home Assistant
+
+wifi:
+  reboot_timeout: 0s  # Keep regulating without Wi-Fi
+##### My customization - End #####
+
+# Basic and optional configurations
+packages:
+  remote_package:
+    url: https://github.com/edwardtfn/NSPanel-Easy
+    ref: latest
+    refresh: 300s
+    files:
+      - nspanel_esphome.yaml # Basic package
+      - esphome/nspanel_esphome_addon_climate_pid_single.yaml
+```
+
+### Example: dual setpoints
+
+```yaml
+substitutions:
+  # Settings - Editable values
+  device_name: "YOUR_NSPANEL_NAME"
+  friendly_name: "Your panel's friendly name"
+  wifi_ssid: !secret wifi_ssid
+  wifi_password: !secret wifi_password
+
+  ## Add-on climate PID
+  heater_relay: "1"
+  cooler_relay: "2"
+  pid_kp: "0.6"   # Radiators react faster than underfloor heating
+  pid_tn: "50"
+  pwm_period: "600"
+
+# Customization area
+##### My customization - Start #####
+api:
+  reboot_timeout: 0s
+
+wifi:
+  reboot_timeout: 0s
+##### My customization - End #####
+
+# Basic and optional configurations
+packages:
+  remote_package:
+    url: https://github.com/edwardtfn/NSPanel-Easy
+    ref: latest
+    refresh: 300s
+    files:
+      - nspanel_esphome.yaml # Basic package
+      - esphome/nspanel_esphome_addon_climate_pid_dual.yaml
 ```
 
 ## Examples

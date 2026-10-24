@@ -1,0 +1,10 @@
+---
+substitutions:
+  heater_relay: "1"
+  cooler_relay: "2"
+
+packages:
+  idf_common: !include esphome_idf_common.yaml
+  basic_package: !include ../nspanel_esphome.yaml  # Core package
+  addon_climate_pid_dual: !include ../esphome/nspanel_esphome_addon_climate_pid_dual.yaml
+...

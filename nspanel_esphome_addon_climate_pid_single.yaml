@@ -1,0 +1,4 @@
+---
+packages:
+  climate_pid_single_package: !include esphome/nspanel_esphome_addon_climate_pid_single.yaml
+...

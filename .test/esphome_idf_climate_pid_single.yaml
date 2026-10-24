@@ -1,0 +1,9 @@
+---
+substitutions:
+  valve_relay: "1"
+
+packages:
+  idf_common: !include esphome_idf_common.yaml
+  basic_package: !include ../nspanel_esphome.yaml  # Core package
+  addon_climate_pid_single: !include ../esphome/nspanel_esphome_addon_climate_pid_single.yaml
+...

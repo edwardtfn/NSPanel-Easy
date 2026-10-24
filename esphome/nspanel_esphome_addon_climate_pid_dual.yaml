@@ -1,0 +1,339 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHome Add-on for Climate control - PID Dual (two setpoints, heat and cool)              #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### PI/PWM control for slow systems such as underfloor heating, replacing the two-point       #####
+##### control of the dual add-on.                                                               #####
+##### - thermostat_embedded keeps holding setpoints and mode for display, chip and Blueprint,   #####
+#####   but only switches the dummy relay 0.                                                    #####
+##### - Two internal PID controllers do the actual control: target_temperature_low -> heat,     #####
+#####   target_temperature_high -> cool. The mode (off/heat/cool/heat_cool) is copied as well.  #####
+##### - The relays are modulated by slow PWM outputs.                                           #####
+#####################################################################################################
+##### ATTENTION: Do NOT combine with climate_heat, climate_cool, climate_dual or                #####
+##### climate_pid_single. The climate base is included by this file.                            #####
+#####################################################################################################
+---
+substitutions:
+  ##############################
+  ## Change only in your      ##
+  ## local yaml substitutions ##
+  ##############################
+  ### PID seed values (first boot only, afterwards the number entities in HA are the source) ###
+  pid_kp: "0.3"                 # Proportional gain: output share per Kelvin of error (0.3 = 30 %/K)
+  pid_ki: "0.00003"             # Compile-time default, overwritten at boot by ki = kp / (Tn * 60)
+  pid_kd: "0.0"                 # Derivative term, not useful for slow systems
+  pid_tn: "180"                 # Integral time Tn in minutes
+  pid_deadband: "0.25"          # Deadband around the setpoint in Kelvin (also when temp_units is °F)
+  pwm_period: "1200"            # PWM cycle time in seconds
+  pid_starting_integral: "0.0"  # Integral term after boot (0.0..1.0), not persisted in flash
+  pid_sync_interval: "10"       # Seconds between syncs thermostat -> PID controllers
+  pid_number_mode: "box"        # Input mode of the number entities in HA: "box" (type a value) or "slider"
+  ### Entity names (override to keep existing entity IDs or to localize) ###
+  pid_name_heat_output: "PID Heat output"
+  pid_name_cool_output: "PID Cool output"
+  pid_name_heat_integral: "PID Heat integral"
+  pid_name_cool_integral: "PID Cool integral"
+  pid_name_kp: "PID kp"
+  pid_name_tn: "PID Tn"
+  pid_name_pwm_period: "PID PWM period"
+  pid_name_deadband: "PID Deadband"
+  pid_name_reset_integral: "PID Reset integral"
+  TAG_ADDON_CLIMATE_PID: nspanel.addon.climate.pid
+
+esphome:
+  build_flags:
+    - -D NSPANEL_EASY_ADDON_CLIMATE_DUAL  # Dual setpoint UI on the display, as with the dual add-on
+    - -D NSPANEL_EASY_ADDON_CLIMATE_PID
+
+climate:
+  # Thermostat facade: holds setpoints and mode, deadband/overrun only drive the activity display
+  - id: !extend thermostat_embedded
+    min_cooling_off_time: 1s
+    min_heating_off_time: 1s
+    min_cooling_run_time: 1s
+    min_heating_run_time: 1s
+    cool_deadband: ${cool_deadband} ${temp_units}
+    cool_overrun: ${cool_overrun} ${temp_units}
+    heat_deadband: ${heat_deadband} ${temp_units}
+    heat_overrun: ${heat_overrun} ${temp_units}
+    cool_action:
+      - switch.turn_on: relay_0   # Dummy, the relays are driven by the PID controllers
+    heat_action:
+      - switch.turn_on: relay_0   # Dummy
+    idle_action:
+      - switch.turn_off: relay_0  # Dummy
+    preset:
+      - name: "Off"
+        default_target_temperature_high: ${target_high} ${temp_units}
+        default_target_temperature_low: ${target_low} ${temp_units}
+        mode: "off"
+      - name: Home
+        default_target_temperature_high: ${target_high} ${temp_units}
+        default_target_temperature_low: ${target_low} ${temp_units}
+        mode: "heat_cool"
+
+  # Two independent internal controllers, operated through thermostat_embedded
+  - platform: pid
+    id: pid_heat_embedded
+    name: PID Heat
+    internal: true
+    sensor: temp_nspanel
+    default_target_temperature: 21  # Overwritten by the sync right after boot
+    heat_output: pid_heat_pwm
+    control_parameters:
+      kp: ${pid_kp}
+      ki: ${pid_ki}
+      kd: ${pid_kd}
+      starting_integral_term: ${pid_starting_integral}
+      min_integral: 0.0  # Heating: error and integral term are positive
+      max_integral: 1.0
+      output_averaging_samples: 5
+    deadband_parameters:
+      threshold_high: ${pid_deadband}°C
+      threshold_low: -${pid_deadband}°C
+      kp_multiplier: 0.0   # No proportional reaction inside the deadband
+      ki_multiplier: 0.05  # Integral keeps creeping slowly inside the deadband
+      kd_multiplier: 0.0
+      deadband_output_averaging_samples: 15
+
+  - platform: pid
+    id: pid_cool_embedded
+    name: PID Cool
+    internal: true
+    sensor: temp_nspanel
+    default_target_temperature: 24  # Overwritten by the sync right after boot
+    cool_output: pid_cool_pwm
+    control_parameters:
+      kp: ${pid_kp}
+      ki: ${pid_ki}
+      kd: ${pid_kd}
+      starting_integral_term: -${pid_starting_integral}
+      min_integral: -1.0  # Cooling: error and integral term are negative
+      max_integral: 0.0
+      output_averaging_samples: 5
+    deadband_parameters:
+      threshold_high: ${pid_deadband}°C
+      threshold_low: -${pid_deadband}°C
+      kp_multiplier: 0.0
+      ki_multiplier: 0.05
+      kd_multiplier: 0.0
+      deadband_output_averaging_samples: 15
+
+output:
+  # Turn the controller outputs (0..100 %) into on/off cycles of the existing relay switches
+  - platform: slow_pwm
+    id: pid_heat_pwm
+    period: ${pwm_period}s
+    turn_on_action:
+      - switch.turn_on: relay_${heater_relay}
+    turn_off_action:
+      - switch.turn_off: relay_${heater_relay}
+
+  - platform: slow_pwm
+    id: pid_cool_pwm
+    period: ${pwm_period}s
+    turn_on_action:
+      - switch.turn_on: relay_${cooler_relay}
+    turn_off_action:
+      - switch.turn_off: relay_${cooler_relay}
+
+interval:
+  # Copies mode and setpoints from the thermostat facade to the controllers.
+  # Change detection avoids needless state publishes. All values are °C internally.
+  - interval: ${pid_sync_interval}s
+    then:
+      - lambda: |-
+          static float last_heat_target = NAN;
+          static float last_cool_target = NAN;
+          static int   last_mode = -1;
+
+          const auto mode = thermostat_embedded->mode;
+          const float t_low  = thermostat_embedded->target_temperature_low;
+          const float t_high = thermostat_embedded->target_temperature_high;
+
+          const bool heat_enabled = (mode == climate::CLIMATE_MODE_HEAT ||
+                                     mode == climate::CLIMATE_MODE_HEAT_COOL);
+          const bool cool_enabled = (mode == climate::CLIMATE_MODE_COOL ||
+                                     mode == climate::CLIMATE_MODE_HEAT_COOL);
+
+          const bool mode_changed = (int(mode) != last_mode);
+          const bool heat_changed = mode_changed ||
+              (heat_enabled && (isnan(last_heat_target) || fabsf(t_low - last_heat_target) > 0.01f));
+          const bool cool_changed = mode_changed ||
+              (cool_enabled && (isnan(last_cool_target) || fabsf(t_high - last_cool_target) > 0.01f));
+
+          if (heat_changed) {
+            if (heat_enabled && isnan(t_low)) {
+              ESP_LOGW("${TAG_ADDON_CLIMATE_PID}", "Heat setpoint is NAN - sync skipped");
+            } else {
+              ESP_LOGD("${TAG_ADDON_CLIMATE_PID}", "Sync PID heat: enabled=%s target=%.2f°C",
+                       YESNO(heat_enabled), t_low);
+              auto call = pid_heat_embedded->make_call();
+              if (heat_enabled) {
+                call.set_mode(climate::CLIMATE_MODE_HEAT);
+                call.set_target_temperature(t_low);
+              } else {
+                call.set_mode(climate::CLIMATE_MODE_OFF);
+              }
+              call.perform();
+              last_heat_target = t_low;
+            }
+          }
+
+          if (cool_changed) {
+            if (cool_enabled && isnan(t_high)) {
+              ESP_LOGW("${TAG_ADDON_CLIMATE_PID}", "Cool setpoint is NAN - sync skipped");
+            } else {
+              ESP_LOGD("${TAG_ADDON_CLIMATE_PID}", "Sync PID cool: enabled=%s target=%.2f°C",
+                       YESNO(cool_enabled), t_high);
+              auto call = pid_cool_embedded->make_call();
+              if (cool_enabled) {
+                call.set_mode(climate::CLIMATE_MODE_COOL);
+                call.set_target_temperature(t_high);
+              } else {
+                call.set_mode(climate::CLIMATE_MODE_OFF);
+              }
+              call.perform();
+              last_cool_target = t_high;
+            }
+          }
+
+          last_mode = int(mode);
+
+sensor:
+  # Controller outputs and integral terms, for tuning in HA
+  - platform: pid
+    climate_id: pid_heat_embedded
+    name: ${pid_name_heat_output}
+    type: HEAT
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_cool_embedded
+    name: ${pid_name_cool_output}
+    type: COOL
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_heat_embedded
+    name: ${pid_name_heat_integral}
+    type: INTEGRAL
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_cool_embedded
+    name: ${pid_name_cool_integral}
+    type: INTEGRAL
+    entity_category: diagnostic
+
+number:
+  # Live tuning from HA, applied to both controllers without reflashing.
+  # After the first boot these entities are the source (restore_value); the substitutions are seeds only.
+  - platform: template
+    id: pid_tuning_kp
+    name: ${pid_name_kp}
+    entity_category: config
+    icon: mdi:tune-vertical
+    min_value: 0.05
+    max_value: 1.0
+    step: 0.05
+    initial_value: ${pid_kp}
+    restore_value: true
+    optimistic: true
+    mode: ${pid_number_mode}
+    on_value:
+      - script.execute: apply_pid_tuning
+
+  - platform: template
+    id: pid_tuning_tn
+    name: ${pid_name_tn}
+    entity_category: config
+    icon: mdi:timer-cog-outline
+    unit_of_measurement: min
+    min_value: 10
+    max_value: 600
+    step: 5
+    initial_value: ${pid_tn}
+    restore_value: true
+    optimistic: true
+    mode: ${pid_number_mode}
+    on_value:
+      - script.execute: apply_pid_tuning
+
+  - platform: template
+    id: pid_tuning_pwm_period
+    name: ${pid_name_pwm_period}
+    entity_category: config
+    icon: mdi:sine-wave
+    unit_of_measurement: s
+    min_value: 300
+    max_value: 3600
+    step: 60
+    initial_value: ${pwm_period}
+    restore_value: true
+    optimistic: true
+    mode: ${pid_number_mode}
+    on_value:
+      - lambda: |-
+          if (isnan(x) || x < 60.0f) return;
+          const uint32_t ms = (uint32_t) (x * 1000.0f);
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "PWM period applied: %.0fs", x);
+          pid_heat_pwm->set_period(ms);
+          pid_cool_pwm->set_period(ms);
+
+  - platform: template
+    id: pid_tuning_deadband
+    name: ${pid_name_deadband}
+    entity_category: config
+    icon: mdi:arrow-expand-vertical
+    unit_of_measurement: "°C"
+    min_value: 0.0
+    max_value: 1.0
+    step: 0.05
+    initial_value: ${pid_deadband}
+    restore_value: true
+    optimistic: true
+    mode: ${pid_number_mode}
+    on_value:
+      - lambda: |-
+          if (isnan(x) || x < 0.0f) return;
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Deadband applied: +/-%.2fK", x);
+          pid_heat_embedded->set_threshold_high(x);
+          pid_heat_embedded->set_threshold_low(-x);
+          pid_cool_embedded->set_threshold_high(x);
+          pid_cool_embedded->set_threshold_low(-x);
+
+script:
+  # Applies kp and Tn from the number entities to both controllers (ki = kp / Tn in seconds)
+  - id: apply_pid_tuning
+    mode: restart
+    then:
+      - lambda: |-
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Tuning applied: kp=%.3f Tn=%.0fmin",
+                   pid_tuning_kp->state, pid_tuning_tn->state);
+      - climate.pid.set_control_parameters:
+          id: pid_heat_embedded
+          kp: !lambda "return pid_tuning_kp->state;"
+          ki: !lambda |-
+            const float tn_s = pid_tuning_tn->state * 60.0f;
+            return (tn_s > 0.0f) ? pid_tuning_kp->state / tn_s : 0.0f;
+      - climate.pid.set_control_parameters:
+          id: pid_cool_embedded
+          kp: !lambda "return pid_tuning_kp->state;"
+          ki: !lambda |-
+            const float tn_s = pid_tuning_tn->state * 60.0f;
+            return (tn_s > 0.0f) ? pid_tuning_kp->state / tn_s : 0.0f;
+
+button:
+  - platform: template
+    name: ${pid_name_reset_integral}
+    entity_category: config
+    icon: mdi:restore
+    on_press:
+      - climate.pid.reset_integral_term: pid_heat_embedded
+      - climate.pid.reset_integral_term: pid_cool_embedded
+
+packages:
+  climate_base_package: !include nspanel_esphome_addon_climate_base.yaml
+...
