@@ -70,6 +70,8 @@ The bar colours themselves are set in the Blueprint, not through substitutions.
 | Substitution | Default | Description |
 | :- | :- | :- |
 | `require_disarm_before_rearm` | `false` | While the alarm is armed, hides the other arming modes on the alarm page, so it must be disarmed before being armed in another mode. See [Alarm Control Panel](alarm.md). |
+| `page_entities_value_font_large_max_len` | `8` | Longest value on the entities pages shown with the default (largest) font; longer values switch to a smaller font. Length is counted in characters, with narrow characters (such as `i`, `l`, `.` or `:`) counting as half. Accepts `0` to `255`; set both `page_entities_value_font_*_max_len` to `255` to always keep the default font. |
+| `page_entities_value_font_medium_max_len` | `12` | Longest value on the entities pages shown with the medium font; longer values use the smallest font. Counted as in `page_entities_value_font_large_max_len`, and must not be lower than it. |
 | `page_button_color_idle` | `16904` | RGB565 colour of the button on the button page while idle. |
 | `page_button_color_pressed` | `15483` | RGB565 colour of the button on the button page while pressed. |
 | `page_button_color_unavail` | `10565` | RGB565 colour of the button on the button page while its entity is unavailable. |
