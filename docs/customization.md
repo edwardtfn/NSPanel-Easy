@@ -78,6 +78,7 @@ substitutions:
   wifi_password: !secret wifi_password
   ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
   language: en      # Language code - see docs/localization.md for all supported codes
+  api_encryption_key: !secret api_encryption_key  # Encrypt the communication between ESPHome and Home Assistant
 
   # Add-on configuration (if needed)
   ## Upload TFT
@@ -88,11 +89,6 @@ substitutions:
 
 # Customization area
 ##### My customization - Start #####
-
-# Encrypt the communication between ESPHome and Home Assistant
-api:
-  encryption:
-    key: !secret api_encryption_key
 
 # More detailed log (for troubleshooting only)
 logger:
@@ -190,11 +186,16 @@ This is highly recommended when you are transfer sensitive information between y
 as when you use your panel to enter the PIN for an Alarm Control Panel.
 
 ```yaml
-# Encrypt the communication between ESPHome and Home Assistant
-api:
-  encryption:
-    key: !secret api_encryption_key
+substitutions:
+  # Encrypt the communication between ESPHome and Home Assistant
+  api_encryption_key: !secret api_encryption_key
 ```
+
+Each panel should have its own key, so use a different secret name for each panel.
+You can get a new randomly generated valid key from the [ESPHome Native API Component](https://esphome.io/components/api/#configuration-variables) page.
+
+> [!NOTE]
+> Configurations that set the key directly in an `api:` block in the customization area keep working.
 
 ### Custom OTA password
 
@@ -244,11 +245,8 @@ Enable it with the `ota_encryption` substitution:
 
 ```yaml
 substitutions:
+  api_encryption_key: !secret api_encryption_key
   ota_encryption: true
-
-api:
-  encryption:
-    key: !secret api_encryption_key
 ```
 
 How to get there depends on how your panel is updated today:

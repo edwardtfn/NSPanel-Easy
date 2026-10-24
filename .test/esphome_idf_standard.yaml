@@ -1,10 +1,8 @@
 ---
 substitutions:
-  ota_encryption: true  # Covers the OTA encryption path
-
-api:
-  encryption:
-    key: !secret api_encryption_key
+  # Covers the API and OTA encryption paths
+  api_encryption_key: !secret api_encryption_key
+  ota_encryption: true
 
 packages:
   idf_common: !include esphome_idf_common.yaml

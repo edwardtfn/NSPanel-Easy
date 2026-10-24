@@ -98,6 +98,7 @@ Follow these steps to add a new device in the ESPHome Dashboard:
 
 6. Copy the API encryption `key:` value and add it to your secrets file (e.g. as `api_encryption_key`).
    It encrypts the communication with Home Assistant and the OTA updates.
+   Only the key is needed: the `api:` block itself is provided by this project.
    ![API Section](pics/ha_esphome_dashboard_new_device_05.png)
 
    which can be edited clicking `secrets` at the top right of your ESPHome menu.
@@ -116,19 +117,15 @@ Follow these steps to add a new device in the ESPHome Dashboard:
      friendly_name: "Your panel's friendly name"
      wifi_ssid: !secret wifi_ssid
      wifi_password: !secret wifi_password
-     ota_encryption: true  # Encrypt the OTA updates with the API encryption key below
-     language: en          # Language code - see docs/localization.md for all supported codes
+     api_encryption_key: !secret api_encryption_key  # The key from step 6
+     ota_encryption: true                            # Encrypt the OTA updates with the API encryption key
+     language: en                                    # Language code - see docs/localization.md for all supported codes
      boot_sound: false
      # Add-on configuration (if needed)
      ## Upload TFT
      upload_tft_automatically: true
      ## Climate add-on
      # heater_relay: "1"  # Possible values: "1" or "2"
-
-   # Encrypt the communication with Home Assistant and the OTA updates
-   api:
-     encryption:
-       key: !secret api_encryption_key  # The key from step 6
 
    # Customization area
    ##### My customization - Start #####
