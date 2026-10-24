@@ -9278,37 +9278,6 @@ actions:
                                           continue_on_error: true
                                     - *delay_default
 
-                          # A slot left without an entity is cleared, otherwise the last value
-                          # sent stays on screen after the entity is removed (#351). The text is
-                          # cleared instead of hidden, as `vis` is not kept across page changes.
-                          - alias: Home page values - Clear unconfigured
-                            repeat:
-                              for_each: >
-                                {%- set ns = namespace(items=[]) -%}
-                                {%- for item in home_page.entity_value -%}
-                                  {%- if not (item.entity is defined and item.entity is string and item.entity.split(".") | count == 2) -%}
-                                    {%- set ns.items = ns.items + [item] -%}
-                                  {%- endif -%}
-                                {%- endfor -%}
-                                {{ ns.items }}
-                              sequence:
-                                - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                  data:
-                                    page: home
-                                    id: '{{ repeat.item.component }}'
-                                    txt_list:
-                                      - ""
-                                  continue_on_error: true
-                                - *delay_default
-                                - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                  data:
-                                    page: home
-                                    id: '{{ repeat.item.component }}_icon'
-                                    txt_list:
-                                      - ""
-                                  continue_on_error: true
-                                - *delay_default
-
                       - alias: Buttons pages
                         conditions: '{{ nspanel_event.page in pages.buttonpages }}'
                         sequence: &refresh_page_buttonpage
@@ -13618,6 +13587,39 @@ actions:
 
           ##### Update global settings (as user may have changed something) #####
           - *global_settings
+
+          # A home page value slot left without an entity is cleared, otherwise the last value sent
+          # stays on screen after the entity is removed (#351). The text is cleared instead of hidden,
+          # as `vis` is not kept across page changes, while the text of the global home page components is.
+          # This runs only here, when the Blueprint settings may have changed, and not on every home page
+          # refresh, so values sent through the API to unconfigured slots are kept (#591).
+          - alias: Home page values - Clear unconfigured
+            repeat:
+              for_each: >
+                {%- set ns = namespace(items=[]) -%}
+                {%- for item in home_page.entity_value -%}
+                  {%- if not (item.entity is defined and item.entity is string and item.entity.split(".") | count == 2) -%}
+                    {%- set ns.items = ns.items + [item] -%}
+                  {%- endif -%}
+                {%- endfor -%}
+                {{ ns.items }}
+              sequence:
+                - action: 'esphome.{{ action_prefix }}_component_text_list'
+                  data:
+                    page: home
+                    id: '{{ repeat.item.component }}'
+                    txt_list:
+                      - ""
+                  continue_on_error: true
+                - *delay_default
+                - action: 'esphome.{{ action_prefix }}_component_text_list'
+                  data:
+                    page: home
+                    id: '{{ repeat.item.component }}_icon'
+                    txt_list:
+                      - ""
+                  continue_on_error: true
+                - *delay_default
 
           - choose:
               ## PAGE HOME ##
