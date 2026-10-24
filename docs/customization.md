@@ -225,43 +225,51 @@ If your configuration still has the `on_boot` code above with a blank `ota_passw
 Remove the `on_boot` code and set `ota_password` to the password used in that code.
 
 > [!NOTE]
-> If you use [API encryption](#api-encryption), consider using [OTA encryption](#ota-encryption) instead of a password.
+> Prefer the [OTA encryption](#ota-encryption) instead of a password.
+> The OTA password only authenticates the uploader, while the encryption also protects the firmware image in transit.
+> When `ota_encryption` is enabled, `ota_password` is used only for the migration, and the `on_boot` code above cannot be used.
 
 ### OTA encryption
 
 The OTA update can be encrypted with the same key used by the [API encryption](#api-encryption).
-This keeps the firmware image confidential in transit and also authenticates the uploader, so no OTA password is needed.
-It requires ESPHome 2026.9.0 or newer.
+This keeps the firmware image confidential in transit, which includes your Wi-Fi password and API key, and also authenticates the uploader, so no OTA password is needed.
+It requires ESPHome 2026.9.0 or newer and the [API encryption](#api-encryption).
 
 > [!IMPORTANT]
-> Once a panel runs firmware with OTA encryption required, it refuses plaintext OTA updates.
-> The encryption applies to the ESPHome OTA (`ota_std`) only, not to the HTTP OTA used by the prebuilt firmware to download its updates.
+> Once a panel runs firmware with OTA encryption required, it refuses OTA updates without the API encryption key.
 > If the key is lost, the panel can only be recovered with a serial flash.
+> The encryption applies to the ESPHome OTA (`ota_std`) only, not to the HTTP OTA used by the prebuilt firmware to download its updates.
 
-Enable it in two steps, as described in ESPHome's
-[Enabling Encryption on an Existing Device](https://esphome.io/components/ota/esphome/#enabling-encryption-on-an-existing-device) guide:
-
-1. **Install a firmware that offers encryption.**
-   Add the [API encryption](#api-encryption) if you don't have it yet, keep your current `ota_password`, and flash your panel.
-   The device log should show `Encryption: offered, plaintext accepted`.
-2. **Require encryption.**
-   Add the code below, which removes the OTA password and requires the encryption, and flash your panel again.
-   The device log should show `Encryption: required`.
+Enable it with the `ota_encryption` substitution:
 
 ```yaml
+substitutions:
+  ota_encryption: true
+
 api:
   encryption:
     key: !secret api_encryption_key
-
-ota:
-  - id: !extend ota_std
-    password: !remove  # A password cannot be combined with the OTA encryption
-    encryption:
 ```
 
+How to get there depends on how your panel is updated today:
+
+- **New panel, flashed by serial:** add the code above before the first flash.
+- **Panel with a blank `ota_password`:** the panel must already run a firmware that offers the encryption.
+  Check the device log for `Encryption: offered, plaintext accepted`.
+  If it is not there, add the API encryption if needed and install once with `ota_encryption: false`, then add `ota_encryption: true` and install again.
+- **Panel with an OTA password (ESPHome 2026.10.0 or newer):** add `ota_encryption: true` and keep your current `ota_password` for one install.
+  The password is used only to send this update to the running firmware, and is not built into the new one.
+  After that install, set `ota_password` back to blank (or remove it): ESPHome warns about it on every upload until then.
+- **Panel with an OTA password (ESPHome 2026.9.x):** install once with the API encryption and your current `ota_password`,
+  so the device log shows `Encryption: offered, plaintext accepted`.
+  Then add `ota_encryption: true`, set `ota_password` back to blank (or remove it), and install again.
+
+After the migration, the device log should show `Encryption: required`.
+For more details, see ESPHome's [Enabling Encryption on an Existing Device](https://esphome.io/components/ota/esphome/#enabling-encryption-on-an-existing-device) guide.
+
 > [!NOTE]
-> The previous version of this guide enabled the OTA encryption by setting `ota_password` to blank.
-> If you used that, add `password: !remove` as shown above, otherwise ESPHome rejects the configuration because the password cannot be combined with the encryption.
+> Previous versions of this guide enabled the OTA encryption by extending `ota_std` with `password: !remove` and `encryption:`.
+> That configuration keeps working, but you can replace it with `ota_encryption: true`.
 
 ### Web server credentials
 

@@ -1,4 +1,11 @@
 ---
+substitutions:
+  ota_encryption: true  # Covers the OTA encryption path
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
 packages:
   idf_common: !include esphome_idf_common.yaml
   core_package: !include ../esphome/nspanel_esphome_core.yaml

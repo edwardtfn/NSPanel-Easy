@@ -18,11 +18,31 @@ substitutions:
   GPIO_PSRAM_CLK_PIN: '5'
   GPIO_PSRAM_CS_PIN: '18'
   name: ${device_name}
+  ota_encryption: false  # Encrypt the OTA updates with the API encryption key (see docs/customization.md#ota-encryption)
   ota_password: ""
   project_tag: nspanel_easy
   TAG_BASE: nspanel.base
   ref_url: https://github.com/edwardtfn/NSPanel-Easy
   ref_name: v${version}
+
+  ##### OTA authentication - selected in `packages` below #####
+  # Password, set when `ota_encryption` is false (even when blank, so the uploader keeps sending it to panels expecting one)
+  _pkg_ota_password:
+    ota:
+      - id: !extend ota_std
+        password: ${ota_password}
+  # Encryption required, using the API encryption key
+  _pkg_ota_encryption:
+    ota:
+      - id: !extend ota_std
+        encryption: {}
+  # One-time migration from a password: the uploader answers the password prompt of the running firmware,
+  # while the new firmware requires the encryption and has no password built in
+  _pkg_ota_encryption_migration:
+    ota:
+      - id: !extend ota_std
+        encryption:
+          allow_plaintext_upload: true
 
 button:
   - id: restart_nspanel  # Reboot ESP32
@@ -82,9 +102,7 @@ nspanel_easy:  # Adds custom library for NSPanel HA Blueprint project
 ota:
   - id: ota_std
     platform: esphome
-    # Always set, even when blank, so the uploader keeps sending it to panels expecting a password
-    # To use the OTA encryption, remove it with `password: !remove` (see docs/customization.md)
-    password: ${ota_password}
+    # `password` and `encryption` are set by the `ota_*` packages, based on `ota_password` and `ota_encryption`
     on_begin:
       then:
         - lambda: |-
@@ -97,6 +115,10 @@ ota:
     on_error:
       then:
         - lambda: system_flags.ota_in_progress = false;
+
+packages:
+  ota_password: ${ _pkg_ota_password if (not ota_encryption or ota_password) else {} }
+  ota_encryption: ${ (_pkg_ota_encryption_migration if ota_password else _pkg_ota_encryption) if ota_encryption else {} }
 
 safe_mode:
   id: safe_mode_component
