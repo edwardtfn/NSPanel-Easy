@@ -363,6 +363,10 @@ wifi:
 
 ESPHome takes its time from Home Assistant, however you can configure it to use a Network Time Server instead.
 
+By default, the panel also syncs its clock with public Network Time Servers (`pool.ntp.org`), so the time can be shown before the connection to Home Assistant is established.
+When `time_provider` uses SNTP, as in the example below, ESPHome merges both into a single SNTP source: your servers come first and the public servers are only used if you list fewer than 3.
+ESPHome reports this merge, and any dropped servers, as warnings when compiling; these can be ignored.
+
 ```yaml
 # Use my own local network time server
 time:
