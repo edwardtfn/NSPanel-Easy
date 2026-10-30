@@ -200,6 +200,9 @@ script:
                 if (timeout_sleep->state <= 0) return;                      // Sleep is disabled
                 if (current_page_id == get_page_id("screensaver")) return;  // Already sleeping
                 if (current_page_id == get_page_id("boot")) return;         // Don't sleep during boot
+                #ifdef NSPANEL_EASY_SUBSCRIBE
+                if (wakeup_sensors_active()) return;  // Kept on while a wake-up sensor is active
+                #endif  // NSPANEL_EASY_SUBSCRIBE
                 go_sleep->execute();
 
   - id: !extend timer_reset_all

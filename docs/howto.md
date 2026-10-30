@@ -301,6 +301,8 @@ The **Wake-up** action differs from a normal page call in that it only opens the
 If the panel is already active, the current page remains displayed.
 This feature is particularly useful in conjunction with a motion sensor to wake up your panel automatically.
 By repeatedly calling this action whenever motion is detected, the panel can be either woken up or have its sleep timeout timer reset (if `reset_timer` is set to `true`).
+For binary sensors in Home Assistant, the Blueprint's [Wake-up sensors](blueprint.md#wake-up-sensors-optional) setting does this without an automation.
+It also keeps the panel on while a sensor is `On`.
 
 > [!NOTE]
 > For more details about this action call, please refer to our [API documentation](api.md#wake-up-action-wake_up).

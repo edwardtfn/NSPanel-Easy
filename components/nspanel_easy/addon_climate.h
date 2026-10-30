@@ -4,6 +4,7 @@
 
 #ifdef NSPANEL_EASY_ADDON_CLIMATE_BASE
 
+#include <cstdint>
 #include <string>
 #include "all_icons.h"
 #include "nextion_constants.h"
@@ -66,6 +67,40 @@ enum ClimateChipVisibility : uint8_t {
 };
 
 // =============================================================================
+// Climate Preset Names
+// =============================================================================
+
+/// Number of standard climate presets (values 0-7 of ESPHome's `climate::ClimatePreset`).
+constexpr uint8_t CLIMATE_PRESET_NAMES_COUNT = 8;
+
+/**
+ * @brief Display names of ESPHome's standard climate presets.
+ *
+ * Array indices correspond to ESPHome's `climate::ClimatePreset` enum values (0-7):
+ * - [0] CLIMATE_PRESET_NONE
+ * - [1] CLIMATE_PRESET_HOME
+ * - [2] CLIMATE_PRESET_AWAY
+ * - [3] CLIMATE_PRESET_BOOST
+ * - [4] CLIMATE_PRESET_COMFORT
+ * - [5] CLIMATE_PRESET_ECO
+ * - [6] CLIMATE_PRESET_SLEEP
+ * - [7] CLIMATE_PRESET_ACTIVITY
+ *
+ * Written as users name them in the thermostat `preset` list. `ClimateCall::set_preset()`
+ * matches standard preset names case-insensitively, so these can be sent back unchanged.
+ */
+constexpr const char *climate_preset_names[CLIMATE_PRESET_NAMES_COUNT] = {
+    "None",     // CLIMATE_PRESET_NONE (0)
+    "Home",     // CLIMATE_PRESET_HOME (1)
+    "Away",     // CLIMATE_PRESET_AWAY (2)
+    "Boost",    // CLIMATE_PRESET_BOOST (3)
+    "Comfort",  // CLIMATE_PRESET_COMFORT (4)
+    "Eco",      // CLIMATE_PRESET_ECO (5)
+    "Sleep",    // CLIMATE_PRESET_SLEEP (6)
+    "Activity"  // CLIMATE_PRESET_ACTIVITY (7)
+};
+
+// =============================================================================
 // Climate Icon Lookup Tables
 // =============================================================================
 
@@ -119,6 +154,36 @@ constexpr IconData climate_action_icons[] = {
     {Icons::MDI_THERMOMETER, Colors::RGB565_GRAY},      // CLIMATE_ACTION_IDLE (4)
     {Icons::MDI_WATER_PERCENT, Colors::RGB565_ORANGE},  // CLIMATE_ACTION_DRYING (5)
     {Icons::MDI_FAN, Colors::RGB565_CYAN}               // CLIMATE_ACTION_FAN (6)
+};
+
+/**
+ * @struct ClimateModeButton
+ * @brief HVAC mode button on the climate page, used for the embedded thermostat.
+ *
+ * Each button selects one ClimateMode. The button is shown only when the
+ * thermostat traits support that mode, so the page matches the configuration.
+ */
+struct ClimateModeButton {
+  const char *name;             ///< Component name, without page prefix (`vis` does not accept one)
+  const char *font_color_path;  ///< Component path with page prefix, for the font color
+  ClimateMode mode;             ///< HVAC mode selected by the button
+  uint16_t color_active;        ///< Font color when the mode is active
+  uint16_t color_inactive;      ///< Font color when the mode is supported but not active
+};
+
+/**
+ * @brief HVAC mode buttons on the climate page, in display order.
+ *
+ * Components and modes match the `climate,hvac_mode,<mode>` events sent by the HMI.
+ */
+constexpr ClimateModeButton CLIMATE_MODE_BUTTONS[] = {
+    {"button01", "climate.button01", CLIMATE_MODE_AUTO, Colors::RGB565_GREEN, Colors::RGB565_GRAY_LIGHT},
+    {"button02", "climate.button02", CLIMATE_MODE_HEAT_COOL, Colors::RGB565_WHITE, Colors::RGB565_GRAY_LIGHT},
+    {"button03", "climate.button03", CLIMATE_MODE_HEAT, Colors::RGB565_DEEP_ORANGE, Colors::RGB565_GRAY_LIGHT},
+    {"button04", "climate.button04", CLIMATE_MODE_COOL, Colors::RGB565_BLUE, Colors::RGB565_GRAY_LIGHT},
+    {"button05", "climate.button05", CLIMATE_MODE_DRY, Colors::RGB565_ORANGE, Colors::RGB565_GRAY_LIGHT},
+    {"button06", "climate.button06", CLIMATE_MODE_FAN_ONLY, Colors::RGB565_CYAN, Colors::RGB565_GRAY_LIGHT},
+    {"button07", "climate.button07", CLIMATE_MODE_OFF, Colors::RGB565_BLUE_INDIGO, Colors::RGB565_GRAY},
 };
 
 }  // namespace esphome::nspanel_easy

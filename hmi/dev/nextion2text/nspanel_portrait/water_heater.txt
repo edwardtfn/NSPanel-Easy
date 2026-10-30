@@ -75,88 +75,75 @@ Page water_heater
                 printh FF FF FF
             }
         
-Variable (int32) va0
-    Attributes
-        ID   : 24
-        Scope: local
-        Value: 0
-    
 Variable (int32) temp_number1
     Attributes
-        ID   : 27
+        ID   : 26
         Scope: local
         Value: 0
     
 Variable (int32) temp_number2
     Attributes
-        ID   : 28
+        ID   : 27
         Scope: local
         Value: 0
     
 Variable (string) temp_unit
     Attributes
-        ID            : 29
+        ID            : 28
         Scope         : local
         Text          : \xc2\xb0
         Max. Text Size: 10
     
 Variable (int32) temp_gap
     Attributes
-        ID   : 30
+        ID   : 29
         Scope: local
         Value: 0
     
-Variable (string) dec_separator
-    Attributes
-        ID            : 31
-        Scope         : local
-        Text          : .
-        Max. Text Size: 5
-    
 Variable (int32) button_font
     Attributes
-        ID   : 32
+        ID   : 30
         Scope: global
         Value: 8
     
-Variable (string) va1
-    Attributes
-        ID            : 34
-        Scope         : local
-        Text          : 
-        Max. Text Size: 10
-    
 Variable (string) climatesetting
     Attributes
-        ID            : 35
+        ID            : 32
         Scope         : local
         Text          : 
         Max. Text Size: 50
     
 Variable (string) lastclick
     Attributes
-        ID            : 36
+        ID            : 33
         Scope         : local
         Text          : 
         Max. Text Size: 255
     
 Variable (int32) temp_number0
     Attributes
-        ID   : 38
+        ID   : 35
         Scope: local
         Value: 0
     
 Variable (int32) temp_offset
     Attributes
-        ID   : 39
+        ID   : 36
         Scope: local
         Value: 0
     
 Variable (int32) temp_step
     Attributes
-        ID   : 40
+        ID   : 37
         Scope: local
         Value: 1
+    
+Variable (string) va1
+    Attributes
+        ID            : 38
+        Scope         : local
+        Text          : 
+        Max. Text Size: 10
     
 Text current_temp
     Attributes
@@ -753,7 +740,7 @@ Text button08
         
 Text target
     Attributes
-        ID                      : 33
+        ID                      : 31
         Scope                   : local
         Dragging                : 0
         Send Component ID       : on press and release
@@ -780,7 +767,7 @@ Text target
     
 Slider slider
     Attributes
-        ID                             : 26
+        ID                             : 25
         Scope                          : local
         Dragging                       : 0
         Send Component ID              : on press and release
@@ -806,27 +793,23 @@ Slider slider
         Touch Release Event
             temp_number0.val=slider.val*temp_step.val
             temp_number0.val+=temp_offset.val
-            va0.val=temp_number0.val/10
-            covx va0.val,target.txt,0,0
-            va0.val=temp_number0.val%10
-            covx va0.val,va1.txt,0,0
-            target.txt+=dec_separator.txt+va1.txt
-            target.txt+=temp_unit.txt
+            sys0=temp_number0.val
+            sys1=temp_step.val
+            call format_tenths
+            target.txt=home.tenths_txt.txt+temp_unit.txt
             timer0.en=1
         
         Touch Move Event
             temp_number0.val=slider.val*temp_step.val
             temp_number0.val+=temp_offset.val
-            va0.val=temp_number0.val/10
-            covx va0.val,target.txt,0,0
-            va0.val=temp_number0.val%10
-            covx va0.val,va1.txt,0,0
-            target.txt+=dec_separator.txt+va1.txt
-            target.txt+=temp_unit.txt
+            sys0=temp_number0.val
+            sys1=temp_step.val
+            call format_tenths
+            target.txt=home.tenths_txt.txt+temp_unit.txt
         
 Button button_back
     Attributes
-        ID                                  : 25
+        ID                                  : 24
         Scope                               : local
         Dragging                            : 0
         Send Component ID                   : on press and release
@@ -878,12 +861,10 @@ Hotspot decrease_temp
                 slider.val--
                 temp_number0.val=slider.val*temp_step.val
                 temp_number0.val+=temp_offset.val
-                va0.val=temp_number0.val/10
-                covx va0.val,target.txt,0,0
-                va0.val=temp_number0.val%10
-                covx va0.val,va1.txt,0,0
-                target.txt+=dec_separator.txt+va1.txt
-                target.txt+=temp_unit.txt
+                sys0=temp_number0.val
+                sys1=temp_step.val
+                call format_tenths
+                target.txt=home.tenths_txt.txt+temp_unit.txt
             }
         
         Touch Release Event
@@ -911,12 +892,10 @@ Hotspot increase_temp
                 slider.val++
                 temp_number0.val=slider.val*temp_step.val
                 temp_number0.val+=temp_offset.val
-                va0.val=temp_number0.val/10
-                covx va0.val,target.txt,0,0
-                va0.val=temp_number0.val%10
-                covx va0.val,va1.txt,0,0
-                target.txt+=dec_separator.txt+va1.txt
-                target.txt+=temp_unit.txt
+                sys0=temp_number0.val
+                sys1=temp_step.val
+                call format_tenths
+                target.txt=home.tenths_txt.txt+temp_unit.txt
             }
         
         Touch Release Event
@@ -936,7 +915,7 @@ Timer swipestore
         
 Timer timer0
     Attributes
-        ID         : 37
+        ID         : 34
         Scope      : local
         Period (ms): 1000
         Enabled    : no

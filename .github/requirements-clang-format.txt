@@ -1,0 +1,13 @@
+# .github/requirements-clang-format.txt
+#
+# clang-format pin for CI, installed via pip so the formatter version does not
+# depend on the runner image. Pinned here so Dependabot can track and propose
+# version updates (picked up by the `pip` ecosystem in .github/dependabot.yml).
+#
+# Kept apart from .github/requirements.txt so a clang-format update only
+# triggers, and can only break, the formatting workflow.
+#
+# Used by:
+#   - .github/workflows/validate_clang_format.yml
+
+clang-format==23.1.3

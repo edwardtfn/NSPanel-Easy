@@ -35,13 +35,13 @@ Run the relevant checks before proposing a change:
 
 ```bash
 # One-time setup (Ubuntu/Debian; markdownlint-cli2 requires Node.js/npm)
-sudo apt-get update && sudo apt-get install -y clang-format
 npm install --global markdownlint-cli2
 pip install -r .github/requirements.txt
+pip install -r .github/requirements-clang-format.txt  # Same version as CI
 pip install esphome  # Intentionally not pinned in requirements.txt
 
 # C++ formatting (config: .clang-format, ColumnLimit 120); same scope as validate_clang_format.yml
-find ./components/nspanel_easy ./.test/unit \( -name '*.h' -o -name '*.c' -o -name '*.cpp' \) -print0 | xargs -0 -r clang-format --style=file -i
+find ./components/nspanel_easy \( -name '*.h' -o -name '*.c' -o -name '*.cpp' \) -print0 | xargs -0 -r clang-format --style=file -i
 
 # YAML lint (max line length 200)
 yamllint -c ./.rules/yamllint.yml .

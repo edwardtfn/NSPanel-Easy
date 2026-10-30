@@ -70,6 +70,11 @@ display:
               goto_page->execute(get_page_id("climate"));
               return;
             }
+            if (page_id == get_page_id("climate") and              // Page `climate`
+                component_id == hmi::climate::PRESET_BUTTON.id) {  // Preset mode button
+              climate_preset_open->execute();
+              return;
+            }
 
 esphome:
   build_flags:
@@ -116,6 +121,20 @@ script:
             return;
           }
 
+  # Opens the preset picker for the climate shown on the page.
+  # For Home Assistant entities, the options were pushed by the Blueprint when the page was constructed.
+  # The climate add-on extends this for the embedded thermostat.
+  - id: climate_preset_open
+    mode: single
+    then:
+      - lambda: |-
+          ESP_LOGV("${TAG_PAGE_CLIMATE}", "Script: climate_preset_open");
+          if (climate_embedded_visible) return;  // Handled by the climate add-on
+          popup_select_open->execute(
+            get_page_id("climate"),
+            std::string("${LOCALIZATION[LANG].climate.select_preset_mode}")
+          );
+
   - id: !extend event_from_display  # Defined by hw_display
     then:
       - lambda: |-
@@ -137,11 +156,7 @@ script:
     then:
       - lambda: |-
           if (current_page_id != get_page_id("climate")) return;
-          const std::string& sep = id(mui_decimal_separator);
-          const char dec_sep = sep.empty() ? '.' : sep[0];
-          const char dec_separator_str[2] = {dec_sep, '\0'};
           disp1->set_component_text("temp_unit", (id(units_separator) + "${temp_units}").c_str());
-          disp1->set_component_text("dec_separator", dec_separator_str);
 
   - id: !extend page_change
     then:
@@ -163,6 +178,28 @@ script:
     mode: single
     then:  # There's nothing here so far
 
+  - id: !extend picker_selected  # Defined by page_popup_select
+    then:
+      - lambda: |-
+          if (context != CLIMATE_PRESET_MODE_CONTEXT) return;
+          if (entity == "${CLIMATE_EMBEDDED_SENTINEL}") return;  // Handled by the climate add-on
+
+          if (mask == 0) {
+            // Not every climate offers a preset to clear the selection, so a deselect tap is a no-op
+            ESP_LOGV("${TAG_PAGE_CLIMATE}", "climate_preset_mode deselect ignored");
+            return;
+          }
+
+          ESP_LOGD("${TAG_PAGE_CLIMATE}", "Dispatch: climate.set_preset_mode entity='%s' preset_mode='%s'", entity.c_str(),
+                                                                                                            value.c_str());
+
+          fire_ha_event("action_call", {
+            {"action", "climate.set_preset_mode"},
+            {"entity", entity.c_str()},
+            {"key", "preset_mode"},
+            {"value", value.c_str()}
+          });
+
   - id: !extend reset_globals
     then:
       - lambda: |-
@@ -179,7 +216,7 @@ script:
       target_temp_low: float
       temp_step: uint8_t
       total_steps: uint16_t
-      temp_offset: uint16_t
+      temp_offset: int32_t  # Signed, as the minimum temperature can be negative
       climate_icon: string
     then:
       - lambda: |-
@@ -194,7 +231,8 @@ script:
                                                                                   id(units_separator).c_str());
           ESP_LOGV("${TAG_PAGE_CLIMATE}", "  temp_step: %u%s${temp_units}", temp_step, id(units_separator).c_str());
           ESP_LOGV("${TAG_PAGE_CLIMATE}", "  total_steps: %u", total_steps);
-          ESP_LOGV("${TAG_PAGE_CLIMATE}", "  temp_offset: %i%s${temp_units}", temp_offset, id(units_separator).c_str());
+          ESP_LOGV("${TAG_PAGE_CLIMATE}", "  temp_offset: %" PRId32 "%s${temp_units}", temp_offset,
+                                                                                       id(units_separator).c_str());
           ESP_LOGV("${TAG_PAGE_CLIMATE}", "  climate_icon: %s", climate_icon.c_str());
 
           if (current_page_id != get_page_id("climate")) {
@@ -213,8 +251,6 @@ script:
           disp1->set_component_text("temp_unit",                (id(units_separator) + "${temp_units}").c_str());
           const std::string& sep = id(mui_decimal_separator);
           const char dec_sep = sep.empty() ? '.' : sep[0];
-          const char dec_separator_str[2] = {dec_sep, '\0'};
-          disp1->set_component_text("dec_separator",            dec_separator_str);
           disp1->show_component("current_temp");
           char buffer[15];
           const bool useDecimal = (temp_step % 10 != 0);
@@ -319,7 +355,9 @@ script:
 
   - id: !extend stop_all
     then:
-      - lambda: change_climate_state->stop();
+      - lambda: |-
+          change_climate_state->stop();
+          climate_preset_open->stop();
 
   - id: !extend stop_page_constructors
     then:

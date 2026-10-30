@@ -11,6 +11,9 @@
 #
 # Note: ESPHome itself is intentionally absent — its version is resolved
 # dynamically by the workflow (latest/dev tracks) and must not be pinned.
+#
+# clang-format is pinned separately in .github/requirements-clang-format.txt,
+# so its updates do not trigger (or depend on) these unrelated workflows.
 
 flake8==7.4.1
 yamllint==1.38.0

@@ -22,6 +22,10 @@ survive a move to Linux:
 The result is byte-for-byte reproducible on any platform and contains no
 non-ASCII characters, which keeps the generated dumps readable in diffs.
 
+The input HMI is read once, before the tool runs, and the tool is served those
+same bytes, so the pages and the exports below always come from one version of
+the file.
+
 The upstream file is left untouched, so the pinned revision stays verifiable
 against its source.
 
@@ -34,6 +38,13 @@ Native macro export is proposed upstream in MMMZZZZ/Nextion2Text#20
 (https://github.com/MMMZZZZ/Nextion2Text/pull/20), with the same output. Once
 it is merged, move the pin past it and drop the macro export from this shim.
 
+The pinned tool also does not export the project settings stored in the
+"main.HMI" container entry. This shim writes the model and the display
+orientation (Device > Display) to main.HMI.txt, so an orientation change shows
+in reviews. The same output is produced by edwardtfn/Nextion2Text#2
+(https://github.com/edwardtfn/Nextion2Text/pull/2), used by the Nextion Editor
+Docker image.
+
 Usage:
     python3 nextion2text_shim.py <Nextion2Text.py> [tool arguments...]
 """
@@ -41,6 +52,8 @@ Usage:
 import argparse
 import builtins
 import codecs
+import io
+import os
 import runpy
 import struct
 import sys
@@ -65,6 +78,9 @@ def _lookup_ansi(name):
 
 _real_open = builtins.open
 
+# Input HMI captured before the tool runs, as (resolved path, bytes).
+_input_hmi = None
+
 
 def _open_as_ascii(file, mode="r", buffering=-1, encoding=None,
                    errors=None, newline=None, closefd=True, opener=None):
@@ -72,7 +88,16 @@ def _open_as_ascii(file, mode="r", buffering=-1, encoding=None,
 
     Nextion2Text opens its output with no explicit encoding, which would
     otherwise make the result depend on the locale of the machine running it.
+
+    A binary read of the input HMI returns the captured bytes instead of
+    reopening the file.
     """
+    if (_input_hmi is not None and mode == "rb"
+            and isinstance(file, (str, os.PathLike))
+            and Path(file).resolve() == _input_hmi[0]):
+        return io.BytesIO(_input_hmi[1])
+    # if reading the captured input HMI
+
     if "b" not in mode and encoding is None:
         encoding = _OUTPUT_ENCODING
 
@@ -95,6 +120,19 @@ _HMI_ENTRY_SIZE = struct.calcsize(_HMI_ENTRY_FORMAT)
 _MACROS_ENTRY = "comcode.sn"
 _MACROS_TITLE = "Macros"
 _INDENT = "    "
+
+# Container entry holding the project settings. The model ID is a uint32 at
+# offset 16 (as read by the tool) and the display orientation a uint8 at
+# offset 12, storing 0..3 for 0, 90, 180 or 270 degrees.
+_SETTINGS_ENTRY = "main.HMI"
+_SETTINGS_MODEL_OFFSET = 16
+_SETTINGS_ORIENTATION_OFFSET = 12
+_ORIENTATIONS = {
+    0: 0,
+    1: 90,
+    2: 180,
+    3: 270,
+}
 
 
 def _read_hmi_entry(raw, entry_name):
@@ -162,8 +200,11 @@ def _parse_macros(data):
 # _parse_macros
 
 
-def _export_macros(tool_args):
-    """Write the HMI macros to <output_dir>/Macros<ext>, when there are any."""
+def _parse_tool_args(tool_args):
+    """Return the tool's input, output and extension arguments, or None.
+
+    Returns None when a path is missing, which the tool has already reported.
+    """
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-i", "--input_hmi")
     parser.add_argument("-o", "--output_dir")
@@ -171,13 +212,20 @@ def _export_macros(tool_args):
     args, _ = parser.parse_known_args(tool_args)
 
     if not args.input_hmi or not args.output_dir:
-        return
-    # if paths missing (the tool has already reported it)
+        return None
+    # if paths missing
 
-    with _real_open(args.input_hmi, "rb") as hmi_file:
-        raw = hmi_file.read()
-    # with hmi_file
+    # Same normalisation as the tool.
+    if not args.file_ext.startswith("."):
+        args.file_ext = "." + args.file_ext
+    # if extension without dot
 
+    return args
+# _parse_tool_args
+
+
+def _export_macros(args, raw):
+    """Write the HMI macros to <output_dir>/Macros<ext>, when there are any."""
     data = _read_hmi_entry(raw, _MACROS_ENTRY)
 
     if data is None:
@@ -211,6 +259,57 @@ def _export_macros(tool_args):
 # _export_macros
 
 
+def _read_settings(raw):
+    """Return (model ID, orientation in degrees) from the settings entry.
+
+    Raises ValueError when the entry is missing or the orientation unknown.
+    Called before the tool runs, as its -d option clears the previous dump.
+    """
+    data = _read_hmi_entry(raw, _SETTINGS_ENTRY)
+
+    if data is None:
+        raise ValueError("No '{}' entry in the HMI file".format(
+            _SETTINGS_ENTRY))
+    # if no settings entry
+
+    (model_id,) = struct.unpack_from("<I", data, _SETTINGS_MODEL_OFFSET)
+    (orientation_raw,) = struct.unpack_from(
+        "<B", data, _SETTINGS_ORIENTATION_OFFSET)
+
+    if orientation_raw not in _ORIENTATIONS:
+        raise ValueError(
+            "Unknown display orientation: " + hex(orientation_raw))
+    # if unknown orientation
+
+    return model_id, _ORIENTATIONS[orientation_raw]
+# _read_settings
+
+
+def _export_settings(args, settings, models):
+    """Write the model and display orientation to <output_dir>/main.HMI<ext>.
+
+    settings comes from _read_settings. models is the tool's model table, so
+    the names match its own output; the tool has already rejected unknown
+    models before writing anything.
+    """
+    model_id, orientation = settings
+    model = models[model_id]
+    text = [
+        _SETTINGS_ENTRY,
+        _INDENT + "Model: " + model["short"] + " (" + model["long"] + ")",
+        _INDENT + "Orientation: " + str(orientation),
+    ]
+
+    # The entry name contains a dot, so it cannot collide with a page name.
+    out_path = Path(args.output_dir) / (_SETTINGS_ENTRY + args.file_ext)
+
+    # Same encoding and newline handling as the tool's own output.
+    with _open_as_ascii(out_path, "w") as out_file:
+        out_file.write("\n".join(text) + "\n")
+    # with out_file
+# _export_settings
+
+
 def main():
     """Register the codec and encoding default, then run the tool directly."""
     if len(sys.argv) < 2:
@@ -218,24 +317,43 @@ def main():
         return 2
     # if tool path missing
 
-    codecs.register(_lookup_ansi)
+    global _input_hmi
 
-    # runpy reads the tool's source through io.open_code, not builtins.open,
-    # so patching here does not affect how the script itself is loaded.
-    builtins.open = _open_as_ascii
+    codecs.register(_lookup_ansi)
 
     tool = sys.argv[1]
     tool_args = sys.argv[2:]
     sys.argv = [tool] + tool_args  # Hide the shim from the tool's argparse
 
+    args = _parse_tool_args(tool_args)
+
+    if args is not None:
+        with _real_open(args.input_hmi, "rb") as hmi_file:
+            raw = hmi_file.read()
+        # with hmi_file
+
+        _input_hmi = (Path(args.input_hmi).resolve(), raw)
+        settings = _read_settings(raw)
+    # if paths given (otherwise the tool reports them missing)
+
+    # runpy reads the tool's source through io.open_code, not builtins.open,
+    # so patching here does not affect how the script itself is loaded.
+    builtins.open = _open_as_ascii
+
     try:
         # Nextion2Text has no main guard; run_path executes it as __main__.
-        runpy.run_path(tool, run_name="__main__")
+        # The returned globals expose the tool's model table.
+        tool_globals = runpy.run_path(tool, run_name="__main__")
     finally:
         builtins.open = _real_open
     # try
 
-    _export_macros(tool_args)
+    if args is None:
+        return 0
+    # if paths missing
+
+    _export_macros(args, raw)
+    _export_settings(args, settings, tool_globals["HMI"]._models)
 
     return 0
 # main

@@ -94,3 +94,27 @@ Macros
         {
           home.b[sys0].picc=pic_background_main
         }
+
+    Macro format_tenths
+        // Formats a value in tenths as text, with one decimal only when the step is not a whole number
+        // In:      sys0 = value in tenths, sys1 = step in tenths
+        // Out:     home.tenths_txt.txt
+        // Changes: sys0, sys2, home.tenths_tmp.txt
+        if(sys0<0)
+        {
+          home.tenths_txt.txt="-"
+          sys0=0-sys0
+        }else
+        {
+          home.tenths_txt.txt=""
+        }
+        sys2=sys0/10
+        covx sys2,home.tenths_tmp.txt,0,0
+        home.tenths_txt.txt+=home.tenths_tmp.txt
+        sys2=sys1%10
+        if(sys2!=0)
+        {
+          sys2=sys0%10
+          covx sys2,home.tenths_tmp.txt,0,0
+          home.tenths_txt.txt+=home.dec_sep.txt+home.tenths_tmp.txt
+        }

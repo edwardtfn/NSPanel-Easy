@@ -8,6 +8,13 @@ on:
 
 permissions:
   contents: write  # Required for auto-commit
+  pull-requests: read  # Required by changed-files to list the pull request files with the REST API
+
+# One run per pull request (or per ref for manual runs): a newer push supersedes a run still working
+# on an older commit; keyed by number, as pull requests from different forks can share a branch name
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   clang-format-checking:
@@ -26,20 +33,35 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: step-security/changed-files@v47.0.5
         with:
+          # The git mode fetches with `-u` into the checked-out branch, moving HEAD to a newer
+          # commit without updating the working tree; the auto-commit below then reverts that commit
+          use_rest_api: true
           files: |
             **/*.h
             **/*.c
             **/*.cpp
             .clang-format
+            .github/requirements-clang-format.txt
+            .github/workflows/validate_clang_format.yml
 
-      - name: Install clang-format
+      - name: Set up Python environment
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
-        run: sudo apt-get install -y clang-format
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: "3.11"
+
+      # Pinned via pip instead of apt, so the formatter version does not depend
+      # on the runner image (e.g. the `ubuntu-latest` move from 24.04 to 26.04).
+      - name: Install clang-format (pinned in .github/requirements-clang-format.txt)
+        if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
+        run: |
+          pip install -r .github/requirements-clang-format.txt
+          clang-format --version
 
       - name: Apply clang-format
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
         run: |
-          find ./components/nspanel_easy ./.test/unit \
+          find ./components/nspanel_easy \
             \( -name "*.h" -o -name "*.c" -o -name "*.cpp" \) \
             -print0 | xargs -0 -r clang-format --style=file -i
 
@@ -65,6 +87,12 @@ jobs:
         with:
           commit_message: "style: apply clang-format"
           commit_options: "--no-verify"
+          # Only formatter output can be committed, never a stale copy of any other file.
+          # Every pattern must match a tracked file, as `git add` fails on a pattern matching none
+          # (there are no `.c` files in the component).
+          file_pattern: >-
+            :(glob)components/nspanel_easy/**/*.h
+            :(glob)components/nspanel_easy/**/*.cpp
 
   # ===========================================================================
   # Gate — required status check for branch protection

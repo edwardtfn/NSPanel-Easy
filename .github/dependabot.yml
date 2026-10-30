@@ -6,7 +6,7 @@
 #
 # Ecosystems covered:
 #   - github-actions : all GitHub Actions used across workflows
-#   - pip            : Python tooling (requires .github/requirements.txt)
+#   - pip            : Python tooling (.github/requirements*.txt)
 #
 # Documentation:
 #   https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
@@ -75,7 +75,8 @@ updates:
   # ---------------------------------------------------------------------------
   # Python (pip)
   # Tracks pinned Python tooling versions.
-  # Requires a .github/requirements.txt file to be effective.
+  # Covers every requirements*.txt file in /.github (requirements.txt and
+  # requirements-clang-format.txt).
   #
   # ESPHome is intentionally excluded: latest/dev tracks are resolved
   # dynamically in the workflow and should not be pinned here.

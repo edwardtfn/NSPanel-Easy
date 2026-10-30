@@ -10,7 +10,7 @@
 # 7. Commits all version changes and pushes to main
 # 8. Builds pre-built firmware binaries in parallel (nspanel-easy, wall-display)
 # 9. Commits the compiled binaries, checksums, and manifests to main
-# 10. Creates a version tag and GitHub Release
+# 10. Creates a version tag and GitHub Release, described by the PR that triggered it
 # 11. Updates the stable and latest floating tags
 # 12. Announces the release on Discord
 #
@@ -62,6 +62,7 @@ jobs:
       release_sha: ${{ steps.capture_sha.outputs.sha }}
       pr_title: ${{ fromJson(steps.pr_info.outputs.result).title }}
       pr_body: ${{ fromJson(steps.pr_info.outputs.result).body }}
+      pr_notes: ${{ fromJson(steps.pr_info.outputs.result).notes }}
 
     steps:
       - name: Checkout code
@@ -103,6 +104,27 @@ jobs:
             // On a push event there is no pull_request payload, so the PR that
             // introduced this commit has to be resolved through the API.
             // Direct pushes to main resolve to no PR and fall back below.
+
+            // Removes the sections added to PR descriptions by CodeRabbit and Sourcery,
+            // as they repeat the description and are not meant for the release notes.
+            const stripBotSections = (body) => {
+              let text = body.replace(/\r\n/g, '\n');
+              text = text.replace(
+                /<!-- This is an auto-generated comment: release notes by coderabbit\.ai -->[\s\S]*?<!-- end of auto-generated comment: release notes by coderabbit\.ai -->/g,
+                '');
+              text = text.replace(/<!-- review_stack_entry_start -->[\s\S]*?<!-- review_stack_entry_end -->/g, '');
+              text = text.replace(/<!-- coderabbit-ai-generated:v1 -->/g, '');
+              // Unmarked bot summaries: from the heading to the next level-2 heading, or the end
+              const heading = /^## Summary by (CodeRabbit|Sourcery)\s*$/m;
+              let match;
+              while ((match = heading.exec(text)) !== null) {
+                const rest = text.slice(match.index + match[0].length);
+                const next = rest.search(/^## /m);
+                text = text.slice(0, match.index) + (next >= 0 ? rest.slice(next) : '');
+              }
+              return text.replace(/\n{3,}/g, '\n\n').trim();
+            };
+
             try {
               const { data: prs } =
                 await github.rest.repos.listPullRequestsAssociatedWithCommit({
@@ -114,9 +136,11 @@ jobs:
               if (!pr) {
                 throw new Error(`No pull request associated with ${context.sha}`);
               }
+              const notes = stripBotSections(pr.body || '');
               return {
                 title: pr.title,
-                body: pr.body || 'No description provided',
+                body: notes || 'No description provided',
+                notes: notes,
                 number: pr.number,
                 found: true
               };
@@ -125,6 +149,7 @@ jobs:
               return {
                 title: 'Version update',
                 body: 'Automated version bump',
+                notes: '',
                 number: null,
                 found: false
               };
@@ -660,16 +685,20 @@ jobs:
       # Tag and release (after binary commit, so tag points to final state)
       # -------------------------------------------------------------------
 
-      - name: Build tag message from PR
+      - name: Build tag message and release notes from PR
         env:
           NEW_VERSION: ${{ needs.bump.outputs.version }}
           PR_TITLE: ${{ needs.bump.outputs.pr_title }}
           PR_BODY: ${{ needs.bump.outputs.pr_body }}
+          PR_NOTES: ${{ needs.bump.outputs.pr_notes }}
         run: |
           {
             printf '# v%s - %s\n\n' "$NEW_VERSION" "$PR_TITLE"
             printf '%s\n' "$PR_BODY"
           } > tag_message.txt
+          # The release description is the PR description (without the bot summaries),
+          # followed by the generated notes. Left empty when there is no description.
+          printf '%s\n' "$PR_NOTES" > release_notes.md
 
       - name: Create and push version tag
         id: push_tag
@@ -687,6 +716,7 @@ jobs:
         with:
           tag_name: v${{ needs.bump.outputs.version }}
           name: v${{ needs.bump.outputs.version }} - ${{ needs.bump.outputs.pr_title }}
+          body_path: release_notes.md
           generate_release_notes: true
 
       # -------------------------------------------------------------------

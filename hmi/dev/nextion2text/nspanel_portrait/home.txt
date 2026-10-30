@@ -122,6 +122,27 @@ Variable (string) units_sep
         Text          :  
         Max. Text Size: 5
     
+Variable (string) dec_sep
+    Attributes
+        ID            : 49
+        Scope         : global
+        Text          : .
+        Max. Text Size: 1
+    
+Variable (string) tenths_txt
+    Attributes
+        ID            : 50
+        Scope         : global
+        Text          : 
+        Max. Text Size: 10
+    
+Variable (string) tenths_tmp
+    Attributes
+        ID            : 51
+        Scope         : global
+        Text          : 
+        Max. Text Size: 6
+    
 Text time
     Attributes
         ID                      : 3

@@ -26,21 +26,21 @@ body:
     attributes:
       label: TFT Version
       description: Enter the TFT version number.
-      placeholder: e.g., 22.0
+      placeholder: e.g., 22.2
     validations:
       required: false
   - type: input
     attributes:
       label: Firmware Version
       description: Enter the ESPHome firmware version number.
-      placeholder: e.g., 2026.10.4
+      placeholder: e.g., 2026.10.7
     validations:
       required: false
   - type: input
     attributes:
       label: Blueprint Version
       description: Enter the Blueprint version number.
-      placeholder: e.g., 2026.10.3
+      placeholder: e.g., 2026.10.5
     validations:
       required: false
   - type: dropdown

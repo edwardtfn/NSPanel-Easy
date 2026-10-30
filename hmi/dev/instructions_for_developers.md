@@ -121,10 +121,50 @@ scripts:
 Nextion Editor v1.68.2 or later is required. The TFTs use macros (named global events called with `call <macro>`),
 which older Editors cannot open or compile.
 
+To compile without a Windows machine (or in automation),
+[sztupy/nextion-editor-docker](https://github.com/sztupy/nextion-editor-docker) provides Nextion Editor 1.68.2
+under Wine, with scripts to build TFT files from HMI files.
+
 ### Macros
 
 Use a macro for code repeated across components or pages, so it is changed in one place.
 `scripts/generate_nextion_txt.sh` exports the macros to `Macros.txt` next to `Program.s.txt`, so they show in reviews.
+
+Macros only reach global data: the system variables (`sys0` to `sys3`), the variables declared in `Program.s`
+and global-scope components on the `home` page. Pass inputs in system variables, return results in a global-scope
+`home` variable, and document both, plus any system variable the macro changes, at the top of the macro.
+
+#### `format_tenths`
+
+Formats a value stored in tenths (as used by the climate and water heater sliders) as text.
+The decimal is only shown when the step is not a whole number, using the separator in `home.dec_sep`.
+
+- Inputs: `sys0` (value in tenths) and `sys1` (step in tenths)
+- Output: `home.tenths_txt.txt`
+- Also changes: `sys0`, `sys2` and `home.tenths_tmp.txt`
+
+```c
+sys0=temp_number0.val
+sys1=temp_step.val
+call format_tenths
+target.txt=home.tenths_txt.txt+temp_unit.txt
+```
+
+### Interface used by external tools
+
+Community tools, like [sztupy/nextion-editor-docker](https://github.com/sztupy/nextion-editor-docker),
+rebuild the TFT files with custom backgrounds by regenerating the pictures and re-importing them into the HMI files.
+They rely on the following, so treat it as a stable interface and announce any change in the release notes:
+
+- `hmi/nspanel_landscape.hmi` and `hmi/nspanel_portrait.hmi` as the HMI sources.
+- `hmi/dev/pics/background/background_<theme>_<orientation>.png` as the background sources,
+  with `<theme>` as `dark`, `light` or `splash` and `<orientation>` as `landscape` or `portrait`.
+  Backgrounds are opaque PNG files, 480x320 for landscape and 320x480 for portrait.
+- `hmi/dev/pics/generate_images.sh <orientation>` generating `hmi/dev/pics/<orientation>/<slot>.png`,
+  where `<slot>` is the picture id in the HMI file, numbered without gaps from `0`.
+  The script must run from a complete checkout, as it also reads `hmi/dev/pics/mapping.yaml` and the source images,
+  and exits with a non-zero status if any picture fails to generate.
+- `hmi/dev/pics/misc/placeholder.png` as the filler for unused slots.
 
 ### Reporting to ESPHome
 

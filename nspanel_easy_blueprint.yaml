@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.10.4)
+  name: NSPanel Easy Configuration (v2026.10.7)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -278,6 +278,13 @@ blueprint:
               filter:
                 domain:
                   - weather
+        weather_forecast_max_first:
+          name: Weather pages - Show maximum temperature first
+          description: >
+            Toggle to show the forecast temperatures on the weather pages as `<max> / <min>` instead of `<min> / <max>`.
+          default: false
+          selector:
+            boolean:
         home_outdoor_temp_visible:
           name: Home Page - Outdoor Temperature Sensor Visibility
           description: "Toggle to display the outdoor temperature on the Home page."
@@ -1490,15 +1497,36 @@ blueprint:
           default: []
           selector:
             action:
-        left_button_name:
-          name: Left hardware button - Label
+        left_button_label_type:
+          name: Left hardware button - Label type
           description: >
-            Label which should be displayed (10 characters are supported).
+            Select whether the label shows the text or the icon set below.
 
             ***Note:** This label is not visible on the US landscape model.*
+          default: Text
+          selector: &hardware-button-label-type-selector
+            select:
+              options:
+                - Text
+                - Icon
+        left_button_name:
+          name: Left hardware button - Label text
+          description: >
+            Text displayed as label when the label type is `Text` (10 characters are supported).
           default: ""
           selector:
             text:
+        left_button_icon:
+          name: Left hardware button - Label icon
+          description: >
+            Icon displayed as label when the label type is `Icon`.
+            If not set, the icon of the state indicator entity (or of the controlled entity, when no state indicator
+            entity is set) is used, falling back to its device class and domain icons.
+
+            Check the [icon cheatsheet](https://edwardtfn.github.io/NSPanel-Easy/icons/cheatsheet.html)
+            for the supported icons.
+          default: ""
+          selector: *selector_icon
         left_button_hold_select:
           name: Left hardware button hold assignment
           description: "Select what should happen on hold."
@@ -1570,15 +1598,32 @@ blueprint:
           default: []
           selector:
             action:
-        right_button_name:
-          name: Right hardware button - Label
+        right_button_label_type:
+          name: Right hardware button - Label type
           description: >
-            Label which should be displayed (10 characters are supported).
+            Select whether the label shows the text or the icon set below.
 
             ***Note:** This label is not visible on the US landscape model.*
+          default: Text
+          selector: *hardware-button-label-type-selector
+        right_button_name:
+          name: Right hardware button - Label text
+          description: >
+            Text displayed as label when the label type is `Text` (10 characters are supported).
           default: ""
           selector:
             text:
+        right_button_icon:
+          name: Right hardware button - Label icon
+          description: >
+            Icon displayed as label when the label type is `Icon`.
+            If not set, the icon of the state indicator entity (or of the controlled entity, when no state indicator
+            entity is set) is used, falling back to its device class and domain icons.
+
+            Check the [icon cheatsheet](https://edwardtfn.github.io/NSPanel-Easy/icons/cheatsheet.html)
+            for the supported icons.
+          default: ""
+          selector: *selector_icon
         right_button_hold_select:
           name: Right hardware button hold assignment
           description: "Select what should happen on hold."
@@ -4577,6 +4622,7 @@ blueprint:
           name: Wake-up sensors
           description: >-
             Select sensors to wake up the panel when the sensor turns `On`.
+            The panel is kept on while any of these sensors is `On`.
           default: &selector_entity_multiple_default_empty []
           selector:
             entity:
@@ -5083,13 +5129,14 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.10.4
+  blueprint_version: 2026.10.7
 
   # Minimum ESPHome firmware version required by this Blueprint (the Blueprint -> ESPHome contract).
   # Set it to 'next' when a change makes the Blueprint depend on a newer firmware, e.g. a new API
   # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
   # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
-  min_esphome_version: 2026.10.1
+  # While it is 'next' (development builds), the minimum firmware check is skipped.
+  min_esphome_version: 2026.10.7
 
   # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
@@ -5126,7 +5173,8 @@ variables:
     {{ (blueprint_version | string).split('.') | map('int') | list }}
   # Parsed into an integer tuple. The unresolved 'next' sentinel (development
   # builds) and any unparseable value fall back to this Blueprint's own version,
-  # the strictest requirement.
+  # the strictest requirement. While the sentinel is unresolved, this is only
+  # used in notifications, as the check is skipped (see min_esphome_version_pending).
   min_esphome_version_parts: >-
     {{
       (min_esphome_version | string).split('.') | map('int') | list
@@ -5136,6 +5184,10 @@ variables:
     }}
   # Resolved minimum version, for notifications and custom actions.
   min_esphome_version_string: "{{ min_esphome_version_parts | join('.') }}"
+  # True while min_esphome_version is the unresolved 'next' sentinel (development builds).
+  # The required firmware version is not known yet, so the minimum version check is skipped,
+  # while the API version check still applies. The versioning workflow resolves it on release.
+  min_esphome_version_pending: "{{ (min_esphome_version | string | trim) == 'next' }}"
   # API version reported by the firmware, parsed into [MAJOR, MINOR]. Only panel
   # events carry it, so it is empty for runs started by any other trigger, and for
   # firmware that does not report it yet.
@@ -5180,7 +5232,8 @@ variables:
     {{
       esphome_version_parts | count == 3
       and (
-        esphome_version_parts[0] > min_esphome_version_parts[0]
+        min_esphome_version_pending
+        or esphome_version_parts[0] > min_esphome_version_parts[0]
         or (esphome_version_parts[0] == min_esphome_version_parts[0]
             and esphome_version_parts[1] > min_esphome_version_parts[1])
         or (esphome_version_parts[0] == min_esphome_version_parts[0]
@@ -5280,12 +5333,6 @@ triggers:
         id: ha_started
         trigger: homeassistant
         event: start
-
-      - alias: Wake-up sensor
-        id: wake_up_sensors
-        trigger: state
-        entity_id: !input wake_up_sensors
-        to: "on"
 
   - triggers:  # Button page 01
       - alias: Button 01
@@ -7720,7 +7767,16 @@ actions:
                                 {%- elif indoortemp_tmp is list and indoortemp_tmp | count > 0 and indoortemp_tmp[0] is string -%} {{ indoortemp_tmp[0] }}
                                 {%- endif -%}
                           - variables:
+                              wake_up_sensors_tmp: !input wake_up_sensors
+                          - variables:
                               subs_lists:
+                                wakeup: >-
+                                  {%- set sensors = [wake_up_sensors_tmp] if wake_up_sensors_tmp is string else wake_up_sensors_tmp -%}
+                                  {%- set ns = namespace(items=[]) -%}
+                                  {%- for sensor in sensors | default([], true) -%}
+                                    {%- set ns.items = ns.items + [{"entity": sensor, "component": "sensor%02d" | format(loop.index)}] -%}
+                                  {%- endfor -%}
+                                  {{ ns.items }}
                                 chips:
                                   - entity: !input chip01
                                     inverted: !input chip01_inverted
@@ -7794,6 +7850,10 @@ actions:
                                   ) + (
                                     home_page.custom_buttons
                                     | map('combine', {'page': 'home'})
+                                    | list
+                                  ) + (
+                                    subs_lists.wakeup
+                                    | map('combine', {'page': 'wakeup'})
                                     | list
                                   )
                                 }}
@@ -7899,7 +7959,9 @@ actions:
                                 state_entity: '{{ hw_button_left_state_entity }}'
                                 state_entity_is_valid: >
                                   {{ hw_button_left_state_entity is defined and hw_button_left_state_entity is string and hw_button_left_state_entity.split(".") | count == 2 }}
+                                label_type: !input 'left_button_label_type'
                                 name: !input 'left_button_name'
+                                icon: !input 'left_button_icon'
                                 hold_select: !input 'left_button_hold_select'
                                 bar_always_visible: !input hw_button_bar_left_always_show
                               right:
@@ -7908,7 +7970,9 @@ actions:
                                 state_entity: '{{ hw_button_right_state_entity }}'
                                 state_entity_is_valid: >
                                   {{ hw_button_right_state_entity is defined and hw_button_right_state_entity is string and hw_button_right_state_entity.split(".") | count == 2 }}
+                                label_type: !input 'right_button_label_type'
                                 name: !input 'right_button_name'
+                                icon: !input 'right_button_icon'
                                 hold_select: !input 'right_button_hold_select'
                                 bar_always_visible: !input hw_button_bar_right_always_show
 
@@ -8262,6 +8326,66 @@ actions:
                         sequence:
                           - variables:
                               hw_buttons_labels_pages: !input hw_buttons_labels_pages
+                          # Left button label: when the label type is `Icon`, the icon is resolved like elsewhere,
+                          # the selected icon first, then the state indicator (or controlled) entity's icon, device class or domain
+                          - variables:
+                              entity_id: >-
+                                {{
+                                  hardware.buttons.left.state_entity if hardware.buttons.left.state_entity_is_valid
+                                  else hardware.buttons.left.entity if hardware.buttons.left.entity_is_valid
+                                  else None
+                                }}
+                              forced_icon_state: '{{ None }}'
+                              overlap:
+                                icon: '{{ hardware.buttons.left.icon | default(None, true) }}'
+                                icon_color: '{{ None }}'
+                                name: '{{ None }}'
+                          - *variable_entity
+                          - variables:
+                              hw_button_left_label: >-
+                                {%- if hardware.buttons.left.label_type == "Icon" -%}
+                                  {%- if overlap_icon_valid -%}
+                                    {{ all_icons[overlap.icon.split(":")[1]] }}
+                                  {%- elif entity_id_valid -%}
+                                    {{ entity.icon }}
+                                  {%- else -%}
+                                    {{ all_icons.unknown }}
+                                  {%- endif -%}
+                                {%- elif hardware.buttons.left.label_type == "Text" -%}
+                                  {{ hardware.buttons.left.name | default("", true) | string }}
+                                {%- else -%}
+                                  {{ "" }}
+                                {%- endif -%}
+                          # Right button label: when the label type is `Icon`, the icon is resolved like elsewhere,
+                          # the selected icon first, then the state indicator (or controlled) entity's icon, device class or domain
+                          - variables:
+                              entity_id: >-
+                                {{
+                                  hardware.buttons.right.state_entity if hardware.buttons.right.state_entity_is_valid
+                                  else hardware.buttons.right.entity if hardware.buttons.right.entity_is_valid
+                                  else None
+                                }}
+                              forced_icon_state: '{{ None }}'
+                              overlap:
+                                icon: '{{ hardware.buttons.right.icon | default(None, true) }}'
+                                icon_color: '{{ None }}'
+                                name: '{{ None }}'
+                          - *variable_entity
+                          - variables:
+                              hw_button_right_label: >-
+                                {%- if hardware.buttons.right.label_type == "Icon" -%}
+                                  {%- if overlap_icon_valid -%}
+                                    {{ all_icons[overlap.icon.split(":")[1]] }}
+                                  {%- elif entity_id_valid -%}
+                                    {{ entity.icon }}
+                                  {%- else -%}
+                                    {{ all_icons.unknown }}
+                                  {%- endif -%}
+                                {%- elif hardware.buttons.right.label_type == "Text" -%}
+                                  {{ hardware.buttons.right.name | default("", true) | string }}
+                                {%- else -%}
+                                  {{ "" }}
+                                {%- endif -%}
                           ### LABELS Pages ###
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
                             data:
@@ -8298,7 +8422,7 @@ actions:
                               page: mem
                               id: button_left_label
                               txt_list:
-                                - '{{ hardware.buttons.left.name }}'
+                                - '{{ hw_button_left_label }}'
                             continue_on_error: true
                           - *delay_boot
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
@@ -8306,7 +8430,7 @@ actions:
                               page: mem
                               id: button_right_label
                               txt_list:
-                                - '{{ hardware.buttons.right.name }}'
+                                - '{{ hw_button_right_label }}'
                             continue_on_error: true
                           - *delay_boot
 
@@ -9154,6 +9278,37 @@ actions:
                                             visible: true
                                           continue_on_error: true
                                     - *delay_default
+
+                          # A slot left without an entity is cleared, otherwise the last value
+                          # sent stays on screen after the entity is removed (#351). The text is
+                          # cleared instead of hidden, as `vis` is not kept across page changes.
+                          - alias: Home page values - Clear unconfigured
+                            repeat:
+                              for_each: >
+                                {%- set ns = namespace(items=[]) -%}
+                                {%- for item in home_page.entity_value -%}
+                                  {%- if not (item.entity is defined and item.entity is string and item.entity.split(".") | count == 2) -%}
+                                    {%- set ns.items = ns.items + [item] -%}
+                                  {%- endif -%}
+                                {%- endfor -%}
+                                {{ ns.items }}
+                              sequence:
+                                - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                  data:
+                                    page: home
+                                    id: '{{ repeat.item.component }}'
+                                    txt_list:
+                                      - ""
+                                  continue_on_error: true
+                                - *delay_default
+                                - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                  data:
+                                    page: home
+                                    id: '{{ repeat.item.component }}_icon'
+                                    txt_list:
+                                      - ""
+                                  continue_on_error: true
+                                - *delay_default
 
                       - alias: Buttons pages
                         conditions: '{{ nspanel_event.page in pages.buttonpages }}'
@@ -10578,6 +10733,115 @@ actions:
                                       continue_on_error: true
                                     - *delay_default
 
+                          ##### Preset mode #####
+                          - &climate-update_preset
+                            # The embedded thermostat is drawn by ESPHome, which also builds its preset
+                            # picker, so the picker keeps working with the API disconnected.
+                            if: '{{ climate_entity != thermostat_embedded }}'
+                            then:
+                              - variables:
+                                  preset_modes_attr: '{{ state_attr(climate_entity, "preset_modes") }}'
+                                  current_preset_mode_raw: '{{ state_attr(climate_entity, "preset_mode") }}'
+                              - variables:
+                                  preset_modes_raw: >
+                                    {{
+                                      preset_modes_attr
+                                      if
+                                        state_attr(climate_entity, "supported_features") | int(0) | bitwise_and(16) > 0 and
+                                        preset_modes_attr is defined and
+                                        preset_modes_attr is iterable and
+                                        preset_modes_attr is not string
+                                      else []
+                                    }}
+                                  current_preset_mode: >-
+                                    {{
+                                      current_preset_mode_raw | trim
+                                      if current_preset_mode_raw is defined and current_preset_mode_raw is string and current_preset_mode_raw | length > 0
+                                      else ""
+                                    }}
+                                  # Options and button visibility are pushed on construction, and on updates only when the
+                                  # preset support or list changes, or when the active preset changes while the list is
+                                  # truncated (the active preset must stay among the retained options).
+                                  preset_refresh: >-
+                                    {%- if page_constructor -%}
+                                      true
+                                    {%- else -%}
+                                      {%- set old_state = trigger.event.data.old_state -%}
+                                      {%- if old_state is none -%}
+                                        true
+                                      {%- else -%}
+                                        {%- set old_supported = old_state.attributes.get("supported_features", 0) | int(0) | bitwise_and(16) > 0 -%}
+                                        {%- set new_supported = state_attr(climate_entity, "supported_features") | int(0) | bitwise_and(16) > 0 -%}
+                                        {{
+                                          old_supported != new_supported
+                                          or old_state.attributes.get("preset_modes") != preset_modes_attr
+                                          or (preset_modes_raw | length > 32 and old_state.attributes.get("preset_mode") != current_preset_mode_raw)
+                                        }}
+                                      {%- endif -%}
+                                    {%- endif -%}
+
+                              ##### Construction and preset list changes: push options + show preset button #####
+                              - if: '{{ preset_refresh }}'
+                                then:
+                                  - if: '{{ preset_modes_raw | length > 0 }}'
+                                    then:
+                                      - variables:
+                                          # The picker pages through up to 32 options; a supported current preset is always included
+                                          preset_modes_truncated: >
+                                            {%- if preset_modes_raw | length <= 32 -%}
+                                              {{ preset_modes_raw }}
+                                            {%- elif
+                                              current_preset_mode | length == 0 or
+                                              current_preset_mode not in preset_modes_raw or
+                                              current_preset_mode in preset_modes_raw[:32]
+                                            -%}
+                                              {{ preset_modes_raw[:32] }}
+                                            {%- else -%}
+                                              {{ [current_preset_mode] + (preset_modes_raw[:31] | reject("equalto", current_preset_mode) | list) }}
+                                            {%- endif -%}
+                                      - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                        data:
+                                          page: mem
+                                          id: popup_select_context
+                                          txt_list:
+                                            - 'climate_preset_mode'
+                                        continue_on_error: true
+                                      - *delay_default
+                                      - action: 'esphome.{{ action_prefix }}_component_val'
+                                        data:
+                                          page: mem
+                                          id: popup_select_mode
+                                          val: 0
+                                        continue_on_error: true
+                                      - *delay_default
+                                      - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                        data:
+                                          page: mem
+                                          id: popup_select_options
+                                          txt_list: '{{ preset_modes_truncated }}'
+                                        continue_on_error: true
+                                      - *delay_default
+                                  - action: 'esphome.{{ action_prefix }}_components_visibility'
+                                    data:
+                                      page: climate
+                                      ids:
+                                        - preset_button
+                                      visible: '{{ preset_modes_raw | length > 0 }}'
+                                    continue_on_error: true
+                                  - *delay_default
+
+                              ##### Always (construction and updates): push current preset_mode #####
+                              - if: '{{ preset_modes_raw | length > 0 }}'
+                                then:
+                                  - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                    data:
+                                      page: mem
+                                      id: popup_select_current
+                                      txt_list:
+                                        - '{{ current_preset_mode }}'
+                                    continue_on_error: true
+                                  - *delay_default
+
                           - &climate_custom_buttons
                             alias: Climate custom buttons
                             sequence:
@@ -10987,7 +11251,6 @@ actions:
                                     - 'temp_offset.val={{ temp_offset }}'
                                     - 'temp_step.val={{ temp_step }}'
                                     ##### Current temperature #####
-                                    - 'dec_separator.txt="{{ decimal_separator }}"'
                                     - 'current_temp.txt="{{ current_temp_text }}"'
                                 continue_on_error: true
                               - *delay_default
@@ -11663,10 +11926,13 @@ actions:
                                           weather_entity_uom if weather_entity_uom is string and weather_entity_uom | length > 0
                                           else temperature_units
                                         }}
+                                      weather_forecast_max_first: !input weather_forecast_max_first
                                       temperature_string: >
-                                        {{ (temp_min | round(0) ~ ("" if compact_unit_display else " ") ~ weather_temp_units) if is_number(temp_min) }}
-                                        {{ "/" if is_number(temp_min) and is_number(temp_max) and temp_min != temp_max }}
-                                        {{ (temp_max | round(0) ~ ("" if compact_unit_display else " ") ~ weather_temp_units) if is_number(temp_max) and temp_min != temp_max }}
+                                        {%- set unit_separator = "" if compact_unit_display else " " -%}
+                                        {%- set temp_low = (temp_min | round(0) ~ unit_separator ~ weather_temp_units) if is_number(temp_min) else "" -%}
+                                        {%- set temp_high = (temp_max | round(0) ~ unit_separator ~ weather_temp_units) if is_number(temp_max) and temp_min != temp_max else "" -%}
+                                        {%- set temps = [temp_high, temp_low] if weather_forecast_max_first else [temp_low, temp_high] -%}
+                                        {{ temps | reject("eq", "") | join(" / ") }}
                                   - if: '{{ (is_number(temp_min) or is_number(temp_max)) and temperature_string is string and temperature_string | length > 0 }}'
                                     then:
                                       - action: 'esphome.{{ action_prefix }}_component_text_list'
@@ -13428,6 +13694,7 @@ actions:
                   hvac_modes: '{{ state_attr(climate_entity, "hvac_modes") }}'
               - *climate-update_slider
               - *climate-update_buttons
+              - *climate-update_preset
 
       - alias: Update climate page custom buttons
         conditions:
@@ -13608,16 +13875,4 @@ actions:
                 }}
               sequence:
                 - *display_value
-
-      - alias: Wake-up
-        conditions:
-          - condition: trigger
-            id: wake_up_sensors
-        sequence:
-          - action: 'esphome.{{ action_prefix }}_component_val'
-            data:
-              page: mem
-              id: wake_up
-              val: 1  # reset timers
-            continue_on_error: true
 ...

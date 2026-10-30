@@ -519,8 +519,8 @@ script:
       # - hw_wifi
       - lambda: |-
           ESP_LOGD("${TAG_API}", "Home Assistant unavailable feedback on page '%s'", page_names[current_page_id]);
-          // The home pages show the connection icon, which explains the refusal (see hw_wifi)
-          if (current_page_id == get_page_id("home") or current_page_id == get_page_id("home_smpl")) return;
+          // The home page shows the connection icon, which explains the refusal (see hw_wifi)
+          if (current_page_id == get_page_id("home")) return;
           // Leave any other page that cannot work without Home Assistant
           if (!is_page_offline_capable(current_page_id)) goto_page->execute(home_page_id);
 

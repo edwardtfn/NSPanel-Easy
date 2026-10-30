@@ -37,11 +37,13 @@ Page climate
                 vis b[sys0],0
                 b[sys0].font=button_font.val
             }
-            // button08 (id 30) and button09 (id 31): set fonts
-            for(sys0=30;sys0<=31;sys0++)
-            {
-                b[sys0].font=button_font.val
-            }
+            // Preset mode button: hidden until ESPHome or the Blueprint confirms presets
+            vis preset_button,0
+            preset_button.font=button_font.val
+            preset_button.pco=color_pco_secondary
+            // button08 and button09: set fonts
+            button08.font=button_font.val
+            button09.font=button_font.val
             button_back.font=button_back_font
             if(theme==1)
             {
@@ -62,15 +64,14 @@ Page climate
                 {
                     b[sys0].pco=color_pco_unsupported
                 }
-                // button08, button09 (ids 30-31): secondary color; target_high (id 32)
-                for(sys0=30;sys0<=32;sys0++)
-                {
-                    b[sys0].picc=climate.pic
-                    if(sys0<=31)
-                    {
-                        b[sys0].pco=color_pco_secondary
-                    }
-                }
+                // button08, button09: secondary color; target_high: background only
+                button08.picc=climate.pic
+                button08.pco=color_pco_secondary
+                button09.picc=climate.pic
+                button09.pco=color_pco_secondary
+                target_high.picc=climate.pic
+                // Preset mode button: secondary color
+                preset_button.picc=climate.pic
                 // Sliders use picc1 for the track background
                 slider_high.picc1=climate.pic
                 slider_low.picc1=climate.pic
@@ -96,8 +97,8 @@ Page climate
             if(timer0.en==1)
             {
                 timer0.en=0
-                covx temp_number0.val,va1.txt,0,0
-                climatesetting.txt="climate,temperature,"+va1.txt
+                covx temp_number0.val,va2.txt,0,0
+                climatesetting.txt="climate,temperature,"+va2.txt
                 printh 92
                 prints "localevent",0
                 printh 00
@@ -108,8 +109,8 @@ Page climate
             if(timer1.en==1)
             {
                 timer1.en=0
-                covx temp_number1.val,va1.txt,0,0
-                climatesetting.txt="climate,target_temp_high,"+va1.txt
+                covx temp_number1.val,va2.txt,0,0
+                climatesetting.txt="climate,target_temp_high,"+va2.txt
                 printh 92
                 prints "localevent",0
                 printh 00
@@ -120,8 +121,8 @@ Page climate
             if(timer2.en==1)
             {
                 timer2.en=0
-                covx temp_number2.val,va1.txt,0,0
-                climatesetting.txt="climate,target_temp_low,"+va1.txt
+                covx temp_number2.val,va2.txt,0,0
+                climatesetting.txt="climate,target_temp_low,"+va2.txt
                 printh 92
                 prints "localevent",0
                 printh 00
@@ -130,124 +131,104 @@ Page climate
                 printh FF FF FF
             }
         
-Variable (string) va1
-    Attributes
-        ID            : 24
-        Scope         : local
-        Text          : 
-        Max. Text Size: 10
-    
 Variable (string) climatesetting
     Attributes
-        ID            : 25
+        ID            : 24
         Scope         : local
         Text          : 
         Max. Text Size: 50
     
 Variable (string) lastclick
     Attributes
-        ID            : 26
+        ID            : 25
         Scope         : local
         Text          : 
         Max. Text Size: 255
     
 Variable (int32) temp_offset
     Attributes
-        ID   : 28
+        ID   : 27
         Scope: local
         Value: 0
     
 Variable (int32) temp_step
     Attributes
-        ID   : 29
+        ID   : 28
         Scope: local
         Value: 0
     
 Variable (int32) temp_number0
     Attributes
-        ID   : 33
-        Scope: local
-        Value: 0
-    
-Variable (int32) va0
-    Attributes
-        ID   : 34
+        ID   : 32
         Scope: local
         Value: 0
     
 Variable (string) va2
     Attributes
-        ID            : 35
+        ID            : 33
         Scope         : local
         Text          : 
         Max. Text Size: 10
     
 Variable (string) click_comp
     Attributes
-        ID            : 37
+        ID            : 35
         Scope         : local
         Text          : 
         Max. Text Size: 8
     
 Variable (int32) active_slider
     Attributes
-        ID   : 40
+        ID   : 38
         Scope: local
         Value: 1
     
 Variable (int32) is_temp_range
     Attributes
-        ID   : 42
+        ID   : 40
         Scope: local
         Value: 0
     
 Variable (int32) temp_number1
     Attributes
-        ID   : 46
+        ID   : 44
         Scope: local
         Value: 0
     
 Variable (int32) temp_number2
     Attributes
-        ID   : 47
+        ID   : 45
         Scope: local
         Value: 0
     
 Variable (string) temp_unit
     Attributes
-        ID            : 48
+        ID            : 46
         Scope         : local
         Text          : \xc2\xb0
         Max. Text Size: 10
     
 Variable (int32) temp_low_max
     Attributes
-        ID   : 49
+        ID   : 47
         Scope: local
         Value: 0
     
 Variable (int32) temp_high_min
     Attributes
-        ID   : 50
+        ID   : 48
         Scope: local
         Value: 0
     
 Variable (int32) temp_gap
     Attributes
-        ID   : 51
+        ID   : 49
         Scope: local
         Value: 0
     
-Variable (string) dec_separator
-    Attributes
-        ID            : 52
-        Scope         : local
-        Text          : .
-        Max. Text Size: 5
-    
 Variable (int32) button_font
     Attributes
-        ID   : 53
+        ID   : 50
         Scope: global
         Value: 8
     
@@ -555,10 +536,10 @@ Text button01
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 25
-        y coordinate            : 261
-        Width                   : 48
-        Height                  : 48
+        x coordinate            : 2
+        y coordinate            : 245
+        Width                   : 66
+        Height                  : 66
         Effect                  : load
         Effect Priority         : 0
         Effect Time             : 300
@@ -591,10 +572,10 @@ Text button02
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 85
-        y coordinate            : 261
-        Width                   : 48
-        Height                  : 48
+        x coordinate            : 68
+        y coordinate            : 245
+        Width                   : 66
+        Height                  : 66
         Effect                  : load
         Effect Priority         : 0
         Effect Time             : 300
@@ -627,10 +608,10 @@ Text button03
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 145
-        y coordinate            : 261
-        Width                   : 48
-        Height                  : 48
+        x coordinate            : 134
+        y coordinate            : 245
+        Width                   : 66
+        Height                  : 66
         Effect                  : load
         Effect Priority         : 0
         Effect Time             : 300
@@ -663,10 +644,10 @@ Text button04
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 205
-        y coordinate            : 261
-        Width                   : 48
-        Height                  : 48
+        x coordinate            : 200
+        y coordinate            : 245
+        Width                   : 66
+        Height                  : 66
         Effect                  : load
         Effect Priority         : 0
         Effect Time             : 300
@@ -699,10 +680,10 @@ Text button05
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 265
-        y coordinate            : 261
-        Width                   : 48
-        Height                  : 48
+        x coordinate            : 266
+        y coordinate            : 245
+        Width                   : 66
+        Height                  : 66
         Effect                  : load
         Effect Priority         : 0
         Effect Time             : 300
@@ -735,10 +716,10 @@ Text button06
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 325
-        y coordinate            : 261
-        Width                   : 48
-        Height                  : 48
+        x coordinate            : 332
+        y coordinate            : 245
+        Width                   : 66
+        Height                  : 66
         Effect                  : load
         Effect Priority         : 0
         Effect Time             : 300
@@ -771,10 +752,10 @@ Text button07
         Dragging                : 0
         Send Component ID       : on press and release
         Opacity                 : 127
-        x coordinate            : 385
-        y coordinate            : 261
-        Width                   : 48
-        Height                  : 48
+        x coordinate            : 398
+        y coordinate            : 245
+        Width                   : 66
+        Height                  : 66
         Effect                  : load
         Effect Priority         : 0
         Effect Time             : 300
@@ -802,7 +783,7 @@ Text button07
         
 Text button08
     Attributes
-        ID                      : 30
+        ID                      : 29
         Scope                   : local
         Dragging                : 0
         Send Component ID       : on press and release
@@ -847,7 +828,7 @@ Text button08
         
 Text button09
     Attributes
-        ID                      : 31
+        ID                      : 30
         Scope                   : local
         Dragging                : 0
         Send Component ID       : on press and release
@@ -892,7 +873,7 @@ Text button09
         
 Text target_high
     Attributes
-        ID                      : 32
+        ID                      : 31
         Scope                   : local
         Dragging                : 0
         Send Component ID       : on press and release
@@ -923,7 +904,7 @@ Text target_high
         
 Text target_low
     Attributes
-        ID                      : 41
+        ID                      : 39
         Scope                   : local
         Dragging                : 0
         Send Component ID       : on press and release
@@ -951,6 +932,37 @@ Text target_low
     Events
         Touch Release Event
             active_slider.val=2
+        
+Text preset_button
+    Attributes
+        ID                      : 51
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 205
+        y coordinate            : 146
+        Width                   : 45
+        Height                  : 45
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xef\x95\x81
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Press Event
+            preset_button.pco=31
         
 Slider slider_high
     Attributes
@@ -988,12 +1000,10 @@ Slider slider_high
             }
             temp_number1.val=slider_high.val*temp_step.val
             temp_number1.val+=temp_offset.val
-            va0.val=temp_number1.val/10
-            covx va0.val,target_high.txt,0,0
-            va0.val=temp_number1.val%10
-            covx va0.val,va1.txt,0,0
-            target_high.txt+=dec_separator.txt+va1.txt
-            target_high.txt+=temp_unit.txt
+            sys0=temp_number1.val
+            sys1=temp_step.val
+            call format_tenths
+            target_high.txt=home.tenths_txt.txt+temp_unit.txt
             timer1.en=1
             active_slider.val=1
             temp_gap.val=3*temp_step.val
@@ -1006,16 +1016,14 @@ Slider slider_high
             }
             temp_number1.val=slider_high.val*temp_step.val
             temp_number1.val+=temp_offset.val
-            va0.val=temp_number1.val/10
-            covx va0.val,target_high.txt,0,0
-            va0.val=temp_number1.val%10
-            covx va0.val,va1.txt,0,0
-            target_high.txt+=dec_separator.txt+va1.txt
-            target_high.txt+=temp_unit.txt
+            sys0=temp_number1.val
+            sys1=temp_step.val
+            call format_tenths
+            target_high.txt=home.tenths_txt.txt+temp_unit.txt
         
 Slider slider_low
     Attributes
-        ID                             : 39
+        ID                             : 37
         Scope                          : local
         Dragging                       : 0
         Send Component ID              : on press and release
@@ -1049,12 +1057,10 @@ Slider slider_low
             }
             temp_number2.val=slider_low.val*temp_step.val
             temp_number2.val+=temp_offset.val
-            va0.val=temp_number2.val/10
-            covx va0.val,target_low.txt,0,0
-            va0.val=temp_number2.val%10
-            covx va0.val,va1.txt,0,0
-            target_low.txt+=dec_separator.txt+va1.txt
-            target_low.txt+=temp_unit.txt
+            sys0=temp_number2.val
+            sys1=temp_step.val
+            call format_tenths
+            target_low.txt=home.tenths_txt.txt+temp_unit.txt
             timer2.en=1
             active_slider.val=2
             temp_gap.val=3*temp_step.val
@@ -1067,16 +1073,14 @@ Slider slider_low
             }
             temp_number2.val=slider_low.val*temp_step.val
             temp_number2.val+=temp_offset.val
-            va0.val=temp_number2.val/10
-            covx va0.val,target_low.txt,0,0
-            va0.val=temp_number2.val%10
-            covx va0.val,va1.txt,0,0
-            target_low.txt+=dec_separator.txt+va1.txt
-            target_low.txt+=temp_unit.txt
+            sys0=temp_number2.val
+            sys1=temp_step.val
+            call format_tenths
+            target_low.txt=home.tenths_txt.txt+temp_unit.txt
         
 Slider climateslider
     Attributes
-        ID                             : 43
+        ID                             : 41
         Scope                          : local
         Dragging                       : 0
         Send Component ID              : on press and release
@@ -1102,28 +1106,24 @@ Slider climateslider
         Touch Release Event
             temp_number0.val=climateslider.val*temp_step.val
             temp_number0.val+=temp_offset.val
-            va0.val=temp_number0.val/10
-            covx va0.val,target_high.txt,0,0
-            va0.val=temp_number0.val%10
-            covx va0.val,va1.txt,0,0
-            target_high.txt+=dec_separator.txt+va1.txt
-            target_high.txt+=temp_unit.txt
+            sys0=temp_number0.val
+            sys1=temp_step.val
+            call format_tenths
+            target_high.txt=home.tenths_txt.txt+temp_unit.txt
             active_slider.val=0
             timer0.en=1
         
         Touch Move Event
             temp_number0.val=climateslider.val*temp_step.val
             temp_number0.val+=temp_offset.val
-            va0.val=temp_number0.val/10
-            covx va0.val,target_high.txt,0,0
-            va0.val=temp_number0.val%10
-            covx va0.val,va1.txt,0,0
-            target_high.txt+=dec_separator.txt+va1.txt
-            target_high.txt+=temp_unit.txt
+            sys0=temp_number0.val
+            sys1=temp_step.val
+            call format_tenths
+            target_high.txt=home.tenths_txt.txt+temp_unit.txt
         
 Button button_back
     Attributes
-        ID                                  : 36
+        ID                                  : 34
         Scope                               : local
         Dragging                            : 0
         Send Component ID                   : on press and release
@@ -1177,12 +1177,10 @@ Hotspot decrease_temp
                     climateslider.val--
                     temp_number0.val=climateslider.val*temp_step.val
                     temp_number0.val+=temp_offset.val
-                    va0.val=temp_number0.val/10
-                    covx va0.val,target_high.txt,0,0
-                    va0.val=temp_number0.val%10
-                    covx va0.val,va1.txt,0,0
-                    target_high.txt+=dec_separator.txt+va1.txt
-                    target_high.txt+=temp_unit.txt
+                    sys0=temp_number0.val
+                    sys1=temp_step.val
+                    call format_tenths
+                    target_high.txt=home.tenths_txt.txt+temp_unit.txt
                 }
             }else if(active_slider.val==1)
             {
@@ -1191,12 +1189,10 @@ Hotspot decrease_temp
                     slider_high.val--
                     temp_number1.val=slider_high.val*temp_step.val
                     temp_number1.val+=temp_offset.val
-                    va0.val=temp_number1.val/10
-                    covx va0.val,target_high.txt,0,0
-                    va0.val=temp_number1.val%10
-                    covx va0.val,va1.txt,0,0
-                    target_high.txt+=dec_separator.txt+va1.txt
-                    target_high.txt+=temp_unit.txt
+                    sys0=temp_number1.val
+                    sys1=temp_step.val
+                    call format_tenths
+                    target_high.txt=home.tenths_txt.txt+temp_unit.txt
                 }
             }else if(active_slider.val==2)
             {
@@ -1205,12 +1201,10 @@ Hotspot decrease_temp
                     slider_low.val--
                     temp_number2.val=slider_low.val*temp_step.val
                     temp_number2.val+=temp_offset.val
-                    va0.val=temp_number2.val/10
-                    covx va0.val,target_low.txt,0,0
-                    va0.val=temp_number2.val%10
-                    covx va0.val,va1.txt,0,0
-                    target_low.txt+=dec_separator.txt+va1.txt
-                    target_low.txt+=temp_unit.txt
+                    sys0=temp_number2.val
+                    sys1=temp_step.val
+                    call format_tenths
+                    target_low.txt=home.tenths_txt.txt+temp_unit.txt
                 }
             }
         
@@ -1250,12 +1244,10 @@ Hotspot increase_temp
                     climateslider.val++
                     temp_number0.val=climateslider.val*temp_step.val
                     temp_number0.val+=temp_offset.val
-                    va0.val=temp_number0.val/10
-                    covx va0.val,target_high.txt,0,0
-                    va0.val=temp_number0.val%10
-                    covx va0.val,va1.txt,0,0
-                    target_high.txt+=dec_separator.txt+va1.txt
-                    target_high.txt+=temp_unit.txt
+                    sys0=temp_number0.val
+                    sys1=temp_step.val
+                    call format_tenths
+                    target_high.txt=home.tenths_txt.txt+temp_unit.txt
                 }
             }else if(active_slider.val==1)
             {
@@ -1264,12 +1256,10 @@ Hotspot increase_temp
                     slider_high.val++
                     temp_number1.val=slider_high.val*temp_step.val
                     temp_number1.val+=temp_offset.val
-                    va0.val=temp_number1.val/10
-                    covx va0.val,target_high.txt,0,0
-                    va0.val=temp_number1.val%10
-                    covx va0.val,va1.txt,0,0
-                    target_high.txt+=dec_separator.txt+va1.txt
-                    target_high.txt+=temp_unit.txt
+                    sys0=temp_number1.val
+                    sys1=temp_step.val
+                    call format_tenths
+                    target_high.txt=home.tenths_txt.txt+temp_unit.txt
                 }
             }else if(active_slider.val==2)
             {
@@ -1278,12 +1268,10 @@ Hotspot increase_temp
                     slider_low.val++
                     temp_number2.val=slider_low.val*temp_step.val
                     temp_number2.val+=temp_offset.val
-                    va0.val=temp_number2.val/10
-                    covx va0.val,target_low.txt,0,0
-                    va0.val=temp_number2.val%10
-                    covx va0.val,va1.txt,0,0
-                    target_low.txt+=dec_separator.txt+va1.txt
-                    target_low.txt+=temp_unit.txt
+                    sys0=temp_number2.val
+                    sys1=temp_step.val
+                    call format_tenths
+                    target_low.txt=home.tenths_txt.txt+temp_unit.txt
                 }
             }
         
@@ -1313,7 +1301,7 @@ Timer swipestore
         
 Timer timer0
     Attributes
-        ID         : 27
+        ID         : 26
         Scope      : local
         Period (ms): 1000
         Enabled    : no
@@ -1321,8 +1309,8 @@ Timer timer0
     Events
         Timer Event
             timer0.en=0
-            covx temp_number0.val,va1.txt,0,0
-            climatesetting.txt="climate,temperature,"+va1.txt
+            covx temp_number0.val,va2.txt,0,0
+            climatesetting.txt="climate,temperature,"+va2.txt
             printh 92
             prints "localevent",0
             printh 00
@@ -1332,7 +1320,7 @@ Timer timer0
         
 Timer click_timer
     Attributes
-        ID         : 38
+        ID         : 36
         Scope      : local
         Period (ms): 800
         Enabled    : no
@@ -1350,7 +1338,7 @@ Timer click_timer
         
 Timer timer1
     Attributes
-        ID         : 44
+        ID         : 42
         Scope      : local
         Period (ms): 1000
         Enabled    : no
@@ -1358,8 +1346,8 @@ Timer timer1
     Events
         Timer Event
             timer1.en=0
-            covx temp_number1.val,va1.txt,0,0
-            climatesetting.txt="climate,target_temp_high,"+va1.txt
+            covx temp_number1.val,va2.txt,0,0
+            climatesetting.txt="climate,target_temp_high,"+va2.txt
             printh 92
             prints "localevent",0
             printh 00
@@ -1369,7 +1357,7 @@ Timer timer1
         
 Timer timer2
     Attributes
-        ID         : 45
+        ID         : 43
         Scope      : local
         Period (ms): 1000
         Enabled    : no
@@ -1377,8 +1365,8 @@ Timer timer2
     Events
         Timer Event
             timer2.en=0
-            covx temp_number2.val,va1.txt,0,0
-            climatesetting.txt="climate,target_temp_low,"+va1.txt
+            covx temp_number2.val,va2.txt,0,0
+            climatesetting.txt="climate,target_temp_low,"+va2.txt
             printh 92
             prints "localevent",0
             printh 00

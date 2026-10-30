@@ -96,11 +96,9 @@ struct WeatherConditionEntry {
 // =============================================================================
 
 /// @brief Sun-unaware variant: same picture regardless of sun elevation.
-#define WPV(id) \
-  { (id), (id) }
+#define WPV(id) {(id), (id)}
 /// @brief Sun-aware variant: distinct pictures for day and night.
-#define WPV2(up, down) \
-  { (up), (down) }
+#define WPV2(up, down) {(up), (down)}
 
 /**
  * @brief Lookup table mapping weather condition strings to picture IDs.

@@ -14,6 +14,10 @@
 #include "pages.h"
 #include "base.h"
 
+#ifdef NSPANEL_EASY_SUBSCRIBE
+#include "api_subscriptions.h"
+#endif  // NSPANEL_EASY_SUBSCRIBE
+
 namespace esphome::nspanel_easy {
 
 /**
@@ -75,6 +79,55 @@ extern DetailsOverlap details_overlap;  ///< Override for the entity details pag
 using ClickInterceptor =
     std::function<bool(const std::string &page, const std::string &event, const std::string &component)>;
 extern ClickInterceptor click_interceptor;
+
+#ifdef NSPANEL_EASY_SUBSCRIBE
+/**
+ * @brief Invoked when the wake-up sensors change between idle and active.
+ *
+ * Assigned from hw_display.yaml, where the wake-up and timer scripts are visible.
+ * Called with true whenever a sensor turns active (each activation wakes the display
+ * and resets its timers), and with false once the last active sensor is released, so
+ * the dim and sleep timers start counting from the end of the activity.
+ */
+extern std::function<void(bool active)> wakeup_sensors_changed;
+
+/**
+ * @brief Whether any wake-up sensor is active.
+ *
+ * While true, the display is kept on: the dim and sleep timers do not act when they expire.
+ *
+ * @return true when at least one wake-up sensor is active.
+ */
+bool wakeup_sensors_active();
+
+/**
+ * @brief Follow the connection to Home Assistant for the wake-up sensors.
+ *
+ * Acts only on connection changes. When the connection is lost, every wake-up sensor is
+ * released, as their states can no longer be trusted, so a sensor that was active cannot
+ * keep the display on indefinitely. Their cached states (and climate hvac_action) are also
+ * forgotten, so the states Home Assistant sends again on reconnection are applied, even when
+ * unchanged.
+ *
+ * @param connected Whether Home Assistant is connected with state subscriptions.
+ */
+void wakeup_sensors_connection_update(bool connected);
+
+/**
+ * @brief Track a subscription binding targeting the wake-up sensors.
+ *
+ * Registered for the "wakeup" page in sub_resolve_renderer(). Nothing is drawn: the
+ * binding only reports whether its sensor is active, which it never is while Home Assistant
+ * is not connected. Bindings are re-applied on every page change, so only transitions are
+ * acted upon.
+ *
+ * @param binding Binding being applied.
+ * @param rt Runtime state, holding the classification of the sensor state.
+ * @param state Unused: the classification in rt is used instead.
+ * @param visible Unused: wake-up sensors are never inverted.
+ */
+void wakeup_sensor_render(const SubBinding &binding, const SubRuntime &rt, const char *state, bool visible);
+#endif  // NSPANEL_EASY_SUBSCRIBE
 
 }  // namespace esphome::nspanel_easy
 

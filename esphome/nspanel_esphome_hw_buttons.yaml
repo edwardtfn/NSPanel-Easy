@@ -127,7 +127,25 @@ globals:
     restore_value: true
     initial_value: '1ULL << get_page_id("home")'
 
+  # Page table (PAGE_TABLE_HASH) in use when `buttons_bars_pages` and `buttons_labels_pages` were saved
+  - id: buttons_pages_table_hash
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+
 script:
+  - id: !extend boot_early_routines
+    then:
+      - lambda: |-
+          // The pages masks are by page id, which changes when the page table changes (a page added,
+          // removed or moved). Masks saved with another page table point to the wrong pages, so they
+          // are reset to the defaults until the Blueprint sends them again.
+          if (id(buttons_pages_table_hash) == PAGE_TABLE_HASH) return;
+          ESP_LOGI("${TAG_HW_BUTTONS}", "Page table changed, buttons pages reset to defaults");
+          id(buttons_bars_pages) = 1ULL << get_page_id("home");
+          id(buttons_labels_pages) = 1ULL << get_page_id("home");
+          id(buttons_pages_table_hash) = PAGE_TABLE_HASH;
+
   - id: !extend action_component_color
     then:
       - lambda: |-
@@ -392,18 +410,13 @@ script:
           if (current_page_id == get_page_id("home")) {
             background = "pic_background_main";
             fill = XSTR_FILL_CROP_IMAGE;
-            left = is_eu ? LabelPosition{47, 288} : LabelPosition{16, 448};
-            right = is_eu ? LabelPosition{288, 288} : LabelPosition{184, 448};
-          } else if (current_page_id == get_page_id("home_smpl")) {
-            background = "0";
-            fill = XSTR_FILL_CROP_IMAGE;
-            left = is_eu ? LabelPosition{46, 282} : LabelPosition{16, 443};
-            right = is_eu ? LabelPosition{287, 280} : LabelPosition{184, 443};
+            left = is_eu ? LabelPosition{47, 286} : LabelPosition{16, 446};
+            right = is_eu ? LabelPosition{288, 286} : LabelPosition{184, 446};
           } else if (current_page_id == get_page_id("screensaver")) {
             background = "screensaver_bco";
             fill = XSTR_FILL_SOLID_COLOR;
-            left = is_eu ? LabelPosition{47, 288} : LabelPosition{16, 448};
-            right = is_eu ? LabelPosition{288, 288} : LabelPosition{184, 448};
+            left = is_eu ? LabelPosition{47, 286} : LabelPosition{16, 446};
+            right = is_eu ? LabelPosition{288, 286} : LabelPosition{184, 446};
           } else {
             if (show) ESP_LOGW("${TAG_HW_BUTTONS}", "Labels not supported on page '%s'", page_names[current_page_id]);
             return;
@@ -420,10 +433,32 @@ script:
             color_right = id(hardware_settings).button_right_state ? id(buttons_color_on) : id(buttons_color_off);
           }  // if (follow_color and button_right_enabled)
 
+          // While Home Assistant is not connected, a button that only reports to it does nothing, so its
+          // label is dimmed. A button that switches its relay locally, or falls back to it, keeps working.
+          if (!api_server->is_connected_with_state_subscription()) {
+            if (!id(hardware_settings).relay1_local and !id(hardware_settings).relay1_fallback) {
+              color_left = Colors::RGB565_GRAY_DARK;
+            }  // if (left button depends on Home Assistant)
+            if (!id(hardware_settings).relay2_local and !id(hardware_settings).relay2_fallback) {
+              color_right = Colors::RGB565_GRAY_DARK;
+            }  // if (right button depends on Home Assistant)
+          }  // if (!api_server->is_connected_with_state_subscription())
+
           static constexpr uint16_t LABEL_WIDTH = 120;
-          static constexpr uint16_t LABEL_HEIGHT = 20;
-          static constexpr uint8_t LABEL_FONT_ID = 1;
+          static constexpr uint16_t LABEL_HEIGHT = 24;             // Fits the icon font and clears a previous icon
+          static constexpr uint8_t LABEL_FONT_ID = 1;              // Text font (no icons)
+          static constexpr uint8_t LABEL_ICON_FONT_ID = 7;         // Icons font (icons and Latin-1 only)
+          static constexpr uint32_t ICON_CODE_POINT_MIN = 0xE000;  // First MDI code point (see all_icons.h)
+          static constexpr uint32_t ICON_CODE_POINT_MAX = 0xFD16;  // Last MDI code point (see all_icons.h)
           auto draw_label = [&](const LabelPosition &position, const std::string &label, uint16_t color) {
+            // A label made of a single icon (3-byte UTF-8 sequence) is drawn with the icons font
+            uint8_t font_id = LABEL_FONT_ID;
+            if (label.size() == 3) {
+              const uint32_t code_point = nspanel_easy::decode_nextion_icon_utf8(label.c_str(), label.size());
+              if (code_point >= ICON_CODE_POINT_MIN and code_point <= ICON_CODE_POINT_MAX) {
+                font_id = LABEL_ICON_FONT_ID;
+              }  // if (code_point in icons range)
+            }  // if (label.size() == 3)
             std::string escaped = label;
             for (size_t pos = 0; (pos = escaped.find('\\', pos)) != std::string::npos; pos += 2) {
               escaped.replace(pos, 1, "\\\\");
@@ -434,7 +469,7 @@ script:
             // xstr x,y,w,h,font,pco,bco,xcenter,ycenter,fill,"text" - an empty text clears the area
             disp1->send_command_printf("xstr %" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%" PRIu16 ",%" PRIu8 ",%" PRIu16
                                        ",%s,1,1,%" PRIu8 ",\"%s\"",
-                                       position.x, position.y, LABEL_WIDTH, LABEL_HEIGHT, LABEL_FONT_ID, color,
+                                       position.x, position.y, LABEL_WIDTH, LABEL_HEIGHT, font_id, color,
                                        background, fill, escaped.c_str());
           };
           // An empty text only repaints the background, clearing the labels
@@ -447,6 +482,17 @@ script:
       - script.execute:
           id: refresh_hardware_buttons_labels
           clear: false
+
+  # Redraw the labels when the connection to Home Assistant changes, as the labels of the buttons
+  # that depend on it are dimmed while it is not connected
+  - id: !extend update_flag_api_ready
+    then:
+      - lambda: |-
+          static bool labels_api_connected = true;
+          const bool connected = api_server->is_connected_with_state_subscription();
+          if (connected == labels_api_connected) return;
+          labels_api_connected = connected;
+          refresh_hardware_buttons_labels->execute(false);
 
   - id: !extend stop_all
     then:

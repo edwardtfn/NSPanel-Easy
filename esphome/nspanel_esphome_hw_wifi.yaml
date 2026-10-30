@@ -168,11 +168,11 @@ script:
           count: 3
           then:
             - lambda: |-
-                if (current_page_id != get_page_id("home") and current_page_id != get_page_id("home_smpl")) return;
+                if (current_page_id != get_page_id("home")) return;
                 disp1->set_component_visibility("wifi_icon", false);
             - delay: 150ms
             - lambda: |-
-                if (current_page_id != get_page_id("home") and current_page_id != get_page_id("home_smpl")) return;
+                if (current_page_id != get_page_id("home")) return;
                 disp1->set_component_visibility("wifi_icon", true);
             - delay: 150ms
 

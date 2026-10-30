@@ -23,6 +23,9 @@
 #ifdef NSPANEL_EASY_PAGE_HOME
 #include "page_home.h"
 #endif  // NSPANEL_EASY_PAGE_HOME
+#ifdef NSPANEL_EASY_HW_DISPLAY
+#include "hw_display.h"
+#endif  // NSPANEL_EASY_HW_DISPLAY
 
 namespace esphome::nspanel_easy {
 
@@ -175,6 +178,9 @@ SubRenderFn sub_resolve_renderer(const char *page) {
 #ifdef NSPANEL_EASY_PAGE_HOME
       {"home", &home_sub_render},
 #endif  // NSPANEL_EASY_PAGE_HOME
+#ifdef NSPANEL_EASY_HW_DISPLAY
+      {"wakeup", &wakeup_sensor_render},
+#endif  // NSPANEL_EASY_HW_DISPLAY
   };
   for (const PageEntry &entry : PAGES) {
     if (strcmp(page, entry.page) == 0) {

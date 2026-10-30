@@ -240,10 +240,29 @@ script:
           if (current_page_id != get_page_id("climate")) return;
 
           // Calculate static values
+          // Values are handled in tenths, as sent to the display. With a whole-number step, the minimum is
+          // rounded up to a multiple of the step (as the Blueprint does for Home Assistant climates), so every
+          // slider value is a whole number, shown without decimals both while sliding and after release.
           ESP_LOGV("${TAG_ADDON_CLIMATE}", "Calculated static values:");
-          const uint16_t total_steps = static_cast<uint16_t>(std::round((temp_max - temp_offset) / temp_step));
+          static const int32_t temp_step_tenths = static_cast<int32_t>(std::lround(temp_step * 10.0f));
+          static const int32_t temp_max_tenths = static_cast<int32_t>(std::lround(temp_max * 10.0f));
+          static const int32_t temp_offset_tenths_raw = static_cast<int32_t>(std::lround(temp_offset * 10.0f));
+          static const int32_t temp_offset_remainder =
+              (temp_step_tenths > 0)
+                  ? ((temp_offset_tenths_raw % temp_step_tenths) + temp_step_tenths) % temp_step_tenths
+                  : 0;
+          static const int32_t temp_offset_tenths =
+              (temp_step_tenths > 0 && temp_step_tenths % 10 == 0 && temp_offset_remainder != 0)
+                  ? temp_offset_tenths_raw + temp_step_tenths - temp_offset_remainder
+                  : temp_offset_tenths_raw;
+          const uint16_t total_steps =
+              (temp_step_tenths > 0 && temp_max_tenths >= temp_offset_tenths)
+                  ? static_cast<uint16_t>((temp_max_tenths - temp_offset_tenths) / temp_step_tenths)
+                  : 0;
           ESP_LOGV("${TAG_ADDON_CLIMATE}", "  temp_step: %f${temp_units}", temp_step);
           ESP_LOGV("${TAG_ADDON_CLIMATE}", "  temp_offset: %f${temp_units}", temp_offset);
+          ESP_LOGV("${TAG_ADDON_CLIMATE}", "  temp_step_tenths: %" PRId32, temp_step_tenths);
+          ESP_LOGV("${TAG_ADDON_CLIMATE}", "  temp_offset_tenths: %" PRId32, temp_offset_tenths);
           ESP_LOGV("${TAG_ADDON_CLIMATE}", "  total_steps: %i", total_steps);
 
           if (current_page_id != get_page_id("climate")) return;
@@ -296,9 +315,9 @@ script:
             -999.0f,                      // temp_target_high
             -999.0f,                      // temp_target_low
             #endif  // NSPANEL_EASY_ADDON_CLIMATE_DUAL
-            int(roundf(temp_step*10)),    // temp_step
+            temp_step_tenths,             // temp_step
             total_steps,                  // total_steps
-            int(roundf(temp_offset*10)),  // temp_offset
+            temp_offset_tenths,           // temp_offset
             ""                            // climate_icon
           );
 
@@ -306,63 +325,114 @@ script:
           ESP_LOGV("${TAG_ADDON_CLIMATE}", "Call update_climate_chip");
           update_climate_chip->execute();
 
-          // Update buttons bar
-          // Hide not supported hotspots
-          ESP_LOGV("${TAG_ADDON_CLIMATE}", "Update buttons bar");
+          // Update HVAC mode buttons
+          // Show only the modes the thermostat supports, from its traits
+          ESP_LOGV("${TAG_ADDON_CLIMATE}", "Update HVAC mode buttons");
+          for (const ClimateModeButton &button : CLIMATE_MODE_BUTTONS) {
+            const climate::ClimateMode mode = static_cast<climate::ClimateMode>(button.mode);
+            if (traits.supports_mode(mode)) {
+              disp1->show_component(button.name);
+              disp1->set_component_font_color(button.font_color_path, (thermostat_embedded->mode == mode)
+                                                                          ? button.color_active
+                                                                          : button.color_inactive);
+            } else {
+              disp1->hide_component(button.name);
+              disp1->set_component_font_color(button.font_color_path, Colors::RGB565_GRAY_DARK);
+            }  // if (traits.supports_mode(mode))
 
-          disp1->hide_component("button01");
-          disp1->set_component_font_color("climate.button01", static_cast<uint16_t>(Colors::RGB565_GRAY_DARK));
+            if (current_page_id != get_page_id("climate")) return;
+          }  // for (button : CLIMATE_MODE_BUTTONS)
 
-          #ifdef NSPANEL_EASY_ADDON_CLIMATE_DUAL
-          disp1->show_component("button02");
-          disp1->set_component_font_color("climate.button02", static_cast<uint16_t>(
-            (thermostat_embedded->mode==climate::CLIMATE_MODE_HEAT_COOL) ? Colors::RGB565_WHITE : Colors::RGB565_GRAY_LIGHT));
-          #else
-          disp1->hide_component("button02");
-          disp1->set_component_font_color("climate.button02", static_cast<uint16_t>(
-            (thermostat_embedded->mode==climate::CLIMATE_MODE_HEAT_COOL) ? Colors::RGB565_WHITE : Colors::RGB565_GRAY_DARK));
-          #endif  // NSPANEL_EASY_ADDON_CLIMATE_DUAL
+          // Preset mode button, only when the thermostat has presets to choose from
+          if (traits.get_supports_presets() or !traits.get_supported_custom_presets().empty()) {
+            disp1->show_component(hmi::climate::PRESET_BUTTON.name);
+          } else {
+            disp1->hide_component(hmi::climate::PRESET_BUTTON.name);
+          }  // if (traits.get_supports_presets() or !traits.get_supported_custom_presets().empty())
 
-          if (current_page_id != get_page_id("climate")) return;
+  # Opens the preset picker for the embedded thermostat.
+  # The options come from the thermostat traits, so this works with the API disconnected.
+  - id: !extend climate_preset_open  # Defined by page_climate
+    then:
+      - lambda: |-
+          ESP_LOGV("${TAG_ADDON_CLIMATE}", "Open the preset picker for the embedded thermostat");
+          if (!climate_embedded_visible) return;
 
-          #if defined(NSPANEL_EASY_ADDON_CLIMATE_HEAT) || defined(NSPANEL_EASY_ADDON_CLIMATE_DUAL)
-          disp1->show_component("button03");  // Heat
-          disp1->set_component_font_color("climate.button03", static_cast<uint16_t>(
-            (thermostat_embedded->mode==climate::CLIMATE_MODE_HEAT) ? Colors::RGB565_DEEP_ORANGE : Colors::RGB565_GRAY_LIGHT));
-          #else
-          disp1->hide_component("button03");  // Heat
-          disp1->set_component_font_color("climate.button03", static_cast<uint16_t>(
-            (thermostat_embedded->mode==climate::CLIMATE_MODE_HEAT) ? Colors::RGB565_DEEP_ORANGE : Colors::RGB565_GRAY_DARK));
-          #endif  // NSPANEL_EASY_ADDON_CLIMATE_HEAT || NSPANEL_EASY_ADDON_CLIMATE_DUAL
+          const ClimateTraits traits = thermostat_embedded->get_traits();
+          std::vector<std::string> options;
 
-          if (current_page_id != get_page_id("climate")) return;
+          // Standard presets first, in ESPHome's enum order
+          for (uint8_t i = 0; i < CLIMATE_PRESET_NAMES_COUNT; i++) {
+            if (traits.supports_preset(static_cast<climate::ClimatePreset>(i))) {
+              options.emplace_back(climate_preset_names[i]);
+            }
+          }  // for (uint8_t i = 0; i < CLIMATE_PRESET_NAMES_COUNT; i++)
 
-          #if defined(NSPANEL_EASY_ADDON_CLIMATE_COOL) || defined(NSPANEL_EASY_ADDON_CLIMATE_DUAL)
-          disp1->show_component("button04");  // Cool
-          disp1->set_component_font_color("climate.button04", static_cast<uint16_t>(
-            (thermostat_embedded->mode==climate::CLIMATE_MODE_COOL) ? Colors::RGB565_BLUE : Colors::RGB565_GRAY_LIGHT));
-          #else
-          disp1->hide_component("button04");  // Cool
-          disp1->set_component_font_color("climate.button04", static_cast<uint16_t>(
-            (thermostat_embedded->mode==climate::CLIMATE_MODE_COOL) ? Colors::RGB565_BLUE : Colors::RGB565_GRAY_DARK));
-          #endif  // NSPANEL_EASY_ADDON_CLIMATE_COOL || NSPANEL_EASY_ADDON_CLIMATE_DUAL
+          // Then the custom presets, in the order they are declared
+          for (const char *custom_preset : traits.get_supported_custom_presets()) {
+            options.emplace_back(custom_preset);
+          }  // for (const char *custom_preset : traits.get_supported_custom_presets())
 
-          if (current_page_id != get_page_id("climate")) return;
+          if (options.empty()) {
+            ESP_LOGW("${TAG_ADDON_CLIMATE}", "Embedded thermostat has no presets");
+            return;
+          }
 
-          disp1->hide_component("button05");
-          disp1->set_component_font_color("climate.button05", static_cast<uint16_t>(Colors::RGB565_GRAY_DARK));
+          // Current preset, by the same name it has in the options
+          std::string current;
+          if (thermostat_embedded->has_custom_preset()) {
+            current = thermostat_embedded->get_custom_preset().c_str();
+          } else if (thermostat_embedded->preset.has_value() and
+                     static_cast<uint8_t>(thermostat_embedded->preset.value()) < CLIMATE_PRESET_NAMES_COUNT) {
+            current = climate_preset_names[static_cast<uint8_t>(thermostat_embedded->preset.value())];
+          }  // if (thermostat_embedded->has_custom_preset())
+          ESP_LOGV("${TAG_ADDON_CLIMATE}", "  current: %s", current.c_str());
 
-          if (current_page_id != get_page_id("climate")) return;
+          if (options.size() > POPUP_SELECT_MAX_OPTIONS) {
+            ESP_LOGW("${TAG_ADDON_CLIMATE}", "Embedded thermostat has %zu presets, picker supports %" PRIu8 "; truncating",
+                                              options.size(), POPUP_SELECT_MAX_OPTIONS);
+            // Keep the current preset in the list, as the Blueprint does for Home Assistant entities
+            const auto it = std::find(options.begin(), options.end(), current);
+            if (it != options.end() and std::distance(options.begin(), it) >= POPUP_SELECT_MAX_OPTIONS) {
+              std::rotate(options.begin(), it, it + 1);  // Move the current preset to the front
+            }  // if (it != options.end() and std::distance(options.begin(), it) >= POPUP_SELECT_MAX_OPTIONS)
+            options.resize(POPUP_SELECT_MAX_OPTIONS);
+          }  // if (options.size() > POPUP_SELECT_MAX_OPTIONS)
 
-          disp1->hide_component("button06");
-          disp1->set_component_font_color("climate.button06", static_cast<uint16_t>(Colors::RGB565_GRAY_DARK));
+          // Fill the picker cache, as the Blueprint does for Home Assistant entities
+          popup_select_cache_entity = "${CLIMATE_EMBEDDED_SENTINEL}";
+          popup_select_cache_context = CLIMATE_PRESET_MODE_CONTEXT;
+          popup_select_cache_mode = 0;  // Single selection
+          popup_select_cache_options = std::move(options);
+          popup_select_cache_mask = 0;
+          for (size_t i = 0; i < popup_select_cache_options.size(); ++i) {
+            if (popup_select_cache_options[i] == current) {
+              popup_select_cache_mask = (1u << i);
+              break;
+            }
+          }  // for (size_t i = 0; i < popup_select_cache_options.size(); ++i)
 
-          if (current_page_id != get_page_id("climate")) return;
+          popup_select_open->execute(
+            get_page_id("climate"),
+            std::string("${LOCALIZATION[LANG].climate.select_preset_mode}")
+          );
 
-          disp1->show_component("button07");  // Off
-          disp1->set_component_font_color("climate.button07", static_cast<uint16_t>(
-                                                                  (thermostat_embedded->mode==climate::CLIMATE_MODE_OFF)
-                                                                  ? Colors::RGB565_BLUE_INDIGO : Colors::RGB565_GRAY));
+  - id: !extend picker_selected  # Defined by page_popup_select
+    then:
+      - lambda: |-
+          if (context != CLIMATE_PRESET_MODE_CONTEXT) return;
+          if (entity != "${CLIMATE_EMBEDDED_SENTINEL}") return;  // Handled by page climate
+
+          if (mask == 0) {
+            // Keep the active preset when its option is tapped again
+            ESP_LOGV("${TAG_ADDON_CLIMATE}", "climate_preset_mode deselect ignored");
+            return;
+          }
+
+          ESP_LOGD("${TAG_ADDON_CLIMATE}", "Set embedded thermostat preset to '%s'", value.c_str());
+          auto call = thermostat_embedded->make_call();
+          call.set_preset(value);
+          call.perform();
 
   - id: !extend stop_all
     then:

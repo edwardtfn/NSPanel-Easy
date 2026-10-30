@@ -14,6 +14,8 @@ namespace esphome::nspanel_easy {
 constexpr uint8_t POPUP_SELECT_SLOTS = 8;
 /// Maximum number of options the picker accepts; bounded by the width of popup_select_cache_mask.
 constexpr uint8_t POPUP_SELECT_MAX_OPTIONS = 32;
+/// Selection mode for a single option, as stored in popup_select_cache_mode.
+constexpr uint8_t POPUP_SELECT_MODE_SINGLE = 0;
 /// Nextion component ID of opt0; opt1..opt7 follow sequentially.
 constexpr uint8_t POPUP_SELECT_ID_OPT0 = 6;
 /// Nextion component ID of the previous-page touch area (hotspot hs_prev, also reported on swipe down).

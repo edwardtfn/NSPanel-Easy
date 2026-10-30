@@ -522,6 +522,10 @@ script:
           set_brightness->execute(brightness_dim_hold ? display_dim_brightness->state : display_brightness->state);
       - delay: !lambda return (int(timeout_dim->state) *1000);
       - lambda: |-
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          // Kept on while a wake-up sensor is active: the timers are reset once it is released
+          if (wakeup_sensors_active()) return;
+          #endif  // NSPANEL_EASY_SUBSCRIBE
           if (
                 timeout_dim->state >= 1 and
                 current_page_id != get_page_id("screensaver") and
@@ -568,6 +572,30 @@ script:
   - id: !extend update_flag_api_ready
     then:
       - script.execute: wakeup_page_update
+      - lambda: |-
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          // Sensor states are stale while disconnected, so they are released and forgotten, and applied again as
+          // Home Assistant sends them on reconnection
+          wakeup_sensors_connection_update(api_server->is_connected_with_state_subscription());
+          #endif  // NSPANEL_EASY_SUBSCRIBE
+
+  - id: !extend boot_early_routines
+    then:
+      - lambda: |-
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          // Assigned before the API connects, as the wake-up sensors report their states right after it
+          wakeup_sensors_changed = [](bool active) {
+            // The boot sequence is left alone: the timers start once it completes
+            if (current_page_id == get_page_id("boot")) return;
+            if (active) {
+              wakeup->execute(true);  // Each activation wakes the display and resets its timers
+              return;
+            }  // if (active)
+            // Released: the dim and sleep timers count from the end of the activity
+            if (current_page_id == get_page_id("screensaver")) return;  // Already sleeping
+            timer_reset_all->execute();
+          };
+          #endif  // NSPANEL_EASY_SUBSCRIBE
 
   - id: wait_for_display
     mode: single

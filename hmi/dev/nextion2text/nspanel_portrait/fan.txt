@@ -251,7 +251,7 @@ Text mode_button
         Vertical Spacing        : 0
     
     Events
-        Touch Release Event
+        Touch Press Event
             mode_button.pco=31
         
 Slider fanslider

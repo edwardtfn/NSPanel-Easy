@@ -52,6 +52,16 @@ display:
             }
 
             const uint32_t bit = (1u << opt_index);
+            if (popup_select_cache_mode == POPUP_SELECT_MODE_SINGLE && popup_select_cache_mask == bit) {
+              // Single selection: tapping the selected option keeps it selected. The display already cleared
+              // its highlight on the tap, so restore it and skip the dispatch, as nothing changed.
+              ESP_LOGV("${TAG_PAGE_POPUP_SELECT}", "Selected option %" PRIu8 " tapped again; keeping the selection",
+                                                    opt_index);
+              disp1->send_command_printf("selection_mask.val=%" PRIu32, static_cast<uint32_t>(1u << slot));
+              disp1->send_command("render.en=1");
+              return;
+            }  // if (popup_select_cache_mode == POPUP_SELECT_MODE_SINGLE && popup_select_cache_mask == bit)
+
             const uint32_t new_mask = (popup_select_cache_mask == bit) ? 0u : bit;
             popup_select_cache_mask = new_mask;
 

@@ -22,6 +22,7 @@ climate:
     cool_overrun: ${cool_overrun} ${temp_units}
     heat_deadband: ${heat_deadband} ${temp_units}
     heat_overrun: ${heat_overrun} ${temp_units}
+    heat_cool_mode: true  # Required for the HEAT_COOL mode, used by the "Home" preset
     cool_action:
       - switch.turn_on: relay_${cooler_relay}
     heat_action:

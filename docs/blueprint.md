@@ -59,6 +59,11 @@ Most of the weather integrations are supported, however some may be able to prov
 
 We run all of our tests with "Accuweather", so the parameters shown on the panel are targetting this integration and will be shown with your integration when available.
 
+### Weather pages - Show maximum temperature first
+
+The weather pages show the forecast temperatures as `<min> / <max>` by default.
+Enable this option to show them as `<max> / <min>`.
+
 ### Outdoor temperature Sensor (Optional)
 
 Optionally, the value of an outdoor temperature sensor can be used here.
@@ -99,6 +104,8 @@ You still have to select that entity on this field in the blueprint settings to 
 Additional climate entities can be assigned to buttons and will be explained later in this document.
 
 On the blueprint settings, you will also find settings for sensors and custom buttons to be shown on all the climate pages.
+
+When a climate entity supports preset modes (like `eco`, `comfort` or `away`), its climate page shows a preset button that opens a list with the available presets.
 
 ## QR Code
 
@@ -153,9 +160,19 @@ If the NSPanel loses Wi-Fi connection or HA is down, the hardware button can the
 
 The entity that should be switched with the left/right hardware button.
 
-### Left/Right Hardware Button Name - Label (Optional)
+### Left/Right Hardware Button - Label (Optional)
 
-Text on the screen above the corresponding hardware button, shown on the pages selected in [Labels Pages](#labels-pages).
+Label on the screen above the corresponding hardware button, shown on the pages selected in [Labels Pages](#labels-pages).
+It can show a text or an icon:
+
+- **Label type:** `Text` (default) shows the label text, and `Icon` shows the label icon.
+- **Label text:** text shown when the label type is `Text` (10 characters are supported).
+- **Label icon:** icon shown when the label type is `Icon`, from the [icon cheatsheet](https://edwardtfn.github.io/NSPanel-Easy/icons/cheatsheet.html).
+  If not set, the icon of the state indicator entity is used (or of the controlled entity, when no state indicator entity is set), falling back to its device class and domain icons.
+  The icon is resolved when the panel syncs with the Blueprint, and does not change with the entity state.
+
+While Home Assistant is not connected, the label is dimmed, as the button has no effect.
+This does not apply when the button controls its relay locally or with [Activate Relay x local Fallback](#activate-relay-x-local-fallback-optional), as the button keeps working.
 
 ### Left/Right Hardware Button hold assignment - VALUE (optional)
 
@@ -282,6 +299,14 @@ data:
 > with a default such as `nspanel_easy_ref: latest` under `substitutions:`)
 > and pass the tag when compiling: `esphome -s nspanel_easy_ref v<version> compile <config>.yaml`.
 > Do not name this substitution `version`, as that name is already used by NSPanel Easy for the firmware version.
+
+## Screensaver
+
+### Wake-up sensors (Optional)
+
+Binary sensors (like motion, occupancy, doors or windows) that wake up the panel when they turn `On`.
+The panel is kept on while any of these sensors is `On`, and the dim and sleep timeouts start counting once all of them are `Off`.
+While Home Assistant is disconnected, the sensors are ignored.
 
 ## Advanced Settings
 

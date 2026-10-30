@@ -911,6 +911,13 @@ For guidance on Nextion development:
 - [Nextion Instruction Set](https://nextion.tech/instruction-set)
 - [Nextion Editor Guide](https://nextion.tech/editor_guide/)
 
+> [!TIP]
+> To replace the background images without installing Nextion Editor, the community project
+> [Nextion Editor Docker](https://github.com/sztupy/nextion-editor-docker) provides a Home Assistant add-on
+> that builds an NSPanel Easy TFT with your own dark, light and splash backgrounds.
+> It also allows compiling TFT files from the command line.
+> The add-on requires an amd64 host (not Raspberry Pi or Home Assistant Green) with at least 4 GB of RAM.
+
 ### Memory Optimization Best Practices
 
 1. **Monitor Memory Usage**: Regularly check memory reports in ESPHome logs
