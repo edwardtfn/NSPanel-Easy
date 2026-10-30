@@ -1,0 +1,14 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### EMPTY PACKAGE                                                                             #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### Placeholder for optional packages: included instead of a package that is disabled by a    #####
+##### substitution (e.g. `sntp_servers` in nspanel_esphome_datetime.yaml).                      #####
+#####################################################################################################
+
+---
+{}
+...

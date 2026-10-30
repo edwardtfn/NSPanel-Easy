@@ -12,10 +12,16 @@ substitutions:
   ## Change only in your      ##
   ## local yaml substitutions ##
   ##############################
+  # SNTP servers (up to 3), separated by ";"; set to blank ("") to remove SNTP
+  sntp_servers: "0.pool.ntp.org;1.pool.ntp.org;2.pool.ntp.org"
+  ##############################
   TAG_DATETIME: nspanel.datetime
   DATE_FORMAT_DEFAULT: "%A, %d.%m"
   TIME_FORMAT_DEFAULT: "%H:%M"
 
+packages:
+  # SNTP as a second time source, removed entirely when `sntp_servers` is blank
+  sntp: !include ${ "nspanel_esphome_datetime_sntp.yaml" if sntp_servers | length > 0 else "nspanel_esphome_empty.yaml" }
 
 esphome:
   build_flags:
@@ -181,16 +187,5 @@ time:  # Keeps time display updated
       then:
         - lambda: |-
             ESP_LOGD("${TAG_DATETIME}", "System clock synchronized");
-            refresh_datetime->execute();
-
-  # Second time source: SNTP only needs Wi-Fi, so the clock becomes valid before the API connects
-  # (e.g. after a power loss, when the system time is not kept).
-  # No manual id on purpose: ESPHome merges all SNTP time sources into one and rejects two manual ids,
-  # so this merges into `time_provider` when it is changed to SNTP (see docs/customization.md).
-  - platform: sntp
-    on_time_sync:
-      then:
-        - lambda: |-
-            ESP_LOGD("${TAG_DATETIME}", "System clock synchronized (SNTP)");
             refresh_datetime->execute();
 ...

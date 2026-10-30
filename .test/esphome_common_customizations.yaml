@@ -97,6 +97,10 @@ script:
     then:
       - logger.log: button_right_release
 
+substitutions:
+  # Use my own local network time server
+  sntp_servers: 192.168.0.1;europe.pool.ntp.org;0.pool.ntp.org
+
 switch:
   # Expose relay local control switch to Home Assistant
   - name: Relay 1 Local
@@ -129,12 +133,6 @@ switch:
 time:
   - id: !extend time_provider
     timezone: "America/Cancun"
-    # Use my own local network time server
-    platform: sntp
-    servers:
-      - !secret mysntpserver
-      - europe.pool.ntp.org
-      - 0.pool.ntp.org
     # Scheduled relay
     on_time:
       - hours: 7
