@@ -295,18 +295,28 @@ substitutions:
 
 ### SNTP (time) server
 
-ESPHome takes its time from Home Assistant, however you can configure it to use a Network Time Server instead.
+ESPHome takes its time from Home Assistant and, as a second source, from public Network Time Servers (`0.pool.ntp.org`, `1.pool.ntp.org` and `2.pool.ntp.org`).
+The second source only needs Wi-Fi, so the time can be shown before the connection to Home Assistant is established.
+
+You can use your own Network Time Servers (up to 3, separated by `;`) with the `sntp_servers` substitution:
 
 ```yaml
 # Use my own local network time server
-time:
-  - id: !extend time_provider
-    platform: sntp
-    servers:
-      - !secret mysntpserver
-      - europe.pool.ntp.org
-      - 0.pool.ntp.org
+substitutions:
+  sntp_servers: "192.168.0.1;europe.pool.ntp.org;0.pool.ntp.org"
 ```
+
+To use only Home Assistant as time source, set it to blank:
+
+```yaml
+# Do not use Network Time Servers
+substitutions:
+  sntp_servers: ""
+```
+
+> [!IMPORTANT]
+> If you previously changed `time_provider` to `platform: sntp`, remove that customization and use the `sntp_servers` substitution instead.
+> Otherwise, the build fails, as ESPHome supports only one SNTP time source.
 
 ### Sensor for display awake vs sleeping
 

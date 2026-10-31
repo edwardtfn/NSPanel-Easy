@@ -12,10 +12,29 @@ substitutions:
   ## Change only in your      ##
   ## local yaml substitutions ##
   ##############################
+  # SNTP servers (up to 3), separated by ";"; set to blank ("") to remove SNTP
+  sntp_servers: "0.pool.ntp.org;1.pool.ntp.org;2.pool.ntp.org"
+  ##############################
   TAG_DATETIME: nspanel.datetime
   DATE_FORMAT_DEFAULT: "%A, %d.%m"
   TIME_FORMAT_DEFAULT: "%H:%M"
+  _pkg_time_sntp:
+    time:
+      # Second time source: SNTP only needs Wi-Fi, so the clock becomes valid before the API connects
+      # (e.g. after a power loss, when the system time is not kept)
+      - id: time_sntp
+        platform: sntp
+        # A list is used as is; a string is split at ";"
+        servers: ${ sntp_servers if sntp_servers is not string else (sntp_servers.split(";") | map("trim") | select | list) }
+        on_time_sync:
+          then:
+            - lambda: |-
+                ESP_LOGD("${TAG_DATETIME}", "System clock synchronized (SNTP)");
+                refresh_datetime->execute();
 
+packages:
+  # SNTP as a second time source, removed entirely when `sntp_servers` is blank
+  time_sntp: ${ _pkg_time_sntp if sntp_servers | length > 0 else {} }
 
 esphome:
   build_flags:
