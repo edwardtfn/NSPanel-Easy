@@ -98,7 +98,7 @@ esp32_ble_tracker:
 
 ## Image size
 
-Tested with `ESPHome 2026.9.1`, `ESPectre 3.0.0` and `NSPanel-Easy 2026.10.0` with space saving `captive_portal: !remove`, `web_server: !remove`.
+Tested with `ESPHome 2026.9.1`, `ESPectre 3.0.0` and `NSPanel-Easy 2026.10.0`.
 
 ### Summary
 
@@ -119,8 +119,6 @@ Tested with `ESPHome 2026.9.1`, `ESPectre 3.0.0` and `NSPanel-Easy 2026.10.0` wi
 ```yaml
 substitutions:
   wakeup_with_button_press: true
-captive_portal: !remove
-web_server: !remove
 packages:
   remote_package:
     url: https://github.com/edwardtfn/NSPanel-Easy
@@ -140,8 +138,6 @@ substitutions:
   backup_heater_relay: "1"
   backup_cooler_relay: "0"  # Relay 2 status icon is used by ESPectre
   climate_backup_delay: "3"
-captive_portal: !remove
-web_server: !remove
 packages:
   remote_package:
     url: https://github.com/edwardtfn/NSPanel-Easy
@@ -163,8 +159,6 @@ substitutions:
   backup_heater_relay: "1"
   backup_cooler_relay: "0"  # Relay 2 status icon is used by ESPectre
   climate_backup_delay: "3"
-captive_portal: !remove
-web_server: !remove
 esp32:
   framework:
     type: esp-idf

@@ -10,11 +10,7 @@ Table of contents:
   - [API encryption](#api-encryption)
   - [Custom OTA password](#custom-ota-password)
   - [OTA encryption](#ota-encryption)
-  - [Web server credentials](#web-server-credentials)
-  - [Reboot when API fails](#reboot-when-api-fails)
-  - [Manual IP](#manual-ip)
-  - [Hidden Wi-Fi](#hidden-wi-fi)
-  - [Connect to multiple networks](#connect-to-multiple-networks)
+  - [Web server](#web-server)
   - [SNTP (time) server](#sntp-time-server)
   - [Sensor for display awake vs sleeping](#sensor-for-display-awake-vs-sleeping)
   - [Deep sleep](#deep-sleep)
@@ -36,7 +32,6 @@ Table of contents:
   - [Hardware button scripts (v4.3.30+)](#hardware-button-scripts-v4330)
   - [Expose relay fallback switch](#expose-relay-fallback-switch)
   - [Relay Interlocking](#relay-interlocking)
-  - [Remove non-essential components](#remove-non-essential-components)
 
 &nbsp;
 &nbsp;
@@ -164,9 +159,6 @@ This is useful for altering standard settings or freeing up memory for additiona
 Here's how you might remove some default settings:
 
 ```yaml
-# Removes the `captive_portal` component
-captive_portal: !remove
-
 # Removes the OTA password
 ota:
   - id: !extend ota_std
@@ -179,6 +171,10 @@ ota:
 > Incorrect removals could render your panel unusable, potentially requiring a reflash via a serial cable.
 
 ## Examples
+
+> [!NOTE]
+> Network settings, such as Wi-Fi, manual IP, gateway, DNS server, and the reboot when the connection fails, are
+> described in [Network](network.md).
 
 ### API encryption
 >
@@ -263,32 +259,19 @@ ota:
 > The previous version of this guide enabled the OTA encryption by setting `ota_password` to blank.
 > If you used that, add `password: !remove` as shown above, otherwise ESPHome rejects the configuration because the password cannot be combined with the encryption.
 
-### Web server credentials
+### Web server
 
-By default, the web server credentials are defined by this project (advanced only) using `admin` as `username` and your `Wi-Fi password` as `password`, but you can replace it using this customization:
+The web server is not included by default. To add it, protected with your own credentials:
 
 ```yaml
-# Custom web server credentials
+# Add the web server with custom credentials
 web_server:
   auth:
     username: !secret web_server_username
     password: !secret web_server_password
 ```
 
-### Reboot when API fails
-
-Reboot your panel if it loses its connection to Home Assistant for more than a certain time (15 minutes in this example).
-
-Sometimes the low-level ESP functions could report that the ESP is connected to the network,
-when in fact it is not and only a full reboot fixes it.
-
-To support long times without Wi-Fi, this is disabled by default in this project, but you can set a reasonable interval to restart, based on your network reliability.
-
-```yaml
-# Reboot if HA is not connected for 15 minutes
-api:
-  reboot_timeout: 15min
-```
+The web server uses a significant amount of memory, so check the [memory usage](#memory-management) after adding it.
 
 ### Feedback when Home Assistant is unavailable
 
@@ -308,55 +291,6 @@ substitutions:
   page_unavailable_sound: true
   # Optional: replace the default tone (RTTTL)
   tone_page_unavailable: "unavailable:d=16,o=5,b=160:a5,e5"
-```
-
-### Manual IP
-
-Set IP address manually.
-
-> [!IMPORTANT]
-> At least one DNS server is required to enable TFT transfer directly from GitHub, otherwise use `nextion_update_url`.
-
-```yaml
-# Set IP address manually
-wifi:
-  networks:
-    - id: !extend wifi_default
-      manual_ip:
-        static_ip: 192.168.0.123
-        gateway: 192.168.0.1
-        subnet: 255.255.255.0
-        dns1: 1.1.1.1  # At least one DNS server is required to enable TFT transfer directly from GitHub, otherwise use `nextion_update_url`.
-        dns2: 8.8.8.8
-```
-
-### Hidden Wi-Fi
-
-Connect to a hidden Wi-Fi network.
-
-```yaml
-# Connect to a hidden Wi-Fi network.
-wifi:
-  networks:
-    - id: !extend wifi_default
-      hidden: true
-  fast_connect: true
-```
-
-### Connect to multiple networks
-
-NSPanel will attempt to connect to the one with the highest signal strength or, if you set a priority, it will try to connect to the highest priority.
-After failing it will connect to the second network.
-
-```yaml
-# Set dual network
-wifi:
-  networks:
-    - id: !extend wifi_default
-      priority: 10
-    - ssid: !secret wifi_ssid_backup
-      password: !secret wifi_password_backup
-      priority: 0
 ```
 
 ### SNTP (time) server
@@ -896,18 +830,6 @@ switch:
   - id: !extend relay_2
     interlock: [relay_1, relay_2]
     interlock_wait_time: 500ms  # Please adjust this accordingly
-```
-
-### Remove non-essential components
-
-This can be useful to free-up memory, so other custom components could be used instead.
-
-```yaml
-# Removes captive portal - Pre-built and advanced only
-captive_portal: !remove
-
-# Removes embedded web server - Advanced only
-web_server: !remove
 ```
 
 ### Restart with 15s button press

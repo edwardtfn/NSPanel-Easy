@@ -44,7 +44,8 @@ For troubleshooting, refer to the following sections:
 ### If using manual IP, make sure you have a DNS server configured
 
 At least one DNS server is required to enable TFT transfer directly from GitHub; otherwise use `nextion_update_url`.
-If you are setting up a manual IP as a customization, please remember to add a valid DNS server for your panel.
+If you are setting up a manual IP as a customization, please remember to add a valid DNS server for your panel,
+as described in [Network](network.md#dns-server).
 
 ### Using the `nspanel_blank.tft` File to Assist
 
