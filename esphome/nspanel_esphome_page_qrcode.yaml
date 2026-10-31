@@ -15,7 +15,8 @@ substitutions:
   qrcode_background_color: 65535
   qrcode_foreground_color: 0
   qrcode_border_size: 8
-  qrcode_max_length: 105  # Must match the setting on Nextion
+  qrcode_max_length: 105       # Must match the setting on Nextion
+  qrcode_title_max_length: 30  # Must match the setting on Nextion (page_label)
   TAG_PAGE_QRCODE: nspanel.page.qrcode
 
 api:
@@ -39,7 +40,16 @@ api:
               return;
             }  // qrcode.length() > ${qrcode_max_length}
 
-            if (!show and title == id(qrcode_title) and qrcode == id(qrcode_string)) {
+            // Truncate title to the Nextion limit on a UTF-8 character boundary (skip back over continuation bytes)
+            std::string page_title = title;
+            if (page_title.size() > ${qrcode_title_max_length}) {
+              size_t length = ${qrcode_title_max_length};
+              while (length > 0 and (static_cast<uint8_t>(page_title[length]) & 0xC0) == 0x80) --length;
+              page_title.resize(length);
+              ESP_LOGW("${TAG_PAGE_QRCODE}", "Title truncated to %zu bytes (max ${qrcode_title_max_length})", length);
+            }  // page_title.size() > ${qrcode_title_max_length}
+
+            if (!show and page_title == id(qrcode_title) and qrcode == id(qrcode_string)) {
               ESP_LOGD("${TAG_PAGE_QRCODE}", "QR code unchanged");
               return;
             }
@@ -60,8 +70,8 @@ api:
               return;
             }  // qrcode.empty() and !id(qrcode_string).empty()
 
-            if (id(qrcode_title) != title) {
-              id(qrcode_title) = title;
+            if (id(qrcode_title) != page_title) {
+              id(qrcode_title) = page_title;
               data_changed = true;
             }
             if (id(qrcode_string) != qrcode) {
@@ -113,11 +123,13 @@ globals:
   - id: qrcode_string
     type: std::string
     restore_value: ${qrcode_restore_value}
+    max_restore_data_length: ${qrcode_max_length}
     initial_value: '${qrcode_initial_value}'
 
   - id: qrcode_title
     type: std::string
     restore_value: ${qrcode_restore_value}
+    max_restore_data_length: ${qrcode_title_max_length}
     initial_value: '${qrcode_title_initial_value}'
 
 script:

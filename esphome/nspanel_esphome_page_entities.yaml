@@ -8,7 +8,14 @@
 
 ---
 substitutions:
-  half_width_chars: "iljtIf '-,;:!.\\\"|()[]{}*^~\\\\/_"
+  ##### User customization #####
+  # Longest adjusted value length shown with the default (largest) font on entities pages
+  page_entities_value_font_large_max_len: 8
+  # Longest adjusted value length shown with the medium font on entities pages (longer values use the smallest font)
+  page_entities_value_font_medium_max_len: 12
+
+  ##### Internal #####
+  half_width_chars: "iljtIf '-,;:!.°\\\"|()[]{}*^~\\\\/_"
   TAG_PAGE_ENTITIES: nspanel.page.entities
 
 esphome:
@@ -30,13 +37,24 @@ script:
           }
 
           // Value - Adjust font
+          static_assert(${page_entities_value_font_large_max_len} >= 0 and ${page_entities_value_font_large_max_len} <= 255,
+                        "page_entities_value_font_large_max_len must be between 0 and 255");
+          static_assert(${page_entities_value_font_medium_max_len} >= ${page_entities_value_font_large_max_len} and
+                            ${page_entities_value_font_medium_max_len} <= 255,
+                        "page_entities_value_font_medium_max_len must be between page_entities_value_font_large_max_len and 255");
+          static constexpr uint8_t VALUE_FONT_ID_SMALL = 0;   // Smallest font, for long values
+          static constexpr uint8_t VALUE_FONT_ID_MEDIUM = 1;  // Medium font
+          static constexpr uint8_t VALUE_FONT_ID_LARGE = 3;   // Default font of the value components in the TFT
           const uint8_t adjusted_length = adjusted_text_length(txt, "${half_width_chars}");
           // Decide which font to use based on adjusted length
-          if (adjusted_length > 8 && adjusted_length <= 12) {
-            disp1->set_component_font(component.c_str(), 1);
-          } else if (adjusted_length > 12) {
-            disp1->set_component_font(component.c_str(), 0);
-          }
+          // The large font is set explicitly, so a short value restores it after a long one on the same component
+          if (adjusted_length > ${page_entities_value_font_medium_max_len}) {
+            disp1->set_component_font(component.c_str(), VALUE_FONT_ID_SMALL);
+          } else if (adjusted_length > ${page_entities_value_font_large_max_len}) {
+            disp1->set_component_font(component.c_str(), VALUE_FONT_ID_MEDIUM);
+          } else {  // adjusted_length <= ${page_entities_value_font_large_max_len}
+            disp1->set_component_font(component.c_str(), VALUE_FONT_ID_LARGE);
+          }  // adjusted_length
 
   - id: !extend action_component_val
     then:

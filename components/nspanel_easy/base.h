@@ -221,6 +221,18 @@ extern UnavailableBehavior unavailable_behavior;
 extern bool unavailable_unhide_pending;
 
 /**
+ * @brief Whether the Home Assistant values on display are stale.
+ *
+ * Set once the API has been disconnected for longer than the `api_stale_grace_period`
+ * substitution, and cleared as soon as it reconnects, so a short drop such as a Home
+ * Assistant restart leaves the display untouched. While set, the last values received
+ * from Home Assistant cannot be trusted: each module hides them, greys them out or falls
+ * back to the panel's own data. Modules react to a change by extending the
+ * `api_stale_changed` script.
+ */
+extern bool api_stale;
+
+/**
  * @brief Fire a Home Assistant event for NSPanel HA Blueprint
  *
  * Automatically adds device_name, type and, when available, api_version to the event data.

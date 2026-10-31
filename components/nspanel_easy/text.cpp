@@ -3,9 +3,9 @@
 #include "text.h"
 #include <algorithm>
 #include <cctype>
-#include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 
 namespace esphome::nspanel_easy {
 
@@ -185,13 +185,101 @@ void replace_all(std::string &str, const char *token, const char *value) {
   }
 }
 
-uint8_t adjusted_text_length(const std::string &text, const std::string &half_width_chars) {
-  float length = 0.0f;
-  for (char const &c : text) {
-    length += (half_width_chars.find(c) != std::string::npos) ? 0.5f : 1.0f;
+namespace {
+
+/// Inclusive range of Unicode code points.
+struct CodePointRange {
+  uint32_t first;
+  uint32_t last;
+};
+
+/// Code points rendered as wide glyphs (about 1.5 times a digit) by the fonts in the TFT.
+/// Based on the East Asian Wide and Fullwidth ranges, limited to the Basic Multilingual Plane (the only one
+/// supported by Nextion fonts), plus the conjoining Hangul Jamo, which Nextion renders standalone.
+constexpr CodePointRange WIDE_CODE_POINTS[] = {
+    {0x1100, 0x11FF},  // Hangul Jamo
+    {0x2E80, 0x303E},  // CJK Radicals, Kangxi Radicals, Ideographic Description, CJK Symbols and Punctuation
+    {0x3041, 0x33FF},  // Hiragana, Katakana, Bopomofo, Hangul Compatibility Jamo, ..., CJK Compatibility
+    {0x3400, 0x4DBF},  // CJK Unified Ideographs Extension A
+    {0x4E00, 0x9FFF},  // CJK Unified Ideographs
+    {0xA000, 0xA4CF},  // Yi Syllables and Radicals
+    {0xA960, 0xA97F},  // Hangul Jamo Extended-A
+    {0xAC00, 0xD7A3},  // Hangul Syllables
+    {0xF900, 0xFAFF},  // CJK Compatibility Ideographs
+    {0xFE10, 0xFE19},  // Vertical Forms
+    {0xFE30, 0xFE6F},  // CJK Compatibility Forms and Small Form Variants
+    {0xFF00, 0xFF60},  // Fullwidth Forms
+    {0xFFE0, 0xFFE6},  // Fullwidth Signs
+};
+
+/// Weights used by adjusted_text_length(), in half units.
+constexpr uint8_t WEIGHT_HALF_WIDTH = 1;  // Narrow characters listed by the caller
+constexpr uint8_t WEIGHT_NORMAL = 2;      // Latin digits and letters, and any other character
+constexpr uint8_t WEIGHT_WIDE = 3;        // CJK, Hangul, Kana and full-width forms
+
+bool is_wide_code_point(uint32_t code_point) {
+  return std::any_of(
+      std::begin(WIDE_CODE_POINTS), std::end(WIDE_CODE_POINTS),
+      [code_point](const CodePointRange &range) { return code_point >= range.first && code_point <= range.last; });
+}
+
+/**
+ * @brief Gets the length of the UTF-8 sequence starting at @p pos.
+ *
+ * @return Length in bytes (1 to 4), or 0 when the lead byte is invalid or the sequence is truncated or has an
+ *         invalid continuation byte.
+ */
+size_t utf8_sequence_length(const std::string &text, size_t pos) {
+  const auto lead = static_cast<unsigned char>(text[pos]);
+  size_t length = 0;
+  if ((lead & 0x80) == 0x00) {
+    return 1;  // ASCII
+  } else if ((lead & 0xE0) == 0xC0) {
+    length = 2;
+  } else if ((lead & 0xF0) == 0xE0) {
+    length = 3;
+  } else if ((lead & 0xF8) == 0xF0) {
+    length = 4;
+  } else {
+    return 0;  // Continuation byte or invalid lead byte
+  }  // lead
+  if (pos + length > text.size()) {
+    return 0;  // Truncated sequence
   }
-  const float ceiled = std::ceil(length);
-  return static_cast<uint8_t>(ceiled > 255.0f ? 255.0f : ceiled);
+  for (size_t i = 1; i < length; ++i) {
+    if ((static_cast<unsigned char>(text[pos + i]) & 0xC0) != 0x80) {
+      return 0;  // Invalid continuation byte
+    }
+  }
+  return length;
+}
+
+}  // namespace
+
+uint8_t adjusted_text_length(const std::string &text, const std::string &half_width_chars) {
+  uint32_t half_units = 0;
+  size_t pos = 0;
+  while (pos < text.size()) {
+    const size_t sequence_length = utf8_sequence_length(text, pos);
+    if (sequence_length == 0) {
+      // Invalid byte: count it as a normal character and resynchronize on the next byte
+      half_units += WEIGHT_NORMAL;
+      ++pos;
+      continue;
+    }  // sequence_length == 0
+    if (half_width_chars.find(text.data() + pos, 0, sequence_length) != std::string::npos) {
+      half_units += WEIGHT_HALF_WIDTH;  // Listed narrow characters take precedence over any other rule
+    } else if (sequence_length >= 2 && sequence_length <= 3 &&
+               is_wide_code_point(decode_nextion_icon_utf8(text.data() + pos, sequence_length))) {
+      half_units += WEIGHT_WIDE;
+    } else {
+      half_units += WEIGHT_NORMAL;
+    }  // half_width_chars
+    pos += sequence_length;
+  }  // while pos
+
+  const uint32_t length = (half_units + 1) / 2;  // Round up to whole characters
+  return static_cast<uint8_t>(std::min<uint32_t>(length, 255));
 }
 
 }  // namespace esphome::nspanel_easy

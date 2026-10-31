@@ -343,8 +343,24 @@ script:
             if (current_page_id != get_page_id("climate")) return;
           }  // for (button : CLIMATE_MODE_BUTTONS)
 
-          // Preset mode button, only when the thermostat has presets to choose from
+          // Preset mode button, only when the thermostat has presets to choose from.
+          // Its icon shows the active standard preset (generic icon for none or a custom preset),
+          // and its font color marks whether a preset is active.
           if (traits.get_supports_presets() or !traits.get_supported_custom_presets().empty()) {
+            const char *preset_icon = climate_preset_icons[static_cast<uint8_t>(climate::CLIMATE_PRESET_NONE)];
+            bool preset_active = false;
+            if (thermostat_embedded->has_custom_preset()) {
+              preset_active = true;
+            } else if (thermostat_embedded->preset.has_value() and
+                       static_cast<uint8_t>(thermostat_embedded->preset.value()) < CLIMATE_PRESET_NAMES_COUNT) {
+              preset_icon = climate_preset_icons[static_cast<uint8_t>(thermostat_embedded->preset.value())];
+              preset_active = (thermostat_embedded->preset.value() != climate::CLIMATE_PRESET_NONE);
+            }  // if (thermostat_embedded->has_custom_preset())
+            ESP_LOGV("${TAG_ADDON_CLIMATE}", "  preset_active: %s", YESNO(preset_active));
+            disp1->set_component_text(hmi::climate::PRESET_BUTTON.name, preset_icon);
+            // Theme colors from the display, so the button follows the light and dark themes
+            disp1->send_command_printf("climate.%s.pco=%s", hmi::climate::PRESET_BUTTON.name,
+                                       preset_active ? "color_pco_main" : "color_pco_secondary");
             disp1->show_component(hmi::climate::PRESET_BUTTON.name);
           } else {
             disp1->hide_component(hmi::climate::PRESET_BUTTON.name);

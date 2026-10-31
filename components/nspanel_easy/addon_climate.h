@@ -100,6 +100,24 @@ constexpr const char *climate_preset_names[CLIMATE_PRESET_NAMES_COUNT] = {
     "Activity"  // CLIMATE_PRESET_ACTIVITY (7)
 };
 
+/**
+ * @brief Icons of ESPHome's standard climate presets, shown on the climate page preset button.
+ *
+ * Array indices correspond to ESPHome's `climate::ClimatePreset` enum values (0-7), as in
+ * `climate_preset_names`. The icons match the ones Home Assistant uses for these presets.
+ * `CLIMATE_PRESET_NONE` uses the generic preset icon, which is also used for custom presets.
+ */
+constexpr const char *climate_preset_icons[CLIMATE_PRESET_NAMES_COUNT] = {
+    Icons::MDI_TUNE_VARIANT,         // CLIMATE_PRESET_NONE (0)
+    Icons::MDI_HOME,                 // CLIMATE_PRESET_HOME (1)
+    Icons::MDI_ACCOUNT_ARROW_RIGHT,  // CLIMATE_PRESET_AWAY (2)
+    Icons::MDI_ROCKET_LAUNCH,        // CLIMATE_PRESET_BOOST (3)
+    Icons::MDI_SOFA,                 // CLIMATE_PRESET_COMFORT (4)
+    Icons::MDI_LEAF,                 // CLIMATE_PRESET_ECO (5)
+    Icons::MDI_BED,                  // CLIMATE_PRESET_SLEEP (6)
+    Icons::MDI_MOTION_SENSOR         // CLIMATE_PRESET_ACTIVITY (7)
+};
+
 // =============================================================================
 // Climate Icon Lookup Tables
 // =============================================================================

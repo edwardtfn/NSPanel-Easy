@@ -1,0 +1,233 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHOME CORE - PAGE - GRAPH                                                               #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+
+---
+substitutions:
+  graph_refresh_interval: 5min      # Must match GRAPH_SLOT_SECONDS
+  graph_draw_queue_timeout: 200ms   # Longest wait for the display queue between two batches
+  graph_draw_batch_delay: 20ms      # Pause between two batches, so other commands are not starved
+  TAG_PAGE_GRAPH: nspanel.page.graph
+
+display:
+  - id: !extend disp1
+    on_touch:
+      then:
+        - lambda: |-
+            if (touch_event) return;  // Ignore the touch, so only the release will be used
+            if (page_id != get_page_id("home")) return;
+            uint8_t value_idx = UINT8_MAX;
+            if (component_id == hmi::home::VALUE01.id or component_id == hmi::home::VALUE01_ICON.id) {
+              value_idx = 0;
+            } else if (component_id == hmi::home::VALUE02.id or component_id == hmi::home::VALUE02_ICON.id) {
+              value_idx = 1;
+            } else if (component_id == hmi::home::VALUE03.id or component_id == hmi::home::VALUE03_ICON.id) {
+              value_idx = 2;
+            } else if (component_id == hmi::home::VALUE04.id or component_id == hmi::home::VALUE04_ICON.id) {
+              value_idx = 3;
+            }  // if (component_id)
+            if (value_idx == UINT8_MAX or graph_entities[value_idx].empty()) return;  // No graph for this value
+            ESP_LOGD("${TAG_PAGE_GRAPH}", "Open graph of %s", graph_entities[value_idx].c_str());
+            detailed_entity->publish_state(graph_entities[value_idx]);  // Reported to the Blueprint in page_changed
+            disp1->send_command_printf("back_page_id=%" PRIu8, current_page_id);
+            goto_page->execute(get_page_id("graph"));
+
+esphome:
+  build_flags:
+    - -D NSPANEL_EASY_PAGE_GRAPH
+
+globals:
+  - id: graph_draw_pixels  # Pixel values being drawn, oldest first
+    type: std::vector<uint8_t>
+    restore_value: false
+
+  - id: graph_draw_index  # Next point of graph_draw_pixels to send
+    type: size_t
+    restore_value: false
+    initial_value: '0'
+
+  - id: graph_draw_low  # Lower bound of the scale drawn
+    type: float
+    restore_value: false
+    initial_value: 'NAN'
+
+  - id: graph_draw_high  # Upper bound of the scale drawn
+    type: float
+    restore_value: false
+    initial_value: 'NAN'
+
+script:
+  - id: !extend action_component_text
+    then:
+      - lambda: |-
+          if (page != "mem") return;
+          if (component == "graph_value_now") {
+            if (current_page_id == get_page_id("graph"))
+              disp1->set_component_text(hmi::graph::VALUE_NOW.name, txt.c_str());
+            return;
+          }
+
+  - id: !extend action_component_text_list
+    then:
+      - lambda: |-
+          if (page != "mem") return;
+          if (component == "graph_entities") {
+            if (txt_list.size() != HOME_VALUE_COUNT) {
+              ESP_LOGE("${TAG_PAGE_GRAPH}", "Expected %" PRIu8 " graph entities, got %zu", HOME_VALUE_COUNT, txt_list.size());
+              return;
+            }
+            for (size_t idx = 0; idx < HOME_VALUE_COUNT; ++idx) {
+              graph_entities[idx] = txt_list[idx];
+            }  // for (idx)
+            return;
+          }
+          if (current_page_id != get_page_id("graph")) return;  // The rest only applies to the graph shown
+          if (component == "graph_config") {
+            if (!graph_set_config(txt_list)) return;
+            disp1->set_component_text(hmi::graph::PAGE_LABEL.name, graph_config.title.c_str());
+            disp1->set_component_text(hmi::graph::ICON_STATE.name, graph_config.icon.c_str());
+            return;
+          }
+          if (component == "graph_history") {
+            if (graph_set_history(txt_list))
+              page_graph_draw->execute();
+            return;
+          }
+          if (component == "graph_append") {
+            const size_t appended = graph_append(txt_list);
+            if (appended == 0) return;
+            float low = NAN;
+            float high = NAN;
+            graph_range(low, high);
+            if (page_graph_draw->is_running() or low != id(graph_draw_low) or high != id(graph_draw_high)) {
+              page_graph_draw->execute();  // Scale changed: draw everything again
+              return;
+            }
+            // Same scale: the waveform scrolls, so sending the new points is enough
+            const std::vector<uint8_t> pixels = graph_pixels(low, high);
+            for (size_t idx = pixels.size() - std::min(appended, pixels.size()); idx < pixels.size(); ++idx) {
+              disp1->add_waveform_data(hmi::graph::WAVE.id, 0, pixels[idx]);
+            }  // for (idx)
+            page_graph_axes->execute();  // The time axis moved with the new points
+            return;
+          }
+
+  - id: !extend page_change
+    then:
+      - lambda: |-
+          if (new_page_id == get_page_id("graph")) {
+            page_graph->execute();
+            page_graph_refresh->execute();
+          }
+
+  - id: !extend reset_globals
+    then:
+      - lambda: |-
+          if (new_page_id == get_page_id("graph")) {
+            display_entity_keep = true;  // The graph entity is reported to the Blueprint in page_changed
+            graph_reset();
+          }
+
+  - id: page_graph
+    mode: single
+    then:
+      - lambda: |-
+          if (current_page_id != get_page_id("graph")) return;  // Page graph not visible
+          // Start empty: the Blueprint sends the settings and the history in answer to page_changed
+          id(graph_draw_low) = NAN;
+          id(graph_draw_high) = NAN;
+          disp1->send_command_printf("cle %" PRIu8 ",0", hmi::graph::WAVE.id);
+          disp1->set_component_text(hmi::graph::VALUE_NOW.name, "");
+          disp1->set_component_text(hmi::graph::VALUE_MIN.name, "");
+          disp1->set_component_text(hmi::graph::VALUE_MAX.name, "");
+
+  - id: page_graph_draw
+    mode: restart
+    then:
+      - lambda: |-
+          if (current_page_id != get_page_id("graph")) return;
+          float low = NAN;
+          float high = NAN;
+          graph_range(low, high);
+          id(graph_draw_low) = low;
+          id(graph_draw_high) = high;
+          id(graph_draw_pixels) = graph_pixels(low, high);
+          id(graph_draw_index) = 0;
+          disp1->set_component_text(hmi::graph::VALUE_MIN.name, graph_format(low).c_str());
+          disp1->set_component_text(hmi::graph::VALUE_MAX.name, graph_format(high).c_str());
+          disp1->send_command_printf("cle %" PRIu8 ",0", hmi::graph::WAVE.id);
+      # Send the points in batches: the whole graph at once would fill the display command queue
+      - while:
+          condition:
+            lambda: |-
+              return current_page_id == get_page_id("graph") and id(graph_draw_index) < id(graph_draw_pixels).size();
+          then:
+            # Same workaround as page_buttons for esphome/esphome#19018
+            - wait_until:
+                condition:
+                  lambda: return (current_page_id != get_page_id("graph")) or (disp1->queue_size() == 0);
+                timeout: ${graph_draw_queue_timeout}
+            - lambda: |-
+                if (current_page_id != get_page_id("graph")) return;
+                const size_t end = std::min(id(graph_draw_index) + GRAPH_BATCH_SIZE, id(graph_draw_pixels).size());
+                for (size_t idx = id(graph_draw_index); idx < end; ++idx) {
+                  disp1->add_waveform_data(hmi::graph::WAVE.id, 0, id(graph_draw_pixels)[idx]);
+                }  // for (idx)
+                id(graph_draw_index) = end;
+            - delay: ${graph_draw_batch_delay}
+      - lambda: |-
+          id(graph_draw_pixels).clear();
+          id(graph_draw_pixels).shrink_to_fit();
+          page_graph_axes->execute();
+
+  - id: page_graph_axes
+    mode: restart
+    then:
+      # Lines at the top and bottom of the graph (the max and min labels) and a tick with the hour every
+      # GRAPH_TICK_HOURS on the time axis. The TFT draws them relative to the waveform, with the theme colours.
+      - lambda: |-
+          if (current_page_id != get_page_id("graph")) return;
+          // Restore the background below the graph, so the ticks of the previous drawing disappear, and draw the bound lines
+          disp1->send_command_printf("click %s,1", hmi::graph::DRAW_FRAME.name);
+          const size_t count = graph_values.size();
+          if (count == 0 or graph_last_slot == 0) return;
+          for (size_t idx = 0; idx < count; ++idx) {
+            const time_t slot = static_cast<time_t>(graph_last_slot) - static_cast<time_t>((count - 1 - idx) * GRAPH_SLOT_SECONDS);
+            const ESPTime local = ESPTime::from_epoch_local(slot);
+            if (local.minute != 0 or local.hour % GRAPH_TICK_HOURS != 0) continue;
+            disp1->send_command_printf("%s.val=%u", hmi::graph::TICK_X.name, static_cast<unsigned>(idx));
+            disp1->send_command_printf("%s.txt=\"%02u\"", hmi::graph::TICK_TEXT.name, static_cast<unsigned>(local.hour));
+            disp1->send_command_printf("click %s,1", hmi::graph::DRAW_TICK.name);
+          }  // for (idx)
+
+  - id: page_graph_refresh
+    mode: restart
+    then:
+      # While the page is open, ask the Blueprint for the points of the periods completed since the newest one shown
+      - while:
+          condition:
+            lambda: return current_page_id == get_page_id("graph");
+          then:
+            - delay: ${graph_refresh_interval}
+            - lambda: |-
+                if (current_page_id != get_page_id("graph")) return;
+                fire_ha_event("generic", {
+                  {"page", "graph"},
+                  {"component", "graph"},
+                  {"event", "refresh"},
+                  {"value", std::to_string(graph_last_slot)},
+                  {"entity", detailed_entity->state}
+                });
+
+  - id: !extend stop_page_constructors
+    then:
+      - lambda: |-
+          page_graph->stop();
+          page_graph_draw->stop();
+          page_graph_axes->stop();
+          page_graph_refresh->stop();
+...

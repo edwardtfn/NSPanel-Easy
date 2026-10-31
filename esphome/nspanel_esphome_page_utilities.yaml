@@ -81,7 +81,6 @@ script:
       - lambda: |-
           if (component_id != "bt_utilities") return;
           page_utilities_enabled = visible;
-          disp1->send_command_printf("vis_bt_utilities=%" PRIu8, visible ? 1 : 0);
           if (current_page_id == get_page_id("home"))
             disp1->set_component_visibility("bt_utilities", visible);
           ESP_LOGV("${TAG_PAGE_UTILITIES}", "page_utilities_enabled: %s", TRUEFALSE(page_utilities_enabled));

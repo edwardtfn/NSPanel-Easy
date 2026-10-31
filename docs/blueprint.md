@@ -83,6 +83,25 @@ If the value of the sensor needs to be corrected, this can be done via the tempe
 | Home page - Chips 01-07 (optional) | Used to display icons of HA binary entities on the home screen. The icon is displayed when the entity is on/open/true/active. Otherwise, no icon is displayed. | ![chip](pics/home_page_chips.jpg) |
 | Custom button 01-07 (Optional) | 7 custom buttons that can be assigned to different entities from your Home Assistant. The behavior of these buttons will depend on the entity's domain, such as light, media player, etc. | ![home_page_custom_buttons.jpg](pics/home_page_custom_buttons.jpg) |
 
+### Home page - Entity State 01-04 - Graph (Optional)
+
+When enabled, tapping the value (or its icon) on the Home page opens a page with a graph of the entity over the last 24 hours, one point per 5 minutes.
+The page also shows the current value, the lower and upper bounds of the scale (with a line at each bound) and the local time every 6 hours below the graph.
+While the page is open, a new point is added every 5 minutes.
+
+The graph is drawn from the 5-minute means that Home Assistant keeps in the recorder statistics, so:
+
+- Only sensors with a `state_class` (e.g. `measurement`) can be graphed, as Home Assistant keeps no statistics for other entities. For those, the value is not tappable.
+- The `recorder` integration must be loaded. It is part of `default_config`.
+- The newest point is the last complete 5-minute period, so the right end of the graph is 5 to 10 minutes behind. The current value label is live.
+- Periods without data repeat the previous value, and periods before the first value are drawn at the bottom of the graph.
+- Home Assistant must be connected: the graph takes a second or two to appear when the page opens.
+
+### Home page - Entity State 01-04 - Graph minimum and maximum (Optional)
+
+Fixed lower and upper bounds of the graph, as numbers (e.g. `0` and `3000`). A comma is also accepted as decimal separator (e.g. `0,5`).
+Leave a field empty for an automatic bound, from the lowest or highest value of the last 24 hours. For example, set only the minimum to `0` for a power sensor.
+
 ## Alarm Control Panel
 
 An alarm control panel entity can be controlled by your panel.
@@ -106,6 +125,7 @@ Additional climate entities can be assigned to buttons and will be explained lat
 On the blueprint settings, you will also find settings for sensors and custom buttons to be shown on all the climate pages.
 
 When a climate entity supports preset modes (like `eco`, `comfort` or `away`), its climate page shows a preset button that opens a list with the available presets.
+The button shows the icon of the active preset and is highlighted while a preset is active. Custom presets use the generic preset icon.
 
 ## QR Code
 
@@ -159,6 +179,9 @@ If the NSPanel loses Wi-Fi connection or HA is down, the hardware button can the
 ### Left/Right Hardware Button - Entity (Optional)
 
 The entity that should be switched with the left/right hardware button.
+
+Old-style groups (`group.*`) are supported: a press turns all members off when the group is on, and on when the group is off, so all members end up in the same state.
+Members must support `turn_on`/`turn_off` (e.g. lights, switches, fans or covers); groups of locks are not supported.
 
 ### Left/Right Hardware Button - Label (Optional)
 

@@ -74,8 +74,7 @@ NSPanel Easy comprises three tightly integrated components that work together:
 | **HA Blueprint** | A Home Assistant automation blueprint that orchestrates the panel's behavior and entity bindings. |
 
 > [!NOTE]
-> Each component is versioned independently and designed to be compatible across releases.
-> You do not need to update all three at once - update each at your own pace as new versions become available.
+> To update a running panel, see [Update NSPanel Easy](docs/howto.md#update-nspanel-easy).
 
 ## Documentation & Resources
 
@@ -87,6 +86,8 @@ Quick links for the most common needs:
 
 - **Getting Started:** [Installation and Setup](docs/install.md) walks you
   through flashing, TFT upload, and Blueprint import.
+- **Updating:** [Update NSPanel Easy](docs/howto.md#update-nspanel-easy)
+  covers the three steps to update a running panel.
 - **Migrating from Blackymas?** The [Migration Guide](docs/migration_from_blackymas.md)
   takes less than 10 minutes — no serial flashing required.
 - **API Reference:** [API Documentation](docs/api.md) for all custom ESPHome
@@ -281,6 +282,8 @@ We welcome contributions of all kinds - code, documentation, translations, and t
 - **Pull Requests:** Open a PR against `main`. Each PR gets its own branch for development and review.
 - **Testing:** Browse [open Pull Requests](https://github.com/edwardtfn/NSPanel-Easy/pulls) to find features that need testing and feedback.
 - **Issues:** Report bugs or request features via [GitHub Issues](https://github.com/edwardtfn/NSPanel-Easy/issues).
+- **Security:** Report vulnerabilities privately, as described in the [Security Policy](SECURITY.md). Never use public issues for them.
+- **Code of Conduct:** All community spaces, including Discord, follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 - **Discussions:** Join the conversation on [Discord][discord].
 
 > [!TIP]
@@ -293,6 +296,7 @@ Whether you need help, want to share your setup, or just want to follow along - 
 
 - **[GitHub Issues & Feature Requests](https://github.com/edwardtfn/NSPanel-Easy/issues)**
 - **[Discord Server][discord]**
+- **[How AI Is Used in This Project](docs/ai_usage.md)** - what is automated, how to identify AI-assisted posts, and how your data is handled
 
 ## Acknowledgements
 

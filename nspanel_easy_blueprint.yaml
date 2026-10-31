@@ -414,6 +414,30 @@ blueprint:
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
+        home_value01_graph:
+          name: Home page - Entity State 01 - Graph
+          description: &description_home_value_graph >-
+            When enabled, tapping this value (or its icon) opens a graph of the entity over the last 24 hours,
+            drawn from the 5-minute means of the Home Assistant recorder statistics.
+
+
+            *Only sensors with a `state_class` (e.g. `measurement`) have statistics. For other entities the value is not tappable.*
+          default: false
+          selector: &selector_home_value_graph
+            boolean: {}
+        home_value01_graph_min:
+          name: Home page - Entity State 01 - Graph minimum
+          description: &description_home_value_graph_min >-
+            Fixed lower bound of the graph. Leave empty for an automatic bound, from the lowest value of the last 24 hours.
+          default: ""
+          selector: &selector_home_value_graph_bound
+            text: {}
+        home_value01_graph_max:
+          name: Home page - Entity State 01 - Graph maximum
+          description: &description_home_value_graph_max >-
+            Fixed upper bound of the graph. Leave empty for an automatic bound, from the highest value of the last 24 hours.
+          default: ""
+          selector: *selector_home_value_graph_bound
         home_value02:
           name: Home page - Entity State 02 - Entity
           description: *description_entity_displayed
@@ -434,6 +458,21 @@ blueprint:
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
+        home_value02_graph:
+          name: Home page - Entity State 02 - Graph
+          description: *description_home_value_graph
+          default: false
+          selector: *selector_home_value_graph
+        home_value02_graph_min:
+          name: Home page - Entity State 02 - Graph minimum
+          description: *description_home_value_graph_min
+          default: ""
+          selector: *selector_home_value_graph_bound
+        home_value02_graph_max:
+          name: Home page - Entity State 02 - Graph maximum
+          description: *description_home_value_graph_max
+          default: ""
+          selector: *selector_home_value_graph_bound
         home_value03:
           name: Home page - Entity State 03 - Entity
           description: *description_entity_displayed
@@ -454,6 +493,21 @@ blueprint:
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
+        home_value03_graph:
+          name: Home page - Entity State 03 - Graph
+          description: *description_home_value_graph
+          default: false
+          selector: *selector_home_value_graph
+        home_value03_graph_min:
+          name: Home page - Entity State 03 - Graph minimum
+          description: *description_home_value_graph_min
+          default: ""
+          selector: *selector_home_value_graph_bound
+        home_value03_graph_max:
+          name: Home page - Entity State 03 - Graph maximum
+          description: *description_home_value_graph_max
+          default: ""
+          selector: *selector_home_value_graph_bound
         home_value04:
           name: Home page - Entity State 04 - Entity
           description: *description_entity_displayed
@@ -474,6 +528,21 @@ blueprint:
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
+        home_value04_graph:
+          name: Home page - Entity State 04 - Graph
+          description: *description_home_value_graph
+          default: false
+          selector: *selector_home_value_graph
+        home_value04_graph_min:
+          name: Home page - Entity State 04 - Graph minimum
+          description: *description_home_value_graph_min
+          default: ""
+          selector: *selector_home_value_graph_bound
+        home_value04_graph_max:
+          name: Home page - Entity State 04 - Graph maximum
+          description: *description_home_value_graph_max
+          default: ""
+          selector: *selector_home_value_graph_bound
     home_page_custom_buttons:
       name: Home page - Custom buttons
       icon: mdi:home
@@ -1474,6 +1543,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - group
                   - humidifier
                   - input_boolean
                   - input_button
@@ -1561,6 +1631,7 @@ blueprint:
                   - climate
                   - cover
                   - fan
+                  - group
                   - humidifier
                   - input_boolean
                   - input_select
@@ -5109,23 +5180,6 @@ trigger_variables:
       group05: !input utilities_page01_group05_line_reference
       group06: !input utilities_page01_group06_line_reference
 
-  sun_state_list: >
-    {{
-      (
-        states.sun
-        | map(attribute="state")
-        | list
-      )
-      if states.sun | length > 0
-      else []
-    }}
-  sun_is_up: >
-    {{
-      sun_state_list | first == "above_horizon"
-      if sun_state_list | length > 0
-      else true
-    }}
-
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
@@ -5136,7 +5190,7 @@ variables:
   # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
   # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
   # While it is 'next' (development builds), the minimum firmware check is skipped.
-  min_esphome_version: 2026.10.7
+  min_esphome_version: next
 
   # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
@@ -5269,6 +5323,7 @@ variables:
       - "entitypage03"
       - "entitypage04"
     fan: "fan"
+    graph: "graph"
     home: "home"
     keyb_num: "keyb_num"
     light: "light"
@@ -6226,7 +6281,7 @@ conditions:
       trigger.id in ["automation_reloaded", "ha_started", "nspanel_event"] or has_value(device_name_sensor)
     }}
   - >  # Update page Home only when visible or home_page_background_update is enabled
-    {{ trigger.id not in ["home_values_state"] or home_page_background_update or pages.current == pages.home }}
+    {{ trigger.id not in ["home_values_state"] or home_page_background_update or pages.current in [pages.home, pages.graph] }}
   - >  # Do not update values when page utilities is not visible
     {{ trigger.id != "utilities_page" or pages.current == pages.utilities }}
   - >  # Do not update values when page entities is not visible
@@ -6294,6 +6349,32 @@ actions:
       # the entity stayed quiet until the wait timed out (settle pass or fallback refresh).
       # Set per iteration by "Entity details pages refresh".
       refresh_settled: false
+      # Milliseconds a button for an automation, button, input button, remote, scene or script shows on
+      # before it is drawn off again.
+      momentary_duration_ms: 800
+      # False when a button page state trigger is not an activation of its automation, button, input button,
+      # scene or script, e.g. a script ending more than momentary_duration_ms after its start or an attribute-only update.
+      # Set by "Update button's entities".
+      momentary_activated: true
+
+      # Not in trigger_variables: they are limited templates there and cannot read states.
+      sun_state_list: >
+        {{
+          (
+            states.sun
+            | map(attribute="state")
+            | list
+          )
+          if states.sun | length > 0
+          else []
+        }}
+      # Only below_horizon means night, so an unavailable or unknown sun keeps the day pictures.
+      sun_is_up: >
+        {{
+          sun_state_list | first != "below_horizon"
+          if sun_state_list | length > 0
+          else true
+        }}
 
       compact_unit_display: !input compact_unit_display
       # Home Assistant strips whitespace from rendered templates, so a variable holding only a space would always be empty.
@@ -6431,11 +6512,25 @@ actions:
             partlycloudy: '{{ 11 if sun_is_up else 12}}'
             lightning_rainy: '{{ 13 if sun_is_up else 14}}'
             lightning-rainy: '{{ 13 if sun_is_up else 14}}'
-            execptional: '{{ 13 if sun_is_up else 14}}'
+            exceptional: '{{ 13 if sun_is_up else 14}}'
             clear_night: 15
             clear-night: 15
             unknown: 1
             unavailable: 1
+          weather_day:  # forecast days show these day pictures also after sunset
+            sunny: 2
+            partlycloudy: 11
+            lightning_rainy: 13
+            lightning-rainy: 13
+            exceptional: 13
+            clear_night: 2  # a forecast covering daytime shows the day picture for clear sky
+            clear-night: 2
+          weather_night:  # forecast slots known to be entirely at night
+            sunny: 15
+            partlycloudy: 12
+            lightning_rainy: 14
+            lightning-rainy: 14
+            exceptional: 14
 
       ##### Home page #####
       home_page:
@@ -6473,24 +6568,36 @@ actions:
             icon: !input home_value01_icon
             icon_color_rgb: !input home_value01_icon_color
             label_color_rgb: !input home_value01_label_color
+            graph: !input home_value01_graph
+            graph_min: !input home_value01_graph_min
+            graph_max: !input home_value01_graph_max
             page: home
             component: value01
           - entity: !input home_value02
             icon: !input home_value02_icon
             icon_color_rgb: !input home_value02_icon_color
             label_color_rgb: !input home_value02_label_color
+            graph: !input home_value02_graph
+            graph_min: !input home_value02_graph_min
+            graph_max: !input home_value02_graph_max
             page: home
             component: value02
           - entity: !input home_value03
             icon: !input home_value03_icon
             icon_color_rgb: !input home_value03_icon_color
             label_color_rgb: !input home_value03_label_color
+            graph: !input home_value03_graph
+            graph_min: !input home_value03_graph_min
+            graph_max: !input home_value03_graph_max
             page: home
             component: value03
           - entity: !input home_value04
             icon: !input home_value04_icon
             icon_color_rgb: !input home_value04_icon_color
             label_color_rgb: !input home_value04_label_color
+            graph: !input home_value04_graph
+            graph_min: !input home_value04_graph_min
+            graph_max: !input home_value04_graph_max
             page: home
             component: value04
 
@@ -7287,17 +7394,16 @@ actions:
 
             **How to Resolve This Issue**
 
-            Components must be updated in this order: **ESPHome**, then **TFT**, then **Blueprint**.
+            To fix this, update the firmware on your panel:
 
-            1. Update your ESPHome configuration to reference version {{ blueprint_version
-            }}{{ '' if esphome_api_outdated else ' (or at least ' ~ min_esphome_version_string ~ ')' }}.
+            1. Open the ESPHome dashboard, find your panel and click **Install**.
 
-            2. Install the new firmware on your panel.
+            2. After the panel restarts, wait about one minute: the display is updated automatically.
 
-            3. Let the panel upload the matching TFT file and reboot.
+            This notification clears itself once everything is up to date.
 
             *For more detailed instructions, please refer to the online documentation:
-            [How to Update](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md).*
+            [How to Update the Firmware](https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/howto.md#update-esphome).*
             {% endif %}
         continue_on_error: true
       - alias: Custom action - ESPHome firmware outdated
@@ -8322,6 +8428,27 @@ actions:
                                   continue_on_error: true
                                 - *delay_boot
 
+                      - alias: Home page - Values with a graph
+                        sequence:
+                          - variables:
+                              graph_entities: >-
+                                {%- set ns = namespace(entities=[]) -%}
+                                {%- for value in home_page.entity_value -%}
+                                  {%- set entity = value.entity if value.entity is string else "" -%}
+                                  {%- set has_graph = value.graph | default(false, true) and "." in entity
+                                        and states[entity] is not none
+                                        and state_attr(entity, "state_class") is not none -%}
+                                  {%- set ns.entities = ns.entities + [entity if has_graph else ""] -%}
+                                {%- endfor -%}
+                                {{ ns.entities }}
+                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: graph_entities
+                              txt_list: '{{ graph_entities }}'
+                            continue_on_error: true
+                          - *delay_boot
+
                       - alias: Hardware buttons labels
                         sequence:
                           - variables:
@@ -9279,37 +9406,6 @@ actions:
                                           continue_on_error: true
                                     - *delay_default
 
-                          # A slot left without an entity is cleared, otherwise the last value
-                          # sent stays on screen after the entity is removed (#351). The text is
-                          # cleared instead of hidden, as `vis` is not kept across page changes.
-                          - alias: Home page values - Clear unconfigured
-                            repeat:
-                              for_each: >
-                                {%- set ns = namespace(items=[]) -%}
-                                {%- for item in home_page.entity_value -%}
-                                  {%- if not (item.entity is defined and item.entity is string and item.entity.split(".") | count == 2) -%}
-                                    {%- set ns.items = ns.items + [item] -%}
-                                  {%- endif -%}
-                                {%- endfor -%}
-                                {{ ns.items }}
-                              sequence:
-                                - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                  data:
-                                    page: home
-                                    id: '{{ repeat.item.component }}'
-                                    txt_list:
-                                      - ""
-                                  continue_on_error: true
-                                - *delay_default
-                                - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                  data:
-                                    page: home
-                                    id: '{{ repeat.item.component }}_icon'
-                                    txt_list:
-                                      - ""
-                                  continue_on_error: true
-                                - *delay_default
-
                       - alias: Buttons pages
                         conditions: '{{ nspanel_event.page in pages.buttonpages }}'
                         sequence: &refresh_page_buttonpage
@@ -9392,11 +9488,15 @@ actions:
                                             {{ state_entity_state == state_value }}
                                           {% else %}
                                             {{
-                                              (state_entity_state in enum.states.on and entity_domain not in ["automation"])
+                                              (state_entity_state in enum.states.on and (entity_domain not in ["automation"] or state_entity_id != entity_id))
                                               or (entity_domain == "climate" and state_entity_state != "off")
                                               or (entity_domain in ["automation", "button", "input_button", "remote", "scene", "script"]
+                                                  and "unavailable" not in [entity_state, state_entity_state]
+                                                  and (trigger.from_state is not defined or trigger.from_state is none or trigger.from_state.state not in ["unavailable"])
                                                   and not page_constructor
-                                                  and trigger.entity_id in [repeat.item.entity, state_entity_id])
+                                                  and momentary_activated
+                                                  and trigger.entity_id in [repeat.item.entity, state_entity_id]
+                                                  and state_entity_id == entity_id)
                                             }}
                                           {% endif %}
                                         temperature_units: !input temperature_unit
@@ -9466,11 +9566,12 @@ actions:
                                         - '{{ btn_state }}'
                                         - '{{ entity_domain in ["automation", "button", "input_button", "remote", "scene", "script"] }}'
                                         - '{{ not page_constructor }}'
+                                        - '{{ momentary_activated }}'
                                         - '{{ trigger.entity_id in [repeat.item.entity, state_entity_id] }}'
                                         - '{{ state_entity_id == entity_id }}'
                                       then:
                                         - delay:
-                                            milliseconds: 800
+                                            milliseconds: '{{ momentary_duration_ms }}'
                                         - action: 'esphome.{{ action_prefix }}_button'
                                           data:
                                             page: '{{ repeat.item.page }}'
@@ -10766,7 +10867,13 @@ actions:
                                     {%- if page_constructor -%}
                                       true
                                     {%- else -%}
-                                      {%- set old_state = trigger.event.data.old_state -%}
+                                      {#- Only state_changed events carry old_state; the details refresh loop runs from the panel event #}
+                                      {%- set old_state = (
+                                        trigger.event.data.old_state
+                                        if trigger is defined and trigger.event is defined and trigger.event.data is defined and trigger.event.data.old_state is defined
+                                        else none
+                                      ) -%}
+                                      {#- No previous state to compare against: push the options again #}
                                       {%- if old_state is none -%}
                                         true
                                       {%- else -%}
@@ -10831,6 +10938,12 @@ actions:
                                   - *delay_default
 
                               ##### Always (construction and updates): push current preset_mode #####
+                              # Read the active preset again right before writing it. The automation runs in parallel mode, so
+                              # a newer state change may already have been pushed while this run sent the options above.
+                              - variables:
+                                  preset_mode_now: >-
+                                    {%- set preset_mode_attr = state_attr(climate_entity, "preset_mode") -%}
+                                    {{ preset_mode_attr | trim if preset_mode_attr is string and preset_mode_attr | length > 0 else "" }}
                               - if: '{{ preset_modes_raw | length > 0 }}'
                                 then:
                                   - action: 'esphome.{{ action_prefix }}_component_text_list'
@@ -10838,7 +10951,36 @@ actions:
                                       page: mem
                                       id: popup_select_current
                                       txt_list:
-                                        - '{{ current_preset_mode }}'
+                                        - '{{ preset_mode_now }}'
+                                    continue_on_error: true
+                                  - *delay_default
+
+                                  ##### Always: show the active preset on the preset button #####
+                                  # Standard presets get the icon Home Assistant uses for them; no preset or a
+                                  # custom one keeps the generic icon. The font color marks whether a preset is
+                                  # active, using the display theme colors. This also clears the press color.
+                                  - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                    data:
+                                      page: mem
+                                      id: command
+                                      txt_list: >-
+                                        {%- set preset_icons = {
+                                          "home": "home",
+                                          "away": "account-arrow-right",
+                                          "boost": "rocket-launch",
+                                          "comfort": "sofa",
+                                          "eco": "leaf",
+                                          "sleep": "bed",
+                                          "activity": "motion-sensor"
+                                        } -%}
+                                        {%- set preset = preset_mode_now | lower -%}
+                                        {%- set preset_active = preset | length > 0 and preset != "none" -%}
+                                        {{
+                                          [
+                                            'preset_button.txt="' ~ all_icons[preset_icons.get(preset, "tune-variant")] ~ '"',
+                                            "preset_button.pco=" ~ ("color_pco_main" if preset_active else "color_pco_secondary")
+                                          ]
+                                        }}
                                     continue_on_error: true
                                   - *delay_default
 
@@ -11706,6 +11848,53 @@ actions:
                                             | map(attribute="condition") | list | count > 0
                                           else None
                                         }}
+                                      # True only when every forecast slot of a forecast page is known to be at night:
+                                      # - daily: a slot covers a whole day, so it is never night;
+                                      # - twice_daily: every slot has is_daytime set to false;
+                                      # - hourly: every slot lies between sunset and sunrise, using the time of day of the next sun events.
+                                      #   Skipped when a sun event is more than 26 hours away (polar day or night) or the sun is not available.
+                                      # Anything else (missing data, legacy forecast attribute) keeps the day pictures.
+                                      forecast_is_night: >
+                                        {%- set items = forecast_day | selectattr("datetime", "defined") | list if datetime_is_string else [] -%}
+                                        {%- if items | count == 0 -%}
+                                          false
+                                        {%- elif forecast_type == "daily" -%}
+                                          false
+                                        {%- elif forecast_type == "twice_daily" -%}
+                                          {{ items | selectattr("is_daytime", "defined") | selectattr("is_daytime", "false") | list | count == items | count }}
+                                        {%- elif forecast_type == "hourly" -%}
+                                          {%- set sun_entity = states.sun | map(attribute="entity_id") | list | first | default(none) -%}
+                                          {%- set next_rising = as_datetime(state_attr(sun_entity, "next_rising") | string, none) if sun_entity else none -%}
+                                          {%- set next_setting = as_datetime(state_attr(sun_entity, "next_setting") | string, none) if sun_entity else none -%}
+                                          {%- set now_ts = as_timestamp(now()) -%}
+                                          {%- if next_rising is none or next_setting is none
+                                                or as_timestamp(next_rising) - now_ts > 93600
+                                                or as_timestamp(next_setting) - now_ts > 93600 -%}
+                                            false
+                                          {%- else -%}
+                                            {%- set rising = as_local(next_rising) -%}
+                                            {%- set setting = as_local(next_setting) -%}
+                                            {%- set setting_seconds = setting.hour * 3600 + setting.minute * 60 + setting.second -%}
+                                            {%- set night_seconds = (rising.hour * 3600 + rising.minute * 60 + rising.second - setting_seconds) % 86400 -%}
+                                            {%- set ns = namespace(night=true) -%}
+                                            {%- for item in items -%}
+                                              {%- set slot = as_datetime(item.datetime | string, none) -%}
+                                              {%- if slot is none -%}
+                                                {%- set ns.night = false -%}
+                                              {%- else -%}
+                                                {%- set slot = as_local(slot) -%}
+                                                {%- set after_setting = (slot.hour * 3600 + slot.minute * 60 + slot.second - setting_seconds) % 86400 -%}
+                                                {#- The whole hour of the slot must end before sunrise -#}
+                                                {%- if after_setting + 3600 > night_seconds -%}
+                                                  {%- set ns.night = false -%}
+                                                {%- endif -%}
+                                              {%- endif -%}
+                                            {%- endfor -%}
+                                            {{ ns.night }}
+                                          {%- endif -%}
+                                        {%- else -%}
+                                          false
+                                        {%- endif -%}
                                       precipitation: >
                                         {{
                                           forecast_day
@@ -11911,7 +12100,13 @@ actions:
                                                 else "unavailable"
                                               ] | int(1)
                                               if condition == "unknown" and page_name == pages.weatherpages[0]
-                                              else nextion.pic.weather[condition] | int(1)
+                                              else (
+                                                nextion.pic.weather_night[condition]
+                                                if page_name != pages.weatherpages[0] and forecast_is_night and condition in nextion.pic.weather_night
+                                                else nextion.pic.weather_day[condition]
+                                                if page_name != pages.weatherpages[0] and not forecast_is_night and condition in nextion.pic.weather_day
+                                                else nextion.pic.weather[condition]
+                                              ) | int(1)
                                             }}
                                         continue_on_error: true
                                       - *delay_default
@@ -12518,6 +12713,140 @@ actions:
                             continue_on_error: true
                           - *delay_default
 
+                      - alias: Graph page
+                        conditions: '{{ nspanel_event.page == pages.graph }}'
+                        sequence: &refresh_page_graph
+                          - variables:
+                              # Settings of the Home page value that opened the graph
+                              graph_value: >-
+                                {{
+                                  home_page.entity_value
+                                  | selectattr("entity", "defined")
+                                  | selectattr("entity", "eq", entity_id)
+                                  | list
+                                  | first
+                                  | default({}, true)
+                                }}
+                              overlap:
+                                icon: >
+                                  {{
+                                    graph_value.icon
+                                    if
+                                      graph_value.icon is defined and
+                                      graph_value.icon is string and
+                                      graph_value.icon is match "mdi:" and
+                                      graph_value.icon.split("mdi:")[1] in all_icons
+                                    else
+                                      None
+                                  }}
+                          - *variable_entity
+                          - condition: '{{ entity_id_valid }}'
+                          - &condition_graph_enabled
+                            alias: Only an entity with the graph enabled on a Home page value
+                            condition: template
+                            value_template: >-
+                              {{
+                                home_page.entity_value
+                                | selectattr("entity", "defined")
+                                | selectattr("entity", "eq", entity_id)
+                                | selectattr("graph", "defined")
+                                | selectattr("graph", "eq", true)
+                                | list | count > 0
+                              }}
+                          - variables:
+                              unit_of_measurement_raw: '{{ state_attr(entity_id, "unit_of_measurement") | default("") }}'
+                              unit_of_measurement: >
+                                {{
+                                  unit_of_measurement_raw
+                                  if unit_of_measurement_raw and unit_of_measurement_raw is string and unit_of_measurement_raw | length > 0
+                                  else ""
+                                }}
+                              # Fixed bounds; a comma is accepted as decimal separator, and an empty or non-numeric field means automatic
+                              graph_min: >-
+                                {%- set bound = (graph_value.graph_min | default("") | string | trim).replace(",", ".") -%}
+                                {{ bound if is_number(bound) else "" }}
+                              graph_max: >-
+                                {%- set bound = (graph_value.graph_max | default("") | string | trim).replace(",", ".") -%}
+                                {{ bound if is_number(bound) else "" }}
+                              # Same decimals as the value shown on the Home page
+                              graph_decimals: >-
+                                {%- set rounded = states(entity_id, rounded=true) | string -%}
+                                {{ rounded.split(".")[1] | length if is_number(rounded) and "." in rounded else 0 }}
+                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: graph_config
+                              txt_list:
+                                - '{{ entity.name }}'
+                                - '{{ entity.icon }}'
+                                - '{{ unit_of_measurement }}'
+                                - '{{ graph_min }}'
+                                - '{{ graph_max }}'
+                                - '{{ graph_decimals }}'
+                            continue_on_error: true
+                          - *delay_default
+                          - &graph_value_now
+                            action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: graph_value_now
+                              txt_list: *value_with_unit_and_translations
+                            continue_on_error: true
+                          - *delay_default
+                          - variables: &variables_graph_period
+                              # The newest complete 5-minute period; the recorder compiles it a few seconds after it ends
+                              graph_end_ts: '{{ ((as_timestamp(now()) - 60) // 300 * 300) | int }}'
+                              graph_start_ts: >-
+                                {{
+                                  [graph_end_ts - 288 * 300, (graph_since | int(0)) + 300] | max
+                                  if graph_since is defined
+                                  else graph_end_ts - 288 * 300
+                                }}
+                          # A missing recorder integration is not caught by continue_on_error, so this run stops here
+                          - &graph_get_statistics
+                            action: recorder.get_statistics
+                            data:
+                              statistic_ids:
+                                - '{{ entity_id }}'
+                              start_time: '{{ graph_start_ts | int | as_datetime | string }}'
+                              end_time: '{{ graph_end_ts | int | as_datetime | string }}'
+                              period: 5minute
+                              types:
+                                - mean
+                            response_variable: graph_response
+                            continue_on_error: true
+                          - variables: &variables_graph_values
+                              # `[start, v0, v1, ...]`: one value per period, oldest first, "" for a period without data
+                              graph_values: >-
+                                {%- set rows = graph_response.statistics[entity_id]
+                                      if graph_response is defined and graph_response.statistics is defined
+                                        and entity_id in graph_response.statistics
+                                      else [] -%}
+                                {%- set rows = rows | selectattr("mean", "number") | list -%}
+                                {%- set slots = ((graph_end_ts - graph_start_ts) // 300) | int -%}
+                                {%- set ns = namespace(out=[graph_start_ts | string], row=0) -%}
+                                {%- for slot in range(slots) -%}
+                                  {%- set slot_ts = graph_start_ts + slot * 300 -%}
+                                  {#- Periods start on 5-minute boundaries, so a row is either in this slot or a later one -#}
+                                  {%- if ns.row < rows | count and as_timestamp(rows[ns.row].start) | int < slot_ts -%}
+                                    {%- set ns.row = ns.row + 1 -%}
+                                  {%- endif -%}
+                                  {%- if ns.row < rows | count and as_timestamp(rows[ns.row].start) | int == slot_ts -%}
+                                    {%- set ns.out = ns.out + ["%.6g" | format(rows[ns.row].mean)] -%}
+                                    {%- set ns.row = ns.row + 1 -%}
+                                  {%- else -%}
+                                    {%- set ns.out = ns.out + [""] -%}
+                                  {%- endif -%}
+                                {%- endfor -%}
+                                {{ ns.out }}
+                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: graph_history
+                              txt_list: '{{ graph_values }}'
+                            continue_on_error: true
+                          - *delay_default
+
                   - condition:
                       - '{{ detailed_entity | length > 0 }}'
                       - '{{ original_state.entity_id_valid }}'
@@ -12801,6 +13130,16 @@ actions:
                                               {{ entity_domain }}.toggle
                                             {% elif entity_domain == "automation" %}
                                               automation.{{ domain_automation_button_action if domain_automation_button_action is string else "toggle"}}
+                                            {% elif entity_domain == "group" %}
+                                              {#- Old-style groups: set all members to the same state, based on the group state.  -#}
+                                              {#- homeassistant.toggle would toggle each member individually, keeping mixed states. -#}
+                                              {% if last_click_button_entity_state in enum.states.on %}
+                                                homeassistant.turn_off
+                                              {% elif last_click_button_entity_state in enum.states.off %}
+                                                homeassistant.turn_on
+                                              {% else %}
+                                                homeassistant.update_entity
+                                              {% endif %}  {#- group state #}
                                             {% elif entity_domain in ["button", "input_button"] %}
                                               {{ entity_domain }}.press
                                             {% elif entity_domain == "lawn_mower" %}
@@ -13091,16 +13430,57 @@ actions:
                                       - delay:
                                           milliseconds: 300
                                       - *variables_page_buttons
+                                      # Only the buttons the click can change are redrawn: the clicked button and the
+                                      # buttons sharing its entity or State Indicator Entity, e.g. scene buttons tracked
+                                      # by one input_select. Other entities changed by a custom action are redrawn by
+                                      # their state triggers. Available momentary entities without a State Indicator Entity
+                                      # are left out, as their state trigger shows them on for 800 ms and then off.
+                                      # Buttons a state trigger has drawn since the click are skipped: the newest update of their
+                                      # entity or State Indicator Entity came after the click, with a state that trigger draws.
+                                      # Nothing is skipped while other runs of this automation were running at the click or are running
+                                      # now, as a state trigger run may have been dropped at the maximum number of runs, or while
+                                      # state triggers are blocked (no device name).
                                       - repeat:
                                           for_each: >
-                                            {{
-                                              buttons_pages.buttons
-                                              | selectattr("page", "defined")
-                                              | selectattr("page", "eq", nspanel_event.page)
-                                              | selectattr("entity", "defined")
-                                              | rejectattr("entity", "eq", [])
-                                              | list
-                                            }}
+                                            {%- set ns = namespace(items=[], click_entities=[last_click_button.entity]) -%}
+                                            {%- if last_click_button.state_entity is defined
+                                                  and last_click_button.state_entity is string
+                                                  and last_click_button.state_entity | length > 3
+                                                  and "." in last_click_button.state_entity -%}
+                                              {%- set ns.click_entities = ns.click_entities + [last_click_button.state_entity] -%}
+                                            {%- endif -%}
+                                            {%- set skip_drawn = has_value(device_name_sensor)
+                                                  and this.attributes.current | int(1) == 0
+                                                  and state_attr(this.entity_id, "current") == 1 -%}
+                                            {%- for item in buttons_pages.buttons
+                                                  | selectattr("page", "defined")
+                                                  | selectattr("page", "eq", nspanel_event.page)
+                                                  | selectattr("entity", "defined")
+                                                  | rejectattr("entity", "eq", []) -%}
+                                              {%- set item_state_entity = item.state_entity
+                                                    if item.state_entity is defined
+                                                        and item.state_entity is string
+                                                        and item.state_entity | length > 3
+                                                        and "." in item.state_entity
+                                                    else item.entity -%}
+                                              {%- if (item.entity in ns.click_entities or item_state_entity in ns.click_entities)
+                                                    and not (item_state_entity == item.entity
+                                                      and item.entity.split(".")[0] in ["automation", "button", "input_button", "remote", "scene", "script"]
+                                                      and states(item.entity) not in ["unavailable"]) -%}
+                                                {%- set newest = [
+                                                        states[item.entity] if "." in item.entity else none,
+                                                        states[item_state_entity] if "." in item_state_entity else none
+                                                      ]
+                                                      | reject("none") | sort(attribute="last_updated") | last | default(none) -%}
+                                                {%- if not (skip_drawn
+                                                      and newest is not none
+                                                      and newest.last_updated > trigger.event.time_fired
+                                                      and (newest.state not in enum.states.unknown or newest.state == "unavailable")) -%}
+                                                  {%- set ns.items = ns.items + [item] -%}
+                                                {%- endif -%}
+                                              {%- endif -%}
+                                            {%- endfor -%}
+                                            {{ ns.items }}
                                           sequence: *display_button_page_button
 
                       - alias: Climate page
@@ -13567,6 +13947,33 @@ actions:
                           - *variable_entity
                           - *entity_details_show
 
+                      - alias: Graph page - Newest values
+                        conditions:
+                          - '{{ nspanel_event.page == pages.graph }}'
+                          - '{{ nspanel_event.component == "graph" }}'
+                          - '{{ nspanel_event.event == "refresh" }}'
+                        sequence:
+                          - variables:
+                              entity_id: '{{ nspanel_event.entity | default("", true) }}'
+                              entity_id_valid: *variable_entity_id_valid
+                              # Start of the newest period the panel already shows
+                              graph_since: '{{ nspanel_event.value | int(0) }}'
+                          - condition: '{{ entity_id_valid }}'
+                          # The entity the panel shows, with the graph enabled
+                          - condition: '{{ states(detailed_entity) == entity_id }}'
+                          - *condition_graph_enabled
+                          - variables: *variables_graph_period
+                          - condition: '{{ graph_end_ts > graph_start_ts }}'
+                          - *graph_get_statistics
+                          - variables: *variables_graph_values
+                          - condition: '{{ graph_values | count > 1 }}'
+                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: graph_append
+                              txt_list: '{{ graph_values }}'
+                            continue_on_error: true
+
       - alias: Automation reloaded
         conditions:
           - condition: trigger
@@ -13620,6 +14027,39 @@ actions:
           ##### Update global settings (as user may have changed something) #####
           - *global_settings
 
+          # A home page value slot left without an entity is cleared, otherwise the last value sent
+          # stays on screen after the entity is removed (#351). The text is cleared instead of hidden,
+          # as `vis` is not kept across page changes, while the text of the global home page components is.
+          # This runs only here, when the Blueprint settings may have changed, and not on every home page
+          # refresh, so values sent through the API to unconfigured slots are kept (#591).
+          - alias: Home page values - Clear unconfigured
+            repeat:
+              for_each: >
+                {%- set ns = namespace(items=[]) -%}
+                {%- for item in home_page.entity_value -%}
+                  {%- if not (item.entity is defined and item.entity is string and item.entity.split(".") | count == 2) -%}
+                    {%- set ns.items = ns.items + [item] -%}
+                  {%- endif -%}
+                {%- endfor -%}
+                {{ ns.items }}
+              sequence:
+                - action: 'esphome.{{ action_prefix }}_component_text_list'
+                  data:
+                    page: home
+                    id: '{{ repeat.item.component }}'
+                    txt_list:
+                      - ""
+                  continue_on_error: true
+                - *delay_default
+                - action: 'esphome.{{ action_prefix }}_component_text_list'
+                  data:
+                    page: home
+                    id: '{{ repeat.item.component }}_icon'
+                    txt_list:
+                      - ""
+                  continue_on_error: true
+                - *delay_default
+
           - choose:
               ## PAGE HOME ##
               - conditions: '{{ pages.current == pages.home }}'
@@ -13637,7 +14077,7 @@ actions:
         conditions:
           - condition: trigger
             id: trigger_buttonpage_state
-          - '{{ trigger.to_state.state not in enum.states.unknown }}'
+          - '{{ trigger.to_state.state not in enum.states.unknown or "unavailable" in [trigger.from_state.state, trigger.to_state.state] }}'
           - condition: or
             conditions:
               - '{{ pages.current in pages.buttonpages }}'
@@ -13646,6 +14086,24 @@ actions:
         sequence:
           - variables:
               detailed_entity_state: '{{ states(detailed_entity) if detailed_entity | length > 0 else "" }}'
+              # Activation: a script or automation run started less than momentary_duration_ms before the update (its start, or the end
+              # of a short run), an automation is turned on or off, a button or input button is pressed, a scene is activated.
+              # Remotes are not filtered.
+              momentary_activated: >
+                {% set domain = trigger.entity_id.split(".")[0] %}
+                {% if domain not in ["automation", "button", "input_button", "scene", "script"] %}
+                  {{ true }}
+                {% elif trigger.from_state is none or trigger.to_state is none %}
+                  {{ false }}
+                {% elif domain in ["automation", "script"] %}
+                  {% set last_triggered = trigger.to_state.attributes.get("last_triggered") %}
+                  {{
+                    (as_timestamp(trigger.to_state.last_updated) - as_timestamp(last_triggered, 0) < momentary_duration_ms / 1000)
+                    or (domain == "automation" and [trigger.from_state.state, trigger.to_state.state] in [["off", "on"], ["on", "off"]])
+                  }}
+                {% else %}
+                  {{ trigger.to_state.state != trigger.from_state.state and trigger.from_state.state != "unavailable" }}
+                {% endif %}
           - choose:
               - alias: Buttons pages
                 conditions:
@@ -13814,6 +14272,23 @@ actions:
                 }}
               sequence:
                 - *display_value
+          - alias: Graph page - Current value
+            if:
+              - '{{ pages.current == pages.graph }}'
+              - '{{ states(detailed_entity) == trigger.entity_id }}'
+            then:
+              - variables:
+                  entity_id: '{{ trigger.entity_id }}'
+              - *variable_entity
+              - variables:
+                  unit_of_measurement_raw: '{{ state_attr(entity_id, "unit_of_measurement") | default("") }}'
+                  unit_of_measurement: >
+                    {{
+                      unit_of_measurement_raw
+                      if unit_of_measurement_raw and unit_of_measurement_raw is string and unit_of_measurement_raw | length > 0
+                      else ""
+                    }}
+              - *graph_value_now
 
       - alias: Update QR code
         conditions:
