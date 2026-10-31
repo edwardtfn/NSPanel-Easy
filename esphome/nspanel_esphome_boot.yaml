@@ -153,15 +153,33 @@ script:
       - lambda: |-
           if (system_flags.blueprint_ready and step != "display_ack") return;
           static uint32_t last_boot_event_fired = 0;
+          // Set when a full request (every step but "start") was sent while no client was connected.
+          // ESPHome drops such events, and the Blueprint answers "start" with the version only.
+          static bool full_request_lost = false;
           const uint32_t now = App.get_loop_component_start_time();
           // "start" opens the boot sequence and "display_ack" restarts the state replay after an
           // unexpected display reset, so neither may be dropped. Every other step is a retry and
           // stays rate-limited to keep a stalled boot from flooding Home Assistant.
           if (step != "start" && step != "display_ack" &&
               (uint32_t)(now - last_boot_event_fired) < ${BOOT_EVENT_REPEAT_INTERVAL_MS}) return;
+          const bool api_connected = api_server->is_connected_with_state_subscription();
           ESP_LOGD("${TAG_BOOT}", "Request blueprint settings");
           fire_ha_event("boot", {{"step", step.c_str()}});
           last_boot_event_fired = now;
+          if (step != "start") {
+            if (api_connected) {
+              full_request_lost = false;
+            } else if (step != "display_ack" or disp1->is_setup()) {
+              // Until the display is set up, ESPHome drops display_ack=1 and the display sends display_ack again
+              full_request_lost = true;
+            }
+          } else if (full_request_lost and api_connected and disp1->is_setup()) {
+            // Send the lost full request now instead of waiting for the next retry.
+            // A display that is not set up yet sends display_ack again by itself.
+            ESP_LOGD("${TAG_BOOT}", "Request blueprint settings again, the full request was lost before the API connected");
+            fire_ha_event("boot", {{"step", "display_ack"}});
+            full_request_lost = false;
+          }
 
   - id: boot_wrap_up
     mode: restart
