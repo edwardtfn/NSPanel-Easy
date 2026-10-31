@@ -27,6 +27,7 @@ packages:
   hw_uart:           !include nspanel_esphome_hw_uart.yaml
   hw_wifi:           !include nspanel_esphome_hw_wifi.yaml
   localization:      !include nspanel_esphome_localization.yaml
+  ota:               !include nspanel_esphome_ota.yaml
   page_boot:         !include nspanel_esphome_page_boot.yaml
   page_home:         !include nspanel_esphome_page_home.yaml
   page_screensaver:  !include nspanel_esphome_page_screensaver.yaml

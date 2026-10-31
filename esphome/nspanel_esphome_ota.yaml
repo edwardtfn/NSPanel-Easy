@@ -1,0 +1,56 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHOME CORE - OTA                                                                        #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+---
+substitutions:
+  ##############################
+  ## Change only in your      ##
+  ## local yaml substitutions ##
+  ##############################
+  ota_encryption: false  # Encrypt the OTA updates with the API encryption key (see docs/customization.md#ota-encryption)
+  ota_password: ""
+
+  ##### OTA authentication - selected in `packages` below #####
+  # Password, set when `ota_encryption` is false (even when blank, so the uploader keeps sending it to panels expecting one)
+  _pkg_ota_password:
+    ota:
+      - id: !extend ota_std
+        password: ${ota_password}
+  # Encryption required, using the API encryption key
+  _pkg_ota_encryption:
+    ota:
+      - id: !extend ota_std
+        encryption: {}
+  # One-time migration from a password: the uploader answers the password prompt of the running firmware,
+  # while the new firmware requires the encryption and has no password built in
+  _pkg_ota_encryption_migration:
+    ota:
+      - id: !extend ota_std
+        encryption:
+          allow_plaintext_upload: true
+
+packages:
+  ota_password: ${ _pkg_ota_password if (not ota_encryption or ota_password) else {} }
+  ota_encryption: ${ (_pkg_ota_encryption_migration if ota_password else _pkg_ota_encryption) if ota_encryption else {} }
+
+ota:
+  - id: ota_std
+    platform: esphome
+    # `password` and `encryption` are set by the `ota_*` packages, based on `ota_password` and `ota_encryption`
+    on_begin:
+      then:
+        - lambda: |-
+            system_flags.ota_in_progress = true;
+            stop_all->execute();
+    # A failed or aborted OTA does not reboot the panel, so clear the flag to re-enable the watchdog
+    on_abort:
+      then:
+        - lambda: system_flags.ota_in_progress = false;
+    on_error:
+      then:
+        - lambda: system_flags.ota_in_progress = false;
+...
