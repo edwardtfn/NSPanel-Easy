@@ -103,6 +103,13 @@ script:
       - lambda: |-
           App.safe_reboot();
 
+  - id: !extend api_stale_changed
+    then:
+      - lambda: |-
+          // Renderers read api_stale. On reconnection, Home Assistant only re-sends the states that
+          // differ from its cache, so an unchanged state would otherwise never be rendered again.
+          sub_render_all();
+
   - id: !extend boot_early_routines
     then:
       - lambda: |-

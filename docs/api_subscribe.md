@@ -120,6 +120,7 @@ The package enables `api: homeassistant_states: true` automatically, which is re
 | Substitution | Default | Description |
 | --- | --- | --- |
 | `api_subscribe_max` | `128` | Maximum number of bindings. Storage is allocated to the configured count, not to this limit. |
+| `api_subscribe_entity_len` | `96` | Buffer size for an `entity_id`, null terminator included (`32` to `255`). A longer `entity_id` is not bound; the log reports the size to set. |
 | `api_subscribe_debounce` | `10s` | Quiet period after the last binding before a restart is applied. |
 | `api_subscribe_timeout` | `120s` | Time without an end marker before the push is committed unverified. |
 
