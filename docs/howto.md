@@ -352,7 +352,7 @@ In the last step, assign the trigger to a button in the Panel Config.
 ### Overview
 
 The OTA password is set by the `ota_password` substitution, which is blank by default.
-If your panel uses a blank `ota_password` or a password of its own, changing the Wi-Fi password does not affect the OTA updates:
+If your panel uses the [OTA encryption](customization.md#ota-encryption), a blank `ota_password` or a password of its own, changing the Wi-Fi password does not affect the OTA updates:
 change the `wifi_ssid` and `wifi_password` substitutions, flash your device, and then update your access point.
 
 If your `ota_password` is set to `${wifi_password}` (as suggested in the migration guide),
