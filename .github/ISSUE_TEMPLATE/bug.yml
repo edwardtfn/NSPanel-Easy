@@ -33,7 +33,7 @@ body:
     attributes:
       label: Firmware Version
       description: Enter the ESPHome firmware version number.
-      placeholder: e.g., 2026.11.3
+      placeholder: e.g., 2026.11.4
     validations:
       required: false
   - type: input
