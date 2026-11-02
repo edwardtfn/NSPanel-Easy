@@ -40,7 +40,7 @@ climate:
   - platform: thermostat
     name: Thermostat
     id: thermostat_embedded
-    sensor: temp_nspanel
+    sensor: thermostat_temperature
     min_idle_time: ${min_idle_time}s
     visual:
       min_temperature: ${temp_min} ${temp_units}
@@ -82,6 +82,13 @@ switch:
     optimistic: true
 
 script:
+  - id: !extend boot_early_routines
+    then:
+      - lambda: |-
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          temp_reference_changed = []() { thermostat_temperature->update(); };
+          #endif  // NSPANEL_EASY_SUBSCRIBE
+
   - id: !extend action_component_text
     then:
       - lambda: |-
@@ -531,6 +538,36 @@ script:
           // Apply the icon and color to the target icon on climate page
           disp1->set_component_text("target_icon", icon);
           disp1->set_component_font_color("target_icon", static_cast<uint16_t>(color));
+
+sensor:
+  - id: !extend temp_nspanel
+    on_value:
+      then:
+        - component.update: thermostat_temperature
+
+  - id: thermostat_temperature  # Temperature the thermostat regulates on: the reference when set to, the panel's otherwise
+    platform: template
+    unit_of_measurement: °C
+    accuracy_decimals: 1
+    device_class: temperature
+    update_interval: never
+    lambda: |-
+      #ifdef NSPANEL_EASY_SUBSCRIBE
+      return thermostat_temp_resolve(temp_nspanel->state, ${temp_reference_max_age} * 60000UL);
+      #else   // NSPANEL_EASY_SUBSCRIBE
+      return temp_nspanel->state;
+      #endif  // NSPANEL_EASY_SUBSCRIBE
+
+interval:
+  - interval: 1min  # A reference that stops changing triggers no event, so its age is checked here
+    then:
+      - lambda: |-
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          static_assert(${temp_reference_max_age} >= 1, "temp_reference_max_age must be at least 1 (minutes)");
+          if (temp_reference_aged_out(${temp_reference_max_age} * 60000UL)) {
+            thermostat_temperature->update();
+          }
+          #endif  // NSPANEL_EASY_SUBSCRIBE
 
 text_sensor:
   - id: !extend detailed_entity  # Defined by hw_display

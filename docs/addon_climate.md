@@ -93,6 +93,29 @@ The following keys are available to be used in your `substitutions`:
 - For more details on the keys, see [ESPHome Base Climate Configurations](https://esphome.io/components/climate/index.html#base-climate-configuration)
   and [ESPHome Climate Thermostat - Additional actions behavior](https://esphome.io/components/climate/thermostat.html#additional-actions-behavior).
 
+## Temperature source
+
+By default, the thermostat uses the panel's own temperature sensor, including the temperature correction set under the panel's device page in Home Assistant.
+That sensor reads high because the panel heats itself up.
+Select a [calibration reference](blueprint.md#nspanel-temperature-sensor---calibration-reference-optional) in the Blueprint to correct it automatically.
+The thermostat keeps regulating on the panel's own sensor, so it keeps working fully on its own while Home Assistant is unavailable.
+
+If the reference is placed elsewhere in the room and you want the thermostat to follow it,
+enable **Climate entity** > **Embedded Thermostat - Regulate on the Calibration Reference** in the Blueprint.
+The thermostat then regulates on the reference directly, and the panel's sensor is still calibrated against it, so it can take over with little difference.
+The thermostat falls back to the calibrated panel sensor when:
+
+- the reference is `unavailable`, `unknown` or has no number,
+- Home Assistant has been unavailable for longer than `api_stale_grace_period` (30 seconds by default),
+- the reference has not changed for 2 hours (`temp_reference_max_age`), as some sensors keep reporting their last value long after they stopped working, or
+- the reference differs from the panel's sensor by more than 10 °C (18 °F), which usually means it reports in a different unit. A warning is logged.
+
+It switches back to the reference as soon as it can be trusted again.
+
+> [!NOTE]
+> The reference must report in the same unit as `temp_units`. The panel's own sensor and thermostat cannot be selected.
+> Changing these settings restarts the panel once, as with any other [API subscription](api_subscribe.md).
+
 ## Modes
 
 The climate page shows only the HVAC modes supported by the thermostat, based on its configuration.

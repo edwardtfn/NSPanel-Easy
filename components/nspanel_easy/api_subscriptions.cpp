@@ -26,6 +26,9 @@
 #ifdef NSPANEL_EASY_HW_DISPLAY
 #include "hw_display.h"
 #endif  // NSPANEL_EASY_HW_DISPLAY
+#ifdef NSPANEL_EASY_HW_TEMPERATURE
+#include "hw_temperature.h"
+#endif  // NSPANEL_EASY_HW_TEMPERATURE
 
 namespace esphome::nspanel_easy {
 
@@ -202,6 +205,9 @@ SubRenderFn sub_resolve_renderer(const char *page) {
 #ifdef NSPANEL_EASY_HW_DISPLAY
       {"wakeup", &wakeup_sensor_render},
 #endif  // NSPANEL_EASY_HW_DISPLAY
+#ifdef NSPANEL_EASY_HW_TEMPERATURE
+      {"calibration", &temp_reference_render},
+#endif  // NSPANEL_EASY_HW_TEMPERATURE
   };
   for (const PageEntry &entry : PAGES) {
     if (strcmp(page, entry.page) == 0) {
