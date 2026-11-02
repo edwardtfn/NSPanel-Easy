@@ -311,6 +311,9 @@ Network Time servers only need Wi-Fi, so after a power loss, when the panel has 
 - The clock is shown as soon as the panel is on the network, also while Home Assistant is still starting or unavailable.
 - Time-based customizations, such as scheduled relays with `on_time`, work without Home Assistant.
 
+Until Home Assistant connects, this time is shown in the timezone detected when the firmware was built.
+If that differs from your timezone (for example, when the firmware is built on another computer), set it as described in [Enforce time zone](#enforce-time-zone).
+
 ```yaml
 substitutions:
   # Router as Network Time server, with public NTP Pool servers as fallback
