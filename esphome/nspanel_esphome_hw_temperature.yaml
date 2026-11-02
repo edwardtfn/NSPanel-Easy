@@ -20,6 +20,7 @@ substitutions:
   temp_calibration_time_constant: '30'   # Minutes for the correction to cover about 63% of a change in the offset
   temp_calibration_max_age: '120'        # Minutes without a change of the reference before auto-calibration pauses
   temp_calibration_hysteresis: '0.75'    # Fraction of a correction step the calibrated value must move before the correction changes
+  temp_reference_max_age: ${temp_calibration_max_age}  # Minutes without a change of the reference before the thermostat ignores it
   TAG_HW_TEMPERATURE: nspanel.hw.temperature
 
 esphome:

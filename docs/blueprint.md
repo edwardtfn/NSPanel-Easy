@@ -82,6 +82,7 @@ The panel's own temperature sensor reads high because the panel heats itself up,
 Select a temperature `sensor`, or a `climate` entity to use its current temperature,
 and the panel calibrates its sensor against it automatically.
 Place it in the same room, near the panel but not directly above it, as the panel's heat rises.
+If the embedded thermostat regulates on this reference directly (see below), place it where the room temperature should be measured instead.
 
 The panel keeps using its own sensor for everything, including the thermostat of the [Climate add-on](addon_climate.md),
 so it keeps working on its own while Home Assistant is unavailable.
@@ -98,7 +99,7 @@ Calibration pauses and keeps the current correction when:
 
 - the reference is `unavailable`, `unknown` or has no number,
 - Home Assistant has been unavailable for longer than `api_stale_grace_period` (30 seconds by default),
-- the reference has not changed for 2 hours, as some sensors keep reporting their last value long after they stopped working, or
+- the reference has not changed for 2 hours (`temp_calibration_max_age`), as some sensors keep reporting their last value long after they stopped working, or
 - the difference is more than 10 °C (18 °F), which usually means the reference reports in a different unit. A warning is logged.
 
 > [!NOTE]
@@ -145,7 +146,8 @@ When you assign the entity here, its icon will be shown as a button on the Home 
 ### Climate to Control (Optional)
 
 Here you select the main climate entity controlled by your panel.
-Its temperature will be used on the Home page and by clicking on that value you will be able to control the climate settings.
+It is shown as the climate chip on the Home page and controlled on the climate page.
+If no climate entity is provided, the climate chip is not shown.
 
 You can optionally use your panel to control a climate system locally, using its temperature sensor and relays.
 You will find more details about this on the Add-on Climate documentation.
@@ -154,6 +156,12 @@ If you are using the climate add-on, it will create a climate entity in your pan
 You still have to select that entity on this field in the blueprint settings to have it used as your main climate.
 
 Additional climate entities can be assigned to buttons and will be explained later in this document.
+
+### Embedded Thermostat - Regulate on the Calibration Reference (Optional)
+
+Only used with the [Climate add-on](addon_climate.md) and a [calibration reference](#nspanel-temperature-sensor---calibration-reference-optional).
+When enabled, the panel's embedded thermostat controls its relays using the calibration reference directly instead of the panel's calibrated sensor.
+See [Temperature source](addon_climate.md#temperature-source) for when it falls back to the panel's sensor.
 
 On the blueprint settings, you will also find settings for sensors and custom buttons to be shown on all the climate pages.
 

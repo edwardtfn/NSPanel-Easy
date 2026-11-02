@@ -339,9 +339,10 @@ Celsius and is converted when the panel is compiled for Fahrenheit.
 ## Limits and behaviour
 
 - **`chips`, `home`, `wakeup` and `calibration` have renderers.** `wakeup` and `calibration` draw
-  nothing: they feed the wake-up sensors and the temperature auto-calibration. Bindings for other
-  pages are accepted, persisted and subscribed, but nothing is drawn and `dump_config` marks them
-  `[no renderer]`.
+  nothing: they feed the wake-up sensors and the temperature reference. A `calibration` binding
+  targets component `temperature` for auto-calibration only, or `thermostat` to also make it the
+  Climate add-on's thermostat temperature. Bindings for other pages are accepted, persisted and
+  subscribed, but nothing is drawn and `dump_config` marks them `[no renderer]`.
 - **`chip_relay1`, `chip_relay2` and `chip_climate` cannot be bound.** They are driven locally by
   the relay and embedded-thermostat logic and keep working without Home Assistant. Attempting to
   bind them logs a warning and is ignored.

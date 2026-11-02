@@ -393,6 +393,8 @@ blueprint:
             between this reference and the panel's sensor. Leave the field empty to set the correction manually.
 
             Place the reference in the same room, near the panel but not directly above it, as the panel's heat rises.
+            If the embedded thermostat regulates on it (see **Embedded Thermostat - Regulate on the Calibration Reference**),
+            place it where the room temperature should be measured instead.
             You may select either a temperature `sensor` entity or a `climate` entity,
             in which case its **current temperature** is used. The panel's own sensor and thermostat cannot be selected.
 
@@ -1014,10 +1016,10 @@ blueprint:
         climate:
           name: Main climate Entity
           description: >
-            This is used to show the internal temperature in the Home page, with a link to the climate page.
-            If a climate entity is not provided here, the internal temperature sensor will be used, without the link.
+            Main climate entity, shown as the climate chip on the Home page and controlled on the climate page.
+            If no climate entity is provided, the climate chip is not shown.
 
-            *Refer to add-ons documentation if you want to control the climate system with your panel's relays.*
+            Select your panel's own thermostat here if you use the Climate add-on to control the climate system with your panel's relays.
 
             *Only one entity may be selected.*
           default: *selector_entity_single_default_empty
@@ -1045,6 +1047,26 @@ blueprint:
                   value: always
                 - label: "Never"
                   value: never
+        thermostat_use_temp_reference:
+          name: Embedded Thermostat - Regulate on the Calibration Reference
+          description: >-
+            Toggle to have the panel's embedded thermostat (Climate add-on) control its relays using
+            **NSPanel Temperature Sensor - Calibration Reference - Entity** directly,
+            for example when that sensor is placed elsewhere in the room.
+            Leave it disabled when the reference is next to the panel, as the calibration alone already covers that case.
+
+            When disabled, the thermostat uses the NSPanel's own sensor, calibrated against that reference,
+            and keeps working fully on its own while Home Assistant is unavailable.
+
+            When enabled, the thermostat falls back to the calibrated NSPanel sensor whenever the reference
+            has no usable value, has not changed for `temp_reference_max_age` (2 hours by default),
+            differs from the panel's sensor by more than 10 °C (18 °F),
+            or Home Assistant has been unavailable for longer than `api_stale_grace_period`.
+
+            Has no effect when no calibration reference is selected.
+          default: false
+          selector:
+            boolean:
     climate_page_settings:
       name: Climate page
       icon: mdi:thermostat-cog
@@ -7893,6 +7915,7 @@ actions:
                                 {%- endif -%}
 
                               temp_calibration_reference_tmp: !input temp_calibration_reference
+                              thermostat_use_temp_reference_tmp: !input thermostat_use_temp_reference
 
                               # Never the panel's own sensor or thermostat: both already include the correction being calibrated.
                               temp_calibration_entity: >
@@ -7972,7 +7995,8 @@ actions:
                                   - entity: '{{ temp_calibration_entity }}'  # Reference for the panel's temperature sensor
                                     attribute: '{{ "current_temperature" if temp_calibration_entity.split(".")[0] == "climate" else "" }}'
                                     page: calibration
-                                    component: temperature
+                                    # The component selects the mode: calibration only, or also the thermostat's direct source
+                                    component: '{{ "thermostat" if thermostat_use_temp_reference_tmp and states[thermostat_embedded] is not none else "temperature" }}'
                                   # A climate entity's attribute is not re-sent when it disappears, so its state tells when it is unavailable
                                   - entity: '{{ temp_calibration_entity if temp_calibration_entity.split(".")[0] == "climate" else "" }}'
                                     page: calibration
