@@ -93,6 +93,7 @@ Restore the display first, while NSPanel Easy is still running, as it can transf
 1. **Restore the original `tft`:**
    Place the original Sonoff `tft` file on a local web server (for example, the `www` folder of Home Assistant),
    then send it to the panel with the [`upload_tft` action](api.md#tft-file-update-action-upload_tft).
+   This action is not registered by default: add `include_action_upload_tft: true` to the `substitutions` in your panel's YAML and install the firmware before this step.
 2. **Restore the ESP32 firmware:**
    Open the panel, connect it as for the first flash, and write the backup taken from this panel to the start of the flash memory:
 

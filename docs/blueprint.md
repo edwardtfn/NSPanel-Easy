@@ -91,7 +91,8 @@ While the page is open, a new point is added every 5 minutes.
 
 The graph is drawn from the 5-minute means that Home Assistant keeps in the recorder statistics, so:
 
-- Only sensors with a `state_class` (e.g. `measurement`) can be graphed, as Home Assistant keeps no statistics for other entities. For those, the value is not tappable.
+- Only sensors with a `state_class` of `measurement` or `measurement_angle` can be graphed, as Home Assistant keeps mean statistics only for those
+  (sensors with `total` or `total_increasing`, like energy meters, have none). For other entities, the value is not tappable.
 - The `recorder` integration must be loaded. It is part of `default_config`.
 - The newest point is the last complete 5-minute period, so the right end of the graph is 5 to 10 minutes behind. The current value label is live.
 - Periods without data repeat the previous value, and periods before the first value are drawn at the bottom of the graph.
