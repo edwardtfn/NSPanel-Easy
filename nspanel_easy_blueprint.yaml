@@ -382,6 +382,25 @@ blueprint:
           description: *description_text_color
           default: [255, 255, 255]
           selector: *color_selector
+        temp_calibration_reference:
+          name: NSPanel Temperature Sensor - Calibration Reference - Entity
+          description: >-
+            Optional reference used to calibrate the NSPanel's own temperature sensor automatically,
+            compensating for the panel's self-heating.
+
+            The panel keeps using its own sensor, so it keeps working while Home Assistant is unavailable.
+            Once a minute, the **Temperature Correction** under HA Devices is adjusted slowly towards the difference
+            between this reference and the panel's sensor. Leave the field empty to set the correction manually.
+
+            Place the reference in the same room, near the panel but not directly above it, as the panel's heat rises.
+            You may select either a temperature `sensor` entity or a `climate` entity,
+            in which case its **current temperature** is used. The panel's own sensor and thermostat cannot be selected.
+
+            The entity must report in the same unit as `temp_units` in your ESPHome settings.
+
+            *Only one entity may be selected.*
+          default: *selector_entity_single_default_empty
+          selector: *entity_temp_or_climate_sensor_selector
     home_page_entites_states:
       name: Home page - Entities states
       icon: mdi:home
@@ -7872,6 +7891,17 @@ actions:
                                 {%- elif indoortemp_tmp is string and indoortemp_tmp | length > 0 -%} {{ indoortemp_tmp }}
                                 {%- elif indoortemp_tmp is list and indoortemp_tmp | count > 0 and indoortemp_tmp[0] is string -%} {{ indoortemp_tmp[0] }}
                                 {%- endif -%}
+
+                              temp_calibration_reference_tmp: !input temp_calibration_reference
+
+                              # Never the panel's own sensor or thermostat: both already include the correction being calibrated.
+                              temp_calibration_entity: >
+                                {%- set e = temp_calibration_reference_tmp[0]
+                                            if temp_calibration_reference_tmp is list and temp_calibration_reference_tmp | count > 0
+                                            else temp_calibration_reference_tmp -%}
+                                {%- if e is string and "." in e and e not in [nspaneltemp, thermostat_embedded] -%}
+                                {{ e }}
+                                {%- endif -%}
                           - variables:
                               wake_up_sensors_tmp: !input wake_up_sensors
                           - variables:
@@ -7938,6 +7968,15 @@ actions:
                                     attribute: '{{ "current_temperature" if indoor_temp_entity.split(".")[0] == "climate" else "" }}'
                                     page: home
                                     component: indr_temp
+                                calibration:
+                                  - entity: '{{ temp_calibration_entity }}'  # Reference for the panel's temperature sensor
+                                    attribute: '{{ "current_temperature" if temp_calibration_entity.split(".")[0] == "climate" else "" }}'
+                                    page: calibration
+                                    component: temperature
+                                  # A climate entity's attribute is not re-sent when it disappears, so its state tells when it is unavailable
+                                  - entity: '{{ temp_calibration_entity if temp_calibration_entity.split(".")[0] == "climate" else "" }}'
+                                    page: calibration
+                                    component: availability
 
                               ##### API subscriptions #####
                               # Components driven directly by ESPHome through Home Assistant state
@@ -7960,6 +7999,10 @@ actions:
                                   ) + (
                                     subs_lists.wakeup
                                     | map('combine', {'page': 'wakeup'})
+                                    | list
+                                  ) + (
+                                    subs_lists.calibration
+                                    | map('combine', {'page': 'calibration'})
                                     | list
                                   )
                                 }}

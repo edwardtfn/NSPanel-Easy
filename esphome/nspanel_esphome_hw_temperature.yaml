@@ -16,6 +16,10 @@ substitutions:
   GPIO_TEMPERATURE_ADC_PIN: 38
   ntc_source_filter_delta: 0.002  # adjust to your sensor's voltage jitter level
   ntc_source_filter_heartbeat: 5min
+  temp_calibration_warmup: '30'          # Minutes after boot before auto-calibration starts, while the panel's self-heating settles
+  temp_calibration_time_constant: '30'   # Minutes for the correction to cover about 63% of a change in the offset
+  temp_calibration_max_age: '120'        # Minutes without a change of the reference before auto-calibration pauses
+  temp_calibration_hysteresis: '0.75'    # Fraction of a correction step the calibrated value must move before the correction changes
   TAG_HW_TEMPERATURE: nspanel.hw.temperature
 
 esphome:
@@ -49,12 +53,7 @@ number:
         - logger.log: Temperature correction changed
         - delay: 1s
         - lambda: |-
-            // To do: Remove version-based code after v2026.6.0
-            #if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 3, 99)
             temp_nspanel->publish_state(temp_nspanel->get_raw_state());
-            #else
-            temp_nspanel->publish_state(temp_nspanel->raw_state);
-            #endif
 
 script:
   - id: !extend action_component_val
@@ -121,6 +120,55 @@ script:
   - id: !extend stop_all
     then:
       - lambda: display_embedded_temp->stop();
+
+interval:
+  - interval: 1min  # Auto-calibration against a Home Assistant reference; one sample per minute
+    then:
+      - lambda: |-
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          static_assert(${temp_calibration_warmup} >= 0, "temp_calibration_warmup must not be negative (minutes)");
+          static_assert(${temp_calibration_time_constant} >= 1, "temp_calibration_time_constant must be at least 1 (minutes)");
+          static_assert(${temp_calibration_max_age} >= 1, "temp_calibration_max_age must be at least 1 (minutes)");
+          static bool warmed_up = false;
+          if (!warmed_up) {
+            if (millis() < ${temp_calibration_warmup} * 60000UL) return;
+            warmed_up = true;
+          }
+
+          const float raw_c = temp_nspanel->get_raw_state();
+
+          #if NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          const float correction_c = temperature_correction->state / 1.8f;  // Offset is a delta, no 32° shift
+          #else   // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          const float correction_c = temperature_correction->state;
+          #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+
+          const optional<float> next_c = temp_calibration_sample(raw_c, correction_c,
+                                                                 ${temp_calibration_max_age} * 60000UL,
+                                                                 1.0f / ${temp_calibration_time_constant});
+          if (!next_c.has_value()) return;
+
+          #if NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          float next = *next_c * 1.8f;
+          #else   // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          float next = *next_c;
+          #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+
+          // Publish only whole steps, and only once the smoothed value is ${temp_calibration_hysteresis} of a step away
+          // from the current correction. Plain rounding would flap between two steps whenever the offset sits near
+          // a rounding boundary, rewriting the correction to flash every few minutes.
+          const float step = temperature_correction->traits.get_step();
+          if (fabsf(next - temperature_correction->state) < ${temp_calibration_hysteresis} * step) return;
+          next = clamp(roundf(next / step) * step,
+                       temperature_correction->traits.get_min_value(), temperature_correction->traits.get_max_value());
+          if (fabsf(next - temperature_correction->state) < step / 2) return;  // Clamped back onto the current value
+
+          ESP_LOGD("${TAG_HW_TEMPERATURE}", "Auto-calibration: temperature correction %.1f -> %.1f${temp_units}",
+                   temperature_correction->state, next);
+          auto call = temperature_correction->make_call();
+          call.set_value(next);
+          call.perform();
+          #endif  // NSPANEL_EASY_SUBSCRIBE
 
 sensor:
   # 1) Raw ADC - fast sampling, early spike removal
