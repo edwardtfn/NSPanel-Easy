@@ -254,6 +254,8 @@ How to get there depends on how your panel is updated today:
 - **Panel with an OTA password (ESPHome 2026.10.0 or newer):** add `ota_encryption: true` and keep your current `ota_password` for one install.
   The password is used only to send this update to the running firmware, and is not built into the new one.
   After that install, set `ota_password` back to blank (or remove it): ESPHome warns about it on every upload until then.
+  If your configuration sets the password directly in `ota_std` (`- id: !extend ota_std` with `password:`), move it to `ota_password` for this install and remove that override,
+  otherwise ESPHome rejects the password next to the required encryption.
 - **Panel with an OTA password (ESPHome 2026.9.x):** install once with the API encryption and your current `ota_password`,
   so the device log shows `Encryption: offered, plaintext accepted`.
   Then add `ota_encryption: true`, set `ota_password` back to blank (or remove it), and install again.

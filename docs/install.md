@@ -96,7 +96,8 @@ Follow these steps to add a new device in the ESPHome Dashboard:
 5. Locate your newly created device in the ESPHome Dashboard and click **Edit**.  
    ![Edit Device](pics/ha_esphome_dashboard_new_device_04.png)
 
-6. Copy the API encryption `key:` value and add it to your secrets file (e.g. as `api_encryption_key`).
+6. Copy the API encryption `key:` value and add it to your secrets file (e.g. as `api_encryption_key_panel_1`).
+   If the value is already a `!secret` reference, the key is already in your secrets file: use that secret name in step 8 instead.
    It encrypts the communication with Home Assistant and the OTA updates.
    Only the key is needed: the `api:` block itself is provided by this project.
    ![API Section](pics/ha_esphome_dashboard_new_device_05.png)
@@ -117,9 +118,9 @@ Follow these steps to add a new device in the ESPHome Dashboard:
      friendly_name: "Your panel's friendly name"
      wifi_ssid: !secret wifi_ssid
      wifi_password: !secret wifi_password
-     api_encryption_key: !secret api_encryption_key  # The key from step 6
-     ota_encryption: true                            # Encrypt the OTA updates with the API encryption key
-     language: en                                    # Language code - see docs/localization.md for all supported codes
+     api_encryption_key: !secret api_encryption_key_panel_1  # The key from step 6
+     ota_encryption: true                                    # Encrypt the OTA updates with the API encryption key
+     language: en                                            # Language code - see docs/localization.md for all supported codes
      boot_sound: false
      # Add-on configuration (if needed)
      ## Upload TFT
@@ -164,7 +165,7 @@ Learn about secrets in ESPHome: [Home Assistant Secrets in ESPHome](https://www.
     > HTTPS support for TFT transfers can be unstable, particularly with the `arduino` framework.
     > Use HTTP whenever possible for local servers.
 
-12. Make sure `api_encryption_key` in your secrets file has the key copied in step 6.
+12. Make sure `api_encryption_key_panel_1` in your secrets file has the key copied in step 6.
     Each panel should have its own key, so use a different secret name for each panel.
     Keep the key safe: with `ota_encryption: true`, the panel refuses OTA updates without it.
     For more details, see [OTA encryption](customization.md#ota-encryption).
