@@ -58,8 +58,11 @@ entity's own state is never received. This is how the outdoor temperature reads 
 weather entity, and how the indoor temperature reads `current_temperature` from a climate entity.
 
 The attribute value reaches the renderer exactly where the state normally would, so classification
-and appearance resolution behave as if it were the state. A missing attribute arrives as the literal
-`None`, which classifies as unrecognised.
+and appearance resolution behave as if it were the state. An attribute that exists but holds no value
+arrives as the literal `None`, which classifies as unrecognised. An attribute that is missing from the
+entity is not sent at all, so the panel keeps the last value it received. Climate entities typically
+drop their attributes when they become unavailable; bind the entity's state as well where that matters,
+as the temperature calibration does.
 
 An entity may be bound twice — once for its state and once for an attribute — targeting different
 components. The home page does this with a weather entity, which drives both the weather picture and
@@ -135,7 +138,7 @@ Registers one binding. Called once per subscribable component.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `page` | string | Target page. `chips` and `home` have renderers. |
+| `page` | string | Target page. `chips`, `home`, `wakeup` and `calibration` have renderers. |
 | `component` | string | Target component, e.g. `chip01`. |
 | `entity` | string | Home Assistant `entity_id`. |
 | `attribute` | string | Attribute to follow instead of the state. Send an empty string to follow the state. |
@@ -335,7 +338,10 @@ Celsius and is converted when the panel is compiled for Fahrenheit.
 
 ## Limits and behaviour
 
-- **`chips` and `home` have renderers.** Bindings for other pages are accepted, persisted and
+- **`chips`, `home`, `wakeup` and `calibration` have renderers.** `wakeup` and `calibration` draw
+  nothing: they feed the wake-up sensors and the temperature reference. A `calibration` binding
+  targets component `temperature` for auto-calibration only, or `thermostat` to also make it the
+  Climate add-on's thermostat temperature. Bindings for other pages are accepted, persisted and
   subscribed, but nothing is drawn and `dump_config` marks them `[no renderer]`.
 - **`chip_relay1`, `chip_relay2` and `chip_climate` cannot be bound.** They are driven locally by
   the relay and embedded-thermostat logic and keep working without Home Assistant. Attempting to
@@ -384,12 +390,15 @@ If a binding shows `[no renderer]`, the target page has no renderer — see
 
 ### A component bound to an attribute shows nothing
 
-Check that the entity really exposes that attribute, in Developer Tools → States. A missing
-attribute arrives as the literal `None`: a chip or button will stay hidden, and a temperature will
-be hidden or fall back to the panel's own sensor.
+Check that the entity really exposes that attribute, in Developer Tools → States. An attribute that
+is missing from the entity is never sent, so the component shows nothing until it appears. An
+attribute that exists but holds no value arrives as the literal `None`: a chip or button will stay
+hidden, and a temperature will be hidden or fall back to the panel's own sensor.
 
-Note that a binding with an attribute never receives the entity's state, so `unavailable` arrives as
-`None` rather than as itself.
+Note that a binding with an attribute never receives the entity's state. An entity that becomes
+`unavailable` usually drops its attributes, and since a missing attribute is not sent, the component
+keeps its last value. Bind the entity's state as well where that matters, as the temperature
+calibration does for a climate reference.
 
 ### The panel restarts on every reconnect
 

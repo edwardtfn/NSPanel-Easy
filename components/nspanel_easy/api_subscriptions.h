@@ -601,8 +601,10 @@ void sub_subscribe_all();
  * @brief Accept one binding from the blueprint's push.
  *
  * The first call after a completed or abandoned push implicitly starts a new
- * one. Appearance is applied to the live binding immediately when the target
- * matches; the entity is staged and only takes effect after a restart.
+ * one, and so does a target that is already staged: each push sends a target
+ * once, so a repeat means another push has started. Appearance is applied to
+ * the live binding immediately when the target matches; the entity is staged
+ * and only takes effect after a restart.
  *
  * @param page Target page.
  * @param component Target component.

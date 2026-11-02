@@ -72,6 +72,8 @@ The bar colours themselves are set in the Blueprint, not through substitutions.
 | Substitution | Default | Description |
 | :- | :- | :- |
 | `require_disarm_before_rearm` | `false` | While the alarm is armed, hides the other arming modes on the alarm page, so it must be disarmed before being armed in another mode. See [Alarm Control Panel](alarm.md). |
+| `page_entities_value_font_large_max_len` | `8` | Longest value on the entities pages shown with the default (largest) font; longer values switch to a smaller font, and shorter ones switch back. Length is counted in characters, with narrow characters (such as `i`, `l`, `.` or `:`) counting as half. Accepts `0` to `255`; set both `page_entities_value_font_*_max_len` to `255` to always keep the default font. |
+| `page_entities_value_font_medium_max_len` | `12` | Longest value on the entities pages shown with the medium font; longer values use the smallest font. Counted as in `page_entities_value_font_large_max_len`, and must not be lower than it. |
 | `page_button_color_idle` | `16904` | RGB565 colour of the button on the button page while idle. |
 | `page_button_color_pressed` | `15483` | RGB565 colour of the button on the button page while pressed. |
 | `page_button_color_unavail` | `10565` | RGB565 colour of the button on the button page while its entity is unavailable. |
@@ -117,6 +119,11 @@ The defaults suit almost every installation, so change them only to solve a spec
 | `invalid_cooldown` | `100ms` | Cooldown after an invalid click sequence on the hardware buttons, as in ESPHome's `on_multi_click` [binary sensor automation](https://esphome.io/components/binary_sensor/). |
 | `ntc_source_filter_delta` | `0.002` | Minimum change of the smoothed voltage from the temperature sensor before a new reading is published. Raise it if the temperature fluctuates without a real change. |
 | `ntc_source_filter_heartbeat` | `5min` | Interval at which the temperature is published again when it has not changed. |
+| `temp_calibration_warmup` | `30` | Minutes after boot before [temperature auto-calibration](blueprint.md#nspanel-temperature-sensor---calibration-reference-optional) starts, while the panel's self-heating settles. |
+| `temp_calibration_time_constant` | `30` | Minutes for the auto-calibrated correction to cover about 63% of a change in the offset. Higher values react slower but are less affected by short changes in self-heating. |
+| `temp_calibration_max_age` | `120` | Minutes without a change of the calibration reference before auto-calibration pauses, keeping the current correction. |
+| `temp_calibration_hysteresis` | `0.75` | Fraction of a Temperature Correction step (0.1 °C or 1 °F) the calibrated value must move before the correction changes. Lower values follow the reference more closely; values of 0.5 or less let the correction flip back and forth between two steps. |
+| `temp_reference_max_age` | `temp_calibration_max_age` | Minutes without a change of the [calibration reference](blueprint.md#nspanel-temperature-sensor---calibration-reference-optional) before an [embedded thermostat regulating on it](addon_climate.md#temperature-source) falls back to the panel's sensor. |
 | `qrcode_initial_value` | `''` | Text of the QR code until one is received. |
 | `qrcode_title_initial_value` | `''` | Title of the QR code page until one is received. |
 | `qrcode_icon_color_initial_value` | `Colors::RGB565_GRAY_LIGHT` | Colour of the QR code button on the home page until one is received. Accepts an RGB565 number. |

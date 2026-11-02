@@ -173,6 +173,20 @@ script:
             return;
           }
 
+  - id: !extend action_icon
+    then:
+      - lambda: |-
+          if (icon_color < 0) return;
+          // A home value icon color set through the API is shadowed as well, so
+          // home_values_paint() restores it instead of the Blueprint color
+          // after a stale period or a display restart.
+          const NSPanelEasyNextionComponent component = extractNextionComponent(component_id, page);
+          if (strcmp(component.page, "home") != 0) return;
+          if (home_value_color_store(component.component_id, static_cast<uint16_t>(icon_color))) {
+            // Painted grey instead while the values are stale; the shadow is restored once fresh
+            if (api_stale) home_values_paint();
+          }  // if (home_value_color_store(...))
+
   - id: !extend boot_nextion
     then:
       - lambda: |-

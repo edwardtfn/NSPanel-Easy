@@ -40,7 +40,7 @@ climate:
   - platform: thermostat
     name: Thermostat
     id: thermostat_embedded
-    sensor: temp_nspanel
+    sensor: thermostat_temperature
     min_idle_time: ${min_idle_time}s
     visual:
       min_temperature: ${temp_min} ${temp_units}
@@ -82,6 +82,13 @@ switch:
     optimistic: true
 
 script:
+  - id: !extend boot_early_routines
+    then:
+      - lambda: |-
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          temp_reference_changed = []() { thermostat_temperature->update(); };
+          #endif  // NSPANEL_EASY_SUBSCRIBE
+
   - id: !extend action_component_text
     then:
       - lambda: |-
@@ -343,8 +350,24 @@ script:
             if (current_page_id != get_page_id("climate")) return;
           }  // for (button : CLIMATE_MODE_BUTTONS)
 
-          // Preset mode button, only when the thermostat has presets to choose from
+          // Preset mode button, only when the thermostat has presets to choose from.
+          // Its icon shows the active standard preset (generic icon for none or a custom preset),
+          // and its font color marks whether a preset is active.
           if (traits.get_supports_presets() or !traits.get_supported_custom_presets().empty()) {
+            const char *preset_icon = climate_preset_icons[static_cast<uint8_t>(climate::CLIMATE_PRESET_NONE)];
+            bool preset_active = false;
+            if (thermostat_embedded->has_custom_preset()) {
+              preset_active = true;
+            } else if (thermostat_embedded->preset.has_value() and
+                       static_cast<uint8_t>(thermostat_embedded->preset.value()) < CLIMATE_PRESET_NAMES_COUNT) {
+              preset_icon = climate_preset_icons[static_cast<uint8_t>(thermostat_embedded->preset.value())];
+              preset_active = (thermostat_embedded->preset.value() != climate::CLIMATE_PRESET_NONE);
+            }  // if (thermostat_embedded->has_custom_preset())
+            ESP_LOGV("${TAG_ADDON_CLIMATE}", "  preset_active: %s", YESNO(preset_active));
+            disp1->set_component_text(hmi::climate::PRESET_BUTTON.name, preset_icon);
+            // Theme colors from the display, so the button follows the light and dark themes
+            disp1->send_command_printf("climate.%s.pco=%s", hmi::climate::PRESET_BUTTON.name,
+                                       preset_active ? "color_pco_main" : "color_pco_secondary");
             disp1->show_component(hmi::climate::PRESET_BUTTON.name);
           } else {
             disp1->hide_component(hmi::climate::PRESET_BUTTON.name);
@@ -515,6 +538,36 @@ script:
           // Apply the icon and color to the target icon on climate page
           disp1->set_component_text("target_icon", icon);
           disp1->set_component_font_color("target_icon", static_cast<uint16_t>(color));
+
+sensor:
+  - id: !extend temp_nspanel
+    on_value:
+      then:
+        - component.update: thermostat_temperature
+
+  - id: thermostat_temperature  # Temperature the thermostat regulates on: the reference when set to, the panel's otherwise
+    platform: template
+    unit_of_measurement: °C
+    accuracy_decimals: 1
+    device_class: temperature
+    update_interval: never
+    lambda: |-
+      #ifdef NSPANEL_EASY_SUBSCRIBE
+      return thermostat_temp_resolve(temp_nspanel->state, ${temp_reference_max_age} * 60000UL);
+      #else   // NSPANEL_EASY_SUBSCRIBE
+      return temp_nspanel->state;
+      #endif  // NSPANEL_EASY_SUBSCRIBE
+
+interval:
+  - interval: 1min  # A reference that stops changing triggers no event, so its age is checked here
+    then:
+      - lambda: |-
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          static_assert(${temp_reference_max_age} >= 1, "temp_reference_max_age must be at least 1 (minutes)");
+          if (temp_reference_aged_out(${temp_reference_max_age} * 60000UL)) {
+            thermostat_temperature->update();
+          }
+          #endif  // NSPANEL_EASY_SUBSCRIBE
 
 text_sensor:
   - id: !extend detailed_entity  # Defined by hw_display

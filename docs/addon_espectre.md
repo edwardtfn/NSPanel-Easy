@@ -54,7 +54,7 @@ The following keys are available to be used in your `substitutions`. All values 
 <!-- markdownlint-disable MD013 MD033 -->
 | Key | Required | Supported values | Default | Description |
 | :- | :-: | :-: | :-: | :- |
-| espectre_ref | no | valid ESPectre release tag | "3.0.0" | ESPectre version control |
+| espectre_ref | no | valid ESPectre release tag | "3.1.0" | ESPectre version control |
 | espectre_direct_api | no | "false" or "true" | "true" | the direct API is used by the ESPectre App |
 | espectre_detection_algorithm | no | "high_accuracy" or "lightweight" | "high_accuracy" | see ESPectre docs |
 | espectre_traffic_generator_mode | no | "ping", "dns", "dns_tcp", "wifi_raw" or "external" | "wifi_raw" | "external" if using ESPectre App as traffic generator |
@@ -98,7 +98,7 @@ esp32_ble_tracker:
 
 ## Image size
 
-Tested with `ESPHome 2026.9.1`, `ESPectre 3.0.0` and `NSPanel-Easy 2026.10.0` with space saving `captive_portal: !remove`, `web_server: !remove`.
+Tested with `ESPHome 2026.9.1`, `ESPectre 3.0.0` and `NSPanel-Easy 2026.10.0`.
 
 ### Summary
 
@@ -119,8 +119,6 @@ Tested with `ESPHome 2026.9.1`, `ESPectre 3.0.0` and `NSPanel-Easy 2026.10.0` wi
 ```yaml
 substitutions:
   wakeup_with_button_press: true
-captive_portal: !remove
-web_server: !remove
 packages:
   remote_package:
     url: https://github.com/edwardtfn/NSPanel-Easy
@@ -140,8 +138,6 @@ substitutions:
   backup_heater_relay: "1"
   backup_cooler_relay: "0"  # Relay 2 status icon is used by ESPectre
   climate_backup_delay: "3"
-captive_portal: !remove
-web_server: !remove
 packages:
   remote_package:
     url: https://github.com/edwardtfn/NSPanel-Easy
@@ -163,8 +159,6 @@ substitutions:
   backup_heater_relay: "1"
   backup_cooler_relay: "0"  # Relay 2 status icon is used by ESPectre
   climate_backup_delay: "3"
-captive_portal: !remove
-web_server: !remove
 esp32:
   framework:
     type: esp-idf

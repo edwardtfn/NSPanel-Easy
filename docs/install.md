@@ -239,6 +239,12 @@ The use of a non-conductive tool, like the blue plastic one shown in the picture
 
 By following these guidelines and referring to the provided resources, you can safely prepare your NSPanel for firmware updates.
 
+#### Backing Up the Original Firmware (Optional)
+
+Before flashing NSPanel Easy for the first time, you can save a copy of the original Sonoff firmware.
+This is the only way to return your panel to its original state later, as each panel's firmware contains unique device credentials that are erased by the first flash.
+See [Backing Up the Original Sonoff Firmware](backup_stock_firmware.md) for the steps.
+
 #### Transferring the Firmware to Your Device
 
 After ensuring your device is properly connected, proceed to update or install the firmware using the ESPHome Dashboard.
