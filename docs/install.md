@@ -233,6 +233,12 @@ The use of a non-conductive tool, like the blue plastic one shown in the picture
 
 By following these guidelines and referring to the provided resources, you can safely prepare your NSPanel for firmware updates.
 
+#### Backing Up the Original Firmware (Optional)
+
+Before flashing NSPanel Easy for the first time, you can save a copy of the original Sonoff firmware.
+This is the only way to return your panel to its original state later, as each panel's firmware contains unique device credentials that are erased by the first flash.
+See [Backing Up the Original Sonoff Firmware](backup_stock_firmware.md) for the steps.
+
 #### Transferring the Firmware to Your Device
 
 After ensuring your device is properly connected, proceed to update or install the firmware using the ESPHome Dashboard.
@@ -341,15 +347,7 @@ ensuring a smooth and hassle-free user experience.
 
 ### Updating Your NSPanel Firmware
 
-Regularly updating your NSPanel firmware ensures that you have the latest features and improvements from this project and ESPHome.
-To update your device's firmware to the latest version, simply follow the [Steps for OTA Updates](#steps-for-ota-updates) as outlined above.
-
-> [!IMPORTANT]  
-> This project comprises three integral parts: ESPHome, the TFT file, and the Blueprint.
-> It is crucial that all three components are updated to the same version to ensure compatibility and optimal performance.
-> When updating the ESPHome firmware, make sure to also update the TFT file and the Blueprint to the corresponding version.
-
-Keeping each component of the NSPanel HA Blueprint in sync with the same version enhances the stability and functionality of your smart panel.
+To update a running panel to the latest version, follow [Update NSPanel Easy](howto.md#update-nspanel-easy).
 
 #### Other
 
@@ -532,21 +530,6 @@ substitutions:
 
 ##### My customization - Start #####
 # Add your custom components here
-# Bluetooth Proxy with smart scanning (only when HA is connected)
-bluetooth_proxy:
-
-esp32_ble_tracker:
-  scan_parameters:
-    continuous: false
-
-api:
-  on_client_connected:
-    then:
-      - esp32_ble_tracker.start_scan:
-          continuous: true
-  on_client_disconnected:
-    then:
-      - esp32_ble_tracker.stop_scan:
 ##### My customization - End #####
 
 packages:
@@ -555,16 +538,21 @@ packages:
     ref: latest
     refresh: 300s
     files:
-      - esphome/nspanel_esphome_core.yaml        # Core NSPanel functionality
-      - esphome/nspanel_esphome_standard.yaml    # Standard features
-      # - esphome/nspanel_esphome_addon_upload_tft.yaml  # Temporarily disabled
+      - esphome/nspanel_esphome_core.yaml                  # Core NSPanel functionality
+      - esphome/nspanel_esphome_standard.yaml              # Standard features
+      - esphome/nspanel_esphome_addon_upload_tft.yaml      # TFT upload
+      - esphome/nspanel_esphome_addon_bluetooth_proxy.yaml # Optional: Bluetooth Proxy
 ```
 
 This approach allows you to:
 
 - Enable only required functionality
-- Temporarily disable memory-intensive components
+- Add optional add-ons, such as the [Bluetooth Proxy add-on](addon_bluetooth_proxy.md)
 - Add custom components while maintaining core functionality
+
+> [!NOTE]
+> Bluetooth Proxy and the TFT upload add-on can be enabled at the same time.
+> Before a TFT upload starts, the TFT upload add-on stops the Bluetooth stack and releases its memory.
 
 ##### Reducing Registered API Actions
 
@@ -602,102 +590,6 @@ this service directly.
 > `include_action_*: true` substitution to restore them. This is a deliberate breaking
 > change introduced to improve boot stability on memory-constrained devices.
 
-##### Dynamic Memory Management
-
-For scenarios requiring temporary memory trade-offs (e.g., TFT updates vs. Bluetooth functionality):
-
-###### Option 1: TFT Update Configuration
-
-```yaml
-# Configuration for TFT updates - Disable Bluetooth temporarily
-substitutions:
-  device_name: "your_nspanel_name"
-  friendly_name: "Your Panel Name"
-  wifi_ssid: !secret wifi_ssid
-  wifi_password: !secret wifi_password
-  ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
-  language: en      # Language code - see docs/localization.md for all supported codes
-  boot_sound: false
-  # Add-on configuration (if needed)
-  ## Upload TFT
-  upload_tft_automatically: true
-  ## Climate add-on
-  # heater_relay: "1"  # Possible values: "1" or "2"
-
-##### My customization - Start #####
-# Bluetooth components commented out during TFT updates
-# bluetooth_proxy:
-# esp32_ble_tracker:
-#   scan_parameters:
-#     continuous: false
-# api:
-#   on_client_connected:
-#     then:
-#       - esp32_ble_tracker.start_scan:
-#           continuous: true
-#   on_client_disconnected:
-#     then:
-#       - esp32_ble_tracker.stop_scan:
-##### My customization - End #####
-
-packages:
-  remote_package:
-    url: https://github.com/edwardtfn/NSPanel-Easy
-    ref: latest
-    refresh: 300s
-    files:
-      - esphome/nspanel_esphome_core.yaml
-      - esphome/nspanel_esphome_standard.yaml
-      - esphome/nspanel_esphome_addon_upload_tft.yaml  # Enable for updates
-```
-
-###### Option 2: Runtime Configuration
-
-```yaml
-# Configuration for normal operation - Enable Bluetooth, disable TFT upload
-substitutions:
-  device_name: "your_nspanel_name"
-  friendly_name: "Your Panel Name"
-  wifi_ssid: !secret wifi_ssid
-  wifi_password: !secret wifi_password
-  ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
-  language: en      # Language code - see docs/localization.md for all supported codes
-  boot_sound: false
-  # Add-on configuration (if needed)
-  ## Upload TFT
-  upload_tft_automatically: true
-  ## Climate add-on
-  # heater_relay: "1"  # Possible values: "1" or "2"
-
-##### My customization - Start #####
-# Bluetooth Proxy with smart scanning (only when HA is connected)
-bluetooth_proxy:
-
-esp32_ble_tracker:
-  scan_parameters:
-    continuous: false
-
-api:
-  on_client_connected:
-    then:
-      - esp32_ble_tracker.start_scan:
-          continuous: true
-  on_client_disconnected:
-    then:
-      - esp32_ble_tracker.stop_scan:
-##### My customization - End #####
-
-packages:
-  remote_package:
-    url: https://github.com/edwardtfn/NSPanel-Easy
-    ref: latest
-    refresh: 300s
-    files:
-      - esphome/nspanel_esphome_core.yaml
-      - esphome/nspanel_esphome_standard.yaml
-      # - esphome/nspanel_esphome_addon_upload_tft.yaml  # Disabled for memory
-```
-
 ##### Memory Usage Monitoring
 
 The core package includes memory reporting functionality. Monitor your device's memory usage through ESPHome logs:
@@ -711,86 +603,6 @@ The core package includes memory reporting functionality. Monitor your device's 
 ```
 
 Use this information to determine if additional components can be safely added or if memory optimization is required.
-
-#### Practical Example: Bluetooth Proxy Integration
-
-Here's a complete workflow for integrating Bluetooth Proxy while managing memory constraints:
-
-1. **Initial Setup with TFT Support**:
-
-   ```yaml
-   substitutions:
-     device_name: "your_nspanel_name"
-     friendly_name: "Your Panel Name"
-     wifi_ssid: !secret wifi_ssid
-     wifi_password: !secret wifi_password
-     ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
-     language: en      # Language code - see docs/localization.md for all supported codes
-     boot_sound: false
-     # Add-on configuration (if needed)
-     ## Upload TFT
-     upload_tft_automatically: true
-     ## Climate add-on
-     # heater_relay: "1"  # Possible values: "1" or "2"
-
-   ##### My customization - Start #####
-   # Bluetooth disabled during initial TFT upload
-   ##### My customization - End #####
-
-   packages:
-     remote_package:
-       files:
-         - esphome/nspanel_esphome_core.yaml
-         - esphome/nspanel_esphome_standard.yaml
-         - esphome/nspanel_esphome_addon_upload_tft.yaml
-   ```
-
-2. **Flash firmware and upload TFT file**
-
-3. **Switch to Bluetooth Configuration**:
-
-   ```yaml
-   substitutions:
-     device_name: "your_nspanel_name"
-     friendly_name: "Your Panel Name"
-     wifi_ssid: !secret wifi_ssid
-     wifi_password: !secret wifi_password
-     ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
-     language: en      # Language code - see docs/localization.md for all supported codes
-     boot_sound: false
-     # Add-on configuration (if needed)
-     ## Upload TFT
-     upload_tft_automatically: true
-     ## Climate add-on
-     # heater_relay: "1"  # Possible values: "1" or "2"
-
-   ##### My customization - Start #####
-   # Bluetooth Proxy with smart scanning (only when HA is connected)
-   bluetooth_proxy:
-
-   esp32_ble_tracker:
-     scan_parameters:
-       continuous: false
-
-   api:
-     on_client_connected:
-       then:
-         - esp32_ble_tracker.start_scan:
-             continuous: true
-     on_client_disconnected:
-       then:
-         - esp32_ble_tracker.stop_scan:
-   ##### My customization - End #####
-
-   packages:
-     remote_package:
-       files:
-         - esphome/nspanel_esphome_core.yaml
-         - esphome/nspanel_esphome_standard.yaml
-         # TFT upload package commented out to save memory
-   ```
-
-4. **For future TFT updates**: Temporarily revert to configuration from step 1, perform update, then switch back to step 3.
 
 ### Advanced ESPHome Configuration
 
@@ -857,22 +669,6 @@ sensor:
     name: "My Custom Sensor"
     # Ensure this doesn't conflict with core functionality
 
-# Optimized Bluetooth Proxy configuration
-bluetooth_proxy:
-
-esp32_ble_tracker:
-  scan_parameters:
-    continuous: false
-
-api:
-  on_client_connected:
-    then:
-      - esp32_ble_tracker.start_scan:
-          continuous: true
-  on_client_disconnected:
-    then:
-      - esp32_ble_tracker.stop_scan:
-
 # Custom automations
 script:
   - id: my_custom_script
@@ -882,6 +678,9 @@ script:
           ESP_LOGI("custom", "Memory available: %d", ESP.getFreeHeap());
 ##### My customization - End #####
 ```
+
+> [!TIP]
+> For Bluetooth Proxy, use the [Bluetooth Proxy add-on](addon_bluetooth_proxy.md) instead of adding the components manually.
 
 ### Advanced Blueprint Configuration
 
@@ -923,8 +722,7 @@ For guidance on Nextion development:
 1. **Monitor Memory Usage**: Regularly check memory reports in ESPHome logs
 2. **Use Granular Packages**: Include only necessary functionality
 3. **Framework Selection**: Prefer ESP-IDF for advanced features
-4. **Temporary Configurations**: Switch configurations for specific tasks (TFT updates)
-5. **PSRAM Utilization**: Leverage the 8MB PSRAM for larger components while keeping core functionality in internal memory
+4. **PSRAM Utilization**: Leverage the 8MB PSRAM for larger components while keeping core functionality in internal memory
 
 ### Advanced Troubleshooting
 

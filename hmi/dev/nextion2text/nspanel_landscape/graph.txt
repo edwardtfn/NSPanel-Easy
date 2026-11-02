@@ -1,0 +1,301 @@
+Page graph
+    Attributes
+        ID                 : 0
+        Scope              : local
+        Dragging           : 0
+        Send Component ID  : on press and release
+        Opacity            : 127
+        Width              : 480
+        Effect             : load
+        Effect Priority    : 0
+        Effect Time        : 300
+        Locked             : no
+        Swide up page ID   : disabled
+        Swide down page ID : disabled
+        Swide left page ID : disabled
+        Swide right page ID: disabled
+        Fill               : picture
+        Back. Picture ID   : 0
+    
+    Events
+        Preinitialize Event
+            if(api==0)
+            {
+                page home_page_id
+            }
+            // set background image and fg color to all components
+            graph.pic=pic_background_main
+            icon_state.picc=pic_background_main
+            page_label.picc=pic_background_main
+            button_back.font=button_back_font
+            button_back.pco=color_pco_navigation
+            button_back.picc2=pic_background_main
+            wave.picc=pic_background_main
+            wave.pco0=color_pco_main
+            value_now.picc=pic_background_main
+            value_now.pco=color_pco_main
+            value_min.picc=pic_background_main
+            value_min.pco=color_pco_secondary
+            value_max.picc=pic_background_main
+            value_max.pco=color_pco_secondary
+            dim=brightness
+            sendme
+        
+Variable (int32) tick_x
+    Attributes
+        ID   : 9
+        Scope: local
+        Value: 0
+    
+Variable (string) tick_text
+    Attributes
+        ID            : 10
+        Scope         : local
+        Text          : 
+        Max. Text Size: 2
+    
+Text page_label
+    Attributes
+        ID                      : 1
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 48
+        y coordinate            : 8
+        Width                   : 300
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 100
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text icon_state
+    Attributes
+        ID                      : 2
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 12
+        y coordinate            : 8
+        Width                   : 35
+        Height                  : 35
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value_now
+    Attributes
+        ID                      : 5
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 96
+        y coordinate            : 56
+        Width                   : 288
+        Height                  : 36
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 3
+        Cropped Back. Picture ID: 65535
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 30
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value_min
+    Attributes
+        ID                      : 6
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 4
+        y coordinate            : 255
+        Width                   : 88
+        Height                  : 25
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 65535
+        Horizontal Alignment    : right
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 30
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value_max
+    Attributes
+        ID                      : 7
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 4
+        y coordinate            : 100
+        Width                   : 88
+        Height                  : 25
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 65535
+        Horizontal Alignment    : right
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 30
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Waveform wave
+    Attributes
+        ID                      : 4
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 96
+        y coordinate            : 100
+        Width                   : 288
+        Height                  : 180
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Flow Direction          : left->right
+        Channel count           : 1
+        Cropped Back. Picture ID: 65535
+        Grid Color              : 1024
+        Grid hor. spacing       : 40
+        Grid ver. spacing       : 40
+        Channel 0 Color         : 64495
+    
+Button button_back
+    Attributes
+        ID                                  : 3
+        Scope                               : local
+        Dragging                            : 0
+        Send Component ID                   : on press and release
+        Opacity                             : 127
+        x coordinate                        : 385
+        y coordinate                        : 0
+        Width                               : 95
+        Height                              : 48
+        Effect                              : load
+        Effect Priority                     : 0
+        Effect Time                         : 300
+        Fill                                : crop image
+        Font ID                             : 8
+        Cropped Back. Picture ID (Unpressed): 0
+        Back. Picture ID (Pressed)          : 65535
+        Cropped Back. Picture ID (Pressed)  : 0
+        Horizontal Alignment                : center
+        Vertical Alignment                  : center
+        State                               : unpressed
+        Text                                : \xee\x85\x98
+        Max. Text Size                      : 3
+        Word wrap                           : disabled
+        Horizontal Spacing                  : 0
+        Vertical Spacing                    : 0
+    
+    Events
+        Touch Press Event
+            page back_page_id
+        
+Hotspot draw_frame
+    Attributes
+        ID               : 8
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: disabled
+        Opacity          : 127
+        x coordinate     : 0
+        y coordinate     : 0
+        Width            : 2
+        Height           : 2
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+    
+    Events
+        Touch Press Event
+            // Restore the background below the waveform, where the ticks and hour labels are drawn
+            sys0=wave.x-12
+            sys1=wave.y+wave.h
+            sys2=wave.w+24
+            picq sys0,sys1,sys2,27,pic_background_main
+            ref value_min
+            // Lines at the top and bottom bounds
+            sys0=wave.x+wave.w-1
+            sys1=wave.y-1
+            line wave.x,sys1,sys0,sys1,color_pco_navigation
+            sys1=wave.y+wave.h
+            line wave.x,sys1,sys0,sys1,color_pco_navigation
+        
+Hotspot draw_tick
+    Attributes
+        ID               : 11
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: disabled
+        Opacity          : 127
+        x coordinate     : 0
+        y coordinate     : 318
+        Width            : 2
+        Height           : 2
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+    
+    Events
+        Touch Press Event
+            sys0=wave.x+tick_x.val
+            sys1=wave.y+wave.h
+            sys2=sys1+4
+            line sys0,sys1,sys0,sys2,color_pco_navigation
+            sys0-=12
+            sys2+=1
+            xstr sys0,sys2,24,20,1,color_pco_navigation,0,1,1,3,tick_text.txt
+        
