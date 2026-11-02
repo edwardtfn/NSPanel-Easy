@@ -12,8 +12,8 @@ substitutions:
   ## Change only in your      ##
   ## local yaml substitutions ##
   ##############################
-  # SNTP servers (up to 3), separated by ";"; set to blank ("") to remove SNTP
-  sntp_servers: "0.pool.ntp.org;1.pool.ntp.org;2.pool.ntp.org"
+  # SNTP servers (up to 3), separated by ";", as a second time source; blank (default) uses only Home Assistant
+  sntp_servers: ""
   ##############################
   TAG_DATETIME: nspanel.datetime
   DATE_FORMAT_DEFAULT: "%A, %d.%m"
@@ -33,7 +33,7 @@ substitutions:
                 refresh_datetime->execute();
 
 packages:
-  # SNTP as a second time source, removed entirely when `sntp_servers` is blank
+  # SNTP as a second time source, only included when `sntp_servers` is set
   time_sntp: ${ _pkg_time_sntp if sntp_servers | length > 0 else {} }
 
 esphome:
