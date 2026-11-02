@@ -26,9 +26,7 @@
 
 namespace esphome::nspanel_easy {
 
-/// @brief Largest plausible offset between the reference and the panel's sensor, in °C.
-/// Matches the range of the Temperature Correction number.
-static constexpr float TEMP_CALIBRATION_MAX_OFFSET_C = 10.0f;
+static constexpr float TEMP_CALIBRATION_MAX_OFFSET_C = 10.0f;  ///< Largest plausible offset in °C, the correction range
 
 /**
  * @brief Track a subscription binding holding the calibration reference.

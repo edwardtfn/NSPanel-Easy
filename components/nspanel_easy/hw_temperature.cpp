@@ -35,16 +35,17 @@ enum class CalibrationPause : uint8_t {
 static CalibrationPause pause_reason = CalibrationPause::NO_REFERENCE;
 
 void temp_reference_render(const SubBinding &binding, const SubRuntime & /*rt*/, const char *state, bool /*visible*/) {
-  // A stale value cannot be trusted, so it is handled like an unusable one.
+  // A stale value cannot be trusted, so it is handled like an unusable one. A non-finite
+  // number ("nan", "inf") parses successfully but would poison the correction.
   const optional<float> value = api_stale ? optional<float>{} : parse_number<float>(state);
-  if (!value.has_value()) {
+  if (!value.has_value() || !std::isfinite(*value)) {
     reference_usable = false;
     return;
   }
 
 #if NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
   const float celsius = fahrenheit_to_celsius(*value);
-#else
+#else   // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
   const float celsius = *value;
 #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
 
@@ -61,13 +62,13 @@ void temp_reference_render(const SubBinding &binding, const SubRuntime & /*rt*/,
 optional<float> temp_calibration_sample(float raw_c, float correction_c, uint32_t max_age_ms, float alpha) {
   CalibrationPause reason = CalibrationPause::NONE;
   float offset_c = NAN;
-  if (!reference_usable || std::isnan(raw_c)) {
+  if (!reference_usable || !std::isfinite(raw_c)) {
     reason = CalibrationPause::NO_REFERENCE;
   } else if (millis() - reference_changed_ms > max_age_ms) {
     reason = CalibrationPause::TOO_OLD;
   } else {
     offset_c = reference_c - raw_c;
-    if (std::fabs(offset_c) > TEMP_CALIBRATION_MAX_OFFSET_C) {
+    if (!std::isfinite(offset_c) || std::fabs(offset_c) > TEMP_CALIBRATION_MAX_OFFSET_C) {
       reason = CalibrationPause::OUT_OF_RANGE;
     }
   }

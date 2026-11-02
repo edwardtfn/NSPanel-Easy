@@ -136,9 +136,9 @@ interval:
 
           #if NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
           const float correction_c = temperature_correction->state / 1.8f;  // Offset is a delta, no 32° shift
-          #else
+          #else   // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
           const float correction_c = temperature_correction->state;
-          #endif
+          #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
 
           const optional<float> next_c = temp_calibration_sample(raw_c, correction_c,
                                                                  ${temp_calibration_max_age} * 60000UL,
@@ -147,9 +147,9 @@ interval:
 
           #if NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
           float next = *next_c * 1.8f;
-          #else
+          #else   // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
           float next = *next_c;
-          #endif
+          #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
 
           // Publish only whole steps, and only once the smoothed value is ${TEMP_CALIBRATION_HYSTERESIS} of a step away
           // from the current correction. Plain rounding would flap between two steps whenever the offset sits near
