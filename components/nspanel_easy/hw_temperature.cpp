@@ -29,6 +29,7 @@ static float reference_c = NAN;
 /// @brief millis() when the reference value last changed.
 static uint32_t reference_changed_ms = 0;
 /// @brief Set once temp_reference_aged_out() has reported the reference too old; cleared on a change.
+/// Keeps it too old after millis() - reference_changed_ms wraps around, about 49.7 days later.
 static bool reference_aged_reported = false;
 /// @brief Whether the binding targets the "thermostat" component.
 static bool reference_drives_thermostat = false;
@@ -98,7 +99,7 @@ void temp_reference_render(const SubBinding &binding, const SubRuntime &rt, cons
 bool temp_reference_drives_thermostat() { return reference_drives_thermostat; }
 
 optional<float> temp_reference_get(uint32_t max_age_ms) {
-  if (!reference_usable || !reference_available || reference_too_old(max_age_ms)) {
+  if (!reference_usable || !reference_available || reference_aged_reported || reference_too_old(max_age_ms)) {
     return {};
   }
   return reference_c;
