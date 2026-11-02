@@ -376,7 +376,8 @@ blueprint:
             Once a minute, the **Temperature Correction** under HA Devices is adjusted slowly towards the difference
             between this reference and the panel's sensor. Leave the field empty to set the correction manually.
 
-            Place the reference close to the panel. You may select either a temperature `sensor` entity or a `climate` entity,
+            Place the reference in the same room, near the panel but not directly above it, as the panel's heat rises.
+            You may select either a temperature `sensor` entity or a `climate` entity,
             in which case its **current temperature** is used. The panel's own sensor and thermostat cannot be selected.
 
             The entity must report in the same unit as `temp_units` in your ESPHome settings.

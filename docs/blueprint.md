@@ -79,8 +79,9 @@ or automatically with a [calibration reference](#nspanel-temperature-sensor---ca
 ### NSPanel Temperature Sensor - Calibration Reference (Optional)
 
 The panel's own temperature sensor reads high because the panel heats itself up, by an amount that varies with its usage.
-Select a temperature `sensor`, or a `climate` entity to use its current temperature, placed close to the panel,
+Select a temperature `sensor`, or a `climate` entity to use its current temperature,
 and the panel calibrates its sensor against it automatically.
+Place it in the same room, near the panel but not directly above it, as the panel's heat rises.
 
 The panel keeps using its own sensor for everything, including the thermostat of the [Climate add-on](addon_climate.md),
 so it keeps working on its own while Home Assistant is unavailable.
@@ -90,7 +91,8 @@ The reference only adjusts the **Temperature Correction** under HA Devices:
 - Once a minute, the correction moves slowly towards the difference between the reference and the panel's uncorrected reading,
   so short changes in self-heating are averaged out.
 - The correction is only changed in whole steps of the Temperature Correction (0.1 °C or 1 °F), and is kept across restarts.
-  It changes only once the calibrated value has moved ¾ of a step away, so it does not flip back and forth between two steps.
+  It changes only once the calibrated value has moved ¾ of a step away (`temp_calibration_hysteresis`), so it does not flip back and forth between two steps.
+  On °F builds this means the correction only moves after about 0.4 °C (0.75 °F) of drift.
 
 Calibration pauses and keeps the current correction when:
 

@@ -19,7 +19,7 @@ substitutions:
   temp_calibration_warmup: '30'          # Minutes after boot before auto-calibration starts, while the panel's self-heating settles
   temp_calibration_time_constant: '30'   # Minutes for the correction to cover about 63% of a change in the offset
   temp_calibration_max_age: '120'        # Minutes without a change of the reference before auto-calibration pauses
-  TEMP_CALIBRATION_HYSTERESIS: '0.75'     # Fraction of a correction step the smoothed value must move before the correction changes
+  temp_calibration_hysteresis: '0.75'    # Fraction of a correction step the calibrated value must move before the correction changes
   TAG_HW_TEMPERATURE: nspanel.hw.temperature
 
 esphome:
@@ -151,11 +151,11 @@ interval:
           float next = *next_c;
           #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
 
-          // Publish only whole steps, and only once the smoothed value is ${TEMP_CALIBRATION_HYSTERESIS} of a step away
+          // Publish only whole steps, and only once the smoothed value is ${temp_calibration_hysteresis} of a step away
           // from the current correction. Plain rounding would flap between two steps whenever the offset sits near
           // a rounding boundary, rewriting the correction to flash every few minutes.
           const float step = temperature_correction->traits.get_step();
-          if (fabsf(next - temperature_correction->state) < ${TEMP_CALIBRATION_HYSTERESIS} * step) return;
+          if (fabsf(next - temperature_correction->state) < ${temp_calibration_hysteresis} * step) return;
           next = clamp(roundf(next / step) * step,
                        temperature_correction->traits.get_min_value(), temperature_correction->traits.get_max_value());
           if (fabsf(next - temperature_correction->state) < step / 2) return;  // Clamped back onto the current value
