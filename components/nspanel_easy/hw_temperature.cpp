@@ -38,9 +38,11 @@ enum class CalibrationPause : uint8_t {
 };
 static CalibrationPause pause_reason = CalibrationPause::NO_REFERENCE;
 
-void temp_reference_render(const SubBinding &binding, const SubRuntime & /*rt*/, const char *state, bool /*visible*/) {
+void temp_reference_render(const SubBinding &binding, const SubRuntime &rt, const char *state, bool /*visible*/) {
   if (strcmp(binding.component, "availability") == 0) {
-    const bool available = !sub_state_in(state, SUB_UNUSABLE_STATES);
+    // rt.state rather than state: for a climate binding without attribute, state carries hvac_action
+    // while it holds a value, and Home Assistant does not clear it when the entity becomes unavailable.
+    const bool available = !sub_state_in(rt.state, SUB_UNUSABLE_STATES);
     if (available != reference_available) {
       reference_available = available;
       ESP_LOGD(TAG, "Calibration reference %s %s", binding.entity, available ? "available" : "unavailable");

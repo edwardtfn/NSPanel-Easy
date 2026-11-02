@@ -44,7 +44,7 @@ static constexpr float TEMP_CALIBRATION_MAX_OFFSET_C = 10.0f;  ///< Largest plau
  * plausibility check in temp_calibration_sample().
  *
  * @param binding Binding being applied.
- * @param rt Unused: the state is passed separately.
+ * @param rt Runtime state; its raw state tells whether a climate reference is available.
  * @param state Raw state string, or the current_temperature attribute for climate.
  * @param visible Unused: nothing is drawn.
  */
