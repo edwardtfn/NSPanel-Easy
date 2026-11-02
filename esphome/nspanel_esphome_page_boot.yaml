@@ -45,7 +45,8 @@ script:
   - id: !extend boot_log
     then:
       - lambda: |-
-          if (current_page_id != get_page_id("boot")) return;
+          // Not while a page change is pending: the command would reach the next page, which has no log_body
+          if (current_page_id != get_page_id("boot") or id(page_change_pending)) return;
           disp1->send_command_printf("log_body.txt+=\"%s: %s\\r\"", category.c_str(), log_message.c_str());
 
   - id: !extend boot_preparation
@@ -212,7 +213,7 @@ script:
     mode: single
     then:
       - lambda: |-
-          if (current_page_id == get_page_id("boot") and !version_blueprint->state.empty())
+          if (current_page_id == get_page_id("boot") and !id(page_change_pending) and !version_blueprint->state.empty())
             disp1->set_component_text_printf("ver_blueprint", "Blueprint: %s", version_blueprint->state.c_str());
 
   - id: page_boot_show_ip
@@ -220,7 +221,7 @@ script:
     then:
       - lambda: |-
           if (!wifi_component->is_connected()) return;
-          if (current_page_id != get_page_id("boot")) return;
+          if (current_page_id != get_page_id("boot") or id(page_change_pending)) return;
           auto ips = network::get_ip_addresses();
           if (ips.empty()) return;
           char ip[16];  // sufficient for IPv4: "255.255.255.255" + '\0'

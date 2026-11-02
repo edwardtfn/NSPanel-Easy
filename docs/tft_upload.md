@@ -44,7 +44,8 @@ For troubleshooting, refer to the following sections:
 ### If using manual IP, make sure you have a DNS server configured
 
 At least one DNS server is required to enable TFT transfer directly from GitHub; otherwise use `nextion_update_url`.
-If you are setting up a manual IP as a customization, please remember to add a valid DNS server for your panel.
+If you are setting up a manual IP as a customization, please remember to add a valid DNS server for your panel,
+as described in [Network](network.md#dns-server).
 
 ### Using the `nspanel_blank.tft` File to Assist
 
@@ -93,8 +94,10 @@ To switch, simply replace 'https' with 'http' in your URLs and make sure your ht
 
 ### Remove Customizations
 
-- **Issue**: Customizations like `bluetooth_proxy` and `ble_tracker` may interfere with the upload.
+- **Issue**: Memory-intensive customizations may leave too little free memory for the upload.
 - **Solution**: Temporarily remove any customizations to free up memory.
+Bluetooth (e.g. the [Bluetooth Proxy add-on](addon_bluetooth_proxy.md)) does not need to be removed,
+as the TFT upload add-on stops the Bluetooth stack and releases its memory before the upload starts.
 - **How to Remove Customizations**: Identify any additional features you've added and remove them from your configuration file.
 Pay special attention to memory-intensive customizations.
 

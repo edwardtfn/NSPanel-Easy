@@ -73,7 +73,40 @@ If no separate sensor is used, the value of the weather integration will be used
 
 An indoor temperature sensor is not necessary.
 Leave the field empty if you want to use the temperature sensor of the NSPanel.
-If the value of the sensor needs to be corrected, this can be done via the temperature correction for the NSPanel under HA Devices.
+If the value of the sensor needs to be corrected, this can be done via the temperature correction for the NSPanel under HA Devices,
+or automatically with a [calibration reference](#nspanel-temperature-sensor---calibration-reference-optional).
+
+### NSPanel Temperature Sensor - Calibration Reference (Optional)
+
+The panel's own temperature sensor reads high because the panel heats itself up, by an amount that varies with its usage.
+Select a temperature `sensor`, or a `climate` entity to use its current temperature,
+and the panel calibrates its sensor against it automatically.
+Place it in the same room, near the panel but not directly above it, as the panel's heat rises.
+If the embedded thermostat regulates on this reference directly (see below), place it where the room temperature should be measured instead.
+
+The panel keeps using its own sensor for everything, including the thermostat of the [Climate add-on](addon_climate.md),
+so it keeps working on its own while Home Assistant is unavailable.
+The reference only adjusts the **Temperature Correction** under HA Devices:
+
+- Calibration starts 30 minutes after the panel boots, once its self-heating has settled.
+- Once a minute, the correction moves slowly towards the difference between the reference and the panel's uncorrected reading,
+  so short changes in self-heating are averaged out.
+- The correction is only changed in whole steps of the Temperature Correction (0.1 °C or 1 °F), and is kept across restarts.
+  It changes only once the calibrated value has moved ¾ of a step away (`temp_calibration_hysteresis`), so it does not flip back and forth between two steps.
+  On °F builds this means the correction only moves after about 0.4 °C (0.75 °F) of drift.
+
+Calibration pauses and keeps the current correction when:
+
+- the reference is `unavailable`, `unknown` or has no number,
+- Home Assistant has been unavailable for longer than `api_stale_grace_period` (30 seconds by default),
+- the reference has not changed for 2 hours (`temp_calibration_max_age`), as some sensors keep reporting their last value long after they stopped working, or
+- the difference is more than 10 °C (18 °F), which usually means the reference reports in a different unit. A warning is logged.
+
+> [!NOTE]
+> The reference must report in the same unit as `temp_units`. The panel's own sensor and thermostat cannot be selected.
+> While a reference is selected, changes made to the Temperature Correction by hand are overwritten by the calibration.
+> Selecting or changing the reference restarts the panel once, as with any other [API subscription](api_subscribe.md).
+> The timings can be changed with [substitutions](substitutions.md#advanced).
 
 ## Home page - Entities States
 
@@ -82,6 +115,26 @@ If the value of the sensor needs to be corrected, this can be done via the tempe
 | Home page - Entity State 01-04 (Optional) | Up to four HA entities can be displayed on the home screen. | ![home_page_entity_state_01_04.jpg](pics/home_page_entity_state_01_04.jpg) |
 | Home page - Chips 01-07 (optional) | Used to display icons of HA binary entities on the home screen. The icon is displayed when the entity is on/open/true/active. Otherwise, no icon is displayed. | ![chip](pics/home_page_chips.jpg) |
 | Custom button 01-07 (Optional) | 7 custom buttons that can be assigned to different entities from your Home Assistant. The behavior of these buttons will depend on the entity's domain, such as light, media player, etc. | ![home_page_custom_buttons.jpg](pics/home_page_custom_buttons.jpg) |
+
+### Home page - Entity State 01-04 - Graph (Optional)
+
+When enabled, tapping the value (or its icon) on the Home page opens a page with a graph of the entity over the last 24 hours, one point per 5 minutes.
+The page also shows the current value, the lower and upper bounds of the scale (with a line at each bound) and the local time every 6 hours below the graph.
+While the page is open, a new point is added every 5 minutes.
+
+The graph is drawn from the 5-minute means that Home Assistant keeps in the recorder statistics, so:
+
+- Only sensors with a `state_class` of `measurement` or `measurement_angle` can be graphed, as Home Assistant keeps mean statistics only for those
+  (sensors with `total` or `total_increasing`, like energy meters, have none). For other entities, the value is not tappable.
+- The `recorder` integration must be loaded. It is part of `default_config`.
+- The newest point is the last complete 5-minute period, so the right end of the graph is 5 to 10 minutes behind. The current value label is live.
+- Periods without data repeat the previous value, and periods before the first value are drawn at the bottom of the graph.
+- Home Assistant must be connected: the graph takes a second or two to appear when the page opens.
+
+### Home page - Entity State 01-04 - Graph minimum and maximum (Optional)
+
+Fixed lower and upper bounds of the graph, as numbers (e.g. `0` and `3000`). A comma is also accepted as decimal separator (e.g. `0,5`).
+Leave a field empty for an automatic bound, from the lowest or highest value of the last 24 hours. For example, set only the minimum to `0` for a power sensor.
 
 ## Alarm Control Panel
 
@@ -93,7 +146,8 @@ When you assign the entity here, its icon will be shown as a button on the Home 
 ### Climate to Control (Optional)
 
 Here you select the main climate entity controlled by your panel.
-Its temperature will be used on the Home page and by clicking on that value you will be able to control the climate settings.
+It is shown as the climate chip on the Home page and controlled on the climate page.
+If no climate entity is provided, the climate chip is not shown.
 
 You can optionally use your panel to control a climate system locally, using its temperature sensor and relays.
 You will find more details about this on the Add-on Climate documentation.
@@ -103,9 +157,16 @@ You still have to select that entity on this field in the blueprint settings to 
 
 Additional climate entities can be assigned to buttons and will be explained later in this document.
 
+### Embedded Thermostat - Regulate on the Calibration Reference (Optional)
+
+Only used with the [Climate add-on](addon_climate.md) and a [calibration reference](#nspanel-temperature-sensor---calibration-reference-optional).
+When enabled, the panel's embedded thermostat controls its relays using the calibration reference directly instead of the panel's calibrated sensor.
+See [Temperature source](addon_climate.md#temperature-source) for when it falls back to the panel's sensor.
+
 On the blueprint settings, you will also find settings for sensors and custom buttons to be shown on all the climate pages.
 
 When a climate entity supports preset modes (like `eco`, `comfort` or `away`), its climate page shows a preset button that opens a list with the available presets.
+The button shows the icon of the active preset and is highlighted while a preset is active. Custom presets use the generic preset icon.
 
 ## QR Code
 
@@ -159,6 +220,9 @@ If the NSPanel loses Wi-Fi connection or HA is down, the hardware button can the
 ### Left/Right Hardware Button - Entity (Optional)
 
 The entity that should be switched with the left/right hardware button.
+
+Old-style groups (`group.*`) are supported: a press turns all members off when the group is on, and on when the group is off, so all members end up in the same state.
+Members must support `turn_on`/`turn_off` (e.g. lights, switches, fans or covers); groups of locks are not supported.
 
 ### Left/Right Hardware Button - Label (Optional)
 

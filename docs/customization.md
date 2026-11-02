@@ -10,11 +10,7 @@ Table of contents:
   - [API encryption](#api-encryption)
   - [Custom OTA password](#custom-ota-password)
   - [OTA encryption](#ota-encryption)
-  - [Web server credentials](#web-server-credentials)
-  - [Reboot when API fails](#reboot-when-api-fails)
-  - [Manual IP](#manual-ip)
-  - [Hidden Wi-Fi](#hidden-wi-fi)
-  - [Connect to multiple networks](#connect-to-multiple-networks)
+  - [Web server](#web-server)
   - [SNTP (time) server](#sntp-time-server)
   - [Sensor for display awake vs sleeping](#sensor-for-display-awake-vs-sleeping)
   - [Deep sleep](#deep-sleep)
@@ -36,7 +32,6 @@ Table of contents:
   - [Hardware button scripts (v4.3.30+)](#hardware-button-scripts-v4330)
   - [Expose relay fallback switch](#expose-relay-fallback-switch)
   - [Relay Interlocking](#relay-interlocking)
-  - [Remove non-essential components](#remove-non-essential-components)
 
 &nbsp;
 &nbsp;
@@ -78,6 +73,7 @@ substitutions:
   wifi_password: !secret wifi_password
   ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
   language: en      # Language code - see docs/localization.md for all supported codes
+  api_encryption_key: !secret api_encryption_key  # Encrypt the communication between ESPHome and Home Assistant
 
   # Add-on configuration (if needed)
   ## Upload TFT
@@ -88,11 +84,6 @@ substitutions:
 
 # Customization area
 ##### My customization - Start #####
-
-# Encrypt the communication between ESPHome and Home Assistant
-api:
-  encryption:
-    key: !secret api_encryption_key
 
 # More detailed log (for troubleshooting only)
 logger:
@@ -164,9 +155,6 @@ This is useful for altering standard settings or freeing up memory for additiona
 Here's how you might remove some default settings:
 
 ```yaml
-# Removes the `captive_portal` component
-captive_portal: !remove
-
 # Removes the OTA password
 ota:
   - id: !extend ota_std
@@ -180,6 +168,10 @@ ota:
 
 ## Examples
 
+> [!NOTE]
+> Network settings, such as Wi-Fi, manual IP, gateway, DNS server, and the reboot when the connection fails, are
+> described in [Network](network.md).
+
 ### API encryption
 >
 > [!IMPORTANT]
@@ -190,11 +182,16 @@ This is highly recommended when you are transfer sensitive information between y
 as when you use your panel to enter the PIN for an Alarm Control Panel.
 
 ```yaml
-# Encrypt the communication between ESPHome and Home Assistant
-api:
-  encryption:
-    key: !secret api_encryption_key
+substitutions:
+  # Encrypt the communication between ESPHome and Home Assistant
+  api_encryption_key: !secret api_encryption_key
 ```
+
+Each panel should have its own key, so use a different secret name for each panel.
+You can get a new randomly generated valid key from the [ESPHome Native API Component](https://esphome.io/components/api/#configuration-variables) page.
+
+> [!NOTE]
+> Configurations that set the key directly in an `api:` block in the customization area keep working.
 
 ### Custom OTA password
 
@@ -225,70 +222,64 @@ If your configuration still has the `on_boot` code above with a blank `ota_passw
 Remove the `on_boot` code and set `ota_password` to the password used in that code.
 
 > [!NOTE]
-> If you use [API encryption](#api-encryption), consider using [OTA encryption](#ota-encryption) instead of a password.
+> Prefer the [OTA encryption](#ota-encryption) instead of a password.
+> The OTA password only authenticates the uploader, while the encryption also protects the firmware image in transit.
+> When `ota_encryption` is enabled, `ota_password` is used only for the migration, and the `on_boot` code above cannot be used.
 
 ### OTA encryption
 
 The OTA update can be encrypted with the same key used by the [API encryption](#api-encryption).
-This keeps the firmware image confidential in transit and also authenticates the uploader, so no OTA password is needed.
-It requires ESPHome 2026.9.0 or newer.
+This keeps the firmware image confidential in transit, which includes your Wi-Fi password and API key, and also authenticates the uploader, so no OTA password is needed.
+It requires ESPHome 2026.9.0 or newer and the [API encryption](#api-encryption).
 
 > [!IMPORTANT]
-> Once a panel runs firmware with OTA encryption required, it refuses plaintext OTA updates.
-> The encryption applies to the ESPHome OTA (`ota_std`) only, not to the HTTP OTA used by the prebuilt firmware to download its updates.
+> Once a panel runs firmware with OTA encryption required, it refuses OTA updates without the API encryption key.
 > If the key is lost, the panel can only be recovered with a serial flash.
+> The encryption applies to the ESPHome OTA (`ota_std`) only, not to the HTTP OTA used by the prebuilt firmware to download its updates.
 
-Enable it in two steps, as described in ESPHome's
-[Enabling Encryption on an Existing Device](https://esphome.io/components/ota/esphome/#enabling-encryption-on-an-existing-device) guide:
-
-1. **Install a firmware that offers encryption.**
-   Add the [API encryption](#api-encryption) if you don't have it yet, keep your current `ota_password`, and flash your panel.
-   The device log should show `Encryption: offered, plaintext accepted`.
-2. **Require encryption.**
-   Add the code below, which removes the OTA password and requires the encryption, and flash your panel again.
-   The device log should show `Encryption: required`.
+Enable it with the `ota_encryption` substitution:
 
 ```yaml
-api:
-  encryption:
-    key: !secret api_encryption_key
-
-ota:
-  - id: !extend ota_std
-    password: !remove  # A password cannot be combined with the OTA encryption
-    encryption:
+substitutions:
+  api_encryption_key: !secret api_encryption_key
+  ota_encryption: true
 ```
 
+How to get there depends on how your panel is updated today:
+
+- **New panel, flashed by serial:** add the code above before the first flash.
+- **Panel with a blank `ota_password`:** the panel must already run a firmware that offers the encryption.
+  Check the device log for `Encryption: offered, plaintext accepted`.
+  If it is not there, add the API encryption if needed and install once with `ota_encryption: false`, then add `ota_encryption: true` and install again.
+- **Panel with an OTA password (ESPHome 2026.10.0 or newer):** add `ota_encryption: true` and keep your current `ota_password` for one install.
+  The password is used only to send this update to the running firmware, and is not built into the new one.
+  After that install, set `ota_password` back to blank (or remove it): ESPHome warns about it on every upload until then.
+  If your configuration sets the password directly in `ota_std` (`- id: !extend ota_std` with `password:`), move it to `ota_password` for this install and remove that override,
+  otherwise ESPHome rejects the password next to the required encryption.
+- **Panel with an OTA password (ESPHome 2026.9.x):** install once with the API encryption and your current `ota_password`,
+  so the device log shows `Encryption: offered, plaintext accepted`.
+  Then add `ota_encryption: true`, set `ota_password` back to blank (or remove it), and install again.
+
+After the migration, the device log should show `Encryption: required`.
+For more details, see ESPHome's [Enabling Encryption on an Existing Device](https://esphome.io/components/ota/esphome/#enabling-encryption-on-an-existing-device) guide.
+
 > [!NOTE]
-> The previous version of this guide enabled the OTA encryption by setting `ota_password` to blank.
-> If you used that, add `password: !remove` as shown above, otherwise ESPHome rejects the configuration because the password cannot be combined with the encryption.
+> Previous versions of this guide enabled the OTA encryption by extending `ota_std` with `password: !remove` and `encryption:`.
+> That configuration keeps working, but you can replace it with `ota_encryption: true`.
 
-### Web server credentials
+### Web server
 
-By default, the web server credentials are defined by this project (advanced only) using `admin` as `username` and your `Wi-Fi password` as `password`, but you can replace it using this customization:
+The web server is not included by default. To add it, protected with your own credentials:
 
 ```yaml
-# Custom web server credentials
+# Add the web server with custom credentials
 web_server:
   auth:
     username: !secret web_server_username
     password: !secret web_server_password
 ```
 
-### Reboot when API fails
-
-Reboot your panel if it loses its connection to Home Assistant for more than a certain time (15 minutes in this example).
-
-Sometimes the low-level ESP functions could report that the ESP is connected to the network,
-when in fact it is not and only a full reboot fixes it.
-
-To support long times without Wi-Fi, this is disabled by default in this project, but you can set a reasonable interval to restart, based on your network reliability.
-
-```yaml
-# Reboot if HA is not connected for 15 minutes
-api:
-  reboot_timeout: 15min
-```
+The web server uses a significant amount of memory, so check the [memory usage](#memory-management) after adding it.
 
 ### Feedback when Home Assistant is unavailable
 
@@ -310,69 +301,31 @@ substitutions:
   tone_page_unavailable: "unavailable:d=16,o=5,b=160:a5,e5"
 ```
 
-### Manual IP
-
-Set IP address manually.
-
-> [!IMPORTANT]
-> At least one DNS server is required to enable TFT transfer directly from GitHub, otherwise use `nextion_update_url`.
-
-```yaml
-# Set IP address manually
-wifi:
-  networks:
-    - id: !extend wifi_default
-      manual_ip:
-        static_ip: 192.168.0.123
-        gateway: 192.168.0.1
-        subnet: 255.255.255.0
-        dns1: 1.1.1.1  # At least one DNS server is required to enable TFT transfer directly from GitHub, otherwise use `nextion_update_url`.
-        dns2: 8.8.8.8
-```
-
-### Hidden Wi-Fi
-
-Connect to a hidden Wi-Fi network.
-
-```yaml
-# Connect to a hidden Wi-Fi network.
-wifi:
-  networks:
-    - id: !extend wifi_default
-      hidden: true
-  fast_connect: true
-```
-
-### Connect to multiple networks
-
-NSPanel will attempt to connect to the one with the highest signal strength or, if you set a priority, it will try to connect to the highest priority.
-After failing it will connect to the second network.
-
-```yaml
-# Set dual network
-wifi:
-  networks:
-    - id: !extend wifi_default
-      priority: 10
-    - ssid: !secret wifi_ssid_backup
-      password: !secret wifi_password_backup
-      priority: 0
-```
-
 ### SNTP (time) server
 
-ESPHome takes its time from Home Assistant, however you can configure it to use a Network Time Server instead.
+By default, the panel takes its time from Home Assistant.
+You can add Network Time (SNTP) servers as a second time source with the `sntp_servers` substitution (up to 3, separated by `;`).
+
+Network Time servers only need Wi-Fi, so after a power loss, when the panel has no time, they bring it back without waiting for Home Assistant:
+
+- The clock is shown as soon as the panel is on the network, also while Home Assistant is still starting or unavailable.
+- Time-based customizations, such as scheduled relays with `on_time`, work without Home Assistant.
+
+Until Home Assistant connects, this time is shown in the timezone detected when the firmware was built.
+If that differs from your timezone (for example, when the firmware is built on another computer), set it as described in [Enforce time zone](#enforce-time-zone).
 
 ```yaml
-# Use my own local network time server
-time:
-  - id: !extend time_provider
-    platform: sntp
-    servers:
-      - !secret mysntpserver
-      - europe.pool.ntp.org
-      - 0.pool.ntp.org
+substitutions:
+  # Router as Network Time server, with public NTP Pool servers as fallback
+  sntp_servers: "192.168.0.1;0.pool.ntp.org;1.pool.ntp.org"
 ```
+
+Prefer a Network Time server in your network, as many routers provide one, so the time requests stay local.
+Public servers, such as the [NTP Pool](https://www.ntppool.org/), are on the internet: see [Network](network.md#internet-access) for what is exchanged and the firewall rules.
+
+> [!IMPORTANT]
+> If you previously changed `time_provider` to `platform: sntp`, that customization keeps working, but the panel no longer takes its time from Home Assistant.
+> Prefer removing it and setting `sntp_servers` instead. Do not use both, as ESPHome supports only one SNTP time source and the build fails.
 
 ### Sensor for display awake vs sleeping
 
@@ -886,18 +839,6 @@ switch:
   - id: !extend relay_2
     interlock: [relay_1, relay_2]
     interlock_wait_time: 500ms  # Please adjust this accordingly
-```
-
-### Remove non-essential components
-
-This can be useful to free-up memory, so other custom components could be used instead.
-
-```yaml
-# Removes captive portal - Pre-built and advanced only
-captive_portal: !remove
-
-# Removes embedded web server - Advanced only
-web_server: !remove
 ```
 
 ### Restart with 15s button press
