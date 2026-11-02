@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.11.1)
+  name: NSPanel Easy Configuration (v2026.11.2)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -5202,7 +5202,7 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.11.1
+  blueprint_version: 2026.11.2
 
   # Minimum ESPHome firmware version required by this Blueprint (the Blueprint -> ESPHome contract).
   # Set it to 'next' when a change makes the Blueprint depend on a newer firmware, e.g. a new API
