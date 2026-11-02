@@ -366,6 +366,22 @@ blueprint:
                 - domain: sensor
                   device_class: temperature
                 - domain: climate
+        home_indoor_temp_icon:
+          name: Home page - Indoor Temperature Sensor - Icon
+          description: "Icon which should be displayed (Default mdi:thermometer)"
+          default: mdi:thermometer
+          selector: &selector_icon
+            icon:
+        home_indoor_temp_icon_color:
+          name: Home page - Indoor Temperature Sensor - Icon color
+          description: &description_icon_color "Icon color which should be displayed."
+          default: [255, 255, 255]
+          selector: *color_selector
+        home_indoor_temp_label_color:
+          name: Home page - Indoor Temperature Sensor - Text color
+          description: *description_text_color
+          default: [255, 255, 255]
+          selector: *color_selector
         temp_calibration_reference:
           name: NSPanel Temperature Sensor - Calibration Reference - Entity
           description: >-
@@ -385,22 +401,6 @@ blueprint:
             *Only one entity may be selected.*
           default: *selector_entity_single_default_empty
           selector: *entity_temp_or_climate_sensor_selector
-        home_indoor_temp_icon:
-          name: Home page - Indoor Temperature Sensor - Icon
-          description: "Icon which should be displayed (Default mdi:thermometer)"
-          default: mdi:thermometer
-          selector: &selector_icon
-            icon:
-        home_indoor_temp_icon_color:
-          name: Home page - Indoor Temperature Sensor - Icon color
-          description: &description_icon_color "Icon color which should be displayed."
-          default: [255, 255, 255]
-          selector: *color_selector
-        home_indoor_temp_label_color:
-          name: Home page - Indoor Temperature Sensor - Text color
-          description: *description_text_color
-          default: [255, 255, 255]
-          selector: *color_selector
     home_page_entites_states:
       name: Home page - Entities states
       icon: mdi:home
