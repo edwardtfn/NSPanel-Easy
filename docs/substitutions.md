@@ -121,6 +121,7 @@ The defaults suit almost every installation, so change them only to solve a spec
 | `temp_calibration_time_constant` | `30` | Minutes for the auto-calibrated correction to cover about 63% of a change in the offset. Higher values react slower but are less affected by short changes in self-heating. |
 | `temp_calibration_max_age` | `120` | Minutes without a change of the calibration reference before auto-calibration pauses, keeping the current correction. |
 | `temp_calibration_hysteresis` | `0.75` | Fraction of a Temperature Correction step (0.1 °C or 1 °F) the calibrated value must move before the correction changes. Lower values follow the reference more closely; values of 0.5 or less let the correction flip back and forth between two steps. |
+| `temp_reference_max_age` | `temp_calibration_max_age` | Minutes without a change of the [calibration reference](blueprint.md#nspanel-temperature-sensor---calibration-reference-optional) before an [embedded thermostat regulating on it](addon_climate.md#temperature-source) falls back to the panel's sensor. |
 | `qrcode_initial_value` | `''` | Text of the QR code until one is received. |
 | `qrcode_title_initial_value` | `''` | Title of the QR code page until one is received. |
 | `qrcode_icon_color_initial_value` | `Colors::RGB565_GRAY_LIGHT` | Colour of the QR code button on the home page until one is received. Accepts an RGB565 number. |
