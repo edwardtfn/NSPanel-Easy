@@ -28,7 +28,7 @@ jobs:
 
       # https://github.com/marketplace/actions/markdownlint-cli2-action
       - name: Markdown Lint
-        uses: DavidAnson/markdownlint-cli2-action@v24.2.0
+        uses: DavidAnson/markdownlint-cli2-action@v25.0.0
         if: steps.changed-files.outputs.any_changed == 'true'
         with:
           globs: ${{ steps.changed-files.outputs.all_changed_files }}
