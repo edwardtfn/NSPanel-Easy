@@ -135,7 +135,7 @@ Registers one binding. Called once per subscribable component.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `page` | string | Target page. `chips` and `home` have renderers. |
+| `page` | string | Target page. `chips`, `home`, `wakeup` and `calibration` have renderers. |
 | `component` | string | Target component, e.g. `chip01`. |
 | `entity` | string | Home Assistant `entity_id`. |
 | `attribute` | string | Attribute to follow instead of the state. Send an empty string to follow the state. |
@@ -335,8 +335,10 @@ Celsius and is converted when the panel is compiled for Fahrenheit.
 
 ## Limits and behaviour
 
-- **`chips` and `home` have renderers.** Bindings for other pages are accepted, persisted and
-  subscribed, but nothing is drawn and `dump_config` marks them `[no renderer]`.
+- **`chips`, `home`, `wakeup` and `calibration` have renderers.** `wakeup` and `calibration` draw
+  nothing: they feed the wake-up sensors and the temperature auto-calibration. Bindings for other
+  pages are accepted, persisted and subscribed, but nothing is drawn and `dump_config` marks them
+  `[no renderer]`.
 - **`chip_relay1`, `chip_relay2` and `chip_climate` cannot be bound.** They are driven locally by
   the relay and embedded-thermostat logic and keep working without Home Assistant. Attempting to
   bind them logs a warning and is ignored.
