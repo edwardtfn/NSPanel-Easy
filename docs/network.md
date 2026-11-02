@@ -31,11 +31,11 @@ Table of contents:
 
 - The panel connects to a 2.4 GHz Wi-Fi network. 5 GHz networks are not supported by the ESP32.
 - By default, the IP address, gateway and DNS server are set automatically by your router (DHCP).
-- Home Assistant and the ESPHome Device Builder connect to the panel. By default, the panel gets its time from Home
-  Assistant.
-- With the default settings, the panel needs internet access for a single purpose: downloading the display (TFT) file
-  from GitHub. Customizations connecting to the internet, such as public Network Time (SNTP) servers, need their own
-  firewall rules.
+- Home Assistant and the ESPHome Device Builder connect to the panel. The panel gets its time from Home Assistant and
+  from public Network Time (SNTP) servers.
+- With the default settings, the panel accesses the internet for two purposes: downloading the display (TFT) file from
+  GitHub, and getting the time from the Network Time servers. Both can be replaced by local servers, see
+  [Running without internet access](#running-without-internet-access).
 - No telemetry, analytics, cloud service, or "phone home" exists. No information about your home, Home Assistant, or
   entities is sent anywhere outside your network.
 
@@ -130,6 +130,7 @@ When changing a manual IP, set `use_address` to the old address, install once, t
 The gateway is the router that forwards the traffic from the panel to anything outside its own subnet. It is used to:
 
 - Download the TFT file from GitHub (internet).
+- Get the time from the public Network Time (SNTP) servers (internet).
 - Reach a DNS server outside the panel subnet, such as `1.1.1.1` or `8.8.8.8`.
 - Reach a server in another subnet or VLAN, such as a local server hosting the TFT files.
 
@@ -142,7 +143,9 @@ The DNS server translates host names into IP addresses. The panel does not need 
 connects to the panel, and not the opposite. It is used only when the panel connects to a host name:
 
 - During a TFT update, to find the server in the TFT URL (by default `raw.githubusercontent.com`).
-- Any other host name you add to your customizations, such as Network Time (SNTP) servers set by name.
+- To find the Network Time (SNTP) servers set by name, including the default ones (`0.pool.ntp.org`,
+  `1.pool.ntp.org` and `2.pool.ntp.org`).
+- Any other host name you add to your customizations.
 
 With DHCP, the DNS server is set by your router. With a [manual IP](#manual-ip), set it with `dns1` (and optionally
 `dns2`). Use the DNS server of your router or any other DNS server reachable by the panel. A public DNS server, such as
@@ -221,7 +224,12 @@ The download happens only when one of the following occurs:
 - **Baud rate scan:** when the **Scan baud rate** button finds a working baud rate (only available when
   `include_button_scan_baud_rate: true`).
 
-Outside of a TFT update, the panel does not connect to the internet.
+The panel also gets its time from public Network Time (SNTP) servers, set with the `sntp_servers` substitution (by
+default `0.pool.ntp.org`, `1.pool.ntp.org` and `2.pool.ntp.org`). Unlike Home Assistant, these only need Wi-Fi, so
+after a power loss the clock is shown before Home Assistant connects. See
+[SNTP (time) server](customization.md#sntp-time-server).
+
+Outside of a TFT update and the time synchronization, the panel does not connect to the internet.
 
 ### What is exchanged
 
@@ -240,12 +248,19 @@ No credentials, device identifiers, Home Assistant data, or user settings are se
 Each download is about 0.7 MB for `blank` and 13.5 MB for `landscape` and `portrait`. Failed attempts are downloaded
 again.
 
+For the time, the panel sends standard NTP requests (UDP port 123) to the Network Time servers at regular intervals.
+Each request is a small packet containing only timestamps. As with any request, the server can see your public IP
+address. No device identifiers or other data are sent.
+
 ### Consequences of blocking internet access
 
 Blocking internet access does not affect the daily use of the panel: the Home Assistant connection, pages, buttons,
 relays, the embedded thermostat, and firmware updates keep working.
 
-The only affected feature is the TFT download. Whenever a TFT update is required (usually after a firmware update) and
+Without the Network Time servers, the time comes only from Home Assistant: after a power loss, the clock is shown only
+once Home Assistant connects. Nothing else is affected.
+
+The TFT download is affected more. Whenever a TFT update is required (usually after a firmware update) and
 the download fails, the panel:
 
 1. Shows the TFT upload screen.
@@ -273,6 +288,17 @@ Choose one of the options below:
   that folder with the ones matching your firmware version on every release, before updating the firmware. See
   [Using a local base URL](addon_upload_tft.md#example-using-a-local-base-url-with-automatic-model-selection).
 
+For the time, use a Network Time server in your network (many routers provide one) or remove the Network Time servers,
+so the time comes only from Home Assistant:
+
+```yaml
+substitutions:
+  # Use a local Network Time server
+  sntp_servers: "192.168.0.1"
+  # Or use only Home Assistant as time source
+  # sntp_servers: ""
+```
+
 ## Firewall rules
 
 Connections to the panel, required when the panel is in a different subnet or VLAN, or when your network filters
@@ -290,14 +316,16 @@ Connections from the panel:
 | Destination | Protocol / Port | Purpose |
 | :- | :- | :- |
 | DHCP server | UDP 67/68 | IP address, gateway and DNS server (not used with a manual IP) |
-| DNS server | UDP/TCP 53 | Host name resolution, such as `raw.githubusercontent.com` |
+| DNS server | UDP/TCP 53 | Host name resolution, such as `raw.githubusercontent.com` and `pool.ntp.org` |
 | `raw.githubusercontent.com` | TCP 443 (HTTPS) | TFT download from GitHub |
+| Network Time servers in `sntp_servers` | UDP 123 (NTP) | Time synchronization (by default `0.pool.ntp.org`, `1.pool.ntp.org` and `2.pool.ntp.org`) |
 | Local TFT server (optional) | The port in your URL, such as TCP 8123 | TFT download from a local server |
 
 > [!TIP]
-> Create the rule for GitHub based on the host name (FQDN) whenever your firewall supports it.
-> `raw.githubusercontent.com` is served by a content delivery network (CDN) whose IP addresses are shared with other
-> services and may change without notice, so rules based on IP addresses can break at any time.
+> Create the rules for GitHub and the Network Time servers based on the host name (FQDN) whenever your firewall supports
+> it. `raw.githubusercontent.com` is served by a content delivery network (CDN) whose IP addresses are shared with other
+> services, and each `pool.ntp.org` name points to different volunteer servers over time, so rules based on IP
+> addresses can break at any time.
 
 If you change `nextion_update_base_url` or `nextion_update_url`, allow the host and port of that URL instead of GitHub.
 

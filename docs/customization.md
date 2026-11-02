@@ -305,6 +305,7 @@ substitutions:
 
 ESPHome takes its time from Home Assistant and, as a second source, from public Network Time Servers (`0.pool.ntp.org`, `1.pool.ntp.org` and `2.pool.ntp.org`).
 The second source only needs Wi-Fi, so the time can be shown before the connection to Home Assistant is established.
+These servers are on the internet: see [Network](network.md#internet-access) for what is exchanged and the firewall rules.
 
 You can use your own Network Time Servers (up to 3, separated by `;`) with the `sntp_servers` substitution:
 
