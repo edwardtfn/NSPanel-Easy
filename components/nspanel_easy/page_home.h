@@ -37,6 +37,10 @@
  * Temperatures: rendered exactly as Home Assistant reports them, with no unit
  * conversion. Indoor falls back to the panel's own sensor when the bound entity
  * has no value; outdoor is hidden, having no local equivalent.
+ *
+ * Stale values (see api_stale): the custom buttons and the weather picture are
+ * hidden, indoor falls back to the panel's own sensor, and outdoor is greyed
+ * out, as are the values and their icons pushed by the blueprint.
  */
 
 namespace esphome::nspanel_easy {
@@ -68,6 +72,31 @@ extern uint32_t home_vis_mask;
 bool home_vis_set(const char *component, bool visible);
 
 void home_vis_resend();
+
+/// @brief Number of value slots on the home page (value01..value04).
+static constexpr uint8_t HOME_VALUE_COUNT = 4;
+
+/**
+ * @brief Shadow a colour the blueprint pushed for a home value or its icon.
+ *
+ * The blueprint pushes these once, at boot, and only when they differ from its
+ * default, so the shadow is what home_values_paint() restores once the values
+ * are fresh again.
+ *
+ * @param component Unscoped component name, e.g. "value01" or "value01_icon".
+ * @param color RGB565 colour.
+ * @return true when the component is a home value or a value icon.
+ */
+bool home_value_color_store(const char *component, uint16_t color);
+
+/**
+ * @brief Paint the home values and their icons.
+ *
+ * Grey while api_stale is set, the shadowed colours otherwise. Called when the
+ * staleness changes and from home_colors_apply, which also covers a display
+ * restart dropping the colours back to their design-time value.
+ */
+void home_values_paint();
 
 /// @brief Number of custom button slots on the home page (button01..button07).
 static constexpr uint8_t HOME_BUTTON_COUNT = 7;
@@ -150,25 +179,6 @@ void home_sub_render(const SubBinding &binding, const SubRuntime &rt, const char
  */
 void home_button_repaint();
 
-/**
- * @brief Track the Home Assistant connection for the subscribed home components.
- *
- * While disconnected, Home Assistant cannot report the bound indoor temperature
- * entity, so its last value is stale. It is then treated as unusable and the
- * component is handed back to the embedded sensor, as when the entity itself
- * becomes unavailable.
- *
- * On reconnect, Home Assistant only re-sends states that differ from the cached
- * ones, so an unchanged value would never be rendered again. The bindings are
- * therefore re-applied from their cached state, but only after a disconnection
- * actually invalidated something.
- *
- * Safe to call repeatedly with the same value; it runs on every watchdog round.
- *
- * @param connected Whether the API is connected with a state subscription.
- */
-void home_api_connection_update(bool connected);
-
 #ifdef NSPANEL_EASY_USE_WEATHER
 
 /**
@@ -176,8 +186,9 @@ void home_api_connection_update(bool connected);
  *
  * Combines the stored condition index, the sun elevation and the active theme
  * into a single picture ID. Call after anything those three depend on changes:
- * a new condition from the subscription, a theme change, sunrise or sunset, and
- * once the sun coordinates have been applied.
+ * a new condition from the subscription, a theme change, sunrise or sunset, a
+ * change of api_stale, and once the sun coordinates have been applied. A blank
+ * picture is drawn while api_stale is set.
  *
  * Safe to call before the display pointer has been handed over; it returns
  * without drawing in that case.
