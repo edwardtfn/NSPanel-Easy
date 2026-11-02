@@ -389,12 +389,15 @@ If a binding shows `[no renderer]`, the target page has no renderer — see
 
 ### A component bound to an attribute shows nothing
 
-Check that the entity really exposes that attribute, in Developer Tools → States. A missing
-attribute arrives as the literal `None`: a chip or button will stay hidden, and a temperature will
-be hidden or fall back to the panel's own sensor.
+Check that the entity really exposes that attribute, in Developer Tools → States. An attribute that
+is missing from the entity is never sent, so the component shows nothing until it appears. An
+attribute that exists but holds no value arrives as the literal `None`: a chip or button will stay
+hidden, and a temperature will be hidden or fall back to the panel's own sensor.
 
-Note that a binding with an attribute never receives the entity's state, so `unavailable` arrives as
-`None` rather than as itself.
+Note that a binding with an attribute never receives the entity's state. An entity that becomes
+`unavailable` usually drops its attributes, and since a missing attribute is not sent, the component
+keeps its last value. Bind the entity's state as well where that matters, as the temperature
+calibration does for a climate reference.
 
 ### The panel restarts on every reconnect
 
