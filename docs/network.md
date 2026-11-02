@@ -34,8 +34,8 @@ Table of contents:
 - Home Assistant and the ESPHome Device Builder connect to the panel. By default, the panel gets its time from Home
   Assistant.
 - With the default settings, the panel needs internet access for a single purpose: downloading the display (TFT) file
-  from GitHub. Customizations connecting to the internet, such as public Network Time (SNTP) servers, need their own
-  firewall rules.
+  from GitHub. Customizations connecting to the internet, such as public
+  [Network Time (SNTP) servers](customization.md#sntp-time-server), need their own firewall rules.
 - No telemetry, analytics, cloud service, or "phone home" exists. No information about your home, Home Assistant, or
   entities is sent anywhere outside your network.
 
@@ -221,7 +221,8 @@ The download happens only when one of the following occurs:
 - **Baud rate scan:** when the **Scan baud rate** button finds a working baud rate (only available when
   `include_button_scan_baud_rate: true`).
 
-Outside of a TFT update, the panel does not connect to the internet.
+Outside of a TFT update, the panel does not connect to the internet, unless you set public
+[Network Time (SNTP) servers](customization.md#sntp-time-server) with `sntp_servers`.
 
 ### What is exchanged
 
@@ -239,6 +240,10 @@ No credentials, device identifiers, Home Assistant data, or user settings are se
 
 Each download is about 0.7 MB for `blank` and 13.5 MB for `landscape` and `portrait`. Failed attempts are downloaded
 again.
+
+With public Network Time servers, the panel sends standard NTP requests (UDP port 123) at regular intervals. Each
+request is a small packet containing only timestamps. As with any request, the server can see your public IP address.
+No device identifiers or other data are sent.
 
 ### Consequences of blocking internet access
 
@@ -292,6 +297,7 @@ Connections from the panel:
 | DHCP server | UDP 67/68 | IP address, gateway and DNS server (not used with a manual IP) |
 | DNS server | UDP/TCP 53 | Host name resolution, such as `raw.githubusercontent.com` |
 | `raw.githubusercontent.com` | TCP 443 (HTTPS) | TFT download from GitHub |
+| Network Time servers in `sntp_servers` (optional) | UDP 123 (NTP) | Time synchronization |
 | Local TFT server (optional) | The port in your URL, such as TCP 8123 | TFT download from a local server |
 
 > [!TIP]

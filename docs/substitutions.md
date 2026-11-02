@@ -37,6 +37,7 @@ substitutions:
 | `ota_password` | `""` | Password required for OTA updates. Empty disables the password. When `ota_encryption` is enabled, used only to migrate a panel that still expects a password. See [Customization](customization.md#custom-ota-password). |
 | `language` | `en` | Language compiled into the firmware. Only the selected language's strings are stored on the panel. See [Localization](localization.md#setting-your-language). |
 | `temp_units` | `°C` | Temperature unit used by everything the panel renders locally: `°C` or `°F`. The Blueprint must be set to the same unit. See [Localization](localization.md#temperature-unit). |
+| `sntp_servers` | `""` | Network Time (SNTP) servers (up to 3, separated by `;`) used as a second time source, next to Home Assistant, so the time can be shown before Home Assistant connects. Empty uses only Home Assistant. See [Customization](customization.md#sntp-time-server). |
 <!-- markdownlint-enable MD013 -->
 
 ## Home page

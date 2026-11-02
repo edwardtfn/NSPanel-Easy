@@ -303,18 +303,29 @@ substitutions:
 
 ### SNTP (time) server
 
-ESPHome takes its time from Home Assistant, however you can configure it to use a Network Time Server instead.
+By default, the panel takes its time from Home Assistant.
+You can add Network Time (SNTP) servers as a second time source with the `sntp_servers` substitution (up to 3, separated by `;`).
+
+Network Time servers only need Wi-Fi, so after a power loss, when the panel has no time, they bring it back without waiting for Home Assistant:
+
+- The clock is shown as soon as the panel is on the network, also while Home Assistant is still starting or unavailable.
+- Time-based customizations, such as scheduled relays with `on_time`, work without Home Assistant.
+
+Until Home Assistant connects, this time is shown in the timezone detected when the firmware was built.
+If that differs from your timezone (for example, when the firmware is built on another computer), set it as described in [Enforce time zone](#enforce-time-zone).
 
 ```yaml
-# Use my own local network time server
-time:
-  - id: !extend time_provider
-    platform: sntp
-    servers:
-      - !secret mysntpserver
-      - europe.pool.ntp.org
-      - 0.pool.ntp.org
+substitutions:
+  # Router as Network Time server, with public NTP Pool servers as fallback
+  sntp_servers: "192.168.0.1;0.pool.ntp.org;1.pool.ntp.org"
 ```
+
+Prefer a Network Time server in your network, as many routers provide one, so the time requests stay local.
+Public servers, such as the [NTP Pool](https://www.ntppool.org/), are on the internet: see [Network](network.md#internet-access) for what is exchanged and the firewall rules.
+
+> [!IMPORTANT]
+> If you previously changed `time_provider` to `platform: sntp`, that customization keeps working, but the panel no longer takes its time from Home Assistant.
+> Prefer removing it and setting `sntp_servers` instead. Do not use both, as ESPHome supports only one SNTP time source and the build fails.
 
 ### Sensor for display awake vs sleeping
 
