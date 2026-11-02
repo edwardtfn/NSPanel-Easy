@@ -71,8 +71,8 @@ static constexpr uint16_t SUB_CHUNK_COUNT = (SUB_MAX + SUB_CHUNK_SIZE - 1) / SUB
  * Configurable because it is the one field whose natural length is set by the
  * user's Home Assistant rather than by this project: integrations that derive
  * an entity_id from a location or a device name can exceed any fixed default.
- * A truncated entity_id subscribes to an entity that does not exist, so the
- * binding is silently dead. Raising this costs SUB_ENTITY_LEN bytes per live
+ * An entity_id that does not fit is not bound: the binding is cleared and a
+ * warning reports the size to set. Raising this costs SUB_ENTITY_LEN bytes per live
  * binding in RAM and widens every persisted chunk by four times the increase,
  * which is why it is a per-installation knob rather than a generous constant.
  *
@@ -601,8 +601,10 @@ void sub_subscribe_all();
  * @brief Accept one binding from the blueprint's push.
  *
  * The first call after a completed or abandoned push implicitly starts a new
- * one. Appearance is applied to the live binding immediately when the target
- * matches; the entity is staged and only takes effect after a restart.
+ * one, and so does a target that is already staged: each push sends a target
+ * once, so a repeat means another push has started. Appearance is applied to
+ * the live binding immediately when the target matches; the entity is staged
+ * and only takes effect after a restart.
  *
  * @param page Target page.
  * @param component Target component.

@@ -363,7 +363,7 @@ script:
           }  // if (!display_entity_keep)
 
           // Reset timers
-          if (current_page_id != ${PAGE_SCREENSAVER_ID}) {
+          if (current_page_id != get_page_id("screensaver")) {
             ESP_LOGV("${TAG_HW_DISPLAY}", "Reset timers");
             timer_reset_all->execute();
           }

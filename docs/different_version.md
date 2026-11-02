@@ -6,6 +6,10 @@ This guide provides instructions on how to switch between different versions for
 Blueprint, ESPHome, and Nextion TFT, allowing users to access development (`dev`), beta, or previous versions.
 
 <!-- markdownlint-disable MD028 -->
+> [!NOTE]
+> This guide is for advanced users only.
+> To update your panel to the latest version, follow [Update NSPanel Easy](howto.md#update-nspanel-easy) instead.
+
 > [!WARNING]
 > Use non-main versions at your own risk. Only the `main`/latest release is officially supported.
 

@@ -13,6 +13,7 @@ substitutions:
   ##############################
   TAG_API: nspanel.api
   EVENT_NAME: esphome.nspanel_easy
+  api_stale_grace_period: '30s'  # Time without Home Assistant before the values on display are indicated as stale
 
 
 packages:
@@ -562,14 +563,48 @@ script:
           action_component_text_list->stop();
           action_component_val->stop();
           action_component_visibility->stop();
+          api_stale_changed->stop();
+          api_stale_timer->stop();
           api_unavailable_feedback->stop();
           ha_button->stop();
           update_flag_api_ready->stop();
 
+  ##### Home Assistant values on display became stale, or fresh again (see api_stale) #####
+  - id: api_stale_changed
+    mode: restart
+    then:  # Modules showing Home Assistant values extend this and read api_stale
+
+  ##### Grace period before the values on display are indicated as stale #####
+  - id: api_stale_timer
+    mode: single
+    then:
+      - delay: ${api_stale_grace_period}
+      - lambda: |-
+          if (api_server->is_connected_with_state_subscription()) return;
+          ESP_LOGW("${TAG_API}", "Home Assistant unavailable for ${api_stale_grace_period}: values are stale");
+          api_stale = true;
+          api_stale_changed->execute();
+
+  # Evaluated on API connect/disconnect and on every watchdog round
   - id: update_flag_api_ready
     then:
       - lambda: |-
           disp1->send_command_printf("api=%i", api_server->is_connected_with_state_subscription() ? 1 : 0);
+
+          if (api_server->is_connected_with_state_subscription()) {
+            api_stale_timer->stop();
+            if (api_stale) {
+              ESP_LOGI("${TAG_API}", "Home Assistant is back: values are fresh");
+              api_stale = false;
+              api_stale_changed->execute();
+            }  // if (api_stale)
+            return;
+          }  // if (api_server->is_connected_with_state_subscription())
+
+          // Disconnected: start the grace period once, without restarting it on every watchdog round
+          if (!api_stale && !api_stale_timer->is_running()) {
+            api_stale_timer->execute();
+          }  // if (!api_stale && !api_stale_timer->is_running())
 
   - id: !extend watchdog_round
     then:

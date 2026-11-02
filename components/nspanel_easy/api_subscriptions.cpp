@@ -137,6 +137,27 @@ static bool sub_binding_equal(const SubBinding &a, const SubBinding &b) {
 }
 
 /**
+ * @brief Find the binding that drives a given target.
+ *
+ * A target is a page and component pair. The blueprint sends each target at
+ * most once per push, so a target is unique within any well-formed set.
+ *
+ * @param set Bindings to search.
+ * @param count Number of bindings in set.
+ * @param page Target page.
+ * @param component Target component.
+ * @return Index of the matching binding, or count when the target is absent.
+ */
+static uint16_t sub_find_target(const SubBinding *set, uint16_t count, const char *page, const char *component) {
+  for (uint16_t idx = 0; idx < count; ++idx) {
+    if (strcmp(set[idx].page, page) == 0 && strcmp(set[idx].component, component) == 0) {
+      return idx;
+    }
+  }  // for each binding
+  return count;
+}
+
+/**
  * @brief Recompute and render one binding from its stored state.
  *
  * Classification happens here so that renderers never interpret a raw state.
@@ -359,6 +380,19 @@ void sub_push_binding(const char *page, const char *component, const char *entit
     ESP_LOGD(TAG, "Binding push started");
   }
 
+  // Overlapping blueprint runs (e.g. a burst of automation reloads) interleave
+  // their pushes in this single staging buffer. Each run sends every target
+  // once, so a target that is already staged means another run has started a
+  // push. Restart staging with it: whatever was staged is now a mixture of runs
+  // and must never be committed. The end markers of the interrupted runs then
+  // fail the count check and are discarded.
+  if (sub_find_target(sub_staging, sub_staged, page, component) < sub_staged) {
+    ESP_LOGW(TAG, "%s.%s pushed twice; a new push started, discarding %" PRIu16 " staged binding(s)", page, component,
+             sub_staged);
+    memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
+    sub_staged = 0;
+  }  // if target already staged
+
   if (sub_staged >= SUB_MAX) {
     ESP_LOGW(TAG, "More than %" PRIu16 " bindings pushed; '%s' ignored", SUB_MAX, entity);
     return;
@@ -480,6 +514,11 @@ bool sub_persist(bool verified) {
 /**
  * @brief Compare the staged set against the live one.
  *
+ * The comparison is by target, not by position: the same bindings received in
+ * a different order are the same set and must not trigger a restart. Targets
+ * are unique within each set (see sub_push_binding()), so equal counts plus a
+ * match for every staged target means both sets hold the same bindings.
+ *
  * @return true when the sets differ and a restart is required.
  */
 static bool sub_staged_differs() {
@@ -487,13 +526,18 @@ static bool sub_staged_differs() {
     return true;
   }
   for (uint16_t idx = 0; idx < sub_staged; ++idx) {
-    if (!sub_binding_equal(sub_staging[idx], sub_bindings[idx])) {
-      ESP_LOGV(TAG, "Binding %" PRIu16 " changed: '%s' %s.%s -> '%s' %s.%s", idx, sub_bindings[idx].entity,
-               sub_bindings[idx].page, sub_bindings[idx].component, sub_staging[idx].entity, sub_staging[idx].page,
-               sub_staging[idx].component);
+    const SubBinding &staged = sub_staging[idx];
+    const uint16_t live = sub_find_target(sub_bindings, sub_count, staged.page, staged.component);
+    if (live >= sub_count) {
+      ESP_LOGV(TAG, "Binding added: '%s' %s.%s", staged.entity, staged.page, staged.component);
       return true;
     }
-  }
+    if (!sub_binding_equal(staged, sub_bindings[live])) {
+      ESP_LOGV(TAG, "Binding changed: '%s' %s.%s -> '%s' %s.%s", sub_bindings[live].entity, sub_bindings[live].page,
+               sub_bindings[live].component, staged.entity, staged.page, staged.component);
+      return true;
+    }
+  }  // for each staged binding
   return false;
 }
 
