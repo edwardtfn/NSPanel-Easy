@@ -127,7 +127,9 @@ interval:
     then:
       - lambda: |-
           #ifdef NSPANEL_EASY_SUBSCRIBE
+          static_assert(${temp_calibration_warmup} >= 0, "temp_calibration_warmup must not be negative (minutes)");
           static_assert(${temp_calibration_time_constant} >= 1, "temp_calibration_time_constant must be at least 1 (minutes)");
+          static_assert(${temp_calibration_max_age} >= 1, "temp_calibration_max_age must be at least 1 (minutes)");
           static bool warmed_up = false;
           if (!warmed_up) {
             if (millis() < ${temp_calibration_warmup} * 60000UL) return;
