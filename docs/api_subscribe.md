@@ -58,8 +58,11 @@ entity's own state is never received. This is how the outdoor temperature reads 
 weather entity, and how the indoor temperature reads `current_temperature` from a climate entity.
 
 The attribute value reaches the renderer exactly where the state normally would, so classification
-and appearance resolution behave as if it were the state. A missing attribute arrives as the literal
-`None`, which classifies as unrecognised.
+and appearance resolution behave as if it were the state. An attribute that exists but holds no value
+arrives as the literal `None`, which classifies as unrecognised. An attribute that is missing from the
+entity is not sent at all, so the panel keeps the last value it received. Climate entities typically
+drop their attributes when they become unavailable; bind the entity's state as well where that matters,
+as the temperature calibration does.
 
 An entity may be bound twice — once for its state and once for an attribute — targeting different
 components. The home page does this with a weather entity, which drives both the weather picture and

@@ -35,6 +35,11 @@ static constexpr float TEMP_CALIBRATION_MAX_OFFSET_C = 10.0f;  ///< Largest plau
  * drawn: the value is kept for temp_calibration_sample(). Bindings are re-applied
  * on every page change, so only a changed value refreshes the reference's age.
  *
+ * A climate reference is bound twice: its current_temperature attribute to the
+ * "temperature" component, and its state to "availability". Home Assistant sends
+ * nothing when an attribute disappears, as it does when the entity becomes
+ * unavailable, so only the state reveals that the last value is no longer valid.
+ *
  * The value is read in the unit set by `temp_units`; a mismatch is caught by the
  * plausibility check in temp_calibration_sample().
  *

@@ -7973,6 +7973,10 @@ actions:
                                     attribute: '{{ "current_temperature" if temp_calibration_entity.split(".")[0] == "climate" else "" }}'
                                     page: calibration
                                     component: temperature
+                                  # A climate entity's attribute is not re-sent when it disappears, so its state tells when it is unavailable
+                                  - entity: '{{ temp_calibration_entity if temp_calibration_entity.split(".")[0] == "climate" else "" }}'
+                                    page: calibration
+                                    component: availability
 
                               ##### API subscriptions #####
                               # Components driven directly by ESPHome through Home Assistant state
