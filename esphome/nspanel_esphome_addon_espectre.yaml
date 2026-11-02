@@ -14,7 +14,7 @@ substitutions:
   ## Change only in your      ##
   ## local yaml substitutions ##
   ##############################
-  espectre_ref: "3.0.0"                          # ESPectre release this add-on was tested with (override at your own risk)
+  espectre_ref: "3.1.0"                          # ESPectre release this add-on was tested with (override at your own risk)
   espectre_traffic_generator_mode: "wifi_raw"    # ping, dns, dns_tcp, wifi_raw or external
   espectre_detection_algorithm: "high_accuracy"  # high_accuracy or lightweight
   espectre_direct_api: "true"                    # see ESPectre documentation
