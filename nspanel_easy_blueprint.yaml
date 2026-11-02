@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.10.7)
+  name: NSPanel Easy Configuration (v2026.11.0)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -17,7 +17,7 @@ blueprint:
   source_url: https://raw.githubusercontent.com/edwardtfn/NSPanel-Easy/refs/tags/latest/nspanel_easy_blueprint.yaml
   domain: automation
   homeassistant:
-    min_version: 2026.8.0
+    min_version: 2026.9.0
 
   input:
     nspanel_name:  # This key was kept with this name to support inputs from legacy versions where the panel name was used
@@ -5202,14 +5202,14 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.10.7
+  blueprint_version: 2026.11.0
 
   # Minimum ESPHome firmware version required by this Blueprint (the Blueprint -> ESPHome contract).
   # Set it to 'next' when a change makes the Blueprint depend on a newer firmware, e.g. a new API
   # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
   # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
   # While it is 'next' (development builds), the minimum firmware check is skipped.
-  min_esphome_version: next
+  min_esphome_version: 2026.11.0
 
   # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
