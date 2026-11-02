@@ -563,6 +563,7 @@ interval:
     then:
       - lambda: |-
           #ifdef NSPANEL_EASY_SUBSCRIBE
+          static_assert(${temp_reference_max_age} >= 1, "temp_reference_max_age must be at least 1 (minutes)");
           if (temp_reference_aged_out(${temp_reference_max_age} * 60000UL)) {
             thermostat_temperature->update();
           }
