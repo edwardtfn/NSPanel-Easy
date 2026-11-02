@@ -18,7 +18,6 @@ substitutions:
   GPIO_PSRAM_CLK_PIN: '5'
   GPIO_PSRAM_CS_PIN: '18'
   name: ${device_name}
-  ota_password: ""
   project_tag: nspanel_easy
   TAG_BASE: nspanel.base
   ref_url: https://github.com/edwardtfn/NSPanel-Easy
@@ -78,25 +77,6 @@ nspanel_easy:  # Adds custom library for NSPanel HA Blueprint project
   on_dump_config:
     then:
       - script.execute: dump_config
-
-ota:
-  - id: ota_std
-    platform: esphome
-    # Always set, even when blank, so the uploader keeps sending it to panels expecting a password
-    # To use the OTA encryption, remove it with `password: !remove` (see docs/customization.md)
-    password: ${ota_password}
-    on_begin:
-      then:
-        - lambda: |-
-            system_flags.ota_in_progress = true;
-            stop_all->execute();
-    # A failed or aborted OTA does not reboot the panel, so clear the flag to re-enable the watchdog
-    on_abort:
-      then:
-        - lambda: system_flags.ota_in_progress = false;
-    on_error:
-      then:
-        - lambda: system_flags.ota_in_progress = false;
 
 safe_mode:
   id: safe_mode_component
