@@ -14,11 +14,18 @@ substitutions:
   TAG_API: nspanel.api
   EVENT_NAME: esphome.nspanel_easy
   api_stale_grace_period: '30s'  # Time without Home Assistant before the values on display are indicated as stale
+  api_encryption_key: ""  # Encrypts the communication with Home Assistant (see docs/customization.md#api-encryption)
 
+  # API encryption - selected in `packages` below
+  _pkg_api_encryption:
+    api:
+      encryption:
+        key: ${api_encryption_key}
 
 packages:
   # yamllint disable rule:colons
-  api_subscribe: !include nspanel_esphome_api_subscribe.yaml
+  api_subscribe:  !include nspanel_esphome_api_subscribe.yaml
+  api_encryption: ${ _pkg_api_encryption if api_encryption_key else {} }
   # yamllint enable rule:colons
 
 api:

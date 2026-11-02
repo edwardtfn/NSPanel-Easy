@@ -67,6 +67,11 @@ substitutions:
 > [!NOTE] Setting OTA to use WiFi is only necessary if you are migrating wirelessly.
 > When migrating via USB/TTL you can freely select your OTA password or leave without one.
 
+After the migration works, we recommend switching to the [OTA encryption](customization.md#ota-encryption),
+which also removes the ESPHome warning `'ota' password wastes significant flash and RAM`.
+Do this as a separate step after the migration, not as part of it.
+If your panel doesn't use the [API encryption](customization.md#api-encryption) yet, adding it may require removing and re-adding the device in Home Assistant.
+
 #### Language
 
 Language is no longer selected in the Blueprint. You must now set it as a substitution
