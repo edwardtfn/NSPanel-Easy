@@ -1053,12 +1053,14 @@ blueprint:
             Toggle to have the panel's embedded thermostat (Climate add-on) control its relays using
             **NSPanel Temperature Sensor - Calibration Reference - Entity** directly,
             for example when that sensor is placed elsewhere in the room.
+            Leave it disabled when the reference is next to the panel, as the calibration alone already covers that case.
 
             When disabled, the thermostat uses the NSPanel's own sensor, calibrated against that reference,
             and keeps working fully on its own while Home Assistant is unavailable.
 
             When enabled, the thermostat falls back to the calibrated NSPanel sensor whenever the reference
-            has no usable value, has not changed for 2 hours, differs from the panel's sensor by more than 10 °C (18 °F),
+            has no usable value, has not changed for `temp_reference_max_age` (2 hours by default),
+            differs from the panel's sensor by more than 10 °C (18 °F),
             or Home Assistant has been unavailable for longer than `api_stale_grace_period`.
 
             Has no effect when no calibration reference is selected.
