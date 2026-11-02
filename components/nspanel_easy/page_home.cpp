@@ -10,6 +10,7 @@
 #include "esphome/components/nextion/nextion.h"
 #include "esphome/core/log.h"
 
+#include "base.h"
 #include "nextion_components.h"
 
 #ifdef NSPANEL_EASY_SUBSCRIBE
@@ -92,6 +93,53 @@ void home_vis_resend() {
   }
 }
 
+/// @brief Blueprint default colour of the home values and their icons (RGB 200, 204, 200).
+static constexpr uint16_t HOME_VALUE_COLOR_DEFAULT = Colors::RGB565_GRAY_LIGHT;
+
+/// @brief A home value or value icon, as the blueprint names it and as it is painted.
+struct HomeValueTarget {
+  const char *component;  ///< Unscoped name, as the blueprint sends it
+  const char *target;     ///< Scoped name, which resolves from any page
+};
+
+/// @brief Every home value and value icon, in the order of home_value_colors.
+static constexpr HomeValueTarget HOME_VALUE_TARGETS[] = {
+    {"value01", hmi::home::VALUE01.name}, {"value01_icon", hmi::home::VALUE01_ICON.name},
+    {"value02", hmi::home::VALUE02.name}, {"value02_icon", hmi::home::VALUE02_ICON.name},
+    {"value03", hmi::home::VALUE03.name}, {"value03_icon", hmi::home::VALUE03_ICON.name},
+    {"value04", hmi::home::VALUE04.name}, {"value04_icon", hmi::home::VALUE04_ICON.name},
+};
+static constexpr size_t HOME_VALUE_TARGET_COUNT = sizeof(HOME_VALUE_TARGETS) / sizeof(HOME_VALUE_TARGETS[0]);
+static_assert(HOME_VALUE_TARGET_COUNT == HOME_VALUE_COUNT * 2, "One label and one icon per home value");
+
+/// @brief Shadowed colours, parallel to HOME_VALUE_TARGETS. Not persisted: the blueprint pushes them on every boot.
+static uint16_t home_value_colors[HOME_VALUE_TARGET_COUNT] = {
+    HOME_VALUE_COLOR_DEFAULT, HOME_VALUE_COLOR_DEFAULT, HOME_VALUE_COLOR_DEFAULT, HOME_VALUE_COLOR_DEFAULT,
+    HOME_VALUE_COLOR_DEFAULT, HOME_VALUE_COLOR_DEFAULT, HOME_VALUE_COLOR_DEFAULT, HOME_VALUE_COLOR_DEFAULT,
+};
+
+bool home_value_color_store(const char *component, uint16_t color) {
+  for (size_t idx = 0; idx < HOME_VALUE_TARGET_COUNT; ++idx) {
+    if (strcmp(component, HOME_VALUE_TARGETS[idx].component) == 0) {
+      home_value_colors[idx] = color;
+      return true;
+    }
+  }  // for each home value target
+  return false;
+}
+
+void home_values_paint() {
+  if (nextion_display == nullptr) {
+    return;  // Boot has not handed the display over yet
+  }
+
+  // Scoped names: this also runs while another page is showing.
+  for (size_t idx = 0; idx < HOME_VALUE_TARGET_COUNT; ++idx) {
+    const uint16_t color = api_stale ? Colors::RGB565_GRAY_DARK : home_value_colors[idx];
+    nextion_display->set_component_font_color(HOME_VALUE_TARGETS[idx].target, color);
+  }  // for each home value target
+}
+
 #ifdef NSPANEL_EASY_SUBSCRIBE
 
 HomeButtonState home_button_states[HOME_BUTTON_COUNT] = {};
@@ -106,9 +154,6 @@ static char outdoor_temp_text[TEMP_TEXT_LEN] = {};
 
 /// @brief Whether the outdoor temperature component is currently shown.
 static Visibility outdoor_temp_shown = Visibility::UNKNOWN;
-
-/// @brief Whether a disconnection handed the indoor temperature to the embedded sensor.
-static bool indoor_temp_offline = false;
 
 /**
  * @brief Build the scoped Nextion name for a home custom button.
@@ -127,6 +172,21 @@ static void home_button_target(uint8_t idx, char *out, size_t size) {
 }
 
 /**
+ * @brief Show or hide a home custom button, on the live page as well.
+ *
+ * home_vis_set() only updates the vis_home mask, which the page applies on its
+ * next load, so the live component is written too while home is showing.
+ *
+ * @param component Unscoped component name, e.g. "button01".
+ * @param visible Whether the button should be shown.
+ */
+static void home_button_visibility(const char *component, bool visible) {
+  if (home_vis_set(component, visible) && is_home_page()) {
+    nextion_display->set_component_visibility(component, visible);
+  }  // if (changed && is_home_page())
+}
+
+/**
  * @brief Render a subscription binding onto a home custom button.
  *
  * Unlike a chip, a bound custom button is always visible: it renders the active
@@ -142,6 +202,16 @@ static void home_button_render(const SubBinding &binding, const SubRuntime &rt, 
   HomeButtonState &button = home_button_states[idx];
   button.bound = true;  // Blocks blueprint pushes for this slot
 
+  // A stale state cannot be trusted, and a tap could not reach Home Assistant
+  // anyway. The binding is rendered again once the values are fresh.
+  if (api_stale) {
+    if (button.shown) {
+      button.shown = false;
+      home_button_visibility(binding.component, false);
+    }  // if (button.shown)
+    return;
+  }  // if (api_stale)
+
   // Nothing to draw until a binding push has supplied appearance. Appearance is
   // not persisted, so a button stays as the blueprint last left it until then.
   if (!rt.has_appearance) {
@@ -155,7 +225,7 @@ static void home_button_render(const SubBinding &binding, const SubRuntime &rt, 
   if (unavailable && unavailable_behavior == UnavailableBehavior::HIDE) {
     if (button.shown) {
       button.shown = false;
-      home_vis_set(binding.component, false);
+      home_button_visibility(binding.component, false);
     }  // if (button.shown)
     return;
   }  // if (unavailable && HIDE)
@@ -220,7 +290,7 @@ static void home_button_render(const SubBinding &binding, const SubRuntime &rt, 
     // A bound button is always visible. The blueprint used to send this with
     // every icon push; nothing else sets it now.
     button.shown = true;
-    home_vis_set(binding.component, true);
+    home_button_visibility(binding.component, true);
   }
 }
 
@@ -231,15 +301,19 @@ void home_weather_resolve() {
     return;  // Boot has not handed the display over yet
   }
 
+  // Index 0 resolves to a blank picture in both themes, so an unknown or
+  // not-yet-received condition needs no visibility handling of its own. A stale
+  // condition is hidden the same way, while the stored index is kept so it is
+  // drawn again once the values are fresh.
+  const uint8_t index = api_stale ? 0 : weather_condition_index;
+
   // is_new_device is always false: the "Easy" TFT project is abandoned.
   const WeatherPicVariant &variant =
-      select_weather_variant(get_weather_pics(weather_condition_index), false, current_theme != ThemeMode::LIGHT);
+      select_weather_variant(get_weather_pics(index), false, current_theme != ThemeMode::LIGHT);
   const uint16_t pic = sun_info.is_up ? variant.sun_up : variant.sun_down;
 
-  // Index 0 resolves to a blank picture in both themes, so an unknown or
-  // not-yet-received condition needs no visibility handling of its own.
-  ESP_LOGD(TAG, "Update weather pic: %" PRIu16 " (condition %" PRIu8 ", sun up: %s)", pic, weather_condition_index,
-           YESNO(sun_info.is_up));
+  ESP_LOGD(TAG, "Update weather pic: %" PRIu16 " (condition %" PRIu8 ", sun up: %s, stale: %s)", pic,
+           weather_condition_index, YESNO(sun_info.is_up), YESNO(api_stale));
   nextion_display->set_component_pic(hmi::home::WEATHER.name, static_cast<uint8_t>(pic));
 }
 
@@ -305,9 +379,11 @@ static void format_temperature(float value, char *out, size_t size) {
 static void home_indoor_temp_render(const char *state) {
   indoor_temp_bound = true;
 
-  const auto value = parse_number<float>(state);
+  // A stale value cannot be trusted, so it is handled like an unusable one and
+  // the panel's own sensor takes over until the values are fresh again.
+  const optional<float> value = api_stale ? optional<float>{} : parse_number<float>(state);
   if (!value.has_value()) {
-    // Unavailable, unknown, empty or simply not a number. Hand the component
+    // Unavailable, unknown, empty, stale or simply not a number. Hand the component
     // back rather than waiting for the next embedded sensor publication, which
     // can be minutes away.
     if (indoor_temp_valid) {
@@ -331,26 +407,6 @@ static void home_indoor_temp_render(const char *state) {
   indoor_temp_text[sizeof(indoor_temp_text) - 1] = '\0';
 
   nextion_display->set_component_text(hmi::home::INDR_TEMP.name, indoor_temp_text);
-}
-
-void home_api_connection_update(bool connected) {
-  if (!connected) {
-    // Only a valid subscribed value needs handing back; otherwise the embedded
-    // sensor already owns the component.
-    if (indoor_temp_bound && indoor_temp_valid) {
-      ESP_LOGD(TAG, "API disconnected; indoor temperature value is stale");
-      indoor_temp_offline = true;
-      home_indoor_temp_render(SUB_UNAVAILABLE_STATES[0]);
-    }  // if (indoor_temp_bound && indoor_temp_valid)
-    return;
-  }  // if (!connected)
-
-  if (indoor_temp_offline) {
-    indoor_temp_offline = false;
-    // Renderers skip redundant writes, so re-applying every binding only
-    // repaints what the disconnection changed.
-    sub_render_all();
-  }  // if (indoor_temp_offline)
 }
 
 /**

@@ -13,15 +13,13 @@ You can write a short message with your findings, and we'll include it here.
 Below are the topics covered in this document, each with relevant tips and solutions.
 
 1. [How do I create "Issues" when I have a problem](#how-to-create-issues-when-i-have-a-problem)
-2. [Update Blueprint](#update-blueprint)
-3. [Update ESPHome](#update-esphome)
-4. [Update TFT](#update-tft)
-5. [Notification via HA](#notification-via-ha)
-6. [Climate control with relays](#climate-control-with-relays)
-7. [Call a page directly](#call-a-page-directly)
-8. [Play RTTTL Sound](#play-rtttl-sound)
-9. [Start automations via Input_Boolean](#start-automations-via-input_boolean)
-10. [Updating Wi-Fi and OTA passwords in ESPHome with this project](#updating-wi-fi-settings-and-ota-passwords-in-esphome-with-this-project)
+2. [Update NSPanel Easy](#update-nspanel-easy)
+3. [Notification via HA](#notification-via-ha)
+4. [Climate control with relays](#climate-control-with-relays)
+5. [Call a page directly](#call-a-page-directly)
+6. [Play RTTTL Sound](#play-rtttl-sound)
+7. [Start automations via Input_Boolean](#start-automations-via-input_boolean)
+8. [Updating Wi-Fi and OTA passwords in ESPHome with this project](#updating-wi-fi-settings-and-ota-passwords-in-esphome-with-this-project)
 
 ## How to create "issues" when I have a problem
 
@@ -85,57 +83,68 @@ use_blueprint:
     left_button_name: Test 2
 ```
 
-## Update Blueprint
+## Update NSPanel Easy
 
-> [!IMPORTANT]
-> To install a new version of the NSPanel, the Blueprint, ESPHome and the TFT must be updated!
+Updating a running panel takes three steps, always in this order:
 
-1. In Home Assistant, go to Settings > Automation & Scenes, select the tab Blueprints and find the blueprint named "NSPanel Configuration"
-2. Click the 3-dot menu and select "Re-import blueprint":
+1. [Update ESPHome](#update-esphome) - install the new firmware on your panel.
+2. [Update TFT](#update-tft) - usually automatic, nothing to do.
+3. [Update Blueprint](#update-blueprint) - re-import the Blueprint in Home Assistant.
 
-    ![image](pics/ha_blueprint_dashboard_reimport.png)
-3. Click "Re-import" button:
+With the default configuration (`ref: latest`), each step always installs the latest release.
+You do not need to edit your ESPHome configuration.
 
-    ![image](pics/ha_blueprint_dashboard_reimport_confirm.png)
-4. The new Blueprint is now available.
-Settings that have already been made are adopted.
-5. Please review the blueprint settings (under Automations tab) for new settings available with the new version.
-
-## Update ESPHome
 <!-- markdownlint-disable MD028 -->
-> [!IMPORTANT]
-> To install a new version of the NSPanel, the Blueprint, ESPHome and the TFT must be updated!
+> [!NOTE]
+> Here, "ESPHome" means the NSPanel Easy firmware running on your panel, which you install from ESPHome Device Builder.
+> It is not the ESPHome Device Builder add-on itself. That one only needs updating when it is older than the
+> [minimum version required](version_compatibility.md).
 
-> [!IMPORTANT]
-> These instructions are for updating a panel where an older version of these files are already installed.
+> [!TIP]
+> If you update the Blueprint first, nothing breaks: the Blueprint pauses the panel and creates a notification
+> until the firmware is updated. Just finish the remaining steps.
+> The version notification clears itself once everything is up to date.
 <!-- markdownlint-enable MD028 -->
 
-These are the steps to flash your panel with an updated version from this project:
+### Update ESPHome
 
-1. Go to the ESPHome dashboard (in your Home Assistant) and find the device you want to update.
-    Then click the 3-dot menu and select the option "Clean Build Files" to make sure you clean-up your system from the previous versions files:
+1. Go to ESPHome Device Builder (in your Home Assistant) and find your panel.
+    Click the 3-dot menu and select **Clean Build Files**, so the new version is downloaded:
     ![Clean Build Files menu](pics/esphome_dashboard_clean_build_files.png)
 
-2. When the clean-up process is done, click on **Install** button:
+2. When the clean-up is done, click the **Install** button:
     ![Install button on Clean Build Files dialog](pics/esphome_dashboard_clean_build_files_install_button.png)
 
-3. As your panel is probably already connected to the Wi-Fi, you may select to install **Wirelessly**,
-    as it is much easier and you don't have to disassemble your panel.
+3. Select **Wirelessly**:
     ![image](pics/esphome_dashboard_install_wirelessly.png)
 
-The new firmware will be built and then flashed to your panel, which will restart at the end of this process and start sending logs again:
+The new firmware is built and installed on your panel, which restarts at the end:
 
 ![image](pics/esphome_dashboard_install_completed.png)
 
-## Update TFT
->
-> [!IMPORTANT]
-> These instructions are for updating a panel where an older version of these files are already installed.
+### Update TFT
 
-1. Go to _**Settings --> Devices & services --> Integrations**_, select the display under the ESPHome integration.
-2. Select the "**Update TFT Display - Model**" accordingly, under **Configuration**.
-3. Press the button "**Update TFT Display**".
-4. The display starts the update process and then restarts.
+Usually there is nothing to do: about one minute after the panel restarts with the new firmware,
+it detects that the display needs a new TFT file and uploads it automatically.
+The display shows the upload progress and restarts when done. Do not power off the panel during the upload.
+
+If the upload does not start (for example, when automatic upload is disabled), start it manually:
+
+1. Go to **Settings** > **Devices & services** > **ESPHome** and select your panel.
+2. Under **Configuration**, press **Update TFT display**.
+
+### Update Blueprint
+
+1. In Home Assistant, go to **Settings** > **Automations & scenes**, select the tab **Blueprints**
+    and find the blueprint named "**NSPanel Easy Configuration**".
+2. Click the 3-dot menu and select **Re-import blueprint**:
+
+    ![image](pics/ha_blueprint_dashboard_reimport.png)
+3. Click the **Re-import** button:
+
+    ![image](pics/ha_blueprint_dashboard_reimport_confirm.png)
+4. Done. Your existing settings are kept.
+    New settings may be available, so it is worth reviewing your panel's automation.
 
 ## Notification via HA
 

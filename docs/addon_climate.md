@@ -104,6 +104,7 @@ If you customize `thermostat_embedded` to support more modes (e.g. `auto_mode`, 
 The thermostat presets are available on the climate page through the preset button, which opens a list with the available presets.
 ESPHome's standard presets (`Home`, `Away`, `Boost`, `Comfort`, `Eco`, `Sleep`, `Activity`) come first, followed by your custom presets.
 This list is built by the panel itself, so presets can be changed even while Home Assistant is unavailable.
+The preset button shows the icon of the active standard preset and is highlighted while a preset is active. Custom presets use the generic preset icon.
 
 By default, the add-on defines the presets `Off` and `Home`. See [Climate custom presets](customization.md#climate-custom-presets) to define your own.
 

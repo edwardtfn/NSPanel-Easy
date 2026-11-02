@@ -15,7 +15,7 @@ and transferring it to the display over serial.
 > This add-on is **included by default** when using the standard `nspanel_esphome.yaml` package.
 > You only need to reference it explicitly if you are using
 > [granular package selection](install.md#granular-package-selection)
-> or if you previously removed it (e.g., for memory optimization with Bluetooth Proxy).
+> or if you previously removed it.
 
 ### How it works
 
@@ -308,12 +308,14 @@ To manually trigger a TFT upload:
 ## Memory considerations
 
 The TFT upload process requires a significant amount of free memory on the ESP32.
-If you are running memory-intensive components such as Bluetooth Proxy alongside this add-on,
-the TFT upload may fail due to insufficient memory.
+If Bluetooth is enabled (e.g. with the [Bluetooth Proxy add-on](addon_bluetooth_proxy.md)),
+this add-on stops the Bluetooth stack and releases its memory before the upload starts,
+so both can be enabled at the same time. The panel restarts after the upload, restoring Bluetooth.
+If the memory cannot be released, the log shows `Bluetooth memory release failed` and the upload is still attempted.
 
-In such cases, you can temporarily remove memory-heavy components, perform the TFT update,
-and then re-add them. See the [Memory Optimization](install.md#memory-optimization-strategies)
-section in the installation guide for detailed instructions.
+Other memory-intensive customizations may still cause the upload to fail due to insufficient memory.
+In such cases, see the [Memory Optimization](install.md#memory-optimization-strategies)
+section in the installation guide.
 
 ## Boot baud rate scan
 
