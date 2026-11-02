@@ -421,7 +421,7 @@ blueprint:
             drawn from the 5-minute means of the Home Assistant recorder statistics.
 
 
-            *Only sensors with a `state_class` (e.g. `measurement`) have statistics. For other entities the value is not tappable.*
+            *Only sensors with a `state_class` of `measurement` or `measurement_angle` have the mean statistics used by the graph. For other entities the value is not tappable.*
           default: false
           selector: &selector_home_value_graph
             boolean: {}
@@ -8437,7 +8437,7 @@ actions:
                                   {%- set entity = value.entity if value.entity is string else "" -%}
                                   {%- set has_graph = value.graph | default(false, true) and "." in entity
                                         and states[entity] is not none
-                                        and state_attr(entity, "state_class") is not none -%}
+                                        and state_attr(entity, "state_class") in ["measurement", "measurement_angle"] -%}
                                   {%- set ns.entities = ns.entities + [entity if has_graph else ""] -%}
                                 {%- endfor -%}
                                 {{ ns.entities }}
