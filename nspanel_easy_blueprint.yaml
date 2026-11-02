@@ -1016,10 +1016,10 @@ blueprint:
         climate:
           name: Main climate Entity
           description: >
-            This is used to show the internal temperature in the Home page, with a link to the climate page.
-            If a climate entity is not provided here, the internal temperature sensor will be used, without the link.
+            Main climate entity, shown as the climate chip on the Home page and controlled on the climate page.
+            If no climate entity is provided, the climate chip is not shown.
 
-            *Refer to add-ons documentation if you want to control the climate system with your panel's relays.*
+            Select your panel's own thermostat here if you use the Climate add-on to control the climate system with your panel's relays.
 
             *Only one entity may be selected.*
           default: *selector_entity_single_default_empty

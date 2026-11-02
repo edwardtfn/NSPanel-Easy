@@ -146,7 +146,8 @@ When you assign the entity here, its icon will be shown as a button on the Home 
 ### Climate to Control (Optional)
 
 Here you select the main climate entity controlled by your panel.
-Its temperature will be used on the Home page and by clicking on that value you will be able to control the climate settings.
+It is shown as the climate chip on the Home page and controlled on the climate page.
+If no climate entity is provided, the climate chip is not shown.
 
 You can optionally use your panel to control a climate system locally, using its temperature sensor and relays.
 You will find more details about this on the Add-on Climate documentation.
