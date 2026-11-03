@@ -264,6 +264,7 @@ In PID mode, the deadband and overrun keys of the thermostat only affect the act
 | pid_eco_entity | single | Optional | Entity ID in Home Assistant | `input_number.climate_eco` | Entity with the temperature of the `Eco` preset, in `temp_units`. |
 | pid_comfort_temp | single | Optional | Number in `temp_units` | `21` (°C) or `70` (°F) | Temperature of the `Comfort` preset until `pid_comfort_entity` has reported a value. |
 | pid_eco_temp | single | Optional | Number in `temp_units` | `18` (°C) or `64` (°F) | Temperature of the `Eco` preset until `pid_eco_entity` has reported a value. |
+| pid_preset_buttons | single | Optional | `true` or `false` | `true` | Show `Comfort` and `Eco` as buttons on the climate page instead of the preset picker. |
 | pid_number_mode | both | Optional | `box` or `slider` | `box` | Input mode of the number entities in Home Assistant: type a value or use a slider. |
 | pid_name_* | both | Optional | String | English names, see below | Entity names, e.g. to localize them or to keep existing entity IDs. |
 
@@ -316,6 +317,8 @@ It needs a synchronized clock and stays unknown if the panel has no time from Ho
 ### PID presets (single only)
 
 The single add-on offers the presets `Comfort`, `Eco` and `Off` on the climate page and in Home Assistant.
+On the climate page, `Comfort` (sofa) and `Eco` (leaf) are two buttons in the mode button row, highlighted while active,
+instead of the preset picker. `Off` is the off button. Set `pid_preset_buttons: "false"` to use the preset picker instead.
 `Comfort` and `Eco` switch the room on and set the setpoint to the value of `pid_comfort_entity` or `pid_eco_entity`.
 These values are stored in flash, so the presets also work while Home Assistant is unavailable.
 When the value changes while its preset is active, the setpoint follows.

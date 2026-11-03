@@ -19,9 +19,10 @@
 ##### - Boost: a switch opens the valve fully for a set time, bypassing the controller.         #####
 #####   It has a button on the climate page and, optionally, a chip on the home page and its    #####
 #####   remaining time on the climate page, all driven locally, so they also work without HA.   #####
-##### - Presets Comfort, Eco and Off. The comfort and eco temperatures follow Home Assistant    #####
-#####   entities (e.g. the helpers of a heating schedule) and are stored in flash. The panel    #####
-#####   marks the matching preset when the setpoint is set to one of them from elsewhere.       #####
+##### - Presets Comfort, Eco and Off, Comfort and Eco also as buttons on the climate page.      #####
+#####   Their temperatures follow Home Assistant entities (e.g. the helpers of a heating        #####
+#####   schedule) and are stored in flash. The panel marks the matching preset when the         #####
+#####   setpoint is set to one of them from elsewhere.                                          #####
 #####################################################################################################
 ##### ATTENTION: Do NOT combine with climate_heat, climate_cool, climate_dual,                  #####
 ##### climate_pid_dual or climate_backup. The climate base is included by this file.            #####
@@ -45,6 +46,7 @@ substitutions:
   pid_eco_entity: input_number.climate_eco          # HA entity with the eco temperature (in temp_units)
   pid_comfort_temp: ${70 if TEMP_UNIT_IS_FAHRENHEIT else 21}  # Comfort temperature until the entity reports
   pid_eco_temp: ${64 if TEMP_UNIT_IS_FAHRENHEIT else 18}      # Eco temperature until the entity reports
+  pid_preset_buttons: "true"  # Comfort and Eco as buttons on the climate page instead of the preset picker
   ### Entity names (override to keep existing entity IDs or to localize) ###
   pid_name_mode: "PID Operating mode"
   pid_name_boost: "PID Boost"
@@ -378,11 +380,28 @@ script:
             disp1->show_component("button03");  // Heat, colored by the base
             disp1->hide_component("button04");  // Cool
           }
+
+          // Presets as buttons: Comfort on button01 and Eco on button02 (the auto and heat_cool mode
+          // buttons, unused by the heat-only facade), replacing the preset picker
+          if (!${pid_preset_buttons}) return;
+          const bool has_preset = !thermostat_embedded->has_custom_preset() && thermostat_embedded->preset.has_value();
+          const bool comfort = room_on && has_preset && thermostat_embedded->preset.value() == climate::CLIMATE_PRESET_COMFORT;
+          const bool eco = room_on && has_preset && thermostat_embedded->preset.value() == climate::CLIMATE_PRESET_ECO;
+          disp1->hide_component(hmi::climate::PRESET_BUTTON.name);
+          disp1->set_component_text("button01", Icons::MDI_SOFA);
+          disp1->set_component_font_color("climate.button01", static_cast<uint16_t>(
+            comfort ? Colors::RGB565_YELLOW_GOLDEN : Colors::RGB565_GRAY_LIGHT));
+          disp1->show_component("button01");
+          disp1->set_component_text("button02", Icons::MDI_LEAF);
+          disp1->set_component_font_color("climate.button02", static_cast<uint16_t>(
+            eco ? Colors::RGB565_GREEN : Colors::RGB565_GRAY_LIGHT));
+          disp1->show_component("button02");
       - script.execute: pid_refresh_boost_ui
 
   # The cool button sends hvac_mode "cool", which the heat-only facade rejects (logged by the base).
   # In this add-on both mode buttons mean "room on", so map it to heat.
   # The boost button (button05) sends hvac_mode "dry", which the facade rejects as well; it toggles the boost.
+  # With pid_preset_buttons, button01 ("auto") selects Comfort and button02 ("heat_cool") selects Eco.
   - id: !extend change_climate_state
     then:
       - lambda: |-
@@ -398,6 +417,10 @@ script:
             } else {
               id(pid_boost_switch).turn_on();
             }
+          } else if (${pid_preset_buttons} && (value == "auto" || value == "heat_cool")) {
+            auto call = thermostat_embedded->make_call();
+            call.set_preset(value == "auto" ? climate::CLIMATE_PRESET_COMFORT : climate::CLIMATE_PRESET_ECO);
+            call.perform();
           }
 
   ###################################################################################################
