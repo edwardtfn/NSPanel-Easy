@@ -45,9 +45,13 @@ climate:
     visual:
       min_temperature: ${temp_min} ${temp_units}
       max_temperature: ${temp_max} ${temp_units}
+      # The steps are written without a unit on purpose, so they are stored in the unit of `temp_units`.
+      # Home Assistant applies the step in its own unit without converting it, and the climate page uses it as is.
+      # With a unit, ESPHome 2026.11+ converts a °F step into °C (1 °F becomes 0.556, which Home Assistant rounds
+      # to 0.6 and applies as °F). See https://github.com/edwardtfn/NSPanel-Easy/issues/646
       temperature_step:
-        target_temperature: ${1 if TEMP_UNIT_IS_FAHRENHEIT else 0.5} ${temp_units}
-        current_temperature: ${1 if TEMP_UNIT_IS_FAHRENHEIT else 0.1} ${temp_units}
+        target_temperature: ${1 if TEMP_UNIT_IS_FAHRENHEIT else 0.5}
+        current_temperature: ${1 if TEMP_UNIT_IS_FAHRENHEIT else 0.1}
     default_preset: "Off"
     on_boot_restore_from: memory
     startup_delay: true
@@ -230,13 +234,14 @@ script:
           if (current_page_id != get_page_id("climate")) return;
 
           // Extract temperature values (static since they don't change during runtime)
+          // The step is already in the unit of `temp_units` (see `visual: temperature_step` above), so it is used
+          // as is. The minimum and maximum are stored by ESPHome in °C, so they are converted on °F builds.
           ESP_LOGV("${TAG_ADDON_CLIMATE}", "Extracted temperature values:");
+          static const float temp_step =   traits.get_visual_target_temperature_step();
           #if NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
-          static const float temp_step =   traits.get_visual_target_temperature_step() * 1.8f;
           static const float temp_offset = celsius_to_fahrenheit(traits.get_visual_min_temperature());
           static const float temp_max =    celsius_to_fahrenheit(traits.get_visual_max_temperature());
           #else  // Celsius
-          static const float temp_step =   traits.get_visual_target_temperature_step();
           static const float temp_offset = traits.get_visual_min_temperature();
           static const float temp_max =    traits.get_visual_max_temperature();
           #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
