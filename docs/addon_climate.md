@@ -25,6 +25,10 @@ and after the `remote_package` (base code), as shown below (for `heat` in this e
 > [!NOTE]
 > Occasionally, ESPHome updates may result in the `entity_id` of embedded thermostats being appended with `_2`.
 > If you experience this change, refer to this [forum post](https://community.home-assistant.io/t/esphome-devices-all-renamed-with-2-added/388146) on the Home Assistant Forum for guidance.
+>
+> The Blueprint recognizes the embedded thermostat by its `entity_id` ending in `_thermostat`.
+> If its `entity_id` no longer ends in `_thermostat` (for example after renaming or localizing it, or with the `_2` suffix above),
+> the Blueprint handles it as an external climate entity, which is slower and does not work while the panel is offline ([#640](https://github.com/edwardtfn/NSPanel-Easy/issues/640)).
 
 ```yaml
 substitutions:
@@ -81,7 +85,6 @@ The following keys are available to be used in your `substitutions`:
 | target_high | Optional | Number representing a temperature in the selected unit | `24` (°C) or `75` (°F) | The initial higher threshold for the target temperature. |
 | temp_min | Optional | Number representing a temperature in the selected unit | *cool: `15` (°C) or `60` (°F)*<br>*heat: `7` (°C) or `45` (°F)*<br>*dual: `7` (°C) or `45` (°F)* | The minimum temperature the climate device can reach. Used to set the range of the frontend gauge. |
 | temp_max | Optional | Number representing a temperature in the selected unit | *cool: `45` (°C) or `113` (°F)*<br>*heat: `35` (°C) or `95` (°F)*<br>*dual: `45` (°C) or `113` (°F)* | The maximum temperature the climate device can reach. Used to set the range of the frontend gauge. |
-| ~temp_step~ | Deprecated | ~Number representing a temperature in the selected unit~ | ~`0.5`~<br>`0.5` (°C) or `1` (°F) | ~The granularity with which the target temperature can be controlled.~ |
 | cool_deadband | Optional | Number representing a temperature hysteresis in the selected unit | `0.5` (°C) or `1` (°F) | The minimum temperature differential (temperature above the set point) before engaging cooling. |
 | cool_overrun | Optional | Number representing a temperature hysteresis in the selected unit | `0.5` (°C) or `1` (°F) | The minimum temperature differential (cooling beyond the set point) before disengaging cooling. |
 | heat_deadband | Optional | Number representing a temperature hysteresis in the selected unit | `0.5` (°C) or `1` (°F) | The minimum temperature differential (temperature below the set point) before engaging heat. |
@@ -92,6 +95,22 @@ The following keys are available to be used in your `substitutions`:
 - All values must be delimited with `""`
 - For more details on the keys, see [ESPHome Base Climate Configurations](https://esphome.io/components/climate/index.html#base-climate-configuration)
   and [ESPHome Climate Thermostat - Additional actions behavior](https://esphome.io/components/climate/thermostat.html#additional-actions-behavior).
+
+### Target temperature step
+
+With `temp_units: °C`, the target temperature is set in steps of `0.5` °C.
+For a finer step, e.g. `0.1` °C, extend the thermostat in your ESPHome settings, at the same level as `substitutions:`:
+
+```yaml
+climate:
+  - id: !extend thermostat_embedded
+    visual:
+      temperature_step:
+        target_temperature: 0.1 °C
+```
+
+ESPHome reads this value as °C, whatever unit is written after it.
+The climate page and Home Assistant then use the same step.
 
 ## Temperature source
 
@@ -321,21 +340,20 @@ The thermostat's settings range from a minimum of `15°C` to a maximum of `22°C
 Furthermore, I have selected `18.3°C` as the default target temperature.
 
 ```yaml
- ##### addon-configuration - start #####
-  ## addon_climate ##
-  heater_relay: "1"  # Use relay 1
-  temp_min: "15" 
-  temp_max: "22" 
+substitutions:
+  ## Add-on climate
+  heater_relay: "1"     # Use relay 1
+  temp_min: "15"
+  temp_max: "22"
+  target_low: "18.3"    # Default target temperature
   heat_deadband: "0.1"
   heat_overrun: "0.1"
- ##### addon-configuration - end #####
 
 climate:
   - id: !extend thermostat_embedded
-    preset:
-      - name: Home
-        default_target_temperature_low: 18.3
-        mode: "heat"
+    visual:
+      temperature_step:
+        target_temperature: 0.1 °C  # See "Target temperature step" above
 ```
 
 Please note that employing any filter to smooth the temperature readings, such as averaging, is discouraged if the relevant timescale exceeds 1min.

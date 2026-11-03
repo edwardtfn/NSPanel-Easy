@@ -13,6 +13,7 @@ substitutions:
   ## local yaml substitutions ##
   ##############################
   BOOT_EVENT_REPEAT_INTERVAL_MS: 10000
+  BOOT_SETTINGS_QUIET_MS: 15000  # A retry waits until the Blueprint has sent nothing for this long
   BOOT_NEXTION_WAIT_TIMEOUT: 120s
   TAG_BOOT: nspanel.boot
 
@@ -162,6 +163,13 @@ script:
           // stays rate-limited to keep a stalled boot from flooding Home Assistant.
           if (step != "start" && step != "display_ack" &&
               (uint32_t)(now - last_boot_event_fired) < ${BOOT_EVENT_REPEAT_INTERVAL_MS}) return;
+          // A retry while the Blueprint is still sending settings would start a second full push in
+          // parallel with the one in progress, slowing Home Assistant down and both pushes with it (#636).
+          if (step != "start" && step != "display_ack" && blueprint_last_setting_ms != 0 &&
+              (uint32_t)(now - blueprint_last_setting_ms) < ${BOOT_SETTINGS_QUIET_MS}) {
+            ESP_LOGD("${TAG_BOOT}", "Blueprint settings still arriving, request skipped");
+            return;
+          }  // if settings still arriving
           const bool api_connected = api_server->is_connected_with_state_subscription();
           ESP_LOGD("${TAG_BOOT}", "Request blueprint settings");
           fire_ha_event("boot", {{"step", step.c_str()}});

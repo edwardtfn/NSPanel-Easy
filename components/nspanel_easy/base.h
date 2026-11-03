@@ -233,6 +233,24 @@ extern bool unavailable_unhide_pending;
 extern bool api_stale;
 
 /**
+ * @brief Loop time (ms) of the last setting or binding received from the Blueprint.
+ *
+ * Zero until the first one arrives. While the Blueprint keeps sending, a full settings push is in
+ * progress, and a repeated settings request would only start a second push in parallel with it,
+ * which slows Home Assistant down and delays both pushes (#636).
+ *
+ * @see blueprint_setting_received()
+ */
+extern uint32_t blueprint_last_setting_ms;
+
+/**
+ * @brief Record that a setting or binding was just received from the Blueprint.
+ *
+ * Called by the API actions that carry settings (`page: mem`) and bindings.
+ */
+inline void blueprint_setting_received() { blueprint_last_setting_ms = App.get_loop_component_start_time(); }
+
+/**
  * @brief Fire a Home Assistant event for NSPanel HA Blueprint
  *
  * Automatically adds device_name, type and, when available, api_version to the event data.
