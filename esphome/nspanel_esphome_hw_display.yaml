@@ -93,12 +93,15 @@ display:
             // visible page only.
             system_flags.display_resync_pending = true;
             boot_request_blueprint_settings->execute("setup");
-            if (!system_flags.boot_completed) {
+            // The display restarted with the boot page's own brightness, so the next change must be sent
+            brightness_current = UINT8_MAX;
+            if (system_flags.boot_completed) {
+              set_brightness->execute(display_brightness->state);
+            } else {
               // Keep the display dimmed while booting, e.g. after a power outage at night (#485).
               // The boot sequence restores the regular brightness when it jumps to the wake-up page.
-              brightness_current = UINT8_MAX;  // The display restarted with its own default brightness
               set_brightness->execute(display_dim_brightness->state);
-            }  // if (!system_flags.boot_completed)
+            }  // if (system_flags.boot_completed)
 
     on_page:
       then:
