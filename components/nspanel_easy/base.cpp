@@ -28,6 +28,9 @@ bool unavailable_unhide_pending = false;
 // Whether the Home Assistant values on display are stale; see base.h.
 bool api_stale = false;
 
+// Loop time of the last setting or binding received from the Blueprint; see base.h.
+uint32_t blueprint_last_setting_ms = 0;
+
 // Fire a Home Assistant event for NSPanel HA Blueprint
 void fire_ha_event(const std::string &type, std::map<std::string, std::string> data) {
   // Add device name and type to the event data
