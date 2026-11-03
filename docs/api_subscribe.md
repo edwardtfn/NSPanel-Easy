@@ -378,7 +378,8 @@ An attribute, where one is used, is shown in parentheses after the entity. This 
 on the same entity are told apart.
 
 If a chip or custom button is listed but nothing draws, no binding push has supplied appearance in
-this session. Reload the automation, or re-run whatever registers your bindings.
+this session. Restart the panel, or re-run whatever registers your bindings. Reloading an unchanged
+automation does not push the bindings again.
 
 The weather picture and the temperatures do not use pushed appearance, so a blank one means no value
 has arrived. Set the log level to `VERBOSE` and look for the `nspanel.api.sub` line naming that

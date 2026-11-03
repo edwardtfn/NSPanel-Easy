@@ -5203,8 +5203,10 @@ trigger_variables:
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_temperature$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_temperature" }}
 
+  # The panel has at most one climate entity (the embedded thermostat), so any climate entity of the
+  # device is it. Matching the entity_id suffix would fail on renamed or localized entity_ids (#636).
   thermostat_embedded: >-
-    {%- set m = nspanel_entities | select("search", "^climate\\..+_thermostat$") | list %}
+    {%- set m = nspanel_entities | select("search", "^climate\\.") | list %}
     {{ m[0] if m | count > 0 else "climate." ~ entity_prefix ~ "_thermostat" }}
 
   detailed_entity: >-
@@ -14048,15 +14050,6 @@ actions:
               - automation_reloaded
               - ha_started
         sequence:
-          - delay: >  # Prevents all panels updating simultaneously in large systems
-              {% set ns = namespace(panels=[]) %}
-              {% for s in states.sensor | selectattr("entity_id", "search", "_device_name$") %}
-                {% set did = device_id(s.entity_id) %}
-                {% if did and device_attr(did, "model") == "NSPanel-Easy" %}
-                  {% set ns.panels = ns.panels + [s.entity_id] %}
-                {% endif %}
-              {% endfor %}
-              {{ (4 * ns.panels.index(device_name_sensor)) if (device_name_sensor in ns.panels) else 0 }}
           - if: '{{ states.sensor | selectattr("entity_id", "eq", device_name_sensor) | list | count > 0 }}'
             then:
               - action: persistent_notification.dismiss
@@ -14088,8 +14081,30 @@ actions:
 
                       4. Wait a bit until the sensor starts providing a value (it shouldn't take more than a minute)
 
-                      5. Go to [Developer Tools](/developer-tools/yaml) and click the button "Automations" to reload your automations
+                      5. Restart the panel, so it receives its settings again
+
+                      6. Go to [Developer Tools](/developer-tools/yaml) and click the button "Automations" to reload your automations and clear this notification
                 continue_on_error: true
+
+          # Home Assistant fires automation_reloaded for every reload, with no data about which automations
+          # were reloaded, and replaces only the automations whose configuration changed. A replaced automation
+          # starts with a new state, so an older state means this panel's settings did not change and are
+          # already on the panel. Skipping it keeps an unrelated automation save from sending the full settings
+          # to every panel at once (#636). The check above still runs, so a reload clears its notification.
+          # `this` is the state as a dict, so last_changed is an ISO string; as_timestamp() reads it.
+          - condition: >-
+              {%- set replaced = as_timestamp(this.get("last_changed"), 0) if this is defined and this is mapping else 0 -%}
+              {{ trigger.id != "automation_reloaded" or replaced == 0 or (as_timestamp(now()) - replaced) < 60 }}
+
+          - delay: >  # Prevents all panels updating simultaneously in large systems
+              {% set ns = namespace(panels=[]) %}
+              {% for s in states.sensor | selectattr("entity_id", "search", "_device_name$") %}
+                {% set did = device_id(s.entity_id) %}
+                {% if did and device_attr(did, "model") == "NSPanel-Easy" %}
+                  {% set ns.panels = ns.panels + [s.entity_id] %}
+                {% endif %}
+              {% endfor %}
+              {{ (4 * ns.panels.index(device_name_sensor)) if (device_name_sensor in ns.panels) else 0 }}
 
           ##### Update global settings (as user may have changed something) #####
           - *global_settings
