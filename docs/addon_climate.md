@@ -25,6 +25,10 @@ and after the `remote_package` (base code), as shown below (for `heat` in this e
 > [!NOTE]
 > Occasionally, ESPHome updates may result in the `entity_id` of embedded thermostats being appended with `_2`.
 > If you experience this change, refer to this [forum post](https://community.home-assistant.io/t/esphome-devices-all-renamed-with-2-added/388146) on the Home Assistant Forum for guidance.
+>
+> The Blueprint recognizes the embedded thermostat by its `entity_id` ending in `_thermostat`.
+> If you rename it, the Blueprint handles it as an external climate entity, which is slower and does not work while the panel is offline.
+> Keep the default `entity_id` ([#640](https://github.com/edwardtfn/NSPanel-Easy/issues/640)).
 
 ```yaml
 substitutions:

@@ -5203,13 +5203,10 @@ trigger_variables:
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_temperature$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_temperature" }}
 
-  # The embedded thermostat keeps its default `_thermostat` suffix unless renamed or localized (#636).
-  # Without that suffix, the panel's only climate entity is taken; a custom configuration may add more,
-  # so the suffix match comes first.
+  # The embedded thermostat is recognized only by its default `_thermostat` suffix. A renamed or
+  # localized entity_id is handled as an external climate entity (#640).
   thermostat_embedded: >-
-    {%- set climates = nspanel_entities | select("search", "^climate\\.") | list %}
-    {%- set m = climates | select("search", "_thermostat$") | list %}
-    {%- set m = m if m | count > 0 else (climates if climates | count == 1 else []) %}
+    {%- set m = nspanel_entities | select("search", "^climate\\..+_thermostat$") | list %}
     {{ m[0] if m | count > 0 else "climate." ~ entity_prefix ~ "_thermostat" }}
 
   detailed_entity: >-
