@@ -30,6 +30,9 @@ button:
 esp32:
   framework:
     advanced:
+      # Link only the generic SPI flash driver, which is the one used by the NSPanel flash
+      # Drops the unused vendor drivers, saving IRAM (requires ESPHome 2026.10.0 or later)
+      flash_chip: generic
       minimum_chip_revision: "3.0"
 
 esphome:
