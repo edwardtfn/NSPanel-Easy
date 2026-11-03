@@ -124,6 +124,10 @@ jobs:
             yaml-file: .test/esphome_idf_climate_heat.yaml
           - name: Climate Dual
             yaml-file: .test/esphome_idf_climate_dual.yaml
+          - name: Climate PID Single
+            yaml-file: .test/esphome_idf_climate_pid_single.yaml
+          - name: Climate PID Dual
+            yaml-file: .test/esphome_idf_climate_pid_dual.yaml
           - name: Cover
             yaml-file: .test/esphome_idf_cover.yaml
           - name: Core
@@ -176,6 +180,10 @@ jobs:
             yaml-file: .test/esphome_idf_climate_heat.yaml
           - name: Climate Dual
             yaml-file: .test/esphome_idf_climate_dual.yaml
+          - name: Climate PID Single
+            yaml-file: .test/esphome_idf_climate_pid_single.yaml
+          - name: Climate PID Dual
+            yaml-file: .test/esphome_idf_climate_pid_dual.yaml
           - name: Cover
             yaml-file: .test/esphome_idf_cover.yaml
           - name: Core
