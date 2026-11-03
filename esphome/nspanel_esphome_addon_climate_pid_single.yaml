@@ -17,11 +17,11 @@
 #####   the action of the active controller (fire/snowflake), and the mode button on the        #####
 #####   climate page switches between heat and cool.                                            #####
 ##### - Boost: a switch opens the valve fully for a set time, bypassing the controller.         #####
-#####   It has its own chip on the home page and a button with remaining time on the climate    #####
-#####   page, both driven locally, so they also work without Home Assistant.                    #####
+#####   It has a button on the climate page and, optionally, a chip on the home page and its    #####
+#####   remaining time on the climate page, all driven locally, so they also work without HA.   #####
 #####################################################################################################
-##### ATTENTION: Do NOT combine with climate_heat, climate_cool, climate_dual or                #####
-##### climate_pid_dual. The climate base is included by this file.                              #####
+##### ATTENTION: Do NOT combine with climate_heat, climate_cool, climate_dual,                  #####
+##### climate_pid_dual or climate_backup. The climate base is included by this file.            #####
 #####################################################################################################
 ---
 substitutions:
@@ -30,42 +30,23 @@ substitutions:
   ## local yaml substitutions ##
   ##############################
   valve_relay: "1"                            # Relay switching the valve actuators (heating and cooling)
+  heater_relay: ${valve_relay}                # Reported by the climate base; the valve relay is driven by the PID
   pid_mode_entity: input_select.climate_mode  # HA entity holding the central operating mode
   pid_mode_heat_state: "Heat"                 # State of the mode entity that selects heating
   pid_mode_cool_state: "Cool"                 # State of the mode entity that selects cooling
-  ### PID seed values (first boot only, afterwards the number entities in HA are the source) ###
-  pid_kp: "0.3"                 # Proportional gain: output share per Kelvin of error (0.3 = 30 %/K)
-  pid_ki: "0.00003"             # Compile-time default, overwritten at boot by ki = kp / (Tn * 60)
-  pid_kd: "0.0"                 # Derivative term, not useful for slow systems
-  pid_tn: "180"                 # Integral time Tn in minutes
-  pid_deadband: "0.25"          # Deadband around the setpoint in Kelvin (also when temp_units is °F)
-  pwm_period: "1200"            # PWM cycle time in seconds
-  pid_starting_integral: "0.0"  # Integral term after boot (0.0..1.0), not persisted in flash
-  pid_sync_interval: "10"       # Seconds between syncs thermostat -> PID controllers
-  pid_number_mode: "box"        # Input mode of the number entities in HA: "box" (type a value) or "slider"
-  pid_boost_duration: "30"      # Boost duration in minutes. Seed for the first boot only
-  pid_boost_chip: "chip07"      # User chip (chip01..chip07) taken over for the boost, or "" for none
+  pid_boost_duration: "30"                    # Boost duration in minutes. Seed for the first boot only
+  pid_boost_chip: ""                          # User chip (chip01..chip07) taken over for the boost, or "" for none
+  pid_boost_value: ""                         # Climate page value slot (value01..value04) for the remaining time, or "" for none
   ### Entity names (override to keep existing entity IDs or to localize) ###
   pid_name_mode: "PID Operating mode"
-  pid_name_heat_output: "PID Heat output"
-  pid_name_cool_output: "PID Cool output"
-  pid_name_heat_integral: "PID Heat integral"
-  pid_name_cool_integral: "PID Cool integral"
-  pid_name_kp: "PID kp"
-  pid_name_tn: "PID Tn"
-  pid_name_pwm_period: "PID PWM period"
-  pid_name_deadband: "PID Deadband"
-  pid_name_reset_integral: "PID Reset integral"
   pid_name_boost: "PID Boost"
   pid_name_boost_duration: "PID Boost duration"
   pid_name_boost_end: "PID Boost end"
   temp_max: ${113 if TEMP_UNIT_IS_FAHRENHEIT else 45}
-  TAG_ADDON_CLIMATE_PID: nspanel.addon.climate.pid
 
 esphome:
   build_flags:
     - -D NSPANEL_EASY_ADDON_CLIMATE_HEAT  # Single setpoint UI on the display, as with the heat add-on
-    - -D NSPANEL_EASY_ADDON_CLIMATE_PID
 
 globals:
   - id: pid_cooling_mode  # Central operating mode: true = cool, false = heat
@@ -156,57 +137,14 @@ climate:
         default_target_temperature_low: ${target_low} ${temp_units}
         mode: "heat"
 
-  # Two internal controllers: the ESPHome PID climate has no direction per mode (heat mode with
-  # both outputs would also cool), so heating and cooling use separate instances
-  - platform: pid
-    id: pid_heat_embedded
-    name: PID Heat
-    internal: true
-    sensor: temp_nspanel
-    default_target_temperature: 21  # Overwritten by the sync right after boot
-    heat_output: pid_heat_out
+  # The controllers are defined in pid_base; their action drives the climate chip here
+  - id: !extend pid_heat_embedded
     on_state:
       - script.execute: pid_refresh_chip  # Action changed (heating/idle)
-    control_parameters:
-      kp: ${pid_kp}
-      ki: ${pid_ki}
-      kd: ${pid_kd}
-      starting_integral_term: ${pid_starting_integral}
-      min_integral: 0.0  # Heating: error and integral term are positive
-      max_integral: 1.0
-      output_averaging_samples: 5
-    deadband_parameters:
-      threshold_high: ${pid_deadband}°C
-      threshold_low: -${pid_deadband}°C
-      kp_multiplier: 0.0   # No proportional reaction inside the deadband
-      ki_multiplier: 0.05  # Integral keeps creeping slowly inside the deadband
-      kd_multiplier: 0.0
-      deadband_output_averaging_samples: 15
 
-  - platform: pid
-    id: pid_cool_embedded
-    name: PID Cool
-    internal: true
-    sensor: temp_nspanel
-    default_target_temperature: 24  # Overwritten by the sync right after boot
-    cool_output: pid_cool_out
+  - id: !extend pid_cool_embedded
     on_state:
       - script.execute: pid_refresh_chip  # Action changed (cooling/idle)
-    control_parameters:
-      kp: ${pid_kp}
-      ki: ${pid_ki}
-      kd: ${pid_kd}
-      starting_integral_term: -${pid_starting_integral}
-      min_integral: -1.0  # Cooling: error and integral term are negative
-      max_integral: 0.0
-      output_averaging_samples: 5
-    deadband_parameters:
-      threshold_high: ${pid_deadband}°C
-      threshold_low: -${pid_deadband}°C
-      kp_multiplier: 0.0
-      ki_multiplier: 0.05
-      kd_multiplier: 0.0
-      deadband_output_averaging_samples: 15
 
 output:
   # Both controllers feed one shared slow PWM output; only the controller of the active mode may write
@@ -322,8 +260,9 @@ script:
       - lambda: |-
           if (current_page_id == get_page_id("climate") and climate_embedded_visible) page_climate->execute();
 
-  # Boost on the display: own chip on the home page (and screensaver), boost button and remaining
-  # time on the climate page (button05 and value01, unused by the heat-only facade)
+  # Boost on the display: boost button on the climate page (button05, the dry mode button, unused by
+  # the heat-only facade), and optionally its own chip on the home page (pid_boost_chip) and the
+  # remaining time in a climate page value slot (pid_boost_value). Both slots are taken from the Blueprint.
   - id: pid_refresh_boost_ui
     mode: queued
     then:
@@ -361,17 +300,21 @@ script:
           disp1->set_component_font_color("climate.button05", static_cast<uint16_t>(
             active ? color : (room_on ? Colors::RGB565_GRAY_LIGHT : Colors::RGB565_GRAY_DARK)));
           disp1->show_component("button05");
+
+          static const std::string value_slot = "${pid_boost_value}";
+          if (value_slot.empty()) return;
+          const std::string value_icon = value_slot + "_icon";
           if (active) {
             const int32_t left_ms = static_cast<int32_t>(id(pid_boost_end_ms) - millis());
             const uint32_t minutes = (left_ms > 0) ? static_cast<uint32_t>((left_ms + 59999) / 60000) : 0;
             char buf[12];
             snprintf(buf, sizeof(buf), "%" PRIu32 " min", minutes);
-            disp1->set_component_text("value01_icon", Icons::MDI_TIMER_SAND);
-            disp1->set_component_font_color("value01_icon", color);
-            disp1->set_component_text("value01", buf);
+            disp1->set_component_text(value_icon.c_str(), Icons::MDI_TIMER_SAND);
+            disp1->set_component_font_color(value_icon.c_str(), color);
+            disp1->set_component_text(value_slot.c_str(), buf);
           } else {
-            disp1->set_component_text("value01_icon", "");
-            disp1->set_component_text("value01", "");
+            disp1->set_component_text(value_icon.c_str(), "");
+            disp1->set_component_text(value_slot.c_str(), "");
           }
 
   # Remaining time on the climate page: redraw when the shown minute changes
@@ -546,26 +489,6 @@ script:
           if (!room_on && id(pid_boost_active)) pid_boost_stop->execute();  // Room off ends the boost
           if (!room_on) id(pid_valve_pwm).set_level(0.0f);
 
-  # Applies kp and Tn from the number entities to both controllers (ki = kp / Tn in seconds)
-  - id: apply_pid_tuning
-    mode: restart
-    then:
-      - lambda: |-
-          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Tuning applied: kp=%.3f Tn=%.0fmin",
-                   pid_tuning_kp->state, pid_tuning_tn->state);
-      - climate.pid.set_control_parameters:
-          id: pid_heat_embedded
-          kp: !lambda "return pid_tuning_kp->state;"
-          ki: !lambda |-
-            const float tn_s = pid_tuning_tn->state * 60.0f;
-            return (tn_s > 0.0f) ? pid_tuning_kp->state / tn_s : 0.0f;
-      - climate.pid.set_control_parameters:
-          id: pid_cool_embedded
-          kp: !lambda "return pid_tuning_kp->state;"
-          ki: !lambda |-
-            const float tn_s = pid_tuning_tn->state * 60.0f;
-            return (tn_s > 0.0f) ? pid_tuning_kp->state / tn_s : 0.0f;
-
 interval:
   - interval: ${pid_sync_interval}s
     then:
@@ -574,103 +497,13 @@ interval:
     then:
       - script.execute: pid_boost_tick
 
-sensor:
-  # Controller outputs and integral terms, for tuning in HA
-  - platform: pid
-    climate_id: pid_heat_embedded
-    name: ${pid_name_heat_output}
-    type: HEAT
-    entity_category: diagnostic
-  - platform: pid
-    climate_id: pid_cool_embedded
-    name: ${pid_name_cool_output}
-    type: COOL
-    entity_category: diagnostic
-  - platform: pid
-    climate_id: pid_heat_embedded
-    name: ${pid_name_heat_integral}
-    type: INTEGRAL
-    entity_category: diagnostic
-  - platform: pid
-    climate_id: pid_cool_embedded
-    name: ${pid_name_cool_integral}
-    type: INTEGRAL
-    entity_category: diagnostic
-
 number:
-  # Live tuning from HA, applied to both controllers without reflashing.
-  # After the first boot these entities are the source (restore_value); the substitutions are seeds only.
-  - platform: template
-    id: pid_tuning_kp
-    name: ${pid_name_kp}
-    entity_category: config
-    icon: mdi:tune-vertical
-    min_value: 0.05
-    max_value: 1.0
-    step: 0.05
-    initial_value: ${pid_kp}
-    restore_value: true
-    optimistic: true
-    mode: ${pid_number_mode}
-    on_value:
-      - script.execute: apply_pid_tuning
-
-  - platform: template
-    id: pid_tuning_tn
-    name: ${pid_name_tn}
-    entity_category: config
-    icon: mdi:timer-cog-outline
-    unit_of_measurement: min
-    min_value: 10
-    max_value: 600
-    step: 5
-    initial_value: ${pid_tn}
-    restore_value: true
-    optimistic: true
-    mode: ${pid_number_mode}
-    on_value:
-      - script.execute: apply_pid_tuning
-
-  - platform: template
-    id: pid_tuning_pwm_period
-    name: ${pid_name_pwm_period}
-    entity_category: config
-    icon: mdi:sine-wave
-    unit_of_measurement: s
-    min_value: 300
-    max_value: 3600
-    step: 60
-    initial_value: ${pwm_period}
-    restore_value: true
-    optimistic: true
-    mode: ${pid_number_mode}
+  - id: !extend pid_tuning_pwm_period
     on_value:
       - lambda: |-
           if (isnan(x) || x < 60.0f) return;
           ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "PWM period applied: %.0fs", x);
-          pid_valve_pwm->set_period((uint32_t) (x * 1000.0f));
-
-  - platform: template
-    id: pid_tuning_deadband
-    name: ${pid_name_deadband}
-    entity_category: config
-    icon: mdi:arrow-expand-vertical
-    unit_of_measurement: "°C"
-    min_value: 0.0
-    max_value: 1.0
-    step: 0.05
-    initial_value: ${pid_deadband}
-    restore_value: true
-    optimistic: true
-    mode: ${pid_number_mode}
-    on_value:
-      - lambda: |-
-          if (isnan(x) || x < 0.0f) return;
-          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Deadband applied: +/-%.2fK", x);
-          pid_heat_embedded->set_threshold_high(x);
-          pid_heat_embedded->set_threshold_low(-x);
-          pid_cool_embedded->set_threshold_high(x);
-          pid_cool_embedded->set_threshold_low(-x);
+          pid_valve_pwm->set_period(static_cast<uint32_t>(x * 1000.0f));
 
   - platform: template
     id: pid_boost_duration
@@ -698,15 +531,6 @@ switch:
     turn_off_action:
       - script.execute: pid_boost_stop
 
-button:
-  - platform: template
-    name: ${pid_name_reset_integral}
-    entity_category: config
-    icon: mdi:restore
-    on_press:
-      - climate.pid.reset_integral_term: pid_heat_embedded
-      - climate.pid.reset_integral_term: pid_cool_embedded
-
 packages:
-  climate_base_package: !include nspanel_esphome_addon_climate_base.yaml
+  climate_pid_base_package: !include nspanel_esphome_addon_climate_pid_base.yaml
 ...

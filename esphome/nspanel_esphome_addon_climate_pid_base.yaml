@@ -1,0 +1,233 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHome Add-on for Climate control - PID Shared - This will be called by pid_single/dual  #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### Two internal PID controllers (heat and cool) with live tuning from Home Assistant.        #####
+##### The including package defines their outputs `pid_heat_out` and `pid_cool_out`, keeps     #####
+##### them in sync with thermostat_embedded, and applies the PWM period.                        #####
+#####################################################################################################
+##### ATTENTION: Do not include directly; use climate_pid_single or climate_pid_dual.           #####
+#####################################################################################################
+---
+substitutions:
+  ##############################
+  ## Change only in your      ##
+  ## local yaml substitutions ##
+  ##############################
+  ### PID seed values (first boot only, afterwards the number entities in HA are the source) ###
+  pid_kp: "0.3"                 # Proportional gain: output share per Kelvin of error (0.3 = 30 %/K)
+  pid_tn: "180"                 # Integral time Tn in minutes; ki = kp / (Tn * 60)
+  pid_kd: "0.0"                 # Derivative term, not useful for slow systems
+  pid_deadband: "0.25"          # Deadband around the setpoint in Kelvin (also when temp_units is °F)
+  pwm_period: "1200"            # PWM cycle time in seconds
+  pid_starting_integral: "0.0"  # Integral term after boot (0.0..1.0), not persisted in flash
+  pid_sync_interval: "10"       # Seconds between syncs thermostat -> PID controllers
+  pid_number_mode: "box"        # Input mode of the number entities in HA: "box" (type a value) or "slider"
+  ### Entity names (override to keep existing entity IDs or to localize) ###
+  pid_name_heat_output: "PID Heat output"
+  pid_name_cool_output: "PID Cool output"
+  pid_name_heat_integral: "PID Heat integral"
+  pid_name_cool_integral: "PID Cool integral"
+  pid_name_kp: "PID kp"
+  pid_name_tn: "PID Tn"
+  pid_name_pwm_period: "PID PWM period"
+  pid_name_deadband: "PID Deadband"
+  pid_name_reset_integral: "PID Reset integral"
+  TAG_ADDON_CLIMATE_PID: nspanel.addon.climate.pid
+
+esphome:
+  build_flags:
+    - -D NSPANEL_EASY_ADDON_CLIMATE_PID
+
+climate:
+  # The ESPHome PID climate has no direction per mode (heat mode with both outputs would also cool),
+  # so heating and cooling use separate instances. Both regulate on the thermostat's temperature,
+  # which follows the Home Assistant reference when the Blueprint is set to.
+  - platform: pid
+    id: pid_heat_embedded
+    name: PID Heat
+    internal: true
+    sensor: thermostat_temperature
+    default_target_temperature: 21  # Overwritten by the sync right after boot
+    heat_output: pid_heat_out
+    control_parameters:
+      kp: ${pid_kp}
+      ki: ${ (pid_kp | float) / ((pid_tn | float) * 60) }
+      kd: ${pid_kd}
+      starting_integral_term: ${pid_starting_integral}
+      min_integral: 0.0  # Heating: error and integral term are positive
+      max_integral: 1.0
+      output_averaging_samples: 5
+    deadband_parameters:
+      threshold_high: ${pid_deadband}°C
+      threshold_low: -${pid_deadband}°C
+      kp_multiplier: 0.0   # No proportional reaction inside the deadband
+      ki_multiplier: 0.05  # Integral keeps creeping slowly inside the deadband
+      kd_multiplier: 0.0
+      deadband_output_averaging_samples: 15
+
+  - platform: pid
+    id: pid_cool_embedded
+    name: PID Cool
+    internal: true
+    sensor: thermostat_temperature
+    default_target_temperature: 24  # Overwritten by the sync right after boot
+    cool_output: pid_cool_out
+    control_parameters:
+      kp: ${pid_kp}
+      ki: ${ (pid_kp | float) / ((pid_tn | float) * 60) }
+      kd: ${pid_kd}
+      starting_integral_term: -${pid_starting_integral}
+      min_integral: -1.0  # Cooling: error and integral term are negative
+      max_integral: 0.0
+      output_averaging_samples: 5
+    deadband_parameters:
+      threshold_high: ${pid_deadband}°C
+      threshold_low: -${pid_deadband}°C
+      kp_multiplier: 0.0
+      ki_multiplier: 0.05
+      kd_multiplier: 0.0
+      deadband_output_averaging_samples: 15
+
+script:
+  - id: !extend dump_config
+    then:
+      - lambda: |-
+          #ifdef NSPANEL_EASY_ADDON_CLIMATE_BACKUP
+            #error "The climate backup add-on cannot be combined with the PID add-ons: it follows the thermostat's actions, which do not drive the relays here."
+          #endif  // NSPANEL_EASY_ADDON_CLIMATE_BACKUP
+          ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "Add-on climate PID:");
+          ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  kp: %.3f", pid_tuning_kp->state);
+          ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Tn: %.0f min", pid_tuning_tn->state);
+          ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  PWM period: %.0f s", pid_tuning_pwm_period->state);
+          ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Deadband: %.2f K", pid_tuning_deadband->state);
+
+  # Applies kp and Tn from the number entities to both controllers (ki = kp / Tn in seconds)
+  - id: apply_pid_tuning
+    mode: restart
+    then:
+      - lambda: |-
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Tuning applied: kp=%.3f Tn=%.0fmin",
+                   pid_tuning_kp->state, pid_tuning_tn->state);
+      - climate.pid.set_control_parameters:
+          id: pid_heat_embedded
+          kp: !lambda "return pid_tuning_kp->state;"
+          ki: !lambda |-
+            const float tn_s = pid_tuning_tn->state * 60.0f;
+            return (tn_s > 0.0f) ? pid_tuning_kp->state / tn_s : 0.0f;
+      - climate.pid.set_control_parameters:
+          id: pid_cool_embedded
+          kp: !lambda "return pid_tuning_kp->state;"
+          ki: !lambda |-
+            const float tn_s = pid_tuning_tn->state * 60.0f;
+            return (tn_s > 0.0f) ? pid_tuning_kp->state / tn_s : 0.0f;
+
+sensor:
+  # Controller outputs and integral terms, for tuning in HA
+  - platform: pid
+    climate_id: pid_heat_embedded
+    name: ${pid_name_heat_output}
+    type: HEAT
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_cool_embedded
+    name: ${pid_name_cool_output}
+    type: COOL
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_heat_embedded
+    name: ${pid_name_heat_integral}
+    type: INTEGRAL
+    entity_category: diagnostic
+  - platform: pid
+    climate_id: pid_cool_embedded
+    name: ${pid_name_cool_integral}
+    type: INTEGRAL
+    entity_category: diagnostic
+
+number:
+  # Live tuning from HA, applied to both controllers without reflashing.
+  # After the first boot these entities are the source (restore_value); the substitutions are seeds only.
+  - platform: template
+    id: pid_tuning_kp
+    name: ${pid_name_kp}
+    entity_category: config
+    icon: mdi:tune-vertical
+    min_value: 0.05
+    max_value: 1.0
+    step: 0.05
+    initial_value: ${pid_kp}
+    restore_value: true
+    optimistic: true
+    mode: ${pid_number_mode}
+    on_value:
+      - script.execute: apply_pid_tuning
+
+  - platform: template
+    id: pid_tuning_tn
+    name: ${pid_name_tn}
+    entity_category: config
+    icon: mdi:timer-cog-outline
+    unit_of_measurement: min
+    min_value: 10
+    max_value: 600
+    step: 5
+    initial_value: ${pid_tn}
+    restore_value: true
+    optimistic: true
+    mode: ${pid_number_mode}
+    on_value:
+      - script.execute: apply_pid_tuning
+
+  # Applied to the PWM outputs by the including package, which extends this entity's on_value
+  - platform: template
+    id: pid_tuning_pwm_period
+    name: ${pid_name_pwm_period}
+    entity_category: config
+    icon: mdi:sine-wave
+    unit_of_measurement: s
+    min_value: 300
+    max_value: 3600
+    step: 60
+    initial_value: ${pwm_period}
+    restore_value: true
+    optimistic: true
+    mode: ${pid_number_mode}
+
+  - platform: template
+    id: pid_tuning_deadband
+    name: ${pid_name_deadband}
+    entity_category: config
+    icon: mdi:arrow-expand-vertical
+    unit_of_measurement: K
+    min_value: 0.0
+    max_value: 1.0
+    step: 0.05
+    initial_value: ${pid_deadband}
+    restore_value: true
+    optimistic: true
+    mode: ${pid_number_mode}
+    on_value:
+      - lambda: |-
+          if (isnan(x) || x < 0.0f) return;
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Deadband applied: +/-%.2fK", x);
+          pid_heat_embedded->set_threshold_high(x);
+          pid_heat_embedded->set_threshold_low(-x);
+          pid_cool_embedded->set_threshold_high(x);
+          pid_cool_embedded->set_threshold_low(-x);
+
+button:
+  - platform: template
+    name: ${pid_name_reset_integral}
+    entity_category: config
+    icon: mdi:restore
+    on_press:
+      - climate.pid.reset_integral_term: pid_heat_embedded
+      - climate.pid.reset_integral_term: pid_cool_embedded
+
+packages:
+  climate_base_package: !include nspanel_esphome_addon_climate_base.yaml
+...
