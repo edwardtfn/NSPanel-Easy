@@ -113,6 +113,12 @@ Write the step in the unit of `temp_units`, without a unit after the number (e.g
 The climate page and Home Assistant then use the same step.
 With a unit, newer ESPHome versions convert the step into °C, and Home Assistant then uses a different step than the climate page.
 
+> [!NOTE]
+> Home Assistant applies the step in its own temperature unit, without converting it.
+> If Home Assistant uses a different unit than `temp_units`, it moves the target temperature in steps of the same
+> number in its own unit (e.g. steps of 1 °C for a °F panel), while the climate page keeps the configured step.
+> This is a Home Assistant limitation, reported in [home-assistant/core#190241](https://github.com/home-assistant/core/issues/190241).
+
 ## Temperature source
 
 By default, the thermostat uses the panel's own temperature sensor, including the temperature correction set under the panel's device page in Home Assistant.
