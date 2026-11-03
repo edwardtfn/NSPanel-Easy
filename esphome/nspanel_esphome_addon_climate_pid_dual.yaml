@@ -24,6 +24,7 @@ esphome:
 climate:
   # Thermostat facade: holds setpoints and mode, deadband/overrun only drive the activity display
   - id: !extend thermostat_embedded
+    heat_cool_mode: true  # Required for the HEAT_COOL mode, used by the "Home" preset
     min_cooling_off_time: 1s
     min_heating_off_time: 1s
     min_cooling_run_time: 1s
