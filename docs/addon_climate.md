@@ -296,6 +296,7 @@ Changes are applied immediately, without reflashing.
 ### PID boost (single only)
 
 The `PID Boost` switch opens the valve fully for `PID Boost duration` minutes, bypassing the controller.
+It differs from AHC's party mode, which raises the setpoint: the boost opens the valve fully, regardless of the setpoint.
 In cooling mode, this means full cooling.
 The controllers keep running in the background; when the boost ends, the valve is handed back to the controller of the active operating mode.
 Turning the switch off ends the boost early, turning it on again restarts the duration.
@@ -324,6 +325,45 @@ When the setpoint is set to the comfort or eco value from elsewhere, e.g. by a s
 
 > [!NOTE]
 > A setpoint that matches neither value keeps the last preset marked, as ESPHome cannot unselect a preset.
+
+### Use with Advanced Heating Control (AHC)
+
+The `pid_single` add-on was designed for and tested with the [Advanced Heating Control](https://github.com/panhans/HomeAssistant) Blueprint (AHC V5) by panhans:
+AHC decides which setpoint applies when (schedules, presence, windows), and the panel turns it into a valve position on its own, also while Home Assistant is unavailable.
+The `pid_dual` add-on is not suited for AHC: AHC only sets a single target temperature, which a thermostat with two setpoints rejects.
+
+Recommended setup:
+
+- Select the panel's climate entity under **Thermostats / Climates** and set **Operation / HVAC Mode** to `heat` for comfort and eco.
+  With this add-on, `heat` means "room on"; whether the panel heats or cools follows `pid_mode_entity`, not AHC.
+  Don't use AHC's `cool` or `heat_cool` modes: the panel does not offer them, so AHC would skip it.
+- Leave **Enable Calibration** off. The panel regulates on its own temperature source, see [Temperature source](#temperature-source).
+- Use `input_number` helpers for **Comfort Temperature** and **Eco Temperature**.
+  To use different values for heating and cooling, let an automation copy the matching values into these helpers when `pid_mode_entity` changes; AHC applies them right away.
+- Set `pid_comfort_entity` and `pid_eco_entity` to the same helpers. The panel's `Comfort` and `Eco` presets then use AHC's temperatures,
+  and the preset matching the setpoint written by AHC is marked on the panel.
+- AHC does not react when the room is switched on at the panel. To apply the current setpoint right away,
+  let an automation fire AHC's `ahc_delay_event` when the panel's climate entity changes to `heat`.
+
+AHC features with this add-on:
+
+<!-- markdownlint-disable MD013 -->
+| AHC feature | Status | Note |
+| :- | :- | :- |
+| Thermostats / Climates, Comfort and Eco Temperature (`input_number`), HVAC mode `heat` | Tested | Basis of the setup above. |
+| Schedules | Tested | |
+| Persons, Guest Mode, Proximity, Presence Sensor, Off If Nobody Home | Expected to work | Only decide between comfort, eco and off. |
+| Party mode (timers or booleans), Force Eco Temperature | Expected to work | A number at the end of a party timer's name sets its temperature. |
+| Windows & Doors | Expected to work | Set **Window Open Temperature** to `0` (off). A temperature above 0 is a setpoint, so in cooling mode the panel would cool with the window open. |
+| Away Temperature Offset | Heating only | AHC always subtracts the offset, so in cooling mode the room is cooled more while away. |
+| Frost Protection | Heating only | Sets a low fixed temperature (e.g. 5 °C) after a long absence, which means full cooling in cooling mode. |
+| Off If Above/Below Room Temperature, Outside and Room Temperature Threshold, Aggressive mode | Heating only | AHC applies heating logic, as its HVAC mode is `heat`. |
+| Liming Protection | Heating only | Sets the maximum temperature, so the controller opens the valve; in cooling mode it stays closed. |
+| Force Max Temperature | Heating only | Same as above, without a duration. |
+| Calibration, Valve Positioning | Not applicable | Meant for TRVs; the panel regulates and drives the valve itself. |
+| `cool` / `heat_cool` HVAC modes | Not applicable | Heating and cooling are switched centrally with `pid_mode_entity`. |
+
+<!-- markdownlint-enable MD013 -->
 
 ### PID tuning
 
