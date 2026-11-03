@@ -30,14 +30,14 @@ jobs:
           # Issue configuration
           # ---------------------------------------------------------------
           days-before-issue-stale: 90  # Days of inactivity before marking stale
-          days-before-issue-close: 14  # Days after stale label before closing
+          days-before-issue-close: 7   # Days after stale label before closing
           stale-issue-label: 'stale'
           stale-issue-message: >
             This issue has been automatically marked as stale because it has
-            not had recent activity. It will be closed in 14 days if no further
+            not had recent activity. It will be closed in 7 days if no further
             activity occurs. Thank you for your contributions!
           close-issue-message: >
-            This issue was closed because it has been inactive for 14 days
+            This issue was closed because it has been inactive for 7 days
             since being marked as stale.
 
           # ---------------------------------------------------------------
