@@ -206,8 +206,15 @@ script:
       - delay: ${PAGE_BOOT_DELAY_TO_EXIT}
       - script.wait: wait_for_version_tft
       - lambda: |-
-          if (current_page_id == get_page_id("boot"))
+          if (current_page_id == get_page_id("boot")) {
             wakeup->execute(false);
+            if (!system_flags.boot_completed) {
+              // The wake-up page loads with the regular brightness (`dim=brightness`), so keep it
+              // dimmed until the boot completes (#485)
+              brightness_current = UINT8_MAX;
+              set_brightness->execute(display_dim_brightness->state);
+            }  // if (!system_flags.boot_completed)
+          }  // if (current_page_id == get_page_id("boot"))
 
   - id: page_boot_show_blueprint_version
     mode: single
