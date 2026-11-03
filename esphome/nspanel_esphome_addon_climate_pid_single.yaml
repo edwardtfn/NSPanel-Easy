@@ -74,15 +74,15 @@ globals:
     restore_value: false
     initial_value: '0'  # Must be quoted: ESPHome expects the C++ initializer as a string
 
-  - id: pid_comfort_value  # Comfort temperature from Home Assistant (°C), NAN until it reports
+  - id: pid_comfort_value  # Comfort temperature (°C): from Home Assistant, pid_comfort_temp until it reports
     type: float
     restore_value: true
-    initial_value: 'NAN'  # Must be quoted: ESPHome expects the C++ initializer as a string
+    initial_value: '(NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT ? ((${pid_comfort_temp}) - 32.0f) * 5.0f / 9.0f : (${pid_comfort_temp}))'
 
-  - id: pid_eco_value  # Eco temperature from Home Assistant (°C), NAN until it reports
+  - id: pid_eco_value  # Eco temperature (°C): from Home Assistant, pid_eco_temp until it reports
     type: float
     restore_value: true
-    initial_value: 'NAN'  # Must be quoted: ESPHome expects the C++ initializer as a string
+    initial_value: '(NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT ? ((${pid_eco_temp}) - 32.0f) * 5.0f / 9.0f : (${pid_eco_temp}))'
 
 text_sensor:
   - platform: homeassistant  # Central operating mode from Home Assistant
@@ -385,16 +385,11 @@ script:
           // buttons, unused by the heat-only facade), replacing the preset picker
           if (!${pid_preset_buttons}) return;
           // Highlighted by the setpoint, not by the selected preset: a manual change to another temperature
-          // clears the highlight, while ESPHome keeps the preset selected. Falls back to the selected preset
-          // until the value has arrived from Home Assistant.
-          const bool has_preset = !thermostat_embedded->has_custom_preset() && thermostat_embedded->preset.has_value();
+          // clears the highlight, while ESPHome keeps the preset selected.
           const float target = thermostat_embedded->target_temperature;
-          auto matches = [&](float value, climate::ClimatePreset preset) {
-            if (std::isnan(value)) return has_preset && thermostat_embedded->preset.value() == preset;
-            return !std::isnan(target) && fabsf(target - value) < 0.01f;
-          };
-          const bool comfort = room_on && matches(id(pid_comfort_value), climate::CLIMATE_PRESET_COMFORT);
-          const bool eco = room_on && !comfort && matches(id(pid_eco_value), climate::CLIMATE_PRESET_ECO);
+          auto matches = [&](float value) { return !std::isnan(target) && fabsf(target - value) < 0.01f; };
+          const bool comfort = room_on && matches(id(pid_comfort_value));
+          const bool eco = room_on && !comfort && matches(id(pid_eco_value));
           disp1->hide_component(hmi::climate::PRESET_BUTTON.name);
           disp1->set_component_text("button01", Icons::MDI_SOFA);
           disp1->set_component_font_color("climate.button01", static_cast<uint16_t>(
@@ -497,6 +492,9 @@ script:
   - id: !extend boot_preparation
     then:
       - lambda: |-
+          // Values stored as NAN by an earlier version: start from the seeds until Home Assistant reports
+          if (std::isnan(id(pid_comfort_value))) id(pid_comfort_value) = (NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT ? ((${pid_comfort_temp}) - 32.0f) * 5.0f / 9.0f : (${pid_comfort_temp}));
+          if (std::isnan(id(pid_eco_value))) id(pid_eco_value) = (NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT ? ((${pid_eco_temp}) - 32.0f) * 5.0f / 9.0f : (${pid_eco_temp}));
           const uint8_t idx = nspanel_easy::find_chip_index("${pid_boost_chip}");
           if (idx == UINT8_MAX || idx < CHIP_IDX_USER) return;
           chip_states[idx].subscribed = true;  // Blocks Blueprint pushes for this slot
@@ -531,7 +529,7 @@ script:
           } else {
             return;
           }
-          if (std::isnan(target)) return;  // No value from Home Assistant yet: keep the seed
+          if (std::isnan(target)) return;
           if (fabsf(thermostat_embedded->target_temperature - target) < 0.01f) return;
           ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Preset %s: setpoint %.1f°C",
                    preset == climate::CLIMATE_PRESET_COMFORT ? "comfort" : "eco", target);
