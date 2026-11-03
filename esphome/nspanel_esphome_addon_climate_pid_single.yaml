@@ -447,9 +447,13 @@ script:
           chip_states[idx].visible = false;
           chip_states[idx].icon[0] = '\0';
 
-  # Draw the (hidden) boost chip once the display is up
+  # Draw the boost chip once the display is up. Rendered unconditionally: after a restart of the
+  # ESP alone, the display may still show the chip from before, while the shadow state is "hidden"
   - id: !extend boot_nextion
     then:
+      - lambda: |-
+          const uint8_t idx = nspanel_easy::find_chip_index("${pid_boost_chip}");
+          if (idx != UINT8_MAX && idx >= CHIP_IDX_USER) chip_render(idx);
       - script.execute: pid_refresh_boost_ui
 
   # Copies room on/off, setpoint and operating mode from the thermostat facade to the controllers
