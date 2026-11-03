@@ -306,13 +306,58 @@ It needs a synchronized clock and stays unknown if the panel has no time from Ho
 
 ### PID tuning
 
-- Start with the defaults and observe the output and the room temperature over one or two days.
-- Slow systems (underfloor heating in screed) need a lower `kp` and a longer `Tn` than radiators.
-- If the room oscillates around the setpoint, reduce `kp` or increase `Tn`.
-- If the room approaches the setpoint very slowly, increase `kp` or reduce `Tn`.
-- With a weather-compensated flow temperature, the output also shows whether the heating curve fits:
-  an output close to 100 % for a long time means the flow temperature is too low, a very low output means it is too high.
-- Avoid smoothing filters on the temperature sensor with time windows longer than one minute; they delay the reaction of an already slow system.
+#### How the output is formed
+
+Every `pid_sample_interval` seconds, each active controller computes an output between 0 and 100 % from two parts:
+
+- **Proportional part (`kp`):** reacts to the current difference from the setpoint. With `kp` at `0.3`, a room 1 K below the setpoint adds 30 %.
+- **Integral part (`Tn`):** collects the difference over time. While the room stays too cold, it keeps rising until the output is enough.
+  Once settled, it holds the room's base load, for example "this room needs 25 % heating in winter", and the proportional part only corrects deviations.
+
+The output becomes the on-time of each PWM cycle: 25 % of a 20-minute `PID PWM period` keeps the valve relay on for 5 minutes and off for 15.
+
+#### Reading the diagnostic entities
+
+- **PID Heat output** / **PID Cool output** move around the base load once the room has settled.
+- **PID Heat integral** / **PID Cool integral** change slowly, over hours. For underfloor heating in winter, 20 % to 40 % is typical; in mild weather it drops close to 0.
+- An output close to 100 % for hours, or an integral stuck at 100 %, means the system cannot keep up:
+  the flow temperature is too low, or the setpoint too high for the heating system.
+- A very low output and an integral close to 0 while the room is warm enough means the flow temperature is too high.
+  With a weather-compensated flow temperature, adjust the heating curve rather than the controller.
+
+#### Adjusting the parameters
+
+<!-- markdownlint-disable MD013 -->
+| Entity | Raise it when | Lower it when |
+| :- | :- | :- |
+| PID kp | The room reaches the setpoint very slowly. | The temperature swings up and down around the setpoint, or the output jumps. |
+| PID Tn | The room overshoots and swings slowly, over hours. | A lasting difference from the setpoint takes very long to disappear. |
+| PID PWM period | The relay should switch less often, or the valve actuators are slow (thermal actuators take a few minutes to open). | The system reacts fast, as radiators do. |
+| PID Deadband | The output reacts nervously to small temperature changes. | The temperature should be held more tightly. |
+
+<!-- markdownlint-enable MD013 -->
+
+Use **PID Reset integral** only after a major change, such as a new heating curve or a different room setup: the learned base load is lost and takes hours to build up again.
+
+As a starting point, the defaults suit underfloor heating in screed (`kp` `0.3`, `Tn` 180 minutes, 20-minute PWM period).
+Radiators react faster and usually work better with about `kp` `0.6`, `Tn` 50 minutes and a 10-minute PWM period, as in the [dual setpoints example](#example-dual-setpoints).
+Leave `pid_kd` at `0`: the derivative part reacts to how fast the temperature changes, which does not help slow systems and amplifies sensor noise.
+
+#### Tuning procedure
+
+1. Start with the defaults and leave them for one or two days. A slow system reacts over hours, so every change needs time to show its effect.
+2. Watch the room temperature and the controller output together, for example in a Home Assistant history graph.
+3. Change only one value at a time, by about 30 % to 50 %, and wait another day.
+4. Aim for a temperature within about ±0.3 K of the setpoint and an output that moves calmly around the base load, without jumping between 0 % and 100 %.
+
+Typical patterns:
+
+- **Slow waves over several hours around the setpoint:** `kp` too high or `Tn` too short. Lower `kp` first.
+- **The room stays below the setpoint for a long time, then creeps up:** `Tn` too long.
+- **The output jumps every few minutes:** the deadband is too small or `kp` too high.
+- **Slightly too warm after each morning heat-up:** usually the heat stored in the screed. A somewhat longer `Tn` or lower `kp` helps, but some overshoot is normal with screed.
+
+Avoid smoothing filters on the temperature sensor with time windows longer than one minute; they delay the reaction of an already slow system.
 
 ### Example: single setpoint with central operating mode
 
