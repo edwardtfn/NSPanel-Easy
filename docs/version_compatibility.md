@@ -1,15 +1,16 @@
 # Version compatibility
 
 NSPanel Easy targets **Home Assistant** and **ESPHome** versions released no more than
-two months before the NSPanel Easy release date.
+one month before the NSPanel Easy release date.
 
-For example, a firmware released in March 2026 will generally require Home Assistant and
-ESPHome versions from January 2026 or later (i.e., `2026.1.x`).
+For example, a firmware released in December 2026 will generally require Home Assistant and
+ESPHome versions from November 2026 or later (i.e., `2026.11.x`).
 
 > [!NOTE]
 > This is a best-effort guideline, not a hard contract.
-> It has been upheld for every release to date, but exceptions may occur
-> if a dependency introduces a breaking change that requires a newer version.
+> Exceptions may occur if a dependency introduces a breaking change that requires a newer version,
+> in which case the minimum version can be higher than the one described above.
+> Releases before November 2026 targeted versions released no more than two months before the release date.
 
 ## Finding the exact minimum ESPHome version
 

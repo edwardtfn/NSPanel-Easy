@@ -17,7 +17,7 @@ blueprint:
   source_url: https://raw.githubusercontent.com/edwardtfn/NSPanel-Easy/refs/tags/latest/nspanel_easy_blueprint.yaml
   domain: automation
   homeassistant:
-    min_version: 2026.9.0
+    min_version: 2026.10.0
 
   input:
     nspanel_name:  # This key was kept with this name to support inputs from legacy versions where the panel name was used
@@ -6334,6 +6334,35 @@ conditions:
       pages.current == pages.climate or
       trigger.id not in ["trigger_climatepage_value_state", "climate_button08_state", "climate_button09_state"]
     }}
+  - >  # Climate entity: run only when something shown on the panel changed (#641)
+    {#- The trigger fires on every change of the entity, including attribute-only updates
+        (e.g. internal values of Better Thermostat, or a new current_temperature). While the
+        climate page is not visible, only the climate chip is updated, and it shows only the
+        state, hvac_action, icon and color. The embedded thermostat has no chip from the Blueprint
+        (the firmware handles it), so it needs the climate page. A removed entity (no new state)
+        has nothing to show. #}
+    {%- if trigger.id != "climate_state" -%}
+      true
+    {%- else -%}
+      {%- set old_state = trigger.event.data.get("old_state") -%}
+      {%- set new_state = trigger.event.data.get("new_state") -%}
+      {%- if new_state is none -%}
+        false
+      {%- elif pages.current == pages.climate -%}
+        true
+      {%- elif trigger.event.data.get("entity_id") == thermostat_embedded -%}
+        false
+      {%- elif old_state is none -%}
+        true
+      {%- else -%}
+        {{
+          old_state.state != new_state.state or
+          old_state.attributes.get("hvac_action") != new_state.attributes.get("hvac_action") or
+          old_state.attributes.get("icon") != new_state.attributes.get("icon") or
+          old_state.attributes.get("color") != new_state.attributes.get("color")
+        }}
+      {%- endif -%}
+    {%- endif -%}
   - >  # Do not update values when page water heater is not visible
     {{
       pages.current == pages.water_heater or
