@@ -29,6 +29,15 @@ Outputs (written to --output-dir, default: ./output)
       HASwitchPlate_table___all_icons__ used by the NSPanel Easy Blueprint.
       Includes special entries: blank, void, unknown, unavailable.
 
+  blueprint_icons.yaml
+      The Blueprint's icon lookup: all_icon_names (one string with every icon
+      name in codepoint order, so an icon's ZI codepoint is U+E000 + its
+      position) and special_icons (blank, void, unknown, unavailable).
+      A single string keeps the automation configuration small: tools that
+      walk every string of every automation (e.g. Spook repairs) slow Home
+      Assistant down with a 7,000-entry dictionary per panel (issue #636).
+      Use --blueprint to replace these lines in the Blueprint directly.
+
   cheatsheet.html
       Searchable visual icon cheatsheet for GitHub Pages (docs/icons/).
       Click-to-copy copies "mdi:<n>" to clipboard.
@@ -142,6 +151,11 @@ def parse_args():
         "--header-dir", default=None,
         help="If set, also copy all_icons.h here "
              "(e.g. path/to/NSPanel-Easy/components/nspanel_easy)"
+    )
+    parser.add_argument(
+        "--blueprint", default=None,
+        help="If set, replace the all_icon_names and special_icons lines in this "
+             "Blueprint file (e.g. path/to/NSPanel-Easy/nspanel_easy_blueprint.yaml)"
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -422,6 +436,67 @@ def build_all_icons_json(zi_map, output_path):
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(line)
     print(f"  Saved: {output_path}  ({len(entries)} entries)")
+
+
+# =============================================================================
+# blueprint_icons.yaml
+# =============================================================================
+
+# Icon names left out of the Blueprint's name string, so looking them up finds nothing,
+# as before: "null" was a YAML null key in the former dictionary and is kept unresolvable on purpose.
+BLUEPRINT_EXCLUDED_ICONS = {"null"}
+
+# Placeholder for unused positions in the name string. A control character never occurs in
+# an icon name, so no lookup can match it.
+BLUEPRINT_EMPTY_SLOT = "\\x01"
+
+
+def build_blueprint_icons(zi_map, output_path, blueprint_path=None):
+    """
+    Write blueprint_icons.yaml — the Blueprint's icon lookup:
+        all_icon_names: ",<name for U+E000>,<name for U+E001>,...,"
+        special_icons: { blank: "\\uFFFF", void: "\\uFFFF", unknown: "\\uXXXX", unavailable: "\\uXXXX" }
+    An icon's ZI codepoint is U+E000 plus its position in all_icon_names, so the Blueprint
+    finds it with string operations, without a dictionary.
+    If blueprint_path is given, the two lines are replaced there, keeping their indentation.
+    """
+    first = min(zi_map.values())
+    last = max(zi_map.values())
+    if first != 0xE000:
+        sys.exit(f"ERROR: first ZI codepoint is U+{first:04X}, the Blueprint lookup expects U+E000")
+    by_cp = {}
+    for name, zi_cp in zi_map.items():
+        if zi_cp in by_cp:
+            sys.exit(f"ERROR: U+{zi_cp:04X} is used by both {by_cp[zi_cp]} and {name}")
+        by_cp[zi_cp] = name
+
+    slots = []
+    for zi_cp in range(first, last + 1):
+        name = by_cp.get(zi_cp)
+        slots.append(BLUEPRINT_EMPTY_SLOT if name is None or name in BLUEPRINT_EXCLUDED_ICONS else name)
+    names_line = 'all_icon_names: ",' + ",".join(slots) + ',"'
+
+    alert_circle_zi = zi_map.get(ALERT_CIRCLE_NAME, 0xE027)
+    special = []
+    for special_name, zi_cp in SPECIAL_ICONS.items():
+        if zi_cp is None:
+            zi_cp = alert_circle_zi
+        special.append(f'{special_name}: "\\u{zi_cp:04X}"')
+    special_line = "special_icons: { " + ", ".join(special) + " }"
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(names_line + "\n" + special_line + "\n")
+    print(f"  Saved: {output_path}  ({last - first + 1} positions)")
+
+    if blueprint_path:
+        content = Path(blueprint_path).read_text(encoding="utf-8")
+        for key, line in (("all_icon_names", names_line), ("special_icons", special_line)):
+            pattern = re.compile(rf"^(?P<ind>[ ]*){key}: .*$", re.M)
+            if len(pattern.findall(content)) != 1:
+                sys.exit(f"ERROR: expected exactly one '{key}:' line in {blueprint_path}")
+            content = pattern.sub(lambda m, line=line: m.group("ind") + line, content)
+        Path(blueprint_path).write_text(content, encoding="utf-8")
+        print(f"  Updated: {blueprint_path}")
 
 
 # =============================================================================
@@ -706,6 +781,7 @@ def main():
     # Generate artifacts
     print("\nGenerating artifacts...")
     build_all_icons_json(zi_map,                                        output_dir / "all_icons.json")
+    build_blueprint_icons(zi_map, output_dir / "blueprint_icons.yaml", args.blueprint)
     build_cheatsheet(name_to_ttf_cp, zi_map, ttf_filename, output_dir / "cheatsheet.html", version_str)
     build_header(zi_map, version_str,                                   output_dir / "all_icons.h")
 
