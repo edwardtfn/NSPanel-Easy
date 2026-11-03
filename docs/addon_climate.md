@@ -98,7 +98,7 @@ The following keys are available to be used in your `substitutions`:
 
 ### Target temperature step
 
-The target temperature is set in steps of `0.5` °C (or `1` °F).
+With `temp_units: °C`, the target temperature is set in steps of `0.5` °C.
 For a finer step, e.g. `0.1` °C, extend the thermostat in your ESPHome settings, at the same level as `substitutions:`:
 
 ```yaml
@@ -109,7 +109,8 @@ climate:
         target_temperature: 0.1 °C
 ```
 
-The climate page and Home Assistant use the same step.
+ESPHome reads this value as °C, whatever unit is written after it.
+The climate page and Home Assistant then use the same step.
 
 ## Temperature source
 
