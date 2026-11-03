@@ -31,8 +31,7 @@ substitutions:
   # Minimum required ESPHome compiler to run this
   # Versioning workflow will take care of raising this (it never lowers it),
   # so it can be set manually to a newer version when a change requires it.
-  # 2026.9.2: Nextion `add_waveform_data()` is no longer behind `USE_NEXTION_WAVEFORM`
-  min_esphome_compiler_version: 2026.9.2
+  min_esphome_compiler_version: 2026.10.0
 
   TAG_VERSIONING: nspanel.versioning
 

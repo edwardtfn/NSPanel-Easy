@@ -2,7 +2,7 @@
 #
 # Triggered by any push to the main branch (normally a PR merge), it automatically:
 # 1. Bumps the CalVer version (YYYY.M.seq)
-# 2. Calculates the minimum upstream version (current month minus 2, YYYY.M.0)
+# 2. Calculates the minimum upstream version (previous month, YYYY.M.0)
 # 3. Resolves the "next" sentinel in min_blueprint_version, if set
 # 4. Raises min_esphome_compiler_version (never lowers it) and updates blueprint homeassistant.min_version
 # 5. Updates the bug report template with current version placeholders
@@ -208,14 +208,14 @@ jobs:
         id: min_upstream
         if: steps.skip_check.outputs.skip == 'false'
         run: |
-          # Minimum upstream version is always 2 months behind the current month,
-          # with patch fixed at 0 (e.g. April 2026 -> 2026.2.0, Jan 2026 -> 2025.11.0).
+          # Minimum upstream version is always 1 month behind the current month,
+          # with patch fixed at 0 (e.g. April 2026 -> 2026.3.0, Jan 2026 -> 2025.12.0).
           # This is the contract for the minimum ESPHome compiler and Home Assistant
           # versions required to build and run NSPanel Easy.
           CURRENT_YEAR=$(date +%Y)
           CURRENT_MONTH=$(date +%-m)  # No leading zero
 
-          MIN_MONTH=$((CURRENT_MONTH - 2))
+          MIN_MONTH=$((CURRENT_MONTH - 1))
           MIN_YEAR=$CURRENT_YEAR
           if [[ $MIN_MONTH -le 0 ]]; then
             MIN_MONTH=$((MIN_MONTH + 12))
@@ -261,7 +261,7 @@ jobs:
             echo "min_blueprint_version is already set to ${MIN_BP}, no sentinel to resolve"
           fi
 
-          # Raise the minimum ESPHome compiler version to 2 months ago, keeping the
+          # Raise the minimum ESPHome compiler version to the previous month, keeping the
           # upstream contract in sync with the release date. A higher value set
           # manually (because a change requires a newer ESPHome) is kept, as
           # lowering it would allow builds that fail to compile.
@@ -364,7 +364,7 @@ jobs:
           fi
 
           # Update the minimum Home Assistant version required to run this blueprint,
-          # kept 2 months behind the release date to match the upstream contract.
+          # kept 1 month behind the release date to match the upstream contract.
           sed -i \
             "s/^    min_version: .*/    min_version: ${MIN_UPSTREAM_VERSION}/" \
             "$BLUEPRINT"

@@ -17,7 +17,7 @@ blueprint:
   source_url: https://raw.githubusercontent.com/edwardtfn/NSPanel-Easy/refs/tags/latest/nspanel_easy_blueprint.yaml
   domain: automation
   homeassistant:
-    min_version: 2026.9.0
+    min_version: 2026.10.0
 
   input:
     nspanel_name:  # This key was kept with this name to support inputs from legacy versions where the panel name was used
