@@ -317,8 +317,9 @@ It needs a synchronized clock and stays unknown if the panel has no time from Ho
 ### PID presets (single only)
 
 The single add-on offers the presets `Comfort`, `Eco` and `Off` on the climate page and in Home Assistant.
-On the climate page, `Comfort` (sofa) and `Eco` (leaf) are two buttons in the mode button row, highlighted while active,
-instead of the preset picker. `Off` is the off button. Set `pid_preset_buttons: "false"` to use the preset picker instead.
+On the climate page, `Comfort` (sofa) and `Eco` (leaf) are two buttons in the mode button row instead of the preset picker.
+A button is highlighted while the setpoint equals its temperature, so a manual change to another temperature clears the highlight.
+`Off` is the off button. Set `pid_preset_buttons: "false"` to use the preset picker instead.
 `Comfort` and `Eco` switch the room on and set the setpoint to the value of `pid_comfort_entity` or `pid_eco_entity`.
 These values are stored in flash, so the presets also work while Home Assistant is unavailable.
 When the value changes while its preset is active, the setpoint follows.

@@ -384,9 +384,17 @@ script:
           // Presets as buttons: Comfort on button01 and Eco on button02 (the auto and heat_cool mode
           // buttons, unused by the heat-only facade), replacing the preset picker
           if (!${pid_preset_buttons}) return;
+          // Highlighted by the setpoint, not by the selected preset: a manual change to another temperature
+          // clears the highlight, while ESPHome keeps the preset selected. Falls back to the selected preset
+          // until the value has arrived from Home Assistant.
           const bool has_preset = !thermostat_embedded->has_custom_preset() && thermostat_embedded->preset.has_value();
-          const bool comfort = room_on && has_preset && thermostat_embedded->preset.value() == climate::CLIMATE_PRESET_COMFORT;
-          const bool eco = room_on && has_preset && thermostat_embedded->preset.value() == climate::CLIMATE_PRESET_ECO;
+          const float target = thermostat_embedded->target_temperature;
+          auto matches = [&](float value, climate::ClimatePreset preset) {
+            if (std::isnan(value)) return has_preset && thermostat_embedded->preset.value() == preset;
+            return !std::isnan(target) && fabsf(target - value) < 0.01f;
+          };
+          const bool comfort = room_on && matches(id(pid_comfort_value), climate::CLIMATE_PRESET_COMFORT);
+          const bool eco = room_on && !comfort && matches(id(pid_eco_value), climate::CLIMATE_PRESET_ECO);
           disp1->hide_component(hmi::climate::PRESET_BUTTON.name);
           disp1->set_component_text("button01", Icons::MDI_SOFA);
           disp1->set_component_font_color("climate.button01", static_cast<uint16_t>(
