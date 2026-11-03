@@ -4,7 +4,7 @@
 # 1. Bumps the CalVer version (YYYY.M.seq)
 # 2. Calculates the minimum upstream version (current month minus 2, YYYY.M.0)
 # 3. Resolves the "next" sentinel in min_blueprint_version, if set
-# 4. Updates min_esphome_compiler_version and blueprint homeassistant.min_version
+# 4. Raises min_esphome_compiler_version (never lowers it) and updates blueprint homeassistant.min_version
 # 5. Updates the bug report template with current version placeholders
 # 6. Updates the blueprint version and display name, and resolves the "next" sentinel in its min_esphome_version
 # 7. Commits all version changes and pushes to main
@@ -261,16 +261,29 @@ jobs:
             echo "min_blueprint_version is already set to ${MIN_BP}, no sentinel to resolve"
           fi
 
-          # Always update the minimum ESPHome compiler version to 2 months ago,
-          # keeping the upstream contract in sync with the release date.
-          sed -i \
-            "s/^  min_esphome_compiler_version: .*/  min_esphome_compiler_version: ${MIN_UPSTREAM_VERSION}/" \
-            "$ESPHOME_VERSION_FILE"
-          if ! grep -q "^  min_esphome_compiler_version: ${MIN_UPSTREAM_VERSION}$" "$ESPHOME_VERSION_FILE"; then
-            echo "ERROR: Failed to update min_esphome_compiler_version in $ESPHOME_VERSION_FILE"
+          # Raise the minimum ESPHome compiler version to 2 months ago, keeping the
+          # upstream contract in sync with the release date. A higher value set
+          # manually (because a change requires a newer ESPHome) is kept, as
+          # lowering it would allow builds that fail to compile.
+          CURRENT_MIN_ESPHOME=$(grep "^  min_esphome_compiler_version:" "$ESPHOME_VERSION_FILE" | awk '{print $2}')
+          if [[ ! "$CURRENT_MIN_ESPHOME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: Invalid min_esphome_compiler_version '${CURRENT_MIN_ESPHOME}' in $ESPHOME_VERSION_FILE"
             exit 1
           fi
-          echo "Updated min_esphome_compiler_version to ${MIN_UPSTREAM_VERSION}"
+          # sort -V compares each CalVer segment numerically (2026.10.0 > 2026.9.2)
+          HIGHEST_MIN_ESPHOME=$(printf '%s\n%s\n' "$CURRENT_MIN_ESPHOME" "$MIN_UPSTREAM_VERSION" | sort -V | tail -n 1)
+          if [[ "$HIGHEST_MIN_ESPHOME" == "$CURRENT_MIN_ESPHOME" ]]; then
+            echo "Keeping min_esphome_compiler_version ${CURRENT_MIN_ESPHOME} (not older than ${MIN_UPSTREAM_VERSION})"
+          else
+            sed -i \
+              "s/^  min_esphome_compiler_version: .*/  min_esphome_compiler_version: ${MIN_UPSTREAM_VERSION}/" \
+              "$ESPHOME_VERSION_FILE"
+            if ! grep -q "^  min_esphome_compiler_version: ${MIN_UPSTREAM_VERSION}$" "$ESPHOME_VERSION_FILE"; then
+              echo "ERROR: Failed to update min_esphome_compiler_version in $ESPHOME_VERSION_FILE"
+              exit 1
+            fi
+            echo "Updated min_esphome_compiler_version from ${CURRENT_MIN_ESPHOME} to ${MIN_UPSTREAM_VERSION}"
+          fi  # if [[ "$HIGHEST_MIN_ESPHOME" == "$CURRENT_MIN_ESPHOME" ]]
 
       - name: Extract cross-component version information
         id: versions
