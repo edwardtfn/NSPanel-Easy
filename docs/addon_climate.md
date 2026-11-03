@@ -212,6 +212,7 @@ How it works:
 - The controllers regulate on the same temperature as the thermostat, so they follow the calibration reference as described in [Temperature source](#temperature-source).
 - The regulation runs entirely on the panel and keeps working without Home Assistant.
 - While a controller is off, its integral term is kept, so it continues from the learned value when switched on again.
+  It is also saved to flash every 30 minutes, so the controllers continue from it after a reboot.
 - *Single only:* the thermostat offers the modes `off` and `heat`, which act as "room off/on".
   The operating mode (heat or cool) is read from `pid_mode_entity` and stored in flash,
   so the panel keeps the last mode while Home Assistant is unavailable.
@@ -224,7 +225,7 @@ How it works:
 > Include **only one** climate package: either `pid_single` or `pid_dual`, not together with `climate_heat`, `climate_cool`, `climate_dual` or each other.
 > The PID packages include the climate base themselves.
 > The `climate_backup` add-on cannot be combined with the PID packages, as it follows the thermostat's actions, which do not drive the relays here; this is checked at build time.
-> The integral term is not stored in flash; after a reboot the controller needs some time to settle again (see `pid_starting_integral`).
+> After a reboot, the controllers continue from the integral term saved up to 30 minutes earlier; only the first boot starts from `pid_starting_integral`.
 > Without Home Assistant the panel reboots after `api: reboot_timeout` (`60min` in this project),
 > and without Wi-Fi after `wifi: reboot_timeout` (`15min` by default in ESPHome). For autonomous operation, set both to `0s` in your local yaml.
 > Thermostatic radiator heads, if present, must be set well above the target temperature, otherwise two controllers fight each other.
@@ -249,7 +250,7 @@ In PID mode, the deadband and overrun keys of the thermostat only affect the act
 | pid_kd | both | Optional | Number | `0.0` | Derivative term, usually not useful for slow systems. |
 | pid_deadband | both | Optional | Number in Kelvin | `0.25` | Deadband around the setpoint. Inside it, the proportional term is disabled and the integral term is slowed down. Also in Kelvin when `temp_units` is `°F`. Seed for the first boot only. |
 | pwm_period | both | Optional | Seconds | `1200` | PWM cycle time. Seed for the first boot only. |
-| pid_starting_integral | both | Optional | `0.0` to `1.0` | `0.0` | Integral term after a boot, e.g. the typical average output in winter, to shorten settling after a reboot. |
+| pid_starting_integral | both | Optional | `0.0` to `1.0` | `0.0` | Integral term on the first boot, e.g. the typical average output in winter, to shorten the first settling. Afterwards the integral term is restored from flash. |
 | pid_sync_interval | both | Optional | Seconds | `10` | Interval for syncing the thermostat to the controllers. |
 | pid_sample_interval | both | Optional | Seconds | `30` | Interval between controller computations. The controllers average their output over 5 computations, or 15 inside the deadband, so this sets how long that smoothing lasts. |
 | pid_boost_duration | single | Optional | Minutes | `30` | Boost duration. Seed for the first boot only. |

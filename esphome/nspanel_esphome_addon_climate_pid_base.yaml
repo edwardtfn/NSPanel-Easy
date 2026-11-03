@@ -23,7 +23,7 @@ substitutions:
   pid_kd: "0.0"                 # Derivative term, not useful for slow systems
   pid_deadband: "0.25"          # Deadband around the setpoint in Kelvin (also when temp_units is °F)
   pwm_period: "1200"            # PWM cycle time in seconds
-  pid_starting_integral: "0.0"  # Integral term after boot (0.0..1.0), not persisted in flash
+  pid_starting_integral: "0.0"  # Integral term on the first boot (0.0..1.0); afterwards it is restored from flash
   pid_sync_interval: "10"       # Seconds between syncs thermostat -> PID controllers
   pid_sample_interval: "30"     # Seconds between PID computations, so the output averaging covers a fixed time
   pid_number_mode: "box"        # Input mode of the number entities in HA: "box" (type a value) or "slider"
@@ -44,16 +44,17 @@ esphome:
     - -D NSPANEL_EASY_ADDON_CLIMATE_PID
 
 globals:
-  # Integral term of each controller while it is off. The ESPHome PID keeps integrating in off mode,
-  # so a room left off for days would otherwise switch on with its integral wound up to the limit.
+  # Integral term of each controller while it is off, and across reboots. The ESPHome PID keeps integrating
+  # in off mode, so a room left off for days would otherwise switch on with its integral wound up to the limit.
+  # Stored in flash, so a reboot does not restart the settling of a slow system from pid_starting_integral.
   - id: pid_heat_integral_stored
     type: float
-    restore_value: false
+    restore_value: true
     initial_value: '${pid_starting_integral}'
 
   - id: pid_cool_integral_stored
     type: float
-    restore_value: false
+    restore_value: true
     initial_value: '-${pid_starting_integral}'
 
 climate:
@@ -118,7 +119,8 @@ script:
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Deadband: %.2f K", pid_tuning_deadband->state);
 
   # Keeps each controller's integral term while it is off: stores it when the controller switches off,
-  # and restores it when it switches on. Executed by the including package after every sync.
+  # and restores it when it switches on, which includes the first sync after a boot.
+  # Executed by the including package after every sync.
   - id: pid_integral_track
     mode: queued
     then:
@@ -159,6 +161,19 @@ script:
           ki: !lambda |-
             const float tn_s = pid_tuning_tn->state * 60.0f;
             return (tn_s > 0.0f) ? pid_tuning_kp->state / tn_s : 0.0f;
+
+interval:
+  # Saves the integral term of each running controller, so a reboot continues from it.
+  # Every 30 minutes, to keep flash writes low; a slow system's integral changes little in that time.
+  - interval: 30min
+    then:
+      - lambda: |-
+          if (pid_heat_embedded->mode != climate::CLIMATE_MODE_OFF) {
+            id(pid_heat_integral_stored) = pid_heat_embedded->get_integral_term();
+          }
+          if (pid_cool_embedded->mode != climate::CLIMATE_MODE_OFF) {
+            id(pid_cool_integral_stored) = pid_cool_embedded->get_integral_term();
+          }
 
 sensor:
   # The PID computes on every value of its sensor, and its output averaging counts values, not time.
