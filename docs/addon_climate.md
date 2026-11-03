@@ -250,6 +250,7 @@ In PID mode, the deadband and overrun keys of the thermostat only affect the act
 | pwm_period | both | Optional | Seconds | `1200` | PWM cycle time. Seed for the first boot only. |
 | pid_starting_integral | both | Optional | `0.0` to `1.0` | `0.0` | Integral term after a boot, e.g. the typical average output in winter, to shorten settling after a reboot. |
 | pid_sync_interval | both | Optional | Seconds | `10` | Interval for syncing the thermostat to the controllers. |
+| pid_sample_interval | both | Optional | Seconds | `30` | Interval between controller computations. The controllers average their output over 5 computations, or 15 inside the deadband, so this sets how long that smoothing lasts. |
 | pid_boost_duration | single | Optional | Minutes | `30` | Boost duration. Seed for the first boot only. |
 | pid_boost_chip | single | Optional | `chip01` to `chip07` or `""` | `""` (none) | User chip on the home page taken over for the boost. That chip can no longer be configured in the Blueprint. |
 | pid_boost_value | single | Optional | `value01` to `value04` or `""` | `""` (none) | Value slot on the climate page showing the remaining boost time. Leave the matching **Climate page - Entity State** empty in the Blueprint, as both would write to it. |

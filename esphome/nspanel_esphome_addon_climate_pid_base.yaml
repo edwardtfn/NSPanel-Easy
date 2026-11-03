@@ -25,6 +25,7 @@ substitutions:
   pwm_period: "1200"            # PWM cycle time in seconds
   pid_starting_integral: "0.0"  # Integral term after boot (0.0..1.0), not persisted in flash
   pid_sync_interval: "10"       # Seconds between syncs thermostat -> PID controllers
+  pid_sample_interval: "30"     # Seconds between PID computations, so the output averaging covers a fixed time
   pid_number_mode: "box"        # Input mode of the number entities in HA: "box" (type a value) or "slider"
   ### Entity names (override to keep existing entity IDs or to localize) ###
   pid_name_heat_output: "PID Heat output"
@@ -44,13 +45,13 @@ esphome:
 
 climate:
   # The ESPHome PID climate has no direction per mode (heat mode with both outputs would also cool),
-  # so heating and cooling use separate instances. Both regulate on the thermostat's temperature,
-  # which follows the Home Assistant reference when the Blueprint is set to.
+  # so heating and cooling use separate instances. Both regulate on pid_temperature, the thermostat's
+  # temperature sampled at a fixed rate.
   - platform: pid
     id: pid_heat_embedded
     name: PID Heat
     internal: true
-    sensor: thermostat_temperature
+    sensor: pid_temperature
     default_target_temperature: 21  # Overwritten by the sync right after boot
     heat_output: pid_heat_out
     control_parameters:
@@ -73,7 +74,7 @@ climate:
     id: pid_cool_embedded
     name: PID Cool
     internal: true
-    sensor: thermostat_temperature
+    sensor: pid_temperature
     default_target_temperature: 24  # Overwritten by the sync right after boot
     cool_output: pid_cool_out
     control_parameters:
@@ -126,6 +127,19 @@ script:
             return (tn_s > 0.0f) ? pid_tuning_kp->state / tn_s : 0.0f;
 
 sensor:
+  # The PID computes on every value of its sensor, and its output averaging counts values, not time.
+  # thermostat_temperature publishes irregularly (on changes, at least every 5 min), so it is sampled here
+  # at a fixed rate: the averaging then covers output_averaging_samples * pid_sample_interval seconds.
+  # It follows the Home Assistant reference when the Blueprint is set to, like the thermostat.
+  - platform: template
+    id: pid_temperature
+    internal: true
+    unit_of_measurement: °C
+    accuracy_decimals: 2
+    device_class: temperature
+    update_interval: ${pid_sample_interval}s
+    lambda: return thermostat_temperature->state;
+
   # Controller outputs and integral terms, for tuning in HA
   - platform: pid
     climate_id: pid_heat_embedded
