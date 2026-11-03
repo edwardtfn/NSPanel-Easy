@@ -14091,13 +14091,10 @@ actions:
           # starts with a new state, so an older state means this panel's settings did not change and are
           # already on the panel. Skipping it keeps an unrelated automation save from sending the full settings
           # to every panel at once (#636). The check above still runs, so a reload clears its notification.
+          # `this` is the state as a dict, so last_changed is an ISO string; as_timestamp() reads it.
           - condition: >-
-              {{
-                trigger.id != "automation_reloaded"
-                or this is not defined
-                or this.last_changed is not defined
-                or (now() - this.last_changed).total_seconds() < 60
-              }}
+              {%- set replaced = as_timestamp(this.get("last_changed"), 0) if this is defined and this is mapping else 0 -%}
+              {{ trigger.id != "automation_reloaded" or replaced == 0 or (as_timestamp(now()) - replaced) < 60 }}
 
           - delay: >  # Prevents all panels updating simultaneously in large systems
               {% set ns = namespace(panels=[]) %}
