@@ -101,6 +101,12 @@ static constexpr const char SUB_HVAC_ACTION[] = "hvac_action";
 /// @brief Consecutive unverified commits tolerated before refusing to commit again.
 static constexpr uint8_t SUB_MAX_UNVERIFIED_COMMITS = 3;
 
+/// @brief Push identifier buffer, null included. The Blueprint sends a 20-digit UTC timestamp.
+static constexpr uint8_t SUB_PUSH_ID_LEN = 24;
+
+/// @brief How long after a push ends a call from an older push is still treated as late and ignored.
+static constexpr uint32_t SUB_LATE_CALL_WINDOW_MS = 60000;
+
 /**
  * @brief Classification of a Home Assistant state string.
  *
@@ -606,6 +612,13 @@ void sub_subscribe_all();
  * the live binding immediately when the target matches; the entity is staged
  * and only takes effect after a restart.
  *
+ * Overlapping pushes are told apart by their push_id, which orders them by when
+ * they started: a newer push replaces the one being staged, and calls from an
+ * older push are ignored. This keeps bindings from different pushes from being
+ * committed together.
+ *
+ * @param push_id Identifier of the push, ordered by start time (compared as a
+ *                string). Every call of one push must carry the same value.
  * @param page Target page.
  * @param component Target component.
  * @param entity Home Assistant entity_id.
@@ -617,13 +630,17 @@ void sub_subscribe_all();
  * @param color_off RGB565 colour for the inactive state.
  * @param inverted Show while the entity is inactive.
  */
-void sub_push_binding(const char *page, const char *component, const char *entity, const char *device_class,
-                      const char *attribute, const char *icon_on, const char *icon_off, uint16_t color_on,
-                      uint16_t color_off, bool inverted);
+void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
+                      const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
+                      uint16_t color_on, uint16_t color_off, bool inverted);
 
 /**
  * @brief Close the blueprint's push.
  *
+ * The end marker of an older push than the one being staged is ignored. One
+ * of a newer push abandons the staged push before being processed.
+ *
+ * @param push_id Identifier of the push, as sent with its bindings.
  * @param count Number of bindings the blueprint sent. A mismatch discards the
  *              push and leaves the persisted set untouched.
  * @return true when the staged set differs from the persisted one, was saved
@@ -631,7 +648,7 @@ void sub_push_binding(const char *page, const char *component, const char *entit
  *         changed, the push was rejected, or the save failed -- restarting on an
  *         unpersisted set would reload the old bindings and loop forever.
  */
-bool sub_push_end(uint16_t count);
+bool sub_push_end(const char *push_id, uint16_t count);
 
 /**
  * @brief Commit a push that never received its end marker.
