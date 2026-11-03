@@ -43,6 +43,19 @@ esphome:
   build_flags:
     - -D NSPANEL_EASY_ADDON_CLIMATE_PID
 
+globals:
+  # Integral term of each controller while it is off. The ESPHome PID keeps integrating in off mode,
+  # so a room left off for days would otherwise switch on with its integral wound up to the limit.
+  - id: pid_heat_integral_stored
+    type: float
+    restore_value: false
+    initial_value: '${pid_starting_integral}'
+
+  - id: pid_cool_integral_stored
+    type: float
+    restore_value: false
+    initial_value: '-${pid_starting_integral}'
+
 climate:
   # The ESPHome PID climate has no direction per mode (heat mode with both outputs would also cool),
   # so heating and cooling use separate instances. Both regulate on pid_temperature, the thermostat's
@@ -58,7 +71,6 @@ climate:
       kp: ${pid_kp}
       ki: ${ (pid_kp | float) / ((pid_tn | float) * 60) }
       kd: ${pid_kd}
-      starting_integral_term: ${pid_starting_integral}
       min_integral: 0.0  # Heating: error and integral term are positive
       max_integral: 1.0
       output_averaging_samples: 5
@@ -81,7 +93,6 @@ climate:
       kp: ${pid_kp}
       ki: ${ (pid_kp | float) / ((pid_tn | float) * 60) }
       kd: ${pid_kd}
-      starting_integral_term: -${pid_starting_integral}
       min_integral: -1.0  # Cooling: error and integral term are negative
       max_integral: 0.0
       output_averaging_samples: 5
@@ -105,6 +116,29 @@ script:
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Tn: %.0f min", pid_tuning_tn->state);
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  PWM period: %.0f s", pid_tuning_pwm_period->state);
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Deadband: %.2f K", pid_tuning_deadband->state);
+
+  # Keeps each controller's integral term while it is off: stores it when the controller switches off,
+  # and restores it when it switches on. Executed by the including package after every sync.
+  - id: pid_integral_track
+    mode: queued
+    then:
+      - lambda: |-
+          auto track = [](pid::PIDClimate *pid, bool &was_on, float &stored, const char *name) {
+            const bool on = (pid->mode != climate::CLIMATE_MODE_OFF);
+            if (on == was_on) return;
+            was_on = on;
+            if (on) {
+              pid->set_starting_integral_term(stored);
+              ESP_LOGD("${TAG_ADDON_CLIMATE_PID}", "%s on: integral restored to %.3f", name, stored);
+            } else {
+              stored = pid->get_integral_term();
+              ESP_LOGD("${TAG_ADDON_CLIMATE_PID}", "%s off: integral %.3f stored", name, stored);
+            }
+          };
+          static bool heat_on = false;
+          static bool cool_on = false;
+          track(pid_heat_embedded, heat_on, id(pid_heat_integral_stored), "PID heat");
+          track(pid_cool_embedded, cool_on, id(pid_cool_integral_stored), "PID cool");
 
   # Applies kp and Tn from the number entities to both controllers (ki = kp / Tn in seconds)
   - id: apply_pid_tuning
@@ -241,6 +275,9 @@ button:
     on_press:
       - climate.pid.reset_integral_term: pid_heat_embedded
       - climate.pid.reset_integral_term: pid_cool_embedded
+      - lambda: |-
+          id(pid_heat_integral_stored) = 0.0f;
+          id(pid_cool_integral_stored) = 0.0f;
 
 packages:
   climate_base_package: !include nspanel_esphome_addon_climate_base.yaml

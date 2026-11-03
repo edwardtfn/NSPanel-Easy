@@ -211,6 +211,7 @@ How it works:
 - The controller output (0-100 %) is turned into on/off cycles of the panel relay by a `slow_pwm` output.
 - The controllers regulate on the same temperature as the thermostat, so they follow the calibration reference as described in [Temperature source](#temperature-source).
 - The regulation runs entirely on the panel and keeps working without Home Assistant.
+- While a controller is off, its integral term is kept, so it continues from the learned value when switched on again.
 - *Single only:* the thermostat offers the modes `off` and `heat`, which act as "room off/on".
   The operating mode (heat or cool) is read from `pid_mode_entity` and stored in flash,
   so the panel keeps the last mode while Home Assistant is unavailable.

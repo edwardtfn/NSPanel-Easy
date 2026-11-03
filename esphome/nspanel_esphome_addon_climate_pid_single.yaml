@@ -94,6 +94,8 @@ text_sensor:
           // Drop the integral terms, so nothing from the previous mode carries over
           pid_heat_embedded->reset_integral_term();
           pid_cool_embedded->reset_integral_term();
+          id(pid_heat_integral_stored) = 0.0f;
+          id(pid_cool_integral_stored) = 0.0f;
           id(pid_valve_pwm).set_level(0.0f);
       - script.execute: pid_sync
       - component.update: pid_mode_active
@@ -488,6 +490,7 @@ script:
           }
           if (!room_on && id(pid_boost_active)) pid_boost_stop->execute();  // Room off ends the boost
           if (!room_on) id(pid_valve_pwm).set_level(0.0f);
+      - script.execute: pid_integral_track
 
 interval:
   - interval: ${pid_sync_interval}s

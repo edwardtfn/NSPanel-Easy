@@ -138,6 +138,7 @@ interval:
           }
 
           last_mode = int(mode);
+      - script.execute: pid_integral_track
 
 packages:
   climate_pid_base_package: !include nspanel_esphome_addon_climate_pid_base.yaml
