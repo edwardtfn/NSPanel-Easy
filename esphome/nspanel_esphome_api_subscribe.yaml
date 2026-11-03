@@ -47,6 +47,7 @@ api:
         inverted: bool        # Render as visible while the entity is inactive
       then:
         - lambda: |-
+            blueprint_setting_received();
             sub_push_binding(
               page.c_str(),
               component.c_str(),

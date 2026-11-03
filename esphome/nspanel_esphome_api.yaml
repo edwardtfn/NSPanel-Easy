@@ -73,6 +73,7 @@ api:
         color: int[]  # New color for the component, specified as an RGB array (e.g., [255, 0, 0] for red).
       then:
         - lambda: |-
+            if (page == "mem") blueprint_setting_received();
             const uint16_t color565 = rgbTo565(color);
             ESP_LOGV("${TAG_API}", "Action: component_color");
             ESP_LOGV("${TAG_API}", "  page: %s", page.c_str());
@@ -120,6 +121,7 @@ api:
               return;
             }  // if (page == "mem" && id == "details_overlap")
 
+            if (page == "mem") blueprint_setting_received();
             action_component_text_list->execute(
               page.c_str(),
               id.c_str(),
@@ -134,6 +136,7 @@ api:
         val: int      # New integer value to set for the component. Adjust based on the data type you're displaying.
       then:
         - lambda: |-
+            if (page == "mem") blueprint_setting_received();
             action_component_val->execute(
               page.c_str(),
               id.c_str(),
