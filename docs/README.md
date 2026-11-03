@@ -45,7 +45,8 @@ Optional packages that extend the base firmware:
 - [Add-on: Bluetooth Proxy](addon_bluetooth_proxy.md) — extend Home Assistant's
   Bluetooth range and track BLE devices through the panel.
 - [Add-on: Climate](addon_climate.md) — use the panel's relays as a local
-  thermostat (heater, cooler, or both) that keeps working without Wi-Fi.
+  thermostat (heater, cooler, or both) that keeps working without Wi-Fi,
+  with on/off or PI/PWM control for slow systems such as underfloor heating.
 - [Add-on: Cover](addon_cover.md) — drive a cover motor from the panel's
   relays.
 - [Add-on: Display Light](addon_display_light.md) — expose the display

@@ -22,7 +22,8 @@ Don't use it to directly power your cooler/heater if it exceeds the panel specif
 
 ## Installation
 
-You will need to add the reference to `addon_climate_heat`, `addon_climate_cool` or `addon_climate_dual` files on your ESPHome settings in the `package` section
+You will need to add the reference to `addon_climate_heat`, `addon_climate_cool` or `addon_climate_dual`
+(or one of the [PID packages](#pid-mode-pipwm-control-for-slow-systems)) files on your ESPHome settings in the `package` section
 and after the `remote_package` (base code), as shown below (for `heat` in this example):
 
 > [!NOTE]
@@ -66,6 +67,8 @@ packages:
       # - esphome/nspanel_esphome_addon_climate_cool.yaml
       - esphome/nspanel_esphome_addon_climate_heat.yaml
       # - esphome/nspanel_esphome_addon_climate_dual.yaml
+      # - esphome/nspanel_esphome_addon_climate_pid_single.yaml  # PI/PWM control, see PID mode below
+      # - esphome/nspanel_esphome_addon_climate_pid_dual.yaml    # PI/PWM control, see PID mode below
       # - esphome/nspanel_esphome_addon_cover.yaml
       # - esphome/nspanel_esphome_addon_display_light.yaml  # Show the display as a light in Home Assistant
 
@@ -206,6 +209,7 @@ How it works:
   so the climate page, the climate chip and the Blueprint work as usual. It only switches the dummy relay `relay_0`.
 - Two internal PID controllers (heat and cool) do the actual control and are synced with the thermostat every `pid_sync_interval` seconds.
 - The controller output (0-100 %) is turned into on/off cycles of the panel relay by a `slow_pwm` output.
+- The controllers regulate on the same temperature as the thermostat, so they follow the calibration reference as described in [Temperature source](#temperature-source).
 - The regulation runs entirely on the panel and keeps working without Home Assistant.
 - *Single only:* the thermostat offers the modes `off` and `heat`, which act as "room off/on".
   The operating mode (heat or cool) is read from `pid_mode_entity` and stored in flash,
@@ -218,10 +222,10 @@ How it works:
 > [!IMPORTANT]
 > Include **only one** climate package: either `pid_single` or `pid_dual`, not together with `climate_heat`, `climate_cool`, `climate_dual` or each other.
 > The PID packages include the climate base themselves.
-> The `climate_backup` add-on must not be combined with the PID packages, as both would switch the same relays.
+> The `climate_backup` add-on cannot be combined with the PID packages, as it follows the thermostat's actions, which do not drive the relays here; this is checked at build time.
 > The integral term is not stored in flash; after a reboot the controller needs some time to settle again (see `pid_starting_integral`).
-> Without Home Assistant the panel reboots after `api: reboot_timeout`, and without Wi-Fi after `wifi: reboot_timeout`.
-> For autonomous operation, set both to `0s` in your local yaml.
+> Without Home Assistant the panel reboots after `api: reboot_timeout` (`60min` in this project),
+> and without Wi-Fi after `wifi: reboot_timeout` (`15min` by default in ESPHome). For autonomous operation, set both to `0s` in your local yaml.
 > Thermostatic radiator heads, if present, must be set well above the target temperature, otherwise two controllers fight each other.
 
 ### PID configuration
@@ -247,7 +251,8 @@ In PID mode, the deadband and overrun keys of the thermostat only affect the act
 | pid_starting_integral | both | Optional | `0.0` to `1.0` | `0.0` | Integral term after a boot, e.g. the typical average output in winter, to shorten settling after a reboot. |
 | pid_sync_interval | both | Optional | Seconds | `10` | Interval for syncing the thermostat to the controllers. |
 | pid_boost_duration | single | Optional | Minutes | `30` | Boost duration. Seed for the first boot only. |
-| pid_boost_chip | single | Optional | `chip01` to `chip07` or `""` | `chip07` | User chip on the home page taken over for the boost. It can no longer be configured in the Blueprint. `""` disables the boost chip. |
+| pid_boost_chip | single | Optional | `chip01` to `chip07` or `""` | `""` (none) | User chip on the home page taken over for the boost. That chip can no longer be configured in the Blueprint. |
+| pid_boost_value | single | Optional | `value01` to `value04` or `""` | `""` (none) | Value slot on the climate page showing the remaining boost time. Leave the matching **Climate page - Entity State** empty in the Blueprint, as both would write to it. |
 | pid_number_mode | both | Optional | `box` or `slider` | `box` | Input mode of the number entities in Home Assistant: type a value or use a slider. |
 | pid_name_* | both | Optional | String | English names, see below | Entity names, e.g. to localize them or to keep existing entity IDs. |
 
@@ -284,9 +289,10 @@ In cooling mode, this means full cooling.
 The controllers keep running in the background; when the boost ends, the valve is handed back to the controller of the active operating mode.
 Turning the switch off ends the boost early, turning it on again restarts the duration.
 The boost is ignored while the room is off, and it ends when the room is switched off or the operating mode changes.
-On the display, the boost has its own chip (rocket, orange when heating, blue when cooling) in the user chip slot set by `pid_boost_chip`.
-The chip is driven by the panel itself and also works without Home Assistant; that slot is no longer available in the Blueprint.
-On the climate page, a rocket button starts and stops the boost, and the remaining time is shown in minutes next to an hourglass while it runs.
+On the climate page, a rocket button starts and stops the boost.
+Optionally, the boost can also have its own chip on the home page (rocket, orange when heating, blue when cooling), in the user chip slot set by `pid_boost_chip`,
+and its remaining time can be shown in minutes next to an hourglass in the climate page value slot set by `pid_boost_value`.
+Both are driven by the panel itself and also work without Home Assistant; the slots they use are no longer available in the Blueprint.
 The climate chip keeps showing the active fire or snowflake, as the valve is open.
 The `PID Boost end` sensor holds the end time; Home Assistant shows it as a live countdown (e.g. "in 25 minutes").
 It needs a synchronized clock and stays unknown if the panel has no time from Home Assistant yet.
