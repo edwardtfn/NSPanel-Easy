@@ -19,6 +19,9 @@
 ##### - Boost: a switch opens the valve fully for a set time, bypassing the controller.         #####
 #####   It has a button on the climate page and, optionally, a chip on the home page and its    #####
 #####   remaining time on the climate page, all driven locally, so they also work without HA.   #####
+##### - Presets Comfort, Eco and Off. The comfort and eco temperatures follow Home Assistant    #####
+#####   entities (e.g. the helpers of a heating schedule) and are stored in flash. The panel    #####
+#####   marks the matching preset when the setpoint is set to one of them from elsewhere.       #####
 #####################################################################################################
 ##### ATTENTION: Do NOT combine with climate_heat, climate_cool, climate_dual,                  #####
 ##### climate_pid_dual or climate_backup. The climate base is included by this file.            #####
@@ -37,6 +40,11 @@ substitutions:
   pid_boost_duration: "30"                    # Boost duration in minutes. Seed for the first boot only
   pid_boost_chip: ""                          # User chip (chip01..chip07) taken over for the boost, or "" for none
   pid_boost_value: ""                         # Climate page value slot (value01..value04) for the remaining time, or "" for none
+  ### Presets Comfort and Eco: temperatures from Home Assistant, seeds until the first value arrives ###
+  pid_comfort_entity: input_number.climate_comfort  # HA entity with the comfort temperature (in temp_units)
+  pid_eco_entity: input_number.climate_eco          # HA entity with the eco temperature (in temp_units)
+  pid_comfort_temp: ${70 if TEMP_UNIT_IS_FAHRENHEIT else 21}  # Comfort temperature until the entity reports
+  pid_eco_temp: ${64 if TEMP_UNIT_IS_FAHRENHEIT else 18}      # Eco temperature until the entity reports
   ### Entity names (override to keep existing entity IDs or to localize) ###
   pid_name_mode: "PID Operating mode"
   pid_name_boost: "PID Boost"
@@ -63,6 +71,16 @@ globals:
     type: uint32_t
     restore_value: false
     initial_value: '0'  # Must be quoted: ESPHome expects the C++ initializer as a string
+
+  - id: pid_comfort_value  # Comfort temperature from Home Assistant (°C), NAN until it reports
+    type: float
+    restore_value: true
+    initial_value: 'NAN'  # Must be quoted: ESPHome expects the C++ initializer as a string
+
+  - id: pid_eco_value  # Eco temperature from Home Assistant (°C), NAN until it reports
+    type: float
+    restore_value: true
+    initial_value: 'NAN'  # Must be quoted: ESPHome expects the C++ initializer as a string
 
 text_sensor:
   - platform: homeassistant  # Central operating mode from Home Assistant
@@ -131,13 +149,20 @@ climate:
       - switch.turn_on: relay_0   # Dummy, the valve relay is driven by the PID controllers
     idle_action:
       - switch.turn_off: relay_0  # Dummy
+    # Comfort and Eco switch the room on. Their temperatures here are seeds only:
+    # pid_apply_preset replaces them with the values from Home Assistant.
     preset:
       - name: "Off"
         default_target_temperature_low: ${target_low} ${temp_units}
         mode: "off"
-      - name: Home
-        default_target_temperature_low: ${target_low} ${temp_units}
+      - name: Comfort
+        default_target_temperature_low: ${pid_comfort_temp} ${temp_units}
         mode: "heat"
+      - name: Eco
+        default_target_temperature_low: ${pid_eco_temp} ${temp_units}
+        mode: "heat"
+    preset_change:
+      - script.execute: pid_apply_preset
 
   # The controllers are defined in pid_base; their action drives the climate chip here
   - id: !extend pid_heat_embedded
@@ -456,6 +481,62 @@ script:
           if (idx != UINT8_MAX && idx >= CHIP_IDX_USER) chip_render(idx);
       - script.execute: pid_refresh_boost_ui
 
+  ###################################################################################################
+  ##### Presets: ESPHome presets have fixed temperatures, so after Comfort or Eco is applied,   #####
+  ##### the setpoint is replaced with the value from Home Assistant (stored in flash).          #####
+  ###################################################################################################
+  - id: pid_apply_preset
+    mode: restart
+    then:
+      - delay: 10ms  # Let the thermostat finish applying the preset first
+      - lambda: |-
+          if (!thermostat_embedded->preset.has_value()) return;
+          const climate::ClimatePreset preset = thermostat_embedded->preset.value();
+          float target = NAN;
+          if (preset == climate::CLIMATE_PRESET_COMFORT) {
+            target = id(pid_comfort_value);
+          } else if (preset == climate::CLIMATE_PRESET_ECO) {
+            target = id(pid_eco_value);
+          } else {
+            return;
+          }
+          if (std::isnan(target)) return;  // No value from Home Assistant yet: keep the seed
+          if (fabsf(thermostat_embedded->target_temperature - target) < 0.01f) return;
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Preset %s: setpoint %.1f°C",
+                   preset == climate::CLIMATE_PRESET_COMFORT ? "comfort" : "eco", target);
+          auto call = thermostat_embedded->make_call();
+          call.set_target_temperature(target);
+          call.perform();
+
+  # Marks Comfort or Eco when the setpoint was set to its value from elsewhere (e.g. a schedule).
+  # A setpoint that matches neither keeps the last preset, as ESPHome cannot unselect a preset.
+  - id: pid_match_preset
+    mode: single
+    then:
+      - lambda: |-
+          if (thermostat_embedded->mode == climate::CLIMATE_MODE_OFF) return;
+          const float target = thermostat_embedded->target_temperature;
+          if (std::isnan(target)) return;
+          climate::ClimatePreset match = climate::CLIMATE_PRESET_NONE;
+          if (!std::isnan(id(pid_comfort_value)) && fabsf(target - id(pid_comfort_value)) < 0.01f) {
+            match = climate::CLIMATE_PRESET_COMFORT;
+          } else if (!std::isnan(id(pid_eco_value)) && fabsf(target - id(pid_eco_value)) < 0.01f) {
+            match = climate::CLIMATE_PRESET_ECO;
+          } else {
+            return;
+          }
+          if (!thermostat_embedded->has_custom_preset() && thermostat_embedded->preset.has_value() &&
+              thermostat_embedded->preset.value() == match) {
+            return;
+          }
+          ESP_LOGD("${TAG_ADDON_CLIMATE_PID}", "Setpoint matches preset %s",
+                   match == climate::CLIMATE_PRESET_COMFORT ? "comfort" : "eco");
+          // Preset and setpoint in one call: the setpoint overrides the seed of the preset
+          auto call = thermostat_embedded->make_call();
+          call.set_preset(match);
+          call.set_target_temperature(target);
+          call.perform();
+
   # Copies room on/off, setpoint and operating mode from the thermostat facade to the controllers
   - id: pid_sync
     mode: queued
@@ -500,9 +581,48 @@ interval:
   - interval: ${pid_sync_interval}s
     then:
       - script.execute: pid_sync
+      - script.execute: pid_match_preset
   - interval: 5s
     then:
       - script.execute: pid_boost_tick
+
+sensor:
+  # Comfort and eco temperatures for the presets, from Home Assistant
+  - platform: homeassistant
+    id: pid_comfort_from_ha
+    entity_id: ${pid_comfort_entity}
+    internal: true
+    on_value:
+      - lambda: |-
+          if (std::isnan(x)) return;
+          #if NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          const float value = fahrenheit_to_celsius(x);
+          #else   // Celsius
+          const float value = x;
+          #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          if (!std::isnan(id(pid_comfort_value)) && fabsf(id(pid_comfort_value) - value) < 0.01f) return;
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Comfort temperature: %.1f°C", value);
+          id(pid_comfort_value) = value;
+      - script.execute: pid_apply_preset  # Follow the new value while Comfort is active
+      - script.execute: pid_match_preset
+
+  - platform: homeassistant
+    id: pid_eco_from_ha
+    entity_id: ${pid_eco_entity}
+    internal: true
+    on_value:
+      - lambda: |-
+          if (std::isnan(x)) return;
+          #if NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          const float value = fahrenheit_to_celsius(x);
+          #else   // Celsius
+          const float value = x;
+          #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          if (!std::isnan(id(pid_eco_value)) && fabsf(id(pid_eco_value) - value) < 0.01f) return;
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Eco temperature: %.1f°C", value);
+          id(pid_eco_value) = value;
+      - script.execute: pid_apply_preset  # Follow the new value while Eco is active
+      - script.execute: pid_match_preset
 
 number:
   - id: !extend pid_tuning_pwm_period

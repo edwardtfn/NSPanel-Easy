@@ -220,6 +220,8 @@ How it works:
   The display follows the operating mode: the climate chip and the icon on the climate page show a fire (heat) or a snowflake (cool),
   colored while the valve is driven and gray while idle. On the climate page, the mode button shows heat or cool accordingly;
   both buttons only switch the room on, the operating mode itself is changed in Home Assistant.
+- Presets: the dual add-on keeps `Off` and `Home`, as described in [Presets](#presets).
+  The single add-on offers `Comfort`, `Eco` and `Off` instead, see [PID presets](#pid-presets-single-only).
 
 > [!IMPORTANT]
 > Include **only one** climate package: either `pid_single` or `pid_dual`, not together with `climate_heat`, `climate_cool`, `climate_dual` or each other.
@@ -258,6 +260,10 @@ In PID mode, the deadband and overrun keys of the thermostat only affect the act
 | pid_boost_duration | single | Optional | Minutes | `30` | Boost duration. Seed for the first boot only. |
 | pid_boost_chip | single | Optional | `chip01` to `chip07` or `""` | `""` (none) | User chip on the home page taken over for the boost. That chip can no longer be configured in the Blueprint. |
 | pid_boost_value | single | Optional | `value01` to `value04` or `""` | `""` (none) | Value slot on the climate page showing the remaining boost time. Leave the matching **Climate page - Entity State** empty in the Blueprint, as both would write to it. |
+| pid_comfort_entity | single | Optional | Entity ID in Home Assistant | `input_number.climate_comfort` | Entity with the temperature of the `Comfort` preset, in `temp_units`. |
+| pid_eco_entity | single | Optional | Entity ID in Home Assistant | `input_number.climate_eco` | Entity with the temperature of the `Eco` preset, in `temp_units`. |
+| pid_comfort_temp | single | Optional | Number in `temp_units` | `21` (°C) or `70` (°F) | Temperature of the `Comfort` preset until `pid_comfort_entity` has reported a value. |
+| pid_eco_temp | single | Optional | Number in `temp_units` | `18` (°C) or `64` (°F) | Temperature of the `Eco` preset until `pid_eco_entity` has reported a value. |
 | pid_number_mode | both | Optional | `box` or `slider` | `box` | Input mode of the number entities in Home Assistant: type a value or use a slider. |
 | pid_name_* | both | Optional | String | English names, see below | Entity names, e.g. to localize them or to keep existing entity IDs. |
 
@@ -305,6 +311,19 @@ It needs a synchronized clock and stays unknown if the panel has no time from Ho
 > [!NOTE]
 > The integral term keeps working during the boost. As the room approaches the setpoint faster,
 > it usually builds up less than without the boost, but a slight overshoot after the boost is possible.
+
+### PID presets (single only)
+
+The single add-on offers the presets `Comfort`, `Eco` and `Off` on the climate page and in Home Assistant.
+`Comfort` and `Eco` switch the room on and set the setpoint to the value of `pid_comfort_entity` or `pid_eco_entity`.
+These values are stored in flash, so the presets also work while Home Assistant is unavailable.
+When the value changes while its preset is active, the setpoint follows.
+Until an entity has reported a value, the preset uses `pid_comfort_temp` or `pid_eco_temp`.
+
+When the setpoint is set to the comfort or eco value from elsewhere, e.g. by a schedule in Home Assistant, the panel marks the matching preset within `pid_sync_interval` seconds.
+
+> [!NOTE]
+> A setpoint that matches neither value keeps the last preset marked, as ESPHome cannot unselect a preset.
 
 ### PID tuning
 
