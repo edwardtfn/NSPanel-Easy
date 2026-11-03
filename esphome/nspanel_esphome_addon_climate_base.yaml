@@ -49,6 +49,8 @@ climate:
       # Home Assistant applies the step in its own unit without converting it, and the climate page uses it as is.
       # With a unit, ESPHome 2026.11+ converts a °F step into °C (1 °F becomes 0.556, which Home Assistant rounds
       # to 0.6 and applies as °F). See https://github.com/edwardtfn/NSPanel-Easy/issues/646
+      # If Home Assistant starts converting the step (https://github.com/home-assistant/core/issues/190241),
+      # this must be reverted to steps with `${temp_units}`, and the climate page must convert it again.
       temperature_step:
         target_temperature: ${1 if TEMP_UNIT_IS_FAHRENHEIT else 0.5}
         current_temperature: ${1 if TEMP_UNIT_IS_FAHRENHEIT else 0.1}
