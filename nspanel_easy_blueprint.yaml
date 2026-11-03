@@ -5233,13 +5233,13 @@ variables:
   # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
   # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
   # While it is 'next' (development builds), the minimum firmware check is skipped.
-  min_esphome_version: 2026.11.0
+  min_esphome_version: next
 
   # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
   # and MAJOR when it follows a firmware change that removed an action or changed its parameters.
   # Kept as a list: Home Assistant would convert "1.10" to the number 1.1.
-  api_version: [1, 0]
+  api_version: [2, 0]
 
   # Firmware version as reported by the ESPHome integration in the device registry.
   # Format: "<project_version> (ESPHome <compiler_version>)", e.g. "2026.8.5 (ESPHome 2026.6.0)".
@@ -8089,6 +8089,9 @@ actions:
                           - &push_subscriptions
                             alias: Push API subscriptions
                             sequence:
+                              # Orders overlapping pushes by start time, so the panel keeps only the newest one
+                              - variables:
+                                  push_id: '{{ utcnow().strftime("%Y%m%d%H%M%S%f") }}'
                               - repeat:
                                   for_each: '{{ api_subscriptions }}'
                                   sequence:
@@ -8145,6 +8148,7 @@ actions:
 
                                     - action: 'esphome.{{ action_prefix }}_api_subscribe'
                                       data:
+                                        push_id: '{{ push_id }}'
                                         page: '{{ repeat.item.page }}'
                                         component: '{{ repeat.item.component }}'
                                         entity: '{{ entity_id }}'
@@ -8160,6 +8164,7 @@ actions:
 
                               - action: 'esphome.{{ action_prefix }}_api_subscribe_end'
                                 data:
+                                  push_id: '{{ push_id }}'
                                   count: '{{ api_subscriptions | count }}'
                                 continue_on_error: true
 

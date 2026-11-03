@@ -63,6 +63,35 @@ static uint16_t sub_staged = 0;
 /// @brief Whether a push is currently in progress.
 static bool sub_pushing = false;
 
+/// @brief Identifier of the push in progress.
+static char sub_push_id[SUB_PUSH_ID_LEN] = "";
+
+/// @brief Identifier of the last push that ended, so a late call from an older push cannot start a new one.
+static char sub_last_push_id[SUB_PUSH_ID_LEN] = "";
+
+/// @brief When the last push ended, to limit how long sub_last_push_id is enforced.
+static uint32_t sub_last_push_end_ms = 0;
+
+/**
+ * @brief Whether a call belongs to an older push than the newest one seen.
+ *
+ * While a push is in progress, the call is compared with that push. Otherwise,
+ * it is compared with the last push that ended, but only for
+ * SUB_LATE_CALL_WINDOW_MS: a late call from an older push arrives within
+ * seconds, and the limit keeps a Home Assistant clock that moved backwards
+ * from blocking every later push.
+ *
+ * @param push_id Identifier of the call's push.
+ * @return true when the call must be ignored.
+ */
+static bool sub_push_superseded(const char *push_id) {
+  if (sub_pushing)
+    return strcmp(push_id, sub_push_id) < 0;
+  if ((uint32_t) (App.get_loop_component_start_time() - sub_last_push_end_ms) >= SUB_LATE_CALL_WINDOW_MS)
+    return false;
+  return strcmp(push_id, sub_last_push_id) < 0;
+}
+
 /// @brief Consecutive commits that never received an end marker.
 static uint8_t sub_unverified = 0;
 
@@ -363,13 +392,29 @@ void sub_subscribe_all() {
 #endif  // USE_API_HOMEASSISTANT_STATES
 }
 
-void sub_push_binding(const char *page, const char *component, const char *entity, const char *device_class,
-                      const char *attribute, const char *icon_on, const char *icon_off, uint16_t color_on,
-                      uint16_t color_off, bool inverted) {
+void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
+                      const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
+                      uint16_t color_on, uint16_t color_off, bool inverted) {
   if (!sub_target_allowed(page, component)) {
     ESP_LOGW(TAG, "%s.%s is driven locally and cannot be bound", page, component);
     return;
   }
+
+  // Overlapping blueprint runs (e.g. a configuration change while another run
+  // is still pushing) interleave their calls. Only the newest push is staged:
+  // a call from an older push, including a late one after a newer push ended,
+  // is ignored, so bindings from different pushes are never committed together.
+  if (sub_push_superseded(push_id)) {
+    ESP_LOGD(TAG, "%s.%s from superseded push '%s' ignored", page, component, push_id);
+    return;
+  }
+  if (sub_pushing && strcmp(push_id, sub_push_id) > 0) {
+    ESP_LOGW(TAG, "Push '%s' superseded by '%s'; discarding %" PRIu16 " staged binding(s)", sub_push_id, push_id,
+             sub_staged);
+    memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
+    sub_staged = 0;
+    sub_copy(sub_push_id, sizeof(sub_push_id), push_id);
+  }  // if newer push
 
   // The first binding after a completed or abandoned push starts a new one.
   if (!sub_pushing) {
@@ -383,15 +428,15 @@ void sub_push_binding(const char *page, const char *component, const char *entit
     memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
     sub_staged = 0;
     sub_pushing = true;
-    ESP_LOGD(TAG, "Binding push started");
-  }
+    sub_copy(sub_push_id, sizeof(sub_push_id), push_id);
+    ESP_LOGD(TAG, "Binding push '%s' started", sub_push_id);
+  }  // if no push in progress
 
-  // Overlapping blueprint runs (e.g. a burst of automation reloads) interleave
-  // their pushes in this single staging buffer. Each run sends every target
-  // once, so a target that is already staged means another run has started a
-  // push. Restart staging with it: whatever was staged is now a mixture of runs
-  // and must never be committed. The end markers of the interrupted runs then
-  // fail the count check and are discarded.
+  // Each run sends every target once, so a target that is already staged
+  // means another run reused the same push_id (e.g. a caller sending a fixed
+  // value). Restart staging with it: whatever was staged is now a mixture of
+  // runs and must never be committed. The end markers of the interrupted runs
+  // then fail the count check and are discarded.
   if (sub_find_target(sub_staging, sub_staged, page, component) < sub_staged) {
     ESP_LOGW(TAG, "%s.%s pushed twice; a new push started, discarding %" PRIu16 " staged binding(s)", page, component,
              sub_staged);
@@ -555,9 +600,26 @@ static void sub_push_release() {
   sub_staging = nullptr;
   sub_staged = 0;
   sub_pushing = false;
+  sub_copy(sub_last_push_id, sizeof(sub_last_push_id), sub_push_id);
+  sub_last_push_end_ms = App.get_loop_component_start_time();
 }
 
-bool sub_push_end(uint16_t count) {
+bool sub_push_end(const char *push_id, uint16_t count) {
+  // Match the end marker to its push, see sub_push_binding().
+  if (sub_push_superseded(push_id)) {
+    ESP_LOGD(TAG, "End marker of superseded push '%s' ignored", push_id);
+    return false;
+  }
+  if (sub_pushing && strcmp(push_id, sub_push_id) > 0) {
+    // A newer push sent its end marker before any binding reached the panel,
+    // so it can only be an empty push. It replaces the one being staged.
+    ESP_LOGW(TAG, "Push '%s' superseded by '%s'; discarding %" PRIu16 " staged binding(s)", sub_push_id, push_id,
+             sub_staged);
+    sub_push_release();
+  }  // if newer push
+  sub_copy(sub_last_push_id, sizeof(sub_last_push_id), push_id);
+  sub_last_push_end_ms = App.get_loop_component_start_time();
+
   // A push containing no bindings never opens, because sub_push_binding() is
   // what starts one. The blueprint still sends the end marker when every
   // component has been unconfigured, so treat that as an explicit empty set --
