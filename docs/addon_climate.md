@@ -227,7 +227,9 @@ How it works:
 > The `climate_backup` add-on cannot be combined with the PID packages, as it follows the thermostat's actions, which do not drive the relays here; this is checked at build time.
 > After a reboot, the controllers continue from the integral term saved up to 30 minutes earlier; only the first boot starts from `pid_starting_integral`.
 > Without Home Assistant the panel reboots after `api: reboot_timeout` (`60min` in this project),
-> and without Wi-Fi after `wifi: reboot_timeout` (`15min` by default in ESPHome). For autonomous operation, set both to `0s` in your local yaml.
+> and without Wi-Fi after `wifi: reboot_timeout` (`15min` by default in ESPHome). Each reboot briefly interrupts the regulation and ends a running boost;
+> the controllers then continue from their saved integral term. Setting both to `0s` in your local yaml avoids these reboots during long outages,
+> but a panel whose connection hangs then stays offline until it is power-cycled.
 > Thermostatic radiator heads, if present, must be set well above the target temperature, otherwise two controllers fight each other.
 
 ### PID configuration
@@ -388,11 +390,6 @@ substitutions:
 
 # Customization area
 ##### My customization - Start #####
-api:
-  reboot_timeout: 0s  # Keep regulating without Home Assistant
-
-wifi:
-  reboot_timeout: 0s  # Keep regulating without Wi-Fi
 ##### My customization - End #####
 
 # Basic and optional configurations
@@ -425,11 +422,6 @@ substitutions:
 
 # Customization area
 ##### My customization - Start #####
-api:
-  reboot_timeout: 0s
-
-wifi:
-  reboot_timeout: 0s
 ##### My customization - End #####
 
 # Basic and optional configurations
