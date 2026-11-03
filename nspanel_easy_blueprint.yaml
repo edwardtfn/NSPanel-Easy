@@ -6338,7 +6338,9 @@ conditions:
     {#- The trigger fires on every change of the entity, including attribute-only updates
         (e.g. internal values of Better Thermostat, or a new current_temperature). While the
         climate page is not visible, only the climate chip is updated, and it shows only the
-        state, hvac_action and icon. A removed entity (no new state) has nothing to show. #}
+        state, hvac_action, icon and color. The embedded thermostat has no chip from the Blueprint
+        (the firmware handles it), so it needs the climate page. A removed entity (no new state)
+        has nothing to show. #}
     {%- if trigger.id != "climate_state" -%}
       true
     {%- else -%}
@@ -6346,13 +6348,18 @@ conditions:
       {%- set new_state = trigger.event.data.get("new_state") -%}
       {%- if new_state is none -%}
         false
-      {%- elif old_state is none or pages.current == pages.climate -%}
+      {%- elif pages.current == pages.climate -%}
+        true
+      {%- elif trigger.event.data.get("entity_id") == thermostat_embedded -%}
+        false
+      {%- elif old_state is none -%}
         true
       {%- else -%}
         {{
           old_state.state != new_state.state or
           old_state.attributes.get("hvac_action") != new_state.attributes.get("hvac_action") or
-          old_state.attributes.get("icon") != new_state.attributes.get("icon")
+          old_state.attributes.get("icon") != new_state.attributes.get("icon") or
+          old_state.attributes.get("color") != new_state.attributes.get("color")
         }}
       {%- endif -%}
     {%- endif -%}
