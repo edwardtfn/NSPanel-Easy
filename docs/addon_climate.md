@@ -98,19 +98,26 @@ The following keys are available to be used in your `substitutions`:
 
 ### Target temperature step
 
-With `temp_units: °C`, the target temperature is set in steps of `0.5` °C.
-For a finer step, e.g. `0.1` °C, extend the thermostat in your ESPHome settings, at the same level as `substitutions:`:
+The target temperature is set in steps of `0.5` with `temp_units: °C`, or `1` with `temp_units: °F`.
+For a different step, e.g. `0.1` °C, extend the thermostat in your ESPHome settings, at the same level as `substitutions:`:
 
 ```yaml
 climate:
   - id: !extend thermostat_embedded
     visual:
       temperature_step:
-        target_temperature: 0.1 °C
+        target_temperature: 0.1
 ```
 
-ESPHome reads this value as °C, whatever unit is written after it.
+Write the step in the unit of `temp_units`, without a unit after the number (e.g. `0.5` for half a degree on a °F panel).
 The climate page and Home Assistant then use the same step.
+With a unit, newer ESPHome versions convert the step into °C, and Home Assistant then uses a different step than the climate page.
+
+> [!NOTE]
+> Home Assistant applies the step in its own temperature unit, without converting it.
+> If Home Assistant uses a different unit than `temp_units`, it moves the target temperature in steps of the same
+> number in its own unit (e.g. steps of 1 °C for a °F panel), while the climate page keeps the configured step.
+> This is a Home Assistant limitation, reported in [home-assistant/core#190241](https://github.com/home-assistant/core/issues/190241).
 
 ## Temperature source
 
@@ -353,7 +360,7 @@ climate:
   - id: !extend thermostat_embedded
     visual:
       temperature_step:
-        target_temperature: 0.1 °C  # See "Target temperature step" above
+        target_temperature: 0.1  # See "Target temperature step" above
 ```
 
 Please note that employing any filter to smooth the temperature readings, such as averaging, is discouraged if the relevant timescale exceeds 1min.
