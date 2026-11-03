@@ -167,6 +167,17 @@ so it has no effect while Home Assistant is connected.
 When Home Assistant has been unavailable for longer than `climate_backup_delay`, the backup relays start to follow the embedded thermostat.
 When Home Assistant is back, the backup relays are turned off and control returns to Home Assistant.
 
+While Home Assistant is connected, the panel does not switch the backup relays on its own:
+Home Assistant must switch them, e.g. with its own thermostat or an automation.
+If you want the panel's thermostat to switch the relay all the time, with or without Home Assistant, you don't need this package.
+Select the relay in `heater_relay` (or `cooler_relay`) instead, and Home Assistant can still change the target temperature and the mode:
+
+```yaml
+substitutions:
+  ## Add-on climate
+  heater_relay: "1"  # The embedded thermostat switches relay 1, with or without Home Assistant
+```
+
 > [!IMPORTANT]
 > This package requires one of the climate add-ons (`heat`, `cool` or `dual`) to be included as well; otherwise ESPHome reports `Source for extension of ID 'relay_0' was not found`.
 > The backup relays must be different from each other and from `heater_relay` / `cooler_relay`; this is checked at build time.
