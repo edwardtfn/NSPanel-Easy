@@ -104,6 +104,9 @@ static constexpr uint8_t SUB_MAX_UNVERIFIED_COMMITS = 3;
 /// @brief Push identifier buffer, null included. The Blueprint sends a 20-digit UTC timestamp.
 static constexpr uint8_t SUB_PUSH_ID_LEN = 24;
 
+/// @brief How long after a push ends a call from an older push is still treated as late and ignored.
+static constexpr uint32_t SUB_LATE_CALL_WINDOW_MS = 60000;
+
 /**
  * @brief Classification of a Home Assistant state string.
  *

@@ -203,8 +203,9 @@ push_id: '{{ utcnow().strftime("%Y%m%d%H%M%S%f") }}'
 ```
 
 Compute it once per push, before the first `api_subscribe` call, and send the same value with every
-call of that push, including `api_subscribe_end`. A push whose `push_id` is older than the last one
-the panel received is ignored until the panel restarts.
+call of that push, including `api_subscribe_end`. For one minute after a push ends, calls with an
+older `push_id` are still ignored as late calls of an older push, so if Home Assistant's clock moves
+backwards, a push sent within that minute is ignored.
 
 ## Driving the panel without the Blueprint
 
