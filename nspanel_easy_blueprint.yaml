@@ -8075,6 +8075,9 @@ actions:
                           - &push_subscriptions
                             alias: Push API subscriptions
                             sequence:
+                              # Orders overlapping pushes by start time, so the panel keeps only the newest one
+                              - variables:
+                                  push_id: '{{ utcnow().strftime("%Y%m%d%H%M%S%f") }}'
                               - repeat:
                                   for_each: '{{ api_subscriptions }}'
                                   sequence:
@@ -8131,6 +8134,7 @@ actions:
 
                                     - action: 'esphome.{{ action_prefix }}_api_subscribe'
                                       data:
+                                        push_id: '{{ push_id }}'
                                         page: '{{ repeat.item.page }}'
                                         component: '{{ repeat.item.component }}'
                                         entity: '{{ entity_id }}'
@@ -8146,6 +8150,7 @@ actions:
 
                               - action: 'esphome.{{ action_prefix }}_api_subscribe_end'
                                 data:
+                                  push_id: '{{ push_id }}'
                                   count: '{{ api_subscriptions | count }}'
                                 continue_on_error: true
 
