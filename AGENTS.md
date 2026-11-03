@@ -143,7 +143,9 @@ Follow ESPHome's C++ conventions and the repository `.clang-format`.
 - `vis` state is not preserved across page navigation, while `.txt` and `.pco` of global components are.
 - `rest` always returns to the boot page and resets globals to the values declared in `Program.s`.
 - Component names referenced from ESPHome must match the declared names exactly; wrong names produce silent `0x1A` errors.
-- Icons come from the MDI font pipeline in `hmi/dev/fonts/`; `all_icons.h` and `all_icons.json` are generated and must not be edited by hand.
+- Icons come from the MDI font pipeline in `hmi/dev/fonts/`; `all_icons.h`, `all_icons.json` and the Blueprint's `all_icon_names` / `special_icons` lines are generated and must not be edited by hand.
+- In the Blueprint, a fixed icon is its glyph with the icon name in a comment (`{{ "\uE392" }}{# mdi:thermostat #}`).
+  An icon name known only at run time is looked up in `all_icon_names`: its position gives the codepoint (U+E000 + position).
 
 ## Documentation
 
@@ -154,7 +156,7 @@ Follow ESPHome's C++ conventions and the repository `.clang-format`.
 ## Things agents must not do
 
 - Edit files under `versioning/` or bump versions manually.
-- Edit generated files (`all_icons.h`, `all_icons.json`, `hmi/dev/nextion2text/`) instead of their sources.
+- Edit generated files (`all_icons.h`, `all_icons.json`, the Blueprint's `all_icon_names` / `special_icons` lines, `hmi/dev/nextion2text/`) instead of their sources.
 - Commit compiled binaries (`.tft`, `.bin`) unless explicitly asked.
 - Reformat or restructure unrelated code in the same change.
 - Remove comments, docs or existing opt-in guards without being asked.
