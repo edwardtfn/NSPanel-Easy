@@ -19,7 +19,7 @@ Page boot
     
     Events
         Preinitialize Event
-            dim=100
+            dim=brightness_dim
             covx baud,tmp_baudrate.txt,0,0
             sys_baudrate.txt="Baud rate: "
             sys_baudrate.txt+=tmp_baudrate.txt
@@ -60,7 +60,7 @@ Variable (string) version
     Attributes
         ID            : 5
         Scope         : local
-        Text          : 22.3
+        Text          : 22.4
         Max. Text Size: 5
     
 Variable (int32) log_len

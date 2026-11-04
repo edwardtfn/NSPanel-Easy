@@ -93,6 +93,19 @@ display:
             // visible page only.
             system_flags.display_resync_pending = true;
             boot_request_blueprint_settings->execute("setup");
+            // The display restarted with its own defaults: send the configured values the pages use on load
+            // (`dim=brightness`), so a page loaded after this restart doesn't fall back to the defaults
+            disp1->send_command_printf("brightness=%i", static_cast<int>(display_brightness->state));
+            disp1->send_command_printf("brightness_dim=%i", static_cast<int>(display_dim_brightness->state));
+            // The display restarted with the boot page's own brightness, so the next change must be sent
+            brightness_current = UINT8_MAX;
+            if (system_flags.boot_completed) {
+              set_brightness->execute(display_brightness->state);
+            } else {
+              // Keep the display dimmed while booting, e.g. after a power outage at night (#485).
+              // The boot sequence restores the regular brightness when it jumps to the wake-up page.
+              set_brightness->execute(display_dim_brightness->state);
+            }  // if (system_flags.boot_completed)
 
     on_page:
       then:
@@ -148,8 +161,8 @@ number:
         - lambda: |-
             disp1->send_command_printf("brightness=%i", int(x));
         - if:
-            condition:
-              - lambda: return current_page_id != get_page_id("screensaver");
+            condition:  # While booting, the display stays dimmed (see `on_setup`)
+              - lambda: return system_flags.boot_completed and current_page_id != get_page_id("screensaver");
             then:
               - script.execute:
                   id: set_brightness
@@ -528,8 +541,10 @@ script:
     mode: restart
     then:
       - lambda: |-
-          // Keep the display dimmed while a hardware button holds it (see `brightness_dim_hold`)
-          set_brightness->execute(brightness_dim_hold ? display_dim_brightness->state : display_brightness->state);
+          // Keep the display dimmed while a hardware button holds it (see `brightness_dim_hold`),
+          // and while booting (see `on_setup`), e.g. after a touch on the boot page
+          set_brightness->execute((brightness_dim_hold or !system_flags.boot_completed) ?
+                                  display_dim_brightness->state : display_brightness->state);
       - delay: !lambda return (int(timeout_dim->state) *1000);
       - lambda: |-
           #ifdef NSPANEL_EASY_SUBSCRIBE
