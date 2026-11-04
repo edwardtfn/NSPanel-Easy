@@ -171,6 +171,10 @@ so it has no effect while Home Assistant is connected.
 When Home Assistant has been unavailable for longer than `climate_backup_delay`, the backup relays start to follow the embedded thermostat.
 When Home Assistant is back, the backup relays are turned off and control returns to Home Assistant.
 
+Home Assistant counts as connected when its ESPHome integration is connected to the panel and receiving its states, as it normally is.
+Other connections to the panel's API that do not receive states (for example, viewing the logs) do not count:
+with only those, Home Assistant is considered unavailable.
+
 While Home Assistant is connected, the panel does not switch the backup relays on its own:
 Home Assistant must switch them, e.g. with its own thermostat or an automation.
 If you want the panel's thermostat to switch the relay all the time, with or without Home Assistant, you don't need this package.
