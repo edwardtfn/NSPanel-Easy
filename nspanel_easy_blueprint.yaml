@@ -6411,7 +6411,7 @@ actions:
               (
                 states(device_name_sensor)
                 if has_value(device_name_sensor)
-                else device_name
+                else entity_prefix
               )
           }}
         {%- endif %}
@@ -14154,6 +14154,7 @@ actions:
             event: nspanel_easy_settings_request
             event_data:
               device_id: '{{ nspanel_deviceid }}'
+              device_name: '{{ action_prefix }}'  # Read by `action_prefix` in the run handling the request
               type: boot
               step: reload
 
