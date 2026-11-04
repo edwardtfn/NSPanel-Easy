@@ -83,7 +83,7 @@ When a change affects a feature that is only included by specific packages (clim
 - Reference related issues in the description (`Closes #N` when resolved; a plain `#N` reference otherwise).
 - Do not hard-wrap text in PR descriptions, issues or release notes.
 - Keep PRs scoped to one logical change. Unrelated fixes go in separate PRs.
-- Target `main` from a short-lived feature branch.
+- Target `dev` from a short-lived feature branch. `main` only receives release PRs from `dev`.
 
 ## General coding rules
 
@@ -121,7 +121,7 @@ Follow ESPHome's C++ conventions and the repository `.clang-format`.
 ## Blueprint (nspanel_easy_blueprint.yaml)
 
 - Action calls to the panel use `nspanel_name`, not `device_name`.
-- Validate entity IDs with `"." in entity_id` combined with `states[entity_id] is not none`.
+- Validate entity IDs with `"." in entity_id` combined with `states[entity_id] is not none` (see the canonical checks below).
 - `has_value()` tests for a non-unknown/unavailable state, not existence.
 - Jinja2 `~` is string concatenation, not bitwise NOT.
 - `default()` arguments are evaluated eagerly; nested attribute access inside them can still raise. Use `default(x, true)` to also catch `None`.
@@ -130,6 +130,34 @@ Follow ESPHome's C++ conventions and the repository `.clang-format`.
 - Compare versions as integer tuples, never lexicographically.
 - Do not confuse `last_changed` with `last_updated`.
 - `ServiceNotFound` is re-raised by Home Assistant even with `continue_on_error`.
+
+### Size and repetition
+
+- Home Assistant expands YAML anchors when it loads the Blueprint: an anchored block is a full copy in every place it is used, in every panel's automation.
+  Anchors keep the file short, but only logic that exists once in the expanded configuration keeps the automation small (issue #657).
+- Compute a value once in `variables` and reuse it, instead of repeating the same expression in several templates.
+- Prefer data over template branches: a mapping of states to values is stored once, while a template written inside an anchor is copied with it (see `entity_state_styles`).
+- Pull requests that change the Blueprint get a metrics report in the "Validate Blueprint YAML" job summary (`.github/scripts/blueprint_metrics.py`).
+  Check that the expanded size and the number of distinct templates do not grow without a reason.
+- Refactorings of the "Variable Entity" anchor must keep its output: run `.github/scripts/test_variable_entity.py` against the Blueprint before the change.
+
+### Canonical checks
+
+Use one form per check, so the same test reads the same everywhere. Change existing code to these forms only in focused PRs, verifying edge cases (`None`, `""`, undefined).
+
+| Check | Form |
+| --- | --- |
+| Value that can be missing | `x is defined and ...` (see below) |
+| Non-empty string | `x is string and x \| length > 0` |
+| Entity ID | `x is string and "." in x and states[x] is not none`; inside the "Variable Entity" anchor, use `entity_id_valid`. |
+| State is unknown or unavailable | `x in enum.states.unknown` (also covers `None` and `""`); for an entity, `has_value(entity_id)`. Not literal lists such as `["unknown", "unavailable"]`. |
+| State is on or off | `x in enum.states.on` / `enum.states.off`, plus `enum.states[domain]` for domain-specific states. |
+| RGB color | `x is list and x \| count == 3` |
+| Icon name | `x is string and x is match "mdi:"`, then the `all_icon_names` lookup on `(x.split("mdi:") \| last)`. |
+| Fallback that also replaces `None` | `x \| default(fallback, true)` |
+
+Test `is defined` only for values that can really be missing: event data (`nspanel_event.*`), attributes, trigger-dependent variables, keys of user-provided mappings and list items.
+Inputs always have a value, and variables set earlier in the same run are always defined, so they need no `is defined`.
 
 ## Nextion HMI (hmi/)
 
