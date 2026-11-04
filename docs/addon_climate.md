@@ -213,6 +213,9 @@ How it works:
 - The regulation runs entirely on the panel and keeps working without Home Assistant.
 - While a controller is off, its integral term is kept, so it continues from the learned value when switched on again.
   It is also saved to flash every 30 minutes, so the controllers continue from it after a reboot.
+- *Dual only:* heating and cooling never run at the same time. If both controllers demand at once, e.g. in `heat_cool` mode with a retained integral term,
+  the one whose setpoint is exceeded more wins. `heater_relay` and `cooler_relay` must be different relays (checked at build time).
+  The climate chip and the climate page show the relay that actually runs.
 - *Single only:* the thermostat offers the modes `off` and `heat`, which act as "room off/on".
   The operating mode (heat or cool) is read from `pid_mode_entity` and stored in flash,
   so the panel keeps the last mode while Home Assistant is unavailable.
@@ -224,7 +227,7 @@ How it works:
   The single add-on offers `Comfort`, `Eco` and `Off` instead, see [PID presets](#pid-presets-single-only).
 
 > [!IMPORTANT]
-> Include **only one** climate package: either `pid_single` or `pid_dual`, not together with `climate_heat`, `climate_cool`, `climate_dual` or each other.
+> Include **only one** climate package: either `pid_single` or `pid_dual`, not together with `climate_heat`, `climate_cool`, `climate_dual` or each other; this is checked at build time.
 > The PID packages include the climate base themselves.
 > The `climate_backup` add-on cannot be combined with the PID packages, as it follows the thermostat's actions, which do not drive the relays here; this is checked at build time.
 > After a reboot, the controllers continue from the integral term saved up to 30 minutes earlier; only the first boot starts from `pid_starting_integral`.
@@ -385,8 +388,10 @@ The output becomes the on-time of each PWM cycle: 25 % of a 20-minute `PID PWM p
 
 - **PID Heat output** / **PID Cool output** move around the base load once the room has settled.
 - **PID Heat integral** / **PID Cool integral** change slowly, over hours. For underfloor heating in winter, 20 % to 40 % is typical; in mild weather it drops close to 0.
-- An output close to 100 % for hours, or an integral stuck at 100 %, means the system cannot keep up:
-  the flow temperature is too low, or the setpoint too high for the heating system.
+  The cool integral is negative (`-100 %` to `0 %`), so read it by its magnitude: about `-20 %` to `-40 %` is a typical cooling base load.
+  **PID Cool output** is shown as a positive duty, like the heat output.
+- An output close to 100 % for hours, or an integral stuck at 100 % (`-100 %` when cooling), means the system cannot keep up:
+  the flow temperature is too low (too high when cooling), or the setpoint too high for the heating system (too low for cooling).
 - A very low output and an integral close to 0 while the room is warm enough means the flow temperature is too high.
   With a weather-compensated flow temperature, adjust the heating curve rather than the controller.
 
