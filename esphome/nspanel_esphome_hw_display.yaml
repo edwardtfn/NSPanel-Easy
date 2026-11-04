@@ -100,6 +100,7 @@ display:
                                                                          display_brightness->state :
                                                                          display_dim_brightness->state));
             disp1->send_command_printf("brightness_dim=%i", static_cast<int>(display_dim_brightness->state));
+            disp1->send_command_printf("brightness_sleep=%i", static_cast<int>(display_sleep_brightness->state));
             // The display restarted with the boot page's own brightness, so the next change must be sent
             brightness_current = UINT8_MAX;
             if (system_flags.boot_completed) {
