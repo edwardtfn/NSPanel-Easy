@@ -81,10 +81,17 @@ static uint32_t sub_last_push_end_ms = 0;
  * seconds, and the limit keeps a Home Assistant clock that moved backwards
  * from blocking every later push.
  *
+ * An identifier too long to be stored is ignored as well, so it can never be
+ * truncated and then mismatch its own end marker.
+ *
  * @param push_id Identifier of the call's push.
  * @return true when the call must be ignored.
  */
 static bool sub_push_superseded(const char *push_id) {
+  if (strlen(push_id) >= SUB_PUSH_ID_LEN) {
+    ESP_LOGW(TAG, "Push identifier longer than %" PRIu8 " characters ignored", SUB_PUSH_ID_LEN - 1);
+    return true;
+  }  // if identifier too long
   if (sub_pushing)
     return strcmp(push_id, sub_push_id) < 0;
   if ((uint32_t) (App.get_loop_component_start_time() - sub_last_push_end_ms) >= SUB_LATE_CALL_WINDOW_MS)
@@ -658,6 +665,8 @@ bool sub_push_end(const char *push_id, uint16_t count) {
   sub_push_release();
   return persisted;
 }
+
+bool sub_push_active() { return sub_pushing; }
 
 bool sub_push_timeout() {
   if (!sub_pushing) {

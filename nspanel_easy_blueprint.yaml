@@ -8113,7 +8113,7 @@ actions:
                                                 repeat.item.icon is string and
                                                 repeat.item.icon | length > 0 and
                                                 repeat.item.icon is match "mdi:" and
-                                                ((repeat.item.icon.split("mdi:")[1]) in special_icons or ("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                                ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                               else
                                                 None
                                             }}
@@ -8330,12 +8330,12 @@ actions:
                                   txt_list:
                                     - >
                                       {{
-                                        (special_icons[(home_indoor_temp_icon.split("mdi:")[1])] if (home_indoor_temp_icon.split("mdi:")[1]) in special_icons
-                                          else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (home_indoor_temp_icon.split("mdi:")[1]) ~ ",")].count(",")))
-                                          if ("," ~ (home_indoor_temp_icon.split("mdi:")[1]) ~ ",") in all_icon_names
+                                        (special_icons[(home_indoor_temp_icon.split("mdi:") | last)] if (home_indoor_temp_icon.split("mdi:") | last) in special_icons
+                                          else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (home_indoor_temp_icon.split("mdi:") | last) ~ ",")].count(",")))
+                                          if ("," ~ (home_indoor_temp_icon.split("mdi:") | last) ~ ",") in all_icon_names
                                           else "")
-                                        if home_indoor_temp_icon.split("mdi:") | count == 2 and ((home_indoor_temp_icon.split("mdi:")[1]) in special_icons
-                                          or ("," ~ (home_indoor_temp_icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                        if home_indoor_temp_icon.split("mdi:") | count == 2 and ((home_indoor_temp_icon.split("mdi:") | last) in special_icons
+                                          or ("," ~ (home_indoor_temp_icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                         else "\uE50E"
                                       }}{# mdi:thermometer #}
                                 continue_on_error: true
@@ -8400,11 +8400,12 @@ actions:
                                   id: bt_entities
                                   icon: >
                                     {{
-                                      (special_icons[(bt_entities_icon.split("mdi:")[1])] if (bt_entities_icon.split("mdi:")[1]) in special_icons
-                                        else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (bt_entities_icon.split("mdi:")[1]) ~ ",")].count(",")))
-                                        if ("," ~ (bt_entities_icon.split("mdi:")[1]) ~ ",") in all_icon_names
+                                      (special_icons[(bt_entities_icon.split("mdi:") | last)] if (bt_entities_icon.split("mdi:") | last) in special_icons
+                                        else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (bt_entities_icon.split("mdi:") | last) ~ ",")].count(",")))
+                                        if ("," ~ (bt_entities_icon.split("mdi:") | last) ~ ",") in all_icon_names
                                         else "")
-                                      if bt_entities_icon is string and ((bt_entities_icon.split("mdi:")[1]) in special_icons or ("," ~ (bt_entities_icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                      if bt_entities_icon is string and ((bt_entities_icon.split("mdi:") | last) in special_icons
+                                          or ("," ~ (bt_entities_icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                       else "\uEDCF"
                                     }}{# mdi:format-list-bulleted-square #}
                                   icon_color: !input home_button06_icon_color
@@ -8423,11 +8424,12 @@ actions:
                                   id: bt_utilities
                                   icon: >
                                     {{
-                                      (special_icons[(bt_utilities_icon.split("mdi:")[1])] if (bt_utilities_icon.split("mdi:")[1]) in special_icons
-                                        else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (bt_utilities_icon.split("mdi:")[1]) ~ ",")].count(",")))
-                                        if ("," ~ (bt_utilities_icon.split("mdi:")[1]) ~ ",") in all_icon_names
+                                      (special_icons[(bt_utilities_icon.split("mdi:") | last)] if (bt_utilities_icon.split("mdi:") | last) in special_icons
+                                        else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (bt_utilities_icon.split("mdi:") | last) ~ ",")].count(",")))
+                                        if ("," ~ (bt_utilities_icon.split("mdi:") | last) ~ ",") in all_icon_names
                                         else "")
-                                      if bt_utilities_icon is string and ((bt_utilities_icon.split("mdi:")[1]) in special_icons or ("," ~ (bt_utilities_icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                      if bt_utilities_icon is string and ((bt_utilities_icon.split("mdi:") | last) in special_icons
+                                          or ("," ~ (bt_utilities_icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                       else "\uE299"
                                     }}{# mdi:gauge #}
                                   icon_color: !input home_button08_icon_color
@@ -8547,16 +8549,16 @@ actions:
                                 - '{{ repeat.item.icon is defined }}'
                                 - '{{ repeat.item.icon is string }}'
                                 - '{{ repeat.item.icon is match "mdi:" }}'
-                                - '{{ ((repeat.item.icon.split("mdi:")[1]) in special_icons or ("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",") in all_icon_names) }}'
+                                - '{{ ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names) }}'
                               then:
                                 - action: 'esphome.{{ action_prefix }}_component_text_list'
                                   data:
                                     page: '{{ repeat.item.page }}'
                                     id: '{{ repeat.item.component }}_icon'
                                     txt_list:
-                                      - '{{ (special_icons[(repeat.item.icon.split("mdi:")[1])] if (repeat.item.icon.split("mdi:")[1]) in special_icons
-                                        else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",")].count(",")))
-                                        if ("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",") in all_icon_names
+                                      - '{{ (special_icons[(repeat.item.icon.split("mdi:") | last)] if (repeat.item.icon.split("mdi:") | last) in special_icons
+                                        else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",")].count(",")))
+                                        if ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names
                                         else "") }}'
                                   continue_on_error: true
                                 - *delay_boot
@@ -8714,11 +8716,12 @@ actions:
                                   txt_list:
                                     - >
                                       {{
-                                        (special_icons[(bt_qrcode_icon.split("mdi:")[1])] if (bt_qrcode_icon.split("mdi:")[1]) in special_icons
-                                          else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (bt_qrcode_icon.split("mdi:")[1]) ~ ",")].count(",")))
-                                          if ("," ~ (bt_qrcode_icon.split("mdi:")[1]) ~ ",") in all_icon_names
+                                        (special_icons[(bt_qrcode_icon.split("mdi:") | last)] if (bt_qrcode_icon.split("mdi:") | last) in special_icons
+                                          else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (bt_qrcode_icon.split("mdi:") | last) ~ ",")].count(",")))
+                                          if ("," ~ (bt_qrcode_icon.split("mdi:") | last) ~ ",") in all_icon_names
                                           else "")
-                                        if bt_qrcode_icon is string and ((bt_qrcode_icon.split("mdi:")[1]) in special_icons or ("," ~ (bt_qrcode_icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                        if bt_qrcode_icon is string and ((bt_qrcode_icon.split("mdi:") | last) in special_icons
+                                            or ("," ~ (bt_qrcode_icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                         else "\uE432"
                                       }}{# mdi:qrcode-scan #}
                                 continue_on_error: true
@@ -8775,11 +8778,11 @@ actions:
                               txt_list:
                                 - >
                                   {{
-                                    (special_icons[(relay1_icon.split("mdi:")[1])] if (relay1_icon.split("mdi:")[1]) in special_icons
-                                      else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (relay1_icon.split("mdi:")[1]) ~ ",")].count(",")))
-                                      if ("," ~ (relay1_icon.split("mdi:")[1]) ~ ",") in all_icon_names
+                                    (special_icons[(relay1_icon.split("mdi:") | last)] if (relay1_icon.split("mdi:") | last) in special_icons
+                                      else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (relay1_icon.split("mdi:") | last) ~ ",")].count(",")))
+                                      if ("," ~ (relay1_icon.split("mdi:") | last) ~ ",") in all_icon_names
                                       else "")
-                                    if ((relay1_icon.split("mdi:")[1]) in special_icons or ("," ~ (relay1_icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                    if ((relay1_icon.split("mdi:") | last) in special_icons or ("," ~ (relay1_icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                     else "\uE3A5"
                                   }}{# mdi:numeric-1-box-outline #}
                             continue_on_error: true
@@ -8792,11 +8795,11 @@ actions:
                               txt_list:
                                 - >
                                   {{
-                                    (special_icons[(relay2_icon.split("mdi:")[1])] if (relay2_icon.split("mdi:")[1]) in special_icons
-                                      else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (relay2_icon.split("mdi:")[1]) ~ ",")].count(",")))
-                                      if ("," ~ (relay2_icon.split("mdi:")[1]) ~ ",") in all_icon_names
+                                    (special_icons[(relay2_icon.split("mdi:") | last)] if (relay2_icon.split("mdi:") | last) in special_icons
+                                      else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (relay2_icon.split("mdi:") | last) ~ ",")].count(",")))
+                                      if ("," ~ (relay2_icon.split("mdi:") | last) ~ ",") in all_icon_names
                                       else "")
-                                    if ((relay2_icon.split("mdi:")[1]) in special_icons or ("," ~ (relay2_icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                    if ((relay2_icon.split("mdi:") | last) in special_icons or ("," ~ (relay2_icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                     else "\uE3A8"
                                   }}{# mdi:numeric-2-box-outline #}
                             continue_on_error: true
@@ -9364,7 +9367,7 @@ actions:
                               nspanel_event.icon is defined and
                               nspanel_event.icon is string and
                               nspanel_event.icon is match "mdi:" and
-                              ((nspanel_event.icon.split("mdi:")[1]) in special_icons or ("," ~ (nspanel_event.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                              ((nspanel_event.icon.split("mdi:") | last) in special_icons or ("," ~ (nspanel_event.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                             else None
                           }}
                         icon_color: '{{ None }}'
@@ -9458,7 +9461,7 @@ actions:
                                                 repeat.item.icon is defined and
                                                 repeat.item.icon is string and
                                                 repeat.item.icon is match "mdi:" and
-                                                ((repeat.item.icon.split("mdi:")[1]) in special_icons or ("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                                ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                               else
                                                 None
                                             }}
@@ -9613,7 +9616,7 @@ actions:
                                                 repeat.item.icon is string and
                                                 repeat.item.icon | length > 0 and
                                                 repeat.item.icon is match "mdi:" and
-                                                ((repeat.item.icon.split("mdi:")[1]) in special_icons or ("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                                ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                               else
                                                 None
                                             }}
@@ -11180,7 +11183,7 @@ actions:
                                                 repeat.item.icon is string and
                                                 repeat.item.icon | length > 0 and
                                                 repeat.item.icon is match "mdi:" and
-                                                ((repeat.item.icon.split("mdi:")[1]) in special_icons or ("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                                ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                               else
                                                 None
                                             }}
@@ -11424,14 +11427,14 @@ actions:
                                 - variables:
                                     var_icon: >
                                       {{
-                                        (special_icons[(repeat.item.icon.split("mdi:")[1])] if (repeat.item.icon.split("mdi:")[1]) in special_icons
-                                          else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",")].count(",")))
-                                          if ("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",") in all_icon_names
+                                        (special_icons[(repeat.item.icon.split("mdi:") | last)] if (repeat.item.icon.split("mdi:") | last) in special_icons
+                                          else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",")].count(",")))
+                                          if ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names
                                           else "")
                                         if
                                           repeat.item.icon is defined and
                                           repeat.item.icon is string and
-                                          ((repeat.item.icon.split("mdi:")[1]) in special_icons or ("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                          ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                         else False
                                       }}
                                 - if: '{{ var_icon != False }}'
@@ -11712,7 +11715,7 @@ actions:
                                             repeat.item.icon is string and
                                             repeat.item.icon | length > 0 and
                                             repeat.item.icon is match "mdi:" and
-                                            ((repeat.item.icon.split("mdi:")[1]) in special_icons or ("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                            ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                           else
                                             None
                                         }}
@@ -12350,7 +12353,7 @@ actions:
                           - alias: Utilities page - Title
                             sequence:
                               - variables:
-                                  page_icon: '{{ pages_utilities.title.icon.split("mdi:")[1] if pages_utilities.title.icon is string and pages_utilities.title.icon.split("mdi:") | count == 2 }}'
+                                  page_icon: '{{ (pages_utilities.title.icon.split("mdi:") | last) if pages_utilities.title.icon is string and pages_utilities.title.icon.split("mdi:") | count == 2 }}'
                               - action: 'esphome.{{ action_prefix }}_component_text_list'
                                 data:
                                   page: mem
@@ -12383,7 +12386,7 @@ actions:
                                         utilities_constructor and
                                         repeat.item.icon is defined and
                                         repeat.item.icon is string and
-                                        ((repeat.item.icon.split("mdi:")[1]) in special_icons or ("," ~ (repeat.item.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                        ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                       }}
                                     value1_enabled: >
                                       {{
@@ -12404,7 +12407,7 @@ actions:
                                   if: '{{ icon_enabled }}'
                                   then:
                                     - variables:
-                                        icon_code: '{{ repeat.item.icon.split("mdi:")[1] }}'
+                                        icon_code: '{{ (repeat.item.icon.split("mdi:") | last) }}'
                                     - action: 'esphome.{{ action_prefix }}_icon'
                                       data:
                                         page: utilities
@@ -12916,7 +12919,7 @@ actions:
                                       graph_value.icon is defined and
                                       graph_value.icon is string and
                                       graph_value.icon is match "mdi:" and
-                                      ((graph_value.icon.split("mdi:")[1]) in special_icons or ("," ~ (graph_value.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                      ((graph_value.icon.split("mdi:") | last) in special_icons or ("," ~ (graph_value.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                     else
                                       None
                                   }}
@@ -13241,7 +13244,7 @@ actions:
                                                           overlap.icon is defined and
                                                           overlap.icon is string and
                                                           overlap.icon is match "mdi:" and
-                                                          ((overlap.icon.split("mdi:")[1]) in special_icons or ("," ~ (overlap.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                                          ((overlap.icon.split("mdi:") | last) in special_icons or ("," ~ (overlap.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                                         else ""
                                                       }}
                                                 continue_on_error: true
@@ -13415,7 +13418,7 @@ actions:
                                       last_click_button.icon is string and
                                       last_click_button.icon | length > 0 and
                                       last_click_button.icon is match "mdi:" and
-                                      ((last_click_button.icon.split("mdi:")[1]) in special_icons or ("," ~ (last_click_button.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                      ((last_click_button.icon.split("mdi:") | last) in special_icons or ("," ~ (last_click_button.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                     else
                                       None
                                   }}
@@ -13807,7 +13810,7 @@ actions:
                                       last_click_button.icon is string and
                                       last_click_button.icon | length > 0 and
                                       last_click_button.icon is match "mdi:" and
-                                      ((last_click_button.icon.split("mdi:")[1]) in special_icons or ("," ~ (last_click_button.icon.split("mdi:")[1]) ~ ",") in all_icon_names)
+                                      ((last_click_button.icon.split("mdi:") | last) in special_icons or ("," ~ (last_click_button.icon.split("mdi:") | last) ~ ",") in all_icon_names)
                                     else
                                       None
                                   }}

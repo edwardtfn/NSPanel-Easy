@@ -74,7 +74,11 @@ api:
             if (sub_push_end(push_id.c_str(), static_cast<uint16_t>(count))) {
               api_subscribe_restart->execute();
             }
-            api_subscribe_watchdog->stop();
+            // An ignored end marker (e.g. from an older push) leaves the staged push open:
+            // keep its watchdog running in that case
+            if (!sub_push_active()) {
+              api_subscribe_watchdog->stop();
+            }  // if (!sub_push_active())
 
 script:
   ##### Collapses a burst of binding calls into a single restart decision. #####

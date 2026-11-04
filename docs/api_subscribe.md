@@ -140,7 +140,7 @@ Registers one binding. Called once per subscribable component.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `push_id` | string | Identifier of the push, the same for every call of one push. See [Push identifier](#push-identifier). |
+| `push_id` | string | Identifier of the push, the same for every call of one push, up to 23 characters. See [Push identifier](#push-identifier). |
 | `page` | string | Target page. `chips`, `home`, `wakeup` and `calibration` have renderers. |
 | `component` | string | Target component, e.g. `chip01`. |
 | `entity` | string | Home Assistant `entity_id`. |
