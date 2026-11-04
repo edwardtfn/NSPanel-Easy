@@ -5422,6 +5422,16 @@ triggers:
         event_data:
           device_id: !input nspanel_name
 
+      # Fired by this automation itself when the panel needs its global settings again (e.g. after a reload).
+      # The same id as the panel's events, so it is handled by "Boot init", where the global settings live once
+      # in the automation (#657).
+      - alias: Settings request
+        id: nspanel_event
+        trigger: event
+        event_type: nspanel_easy_settings_request
+        event_data:
+          device_id: !input nspanel_name
+
       - alias: Automation reloaded
         id: automation_reloaded
         trigger: event
@@ -7868,7 +7878,7 @@ actions:
               - alias: Boot init
                 conditions:
                   - '{{ nspanel_event.type == "boot"}}'
-                  - '{{ nspanel_event.step is defined and nspanel_event.step in ["display_ack", "setup", "start", "timeout"] }}'
+                  - '{{ nspanel_event.step is defined and nspanel_event.step in ["display_ack", "setup", "start", "timeout", "reload"] }}'
                 sequence:
                   - &global_settings
                     sequence:
@@ -14225,7 +14235,14 @@ actions:
               {{ (4 * ns.panels.index(device_name_sensor)) if (device_name_sensor in ns.panels) else 0 }}
 
           ##### Update global settings (as user may have changed something) #####
-          - *global_settings
+          # Sent through "Boot init" in a run of its own, instead of a second copy of the global settings here,
+          # which Home Assistant would expand into the automation again (about 90 kB, #657)
+          - alias: Request global settings
+            event: nspanel_easy_settings_request
+            event_data:
+              device_id: '{{ nspanel_deviceid }}'
+              type: boot
+              step: reload
 
           # A home page value slot left without an entity is cleared, otherwise the last value sent
           # stays on screen after the entity is removed (#351). The text is cleared instead of hidden,
