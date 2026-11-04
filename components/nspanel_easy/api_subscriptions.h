@@ -102,6 +102,7 @@ static constexpr const char SUB_HVAC_ACTION[] = "hvac_action";
 static constexpr uint8_t SUB_MAX_UNVERIFIED_COMMITS = 3;
 
 /// @brief Push identifier buffer, null included. The Blueprint sends a 20-digit UTC timestamp.
+/// Longer identifiers are rejected, as a truncated copy would no longer match the end marker.
 static constexpr uint8_t SUB_PUSH_ID_LEN = 24;
 
 /// @brief How long after a push ends a call from an older push is still treated as late and ignored.
@@ -649,6 +650,17 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
  *         unpersisted set would reload the old bindings and loop forever.
  */
 bool sub_push_end(const char *push_id, uint16_t count);
+
+/**
+ * @brief Whether a push is being staged.
+ *
+ * Lets the end marker handler keep the watchdog running when the marker it
+ * received was ignored (e.g. one from an older push) while a newer push is
+ * still being staged.
+ *
+ * @return true while a push is in progress.
+ */
+bool sub_push_active();
 
 /**
  * @brief Commit a push that never received its end marker.

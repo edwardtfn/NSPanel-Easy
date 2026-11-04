@@ -110,7 +110,7 @@ climate:
 ```
 
 Write the step in the unit of `temp_units`, without a unit after the number (e.g. `0.5` for half a degree on a °F panel).
-The climate page and Home Assistant then use the same step.
+The climate page and Home Assistant then use the same step, as long as Home Assistant uses the same unit as `temp_units` (see the note below).
 With a unit, newer ESPHome versions convert the step into °C, and Home Assistant then uses a different step than the climate page.
 
 > [!NOTE]
