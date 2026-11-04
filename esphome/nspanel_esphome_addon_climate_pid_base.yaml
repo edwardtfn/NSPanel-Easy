@@ -112,6 +112,9 @@ script:
           #ifdef NSPANEL_EASY_ADDON_CLIMATE_BACKUP
             #error "The climate backup add-on cannot be combined with the PID add-ons: it follows the thermostat's actions, which do not drive the relays here."
           #endif  // NSPANEL_EASY_ADDON_CLIMATE_BACKUP
+          #ifdef NSPANEL_EASY_ADDON_CLIMATE_ONOFF
+            #error "The PID add-ons cannot be combined with the climate heat, cool or dual add-ons: both would drive the thermostat and the relays."
+          #endif  // NSPANEL_EASY_ADDON_CLIMATE_ONOFF
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "Add-on climate PID:");
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  kp: %.3f", pid_tuning_kp->state);
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Tn: %.0f min", pid_tuning_tn->state);

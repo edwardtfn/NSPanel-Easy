@@ -19,6 +19,7 @@ substitutions:
 esphome:
   build_flags:
     - -D NSPANEL_EASY_ADDON_CLIMATE_COOL
+    - -D NSPANEL_EASY_ADDON_CLIMATE_ONOFF  # On/off control; checked by the PID add-ons, which share the selector flags
 
 climate:
   - id: !extend thermostat_embedded
