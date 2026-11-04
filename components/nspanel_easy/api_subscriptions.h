@@ -101,7 +101,7 @@ static constexpr const char SUB_HVAC_ACTION[] = "hvac_action";
 /// @brief Consecutive unverified commits tolerated before refusing to commit again.
 static constexpr uint8_t SUB_MAX_UNVERIFIED_COMMITS = 3;
 
-/// @brief Push identifier buffer, null included. The Blueprint sends a 20-digit UTC timestamp.
+/// @brief Push identifier buffer, null included. The Blueprint sends a UTC timestamp (YYYYMMDDTHHMMSSffffff, 21 chars).
 /// Longer identifiers are rejected, as a truncated copy would no longer match the end marker.
 static constexpr uint8_t SUB_PUSH_ID_LEN = 24;
 
