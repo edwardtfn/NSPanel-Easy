@@ -159,15 +159,29 @@ def duplicated_subtrees(node, top):
     Only maximal duplicates are reported: once a subtree is a duplicate, the
     subtrees inside it are not reported again.
     """
+    # Size and digest per object, computed once: an aliased subtree is the same object in every place
+    # it is used, and both passes visit it, so serializing it again for each visit would be wasted work.
+    # Counts stay per occurrence, as each visit still counts.
+    sizes = {}
+    digests = {}
+
+    def size(item):
+        if id(item) not in sizes:
+            sizes[id(item)] = expanded_size(item)
+        return sizes[id(item)]
+
     def digest(item):  # Key order kept as loaded: anchor copies keep the same order
-        return hashlib.sha1(json.dumps(item, default=str).encode(), usedforsecurity=False).hexdigest()
+        if id(item) not in digests:
+            digests[id(item)] = hashlib.sha1(json.dumps(item, default=str).encode(),
+                                             usedforsecurity=False).hexdigest()
+        return digests[id(item)]
 
     counts = collections.Counter()
 
     def count(item):
         if not isinstance(item, (dict, list)):
             return
-        if expanded_size(item) >= DUPLICATE_MIN_SIZE:
+        if size(item) >= DUPLICATE_MIN_SIZE:
             counts[digest(item)] += 1
         for child in (item.values() if isinstance(item, dict) else item):
             count(child)
@@ -177,10 +191,10 @@ def duplicated_subtrees(node, top):
     def collect(item, label):
         if not isinstance(item, (dict, list)):
             return
-        if expanded_size(item) >= DUPLICATE_MIN_SIZE:
+        if size(item) >= DUPLICATE_MIN_SIZE:
             key = digest(item)
             if counts[key] > 1:
-                found.setdefault(key, (counts[key], expanded_size(item), label))
+                found.setdefault(key, (counts[key], size(item), label))
                 return  # Maximal duplicate: don't report what's inside it
         child_label = item.get("alias", label) if isinstance(item, dict) else label
         for child in (item.values() if isinstance(item, dict) else item):
