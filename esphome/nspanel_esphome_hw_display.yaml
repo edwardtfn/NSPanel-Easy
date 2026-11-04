@@ -95,7 +95,10 @@ display:
             boot_request_blueprint_settings->execute("setup");
             // The display restarted with its own defaults: send the configured values the pages use on load
             // (`dim=brightness`), so a page loaded after this restart doesn't fall back to the defaults
-            disp1->send_command_printf("brightness=%i", static_cast<int>(display_brightness->state));
+            // While booting, the regular brightness holds the dimmed value (see `boot_nextion`)
+            disp1->send_command_printf("brightness=%i", static_cast<int>(system_flags.boot_completed ?
+                                                                         display_brightness->state :
+                                                                         display_dim_brightness->state));
             disp1->send_command_printf("brightness_dim=%i", static_cast<int>(display_dim_brightness->state));
             // The display restarted with the boot page's own brightness, so the next change must be sent
             brightness_current = UINT8_MAX;
@@ -165,7 +168,9 @@ number:
     on_value:
       then:
         - lambda: |-
-            disp1->send_command_printf("brightness=%i", int(x));
+            // While booting, the TFT holds the dimmed value instead, and gets this one when the boot completes
+            if (system_flags.boot_completed)
+              disp1->send_command_printf("brightness=%i", int(x));
         - if:
             condition:  # While booting, the display stays dimmed (see `on_setup`)
               - lambda: return system_flags.boot_completed and current_page_id != get_page_id("screensaver");
@@ -189,6 +194,9 @@ number:
       then:
         - lambda: |-
             disp1->send_command_printf("brightness_dim=%i", int(x));
+            // While booting, the TFT's regular brightness holds the dimmed value (see `boot_nextion`)
+            if (!system_flags.boot_completed)
+              disp1->send_command_printf("brightness=%i", int(x));
         - if:
             condition:
               - lambda: return current_page_id != get_page_id("screensaver");

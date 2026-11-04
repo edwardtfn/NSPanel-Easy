@@ -110,9 +110,10 @@ climate:
         current_temperature: 0.1  # Same precision, so Home Assistant shows the target with decimals
 ```
 
-Write the step in the unit of `temp_units`, without a unit after the number (e.g. `0.5` for half a degree on a °F panel).
+Write the step in the unit of `temp_units`, without a unit after the number (e.g. `0.5` for half a degree on a °F panel), and as a multiple of `0.1`.
 The climate page and Home Assistant then use the same step, as long as Home Assistant uses the same unit as `temp_units` (see the note below).
-With a unit, newer ESPHome versions convert the step into °C, and Home Assistant then uses a different step than the climate page.
+Both round the step to one decimal, but not the same way, so a step such as `0.25` becomes 0.3 on the climate page and 0.2 in Home Assistant.
+With a unit, newer ESPHome versions convert a step written in °F into °C, so on a °F panel `1 °F` becomes about 0.6, on the climate page and in Home Assistant.
 
 > [!NOTE]
 > Home Assistant applies the step in its own temperature unit, without converting it.
