@@ -49,23 +49,176 @@ climate:
         default_target_temperature_low: ${target_low} ${temp_units}
         mode: "heat_cool"
 
+globals:
+  # Demands of the controllers (0..1) before the heat/cool interlock in pid_dual_outputs
+  - id: pid_heat_demand
+    type: float
+    restore_value: false
+    initial_value: '0.0f'  # Must be quoted: ESPHome expects the C++ initializer as a string
+  - id: pid_cool_demand
+    type: float
+    restore_value: false
+    initial_value: '0.0f'  # Must be quoted: ESPHome expects the C++ initializer as a string
+  - id: pid_dual_activity  # Relay running after the interlock: 0 = none, 1 = heating, 2 = cooling
+    type: uint8_t
+    restore_value: false
+    initial_value: '0'  # Must be quoted: ESPHome expects the C++ initializer as a string
+
 output:
-  # Turn the controller outputs (0..100 %) into on/off cycles of the existing relay switches
-  - platform: slow_pwm
+  # The controllers write their demand here; pid_dual_outputs decides which relay may run
+  - platform: template
     id: pid_heat_out
+    type: float
+    write_action:
+      - lambda: |-
+          id(pid_heat_demand) = state;
+          pid_dual_outputs->execute();
+
+  - platform: template
+    id: pid_cool_out
+    type: float
+    write_action:
+      - lambda: |-
+          id(pid_cool_demand) = state;
+          pid_dual_outputs->execute();
+
+  # Turn the arbitrated outputs (0..100 %) into on/off cycles of the relays.
+  # Interlock at the relay: switching one relay on always switches the other one off first.
+  - platform: slow_pwm
+    id: pid_heat_pwm
     period: ${pwm_period}s
     turn_on_action:
+      - switch.turn_off: relay_${cooler_relay}
       - switch.turn_on: relay_${heater_relay}
     turn_off_action:
       - switch.turn_off: relay_${heater_relay}
 
   - platform: slow_pwm
-    id: pid_cool_out
+    id: pid_cool_pwm
     period: ${pwm_period}s
     turn_on_action:
+      - switch.turn_off: relay_${heater_relay}
       - switch.turn_on: relay_${cooler_relay}
     turn_off_action:
       - switch.turn_off: relay_${cooler_relay}
+
+script:
+  # Validates the relay selection at build time
+  - id: !extend dump_config
+    then:
+      - lambda: |-
+          static_assert((${heater_relay} == 1) or (${heater_relay} == 2), "heater_relay must be 1 or 2");
+          static_assert((${cooler_relay} == 1) or (${cooler_relay} == 2), "cooler_relay must be 1 or 2");
+          static_assert(${heater_relay} != ${cooler_relay}, "heater_relay and cooler_relay must select different relays");
+
+  # Heat/cool interlock, applied on every controller sample: in heat_cool mode, a retained integral term
+  # can keep one controller demanding while the other one starts. Only one relay may run: the controller
+  # whose setpoint is exceeded more wins, the other one is set to 0.
+  - id: pid_dual_outputs
+    mode: queued
+    then:
+      - lambda: |-
+          float heat = id(pid_heat_demand);
+          float cool = id(pid_cool_demand);
+          if (heat > 0.0f && cool > 0.0f) {
+            const float temp = pid_temperature->state;
+            const float low = thermostat_embedded->target_temperature_low;
+            const float high = thermostat_embedded->target_temperature_high;
+            const bool cooling_wins = (std::isnan(temp) || std::isnan(low) || std::isnan(high))
+                                          ? (cool >= heat)
+                                          : ((temp - high) >= (low - temp));
+            ESP_LOGD("${TAG_ADDON_CLIMATE_PID}", "Heat and cool demanded at once: %s wins",
+                     cooling_wins ? "cooling" : "heating");
+            if (cooling_wins) {
+              heat = 0.0f;
+            } else {
+              cool = 0.0f;
+            }
+          }
+          // The output that stops is set first
+          if (heat > 0.0f) {
+            id(pid_cool_pwm).set_level(cool);
+            id(pid_heat_pwm).set_level(heat);
+          } else {
+            id(pid_heat_pwm).set_level(heat);
+            id(pid_cool_pwm).set_level(cool);
+          }
+          // Activity shown on the display, from the relay outputs instead of the facade's hysteresis
+          const uint8_t activity = (heat > 0.0f) ? 1 : ((cool > 0.0f) ? 2 : 0);
+          if (activity != id(pid_dual_activity)) {
+            id(pid_dual_activity) = activity;
+            if (id(is_embedded_thermostat)) update_climate_chip->execute();
+          }
+
+  ###################################################################################################
+  ##### Display: replaces the climate chip of the climate base. The base derives the activity   #####
+  ##### from the thermostat facade, whose hysteresis does not drive the relays here. Here it    #####
+  ##### comes from the arbitrated controller outputs instead.                                   #####
+  ###################################################################################################
+  - id: !remove update_climate_chip
+
+  - id: update_climate_chip
+    mode: single
+    then:
+      - lambda: |-
+          const uint8_t mode = static_cast<uint8_t>(thermostat_embedded->mode);
+          uint8_t action = nspanel_easy::CLIMATE_ACTION_OFF;
+          if (thermostat_embedded->mode != climate::CLIMATE_MODE_OFF) {
+            if (id(pid_dual_activity) == 1) {
+              action = nspanel_easy::CLIMATE_ACTION_HEATING;
+            } else if (id(pid_dual_activity) == 2) {
+              action = nspanel_easy::CLIMATE_ACTION_COOLING;
+            } else {
+              action = nspanel_easy::CLIMATE_ACTION_IDLE;
+            }
+          }
+          const bool is_active = (action == nspanel_easy::CLIMATE_ACTION_COOLING ||
+                                  action == nspanel_easy::CLIMATE_ACTION_HEATING);
+
+          const auto visibility = static_cast<nspanel_easy::ClimateChipVisibility>(id(climate_chip_visibility));
+          bool visible = false;
+          if (visibility == nspanel_easy::CLIMATE_CHIP_ALWAYS) {
+            visible = true;
+          } else if (visibility == nspanel_easy::CLIMATE_CHIP_ACTIVE_ONLY) {
+            visible = is_active;
+          }
+
+          // Same icons and colors as the climate base
+          const char *icon = Icons::MDI_NONE;
+          uint16_t color = Colors::RGB565_BLACK;
+          if (visible) {
+            if (action == nspanel_easy::CLIMATE_ACTION_OFF) {
+              if (mode <= nspanel_easy::CLIMATE_MODE_AUTO) {
+                icon = climate_off_mode_icons[mode].icon;
+                color = climate_off_mode_icons[mode].color;
+              }
+            } else {
+              icon = climate_action_icons[action].icon;
+              color = climate_action_icons[action].color;
+            }
+          }
+
+          ChipState &the_chip = chip_states[CHIP_IDX_CLIMATE];
+          bool changed = false;
+          if (strcmp(the_chip.icon, icon) != 0) {
+            strncpy(the_chip.icon, icon, sizeof(the_chip.icon) - 1);
+            the_chip.icon[sizeof(the_chip.icon) - 1] = '\0';
+            changed = true;
+          }
+          if (the_chip.color != color) {
+            the_chip.color = color;
+            changed = true;
+          }
+          if (the_chip.visible != visible) {
+            the_chip.visible = visible;
+            changed = true;
+          }
+          if (changed) chip_render(CHIP_IDX_CLIMATE);
+
+          if (current_page_id != get_page_id("climate")) return;
+          if (!climate_embedded_visible) return;
+          disp1->set_component_text("target_icon", icon);
+          disp1->set_component_font_color("target_icon", static_cast<uint16_t>(color));
 
 number:
   - id: !extend pid_tuning_pwm_period
@@ -74,8 +227,8 @@ number:
           if (isnan(x) || x < 60.0f) return;
           const uint32_t ms = static_cast<uint32_t>(x * 1000.0f);
           ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "PWM period applied: %.0fs", x);
-          pid_heat_out->set_period(ms);
-          pid_cool_out->set_period(ms);
+          pid_heat_pwm->set_period(ms);
+          pid_cool_pwm->set_period(ms);
 
 interval:
   # Copies mode and setpoints from the thermostat facade to the controllers.
