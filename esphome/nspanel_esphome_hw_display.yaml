@@ -113,6 +113,12 @@ display:
             ESP_LOGI("${TAG_HW_DISPLAY}", "Page changed: '%s'->'%s'", page_names[current_page_id], page_names[x]);
             ESP_LOGW_IF("${TAG_HW_DISPLAY}", (x == current_page_id), "Same page");
             page_change->execute(x);
+            if (!system_flags.boot_completed and x != get_page_id("boot")) {
+              // The page set the regular brightness on load (`dim=brightness`), e.g. after a wake-up before
+              // the boot completes: keep the display dimmed until the boot completes (#485)
+              brightness_current = UINT8_MAX;
+              set_brightness->execute(display_dim_brightness->state);
+            }  // if (!system_flags.boot_completed and x != get_page_id("boot"))
 
     on_touch:
       then:

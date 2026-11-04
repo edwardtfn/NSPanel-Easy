@@ -95,10 +95,12 @@ script:
       - script.wait: boot_wrap_up
 
       - lambda: |-
+          // Set before the wake-up, so its timers (`timer_dim`) and the page change apply the
+          // regular brightness instead of keeping the display dimmed as during the boot (#485)
+          system_flags.boot_completed = true;
           set_brightness->execute(display_brightness->state);
           boot_log->execute("Boot", "Jump to wake-up page");
           wakeup->execute(true);
-          system_flags.boot_completed = true;
 
   - id: boot_critical_components
     mode: single

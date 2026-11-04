@@ -460,10 +460,12 @@ def build_blueprint_icons(zi_map, output_path, blueprint_path=None):
     finds it with string operations, without a dictionary.
     If blueprint_path is given, the two lines are replaced there, keeping their indentation.
     """
-    first = min(zi_map.values())
+    # Slots always start at U+E000, as the Blueprint expects: an icon skipped for a missing SVG
+    # (also the first one) only leaves its slot empty
+    first = 0xE000
     last = max(zi_map.values())
-    if first != 0xE000:
-        sys.exit(f"ERROR: first ZI codepoint is U+{first:04X}, the Blueprint lookup expects U+E000")
+    if min(zi_map.values()) < first:
+        sys.exit(f"ERROR: first ZI codepoint is U+{min(zi_map.values()):04X}, the Blueprint lookup expects U+E000")
     by_cp = {}
     for name, zi_cp in zi_map.items():
         if zi_cp in by_cp:
@@ -495,7 +497,9 @@ def build_blueprint_icons(zi_map, output_path, blueprint_path=None):
             if len(pattern.findall(content)) != 1:
                 sys.exit(f"ERROR: expected exactly one '{key}:' line in {blueprint_path}")
             content = pattern.sub(lambda m, line=line: m.group("ind") + line, content)
-        Path(blueprint_path).write_text(content, encoding="utf-8")
+        # Always LF, as the repository requires, also when running on Windows
+        with open(blueprint_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(content)
         print(f"  Updated: {blueprint_path}")
 
 

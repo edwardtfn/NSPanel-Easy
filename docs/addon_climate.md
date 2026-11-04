@@ -107,6 +107,7 @@ climate:
     visual:
       temperature_step:
         target_temperature: 0.1
+        current_temperature: 0.1  # Same precision, so Home Assistant shows the target with decimals
 ```
 
 Write the step in the unit of `temp_units`, without a unit after the number (e.g. `0.5` for half a degree on a °F panel).
