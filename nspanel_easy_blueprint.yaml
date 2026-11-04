@@ -8089,9 +8089,11 @@ actions:
                           - &push_subscriptions
                             alias: Push API subscriptions
                             sequence:
-                              # Orders overlapping pushes by start time, so the panel keeps only the newest one
+                              # Orders overlapping pushes by start time, so the panel keeps only the newest one.
+                              # The "T" keeps it a string: Home Assistant would turn an all-digit value into a number,
+                              # too large for the recorder to store with the action call.
                               - variables:
-                                  push_id: '{{ utcnow().strftime("%Y%m%d%H%M%S%f") }}'
+                                  push_id: '{{ utcnow().strftime("%Y%m%dT%H%M%S%f") }}'
                               - repeat:
                                   for_each: '{{ api_subscriptions }}'
                                   sequence:
