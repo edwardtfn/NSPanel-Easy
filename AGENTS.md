@@ -151,7 +151,7 @@ Use one form per check, so the same test reads the same everywhere. Change exist
 | Value that can be missing | `x is defined and ...` (see below) |
 | Non-empty string | `x is string and x \| length > 0` |
 | Entity ID | `x is string and "." in x and states[x] is not none`; inside the "Variable Entity" anchor, use `entity_id_valid`. |
-| State is unknown or unavailable | `x in enum.states.unknown` (also covers `None` and `""`); for an entity, `has_value(entity_id)`. Not literal lists such as `["unknown", "unavailable"]`. |
+| State is unknown or unavailable | `x in enum.states.unknown` (also covers `None` and `""`); for an entity, `has_value(entity_id)` or `not has_value(entity_id)`. Not literal lists such as `["unknown", "unavailable"]`. |
 | State is on or off | `x in enum.states.on` / `enum.states.off`, plus `enum.states[domain]` for domain-specific states. |
 | RGB color | `x is list and x \| count == 3` |
 | Icon name | `x is string and x is match "mdi:"`, then the `all_icon_names` lookup on `(x.split("mdi:") \| last)`. |
