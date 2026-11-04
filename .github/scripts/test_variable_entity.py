@@ -142,12 +142,18 @@ class MockHomeAssistant:
 
 
 def parse_result(text):
-    """Approximate Home Assistant's parsing of a rendered template: Python literals become values."""
+    """
+    Approximate Home Assistant's parsing of a rendered template: Python literals become values.
+
+    A result that parses to a string keeps its rendered text, quotes included, as Home Assistant does,
+    so a template that starts adding quotes around a value is reported as a difference.
+    """
     stripped = text.strip()
     try:
-        return ast.literal_eval(stripped)
+        value = ast.literal_eval(stripped)
     except (ValueError, SyntaxError):
         return stripped
+    return stripped if isinstance(value, str) else value
 
 
 def render(hass, node, context):
