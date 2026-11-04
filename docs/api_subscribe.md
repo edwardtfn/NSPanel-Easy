@@ -155,7 +155,7 @@ Registers one binding. Called once per subscribable component.
 ```yaml
 action: esphome.my_panel_api_subscribe
 data:
-  push_id: "20261103170405123456"
+  push_id: "20261103T170405123456"
   page: chips
   component: chip01
   entity: binary_sensor.corridor_motion
@@ -184,7 +184,7 @@ Closes the push and states how many bindings were sent.
 ```yaml
 action: esphome.my_panel_api_subscribe_end
 data:
-  push_id: "20261103170405123456"
+  push_id: "20261103T170405123456"
   count: 7
 ```
 
@@ -196,10 +196,12 @@ persisted bindings stay in effect. This prevents a truncated push from silently 
 The panel compares `push_id` values as strings to tell which push started last. A call with a newer
 `push_id` replaces the push being staged, and calls with an older one are ignored, so bindings from
 overlapping pushes are never saved together. Use a value that sorts by start time, such as a UTC
-timestamp with a fixed number of digits, as the Blueprint does:
+timestamp with a fixed number of digits, as the Blueprint does. Keep a non-digit character in it (the
+`T` below): Home Assistant turns an all-digit template result into a number, and one this large cannot
+be stored by the recorder.
 
 ```yaml
-push_id: '{{ utcnow().strftime("%Y%m%d%H%M%S%f") }}'
+push_id: '{{ utcnow().strftime("%Y%m%dT%H%M%S%f") }}'
 ```
 
 Compute it once per push, before the first `api_subscribe` call, and send the same value with every
@@ -218,7 +220,7 @@ A minimal Home Assistant script that binds two chips and the home page weather p
 alias: NSPanel bindings
 sequence:
   - variables:
-      push_id: '{{ utcnow().strftime("%Y%m%d%H%M%S%f") }}'
+      push_id: '{{ utcnow().strftime("%Y%m%dT%H%M%S%f") }}'
   - action: esphome.my_panel_api_subscribe
     data:
       push_id: "{{ push_id }}"

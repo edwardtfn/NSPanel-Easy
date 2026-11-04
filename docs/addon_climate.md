@@ -110,9 +110,12 @@ climate:
         current_temperature: 0.1  # Same precision, so Home Assistant shows the target with decimals
 ```
 
-Write the step in the unit of `temp_units`, without a unit after the number (e.g. `0.5` for half a degree on a °F panel).
+Write the step in the unit of `temp_units`, without a unit after the number (e.g. `0.5` for half a degree on a °F panel), and as a multiple of `0.1`.
 The climate page and Home Assistant then use the same step, as long as Home Assistant uses the same unit as `temp_units` (see the note below).
-With a unit, newer ESPHome versions convert the step into °C, and Home Assistant then uses a different step than the climate page.
+Both round the step to one decimal, but not the same way, so a step such as `0.25` becomes 0.3 on the climate page and 0.2 in Home Assistant.
+Home Assistant shows temperatures with the precision of `current_temperature` (whole degrees from `1`, half degrees from `0.5`, tenths below).
+Keep `current_temperature: 0.1` when the target step is not a multiple of `0.5`, so a target such as 20.2 is not shown rounded.
+With a unit, newer ESPHome versions convert a step written in °F into °C, so on a °F panel `1 °F` becomes about 0.6, on the climate page and in Home Assistant.
 
 > [!NOTE]
 > Home Assistant applies the step in its own temperature unit, without converting it.
@@ -167,6 +170,10 @@ The embedded thermostat keeps running all the time on its normal relays (typical
 so it has no effect while Home Assistant is connected.
 When Home Assistant has been unavailable for longer than `climate_backup_delay`, the backup relays start to follow the embedded thermostat.
 When Home Assistant is back, the backup relays are turned off and control returns to Home Assistant.
+
+Home Assistant counts as connected when its ESPHome integration is connected to the panel and receiving its states, as it normally is.
+Other connections to the panel's API that do not receive states (for example, viewing the logs) do not count:
+with only those, Home Assistant is considered unavailable.
 
 While Home Assistant is connected, the panel does not switch the backup relays on its own:
 Home Assistant must switch them, e.g. with its own thermostat or an automation.
