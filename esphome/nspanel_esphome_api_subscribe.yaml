@@ -35,6 +35,7 @@ api:
     ##### One binding. The blueprint sends one call per subscribable component. #####
     - action: api_subscribe
       variables:
+        push_id: string       # Identifier of the push, ordered by start time; the same for every call of one push
         page: string          # Target page, e.g. "chips"
         component: string     # Target component, e.g. "chip01"
         entity: string        # Home Assistant entity_id
@@ -49,6 +50,7 @@ api:
         - lambda: |-
             blueprint_setting_received();
             sub_push_binding(
+              push_id.c_str(),
               page.c_str(),
               component.c_str(),
               entity.c_str(),
@@ -65,13 +67,18 @@ api:
     ##### End marker. Sent after every binding, carrying how many were sent. #####
     - action: api_subscribe_end
       variables:
-        count: int
+        push_id: string       # Identifier of the push, as sent with its bindings
+        count: int            # Number of bindings sent in this push
       then:
         - lambda: |-
-            if (sub_push_end(static_cast<uint16_t>(count))) {
+            if (sub_push_end(push_id.c_str(), static_cast<uint16_t>(count))) {
               api_subscribe_restart->execute();
             }
-            api_subscribe_watchdog->stop();
+            // An ignored end marker (e.g. from an older push) leaves the staged push open:
+            // keep its watchdog running in that case
+            if (!sub_push_active()) {
+              api_subscribe_watchdog->stop();
+            }  // if (!sub_push_active())
 
 script:
   ##### Collapses a burst of binding calls into a single restart decision. #####
