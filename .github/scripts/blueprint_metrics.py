@@ -48,6 +48,11 @@ AUTOMATION_SECTIONS = ("trigger_variables", "variables", "triggers", "conditions
 # Subtrees smaller than this (expanded JSON characters) are not reported as duplicates
 DUPLICATE_MIN_SIZE = 2000
 
+# Upper bound for the number of nodes once anchors are expanded. Aliases can nest so that the
+# expanded size grows exponentially; above this bound no metrics are computed (the Blueprint
+# has about 200,000).
+MAX_EXPANDED_NODES = 5_000_000
+
 
 class BlueprintLoader(yaml.SafeLoader):
     """SafeLoader that accepts Home Assistant tags (e.g. `!input`), keeping them as text."""
@@ -70,6 +75,27 @@ def load_blueprint(path):
     with open(path, encoding="utf-8") as f:
         text = f.read()
     return text, yaml.load(text, Loader=BlueprintLoader)  # nosec B506 - SafeLoader subclass
+
+
+def expanded_node_count(node, memo=None):
+    """
+    Number of nodes once every anchor is expanded, computed without expanding them.
+
+    Aliases are the same Python object, so each distinct object is counted once and its
+    count reused, keeping this linear in the size of the file.
+    """
+    memo = {} if memo is None else memo
+    if id(node) in memo:
+        return memo[id(node)]
+    if isinstance(node, dict):
+        total = 1 + sum(expanded_node_count(value, memo) for value in node.values())
+    elif isinstance(node, list):
+        total = 1 + sum(expanded_node_count(value, memo) for value in node)
+    else:
+        total = 1
+    if isinstance(node, (dict, list)):
+        memo[id(node)] = total
+    return total
 
 
 def expanded_size(node):
@@ -129,6 +155,7 @@ def duplicated_subtrees(node, top):
     """
     Find the largest subtrees that appear more than once.
 
+    node maps each automation section to its content, so every section is scanned.
     Only maximal duplicates are reported: once a subtree is a duplicate, the
     subtrees inside it are not reported again.
     """
@@ -160,7 +187,8 @@ def duplicated_subtrees(node, top):
             collect(child, child_label)
 
     count(node)
-    collect(node, "(top level)")
+    for section, value in node.items():
+        collect(value, section)
     return sorted(found.values(), key=lambda entry: -(entry[0] - 1) * entry[1])[:top]
 
 
@@ -168,6 +196,10 @@ def measure(path, top):
     """Compute all metrics for one Blueprint file."""
     text, data = load_blueprint(path)
     sections = {key: data.get(key) for key in AUTOMATION_SECTIONS if key in data}
+    nodes = expanded_node_count(sections)
+    if nodes > MAX_EXPANDED_NODES:
+        raise ValueError(f"{path}: {nodes:,} nodes once anchors are expanded, above the limit of "
+                         f"{MAX_EXPANDED_NODES:,}; metrics skipped")
     templates = []
     collect_templates(sections, templates)
     counter = collections.Counter(templates)
@@ -186,7 +218,7 @@ def measure(path, top):
         "largest_templates": sorted(counter, key=len, reverse=True)[:top],
         "most_repeated": sorted(counter.items(), key=lambda item: -len(item[0]) * (item[1] - 1))[:top],
         "branches": branches[:top],
-        "duplicates": duplicated_subtrees(sections.get("actions"), top),
+        "duplicates": duplicated_subtrees(sections, top),
     }
 
 
@@ -197,6 +229,18 @@ def delta(current, base, key):
         return f"{value:,}"
     diff = value - base[key]
     return f"{value:,} ({diff:+,})" if diff else f"{value:,} (=)"
+
+
+def markdown_escape(text):
+    """
+    Escape a value from the Blueprint for a Markdown table cell.
+
+    Values come from pull requests, so whitespace (including newlines) is collapsed and every
+    character with a meaning in Markdown or HTML is escaped: nothing in a cell can start a
+    link, an image, HTML or a new table row.
+    """
+    flat = " ".join(str(text).split())
+    return "".join("\\" + char if char in "\\`*_{}[]()<>#+-.!|~&" else char for char in flat)
 
 
 def preview(template, width=90):
@@ -214,7 +258,7 @@ def report(current, base, markdown):
             out.append("| " + " | ".join(headers) + " |")
             out.append("|" + "|".join("---" for _ in headers) + "|")
             for row in rows:
-                out.append("| " + " | ".join(str(cell).replace("|", "\\|") for cell in row) + " |")
+                out.append("| " + " | ".join(markdown_escape(cell) for cell in row) + " |")
         else:
             for row in rows:
                 out.append("  " + "  ".join(str(cell) for cell in row))
@@ -248,11 +292,11 @@ def report(current, base, markdown):
 
     heading("Most repeated templates (by chars added)")
     table(["Copies", "Chars", "Template"],
-          [[count, len(t), f"`{preview(t)}`" if markdown else preview(t)] for t, count in current["most_repeated"]])
+          [[count, len(t), preview(t)] for t, count in current["most_repeated"]])
 
     heading("Largest templates")
     table(["Chars", "Template"],
-          [[len(t), f"`{preview(t)}`" if markdown else preview(t)] for t in current["largest_templates"]])
+          [[len(t), preview(t)] for t in current["largest_templates"]])
 
     return "\n".join(out)
 
@@ -268,8 +312,12 @@ def main():
                         help="warn when distinct templates reach this number (0 disables)")
     args = parser.parse_args()
 
-    current = measure(args.blueprint, args.top)
-    base = measure(args.base, args.top) if args.base else None
+    try:
+        current = measure(args.blueprint, args.top)
+        base = measure(args.base, args.top) if args.base else None
+    except ValueError as error:
+        print(f"::warning file={args.blueprint}::{error}")
+        return 0
     text = report(current, base, args.markdown)
     if args.output:
         with open(args.output, "a", encoding="utf-8") as f:

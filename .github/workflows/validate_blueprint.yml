@@ -27,6 +27,7 @@ jobs:
             nspanel_easy_blueprint.yaml
             .github/scripts/blueprint_metrics.py
             .github/workflows/validate_blueprint.yml
+            .github/requirements.txt
 
       - name: Set up Python
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
