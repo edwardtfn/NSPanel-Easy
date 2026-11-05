@@ -278,6 +278,15 @@ How it works:
 > the controllers then continue from their saved integral term. Setting both to `0s` in your local yaml avoids these reboots during long outages,
 > but a panel whose connection hangs then stays offline until it is power-cycled.
 > Thermostatic radiator heads, if present, must be set well above the target temperature, otherwise two controllers fight each other.
+> The relays driven by the PID packages must be dedicated to them: a hardware button set to control the same relay
+> fights the PWM output until its next switch.
+
+<!-- Separates the two alerts -->
+
+> [!CAUTION]
+> When cooling through the floor, surfaces below the dew point collect condensation, which can damage the floor and building.
+> The PID packages do not monitor the dew point: the controllers, and the boost of the single package, open the valve regardless of humidity.
+> Cooling requires dew-point protection on the heating system side, e.g. in the heat pump or at the manifold.
 
 ### PID configuration
 
