@@ -216,9 +216,11 @@ def compare_forecast(reference, candidate):
         total += 1
         expected = run_forecast(hass, reference, context)
         actual = run_forecast(hass, candidate, context)
-        if expected == actual:
+        # An error in the tested version is always a difference, even when the reference fails the same way
+        failed = str(actual).startswith("ERROR")
+        if expected == actual and not failed:
             continue
-        if str(expected).startswith("ERROR") and not str(actual).startswith("ERROR"):
+        if str(expected).startswith("ERROR") and not failed:
             fixed += 1
             continue
         differences += 1
