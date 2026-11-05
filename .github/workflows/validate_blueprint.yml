@@ -4,6 +4,8 @@ name: Validate Blueprint YAML
 # yamllint disable-line rule:truthy
 on:
   pull_request:
+    # labeled/unlabeled re-run the checks when the equivalence tests' skip label changes
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
 
 permissions:
@@ -17,6 +19,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: '0'
+          # This job runs scripts from the PR, so it must not keep the Git credentials
+          persist-credentials: false
 
       - name: Get changed files
         id: changed
@@ -26,6 +30,7 @@ jobs:
           files: |
             nspanel_easy_blueprint.yaml
             .github/scripts/blueprint_metrics.py
+            .github/scripts/test_*.py
             .github/workflows/validate_blueprint.yml
             .github/requirements.txt
 
@@ -55,6 +60,28 @@ jobs:
           fi  # if a base Blueprint is available
           python3 .github/scripts/blueprint_metrics.py nspanel_easy_blueprint.yaml "${base_args[@]}" \
             --markdown --output "$GITHUB_STEP_SUMMARY"
+
+      # Equivalence tests: each .github/scripts/test_*.py renders part of the Blueprint in this PR and in the target branch
+      # and fails when what the panel receives differs. For an intended change, add the label 'Blueprint: behavior change'.
+      - name: Blueprint equivalence tests
+        if: >-
+          github.event_name == 'pull_request'
+          && steps.changed.outputs.any_changed == 'true'
+          && !contains(github.event.pull_request.labels.*.name, 'Blueprint: behavior change')
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git show "origin/$BASE_REF:nspanel_easy_blueprint.yaml" > "$RUNNER_TEMP/reference_blueprint.yaml"
+          status=0
+          for test_script in .github/scripts/test_*.py; do
+            echo "::group::${test_script}"
+            if ! python3 "$test_script" "$RUNNER_TEMP/reference_blueprint.yaml" nspanel_easy_blueprint.yaml; then
+              echo "::error file=${test_script}::Rendering differs from ${BASE_REF}. If intended, add the label 'Blueprint: behavior change'."
+              status=1
+            fi  # if the test failed
+            echo "::endgroup::"
+          done
+          exit "$status"
 
   all-checks-passed:
     name: Validate Blueprint YAML / All checks passed

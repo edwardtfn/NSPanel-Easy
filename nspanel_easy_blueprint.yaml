@@ -9810,39 +9810,24 @@ actions:
                           - variables: *variables_weather_entity_from_input
                           - variables:
                               weather_attribution: '{{ state_attr(weather_entity, "attribution") if weather_entity is string }}'
-                              weather_units:
-                                humidity: >
-                                  {{
-                                    state_attr(weather_entity, "humidity_unit") | default("%")
-                                    if weather_entity is string and state_attr(weather_entity, "humidity_unit")
-                                    else "%"
-                                  }}
-                                hours_of_sun: >
-                                  {{
-                                    state_attr(weather_entity, "hours_of_sun_unit") | default("h")
-                                    if weather_entity is string and state_attr(weather_entity, "hours_of_sun_unit")
-                                    else "h"
-                                  }}
-                                precipitation: >
-                                  {{
-                                    state_attr(weather_entity, "precipitation_unit") | default("")
-                                    if weather_entity is string and state_attr(weather_entity, "precipitation_unit")
-                                  }}
-                                precipitation_probability: >
-                                  {{
-                                    state_attr(weather_entity, "precipitation_probability_unit") | default("%")
-                                    if weather_entity is string and state_attr(weather_entity, "precipitation_probability_unit")
-                                    else "%"
-                                  }}
-                                pressure: '{{ state_attr(weather_entity, "pressure_unit") | default("") if weather_entity is string and state_attr(weather_entity, "pressure_unit") }}'
-                                thunderstorm_probability: >
-                                  {{
-                                    state_attr(weather_entity, "thunderstorm_probability_unit") | default("%")
-                                    if weather_entity is string and state_attr(weather_entity, "thunderstorm_probability_unit")
-                                    else "%"
-                                  }}
-                                uv_index: '{{ state_attr(weather_entity, "uv_index_unit") | default("") if weather_entity is string and state_attr(weather_entity, "uv_index_unit") }}'
-                                wind_speed: '{{ state_attr(weather_entity, "wind_speed_unit") | default("") if weather_entity is string and state_attr(weather_entity, "wind_speed_unit") }}'
+                              # Unit of each weather value, from the weather entity, with a fallback for missing units
+                              weather_units: >-
+                                {%- set default_units = {
+                                      "humidity": "%",
+                                      "hours_of_sun": "h",
+                                      "precipitation": "",
+                                      "precipitation_probability": "%",
+                                      "pressure": "",
+                                      "thunderstorm_probability": "%",
+                                      "uv_index": "",
+                                      "wind_speed": ""
+                                    } -%}
+                                {%- set ns = namespace(units={}) -%}
+                                {%- for key, default_unit in default_units.items() -%}
+                                  {%- set unit = state_attr(weather_entity, key ~ "_unit") if weather_entity is string -%}
+                                  {%- set ns.units = dict(ns.units, **{key: unit if unit else default_unit}) -%}
+                                {%- endfor -%}
+                                {{ ns.units }}
                               page_name: '{{ nspanel_event.page }}'
                               page_index: '{{ (page_name[-2:] | int(0)) - 1 }}'
 
@@ -9929,8 +9914,7 @@ actions:
                                         else "" }}',
                                       'temperature': '{{ forecast | default([])
                                         | selectattr("temperature", "defined")
-                                        | rejectattr("temperature", "none")
-                                        | rejectattr("temperature", "eq", "")
+                                        | selectattr("temperature", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9939,8 +9923,7 @@ actions:
                                         | map(attribute="temperature") | list | first
                                         if forecast | default([])
                                         | selectattr("temperature", "defined")
-                                        | rejectattr("temperature", "none")
-                                        | rejectattr("temperature", "eq", "")
+                                        | selectattr("temperature", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9950,8 +9933,7 @@ actions:
                                         else "" }}',
                                       'templow': '{{ forecast | default([])
                                         | selectattr("templow", "defined")
-                                        | rejectattr("templow", "none")
-                                        | rejectattr("templow", "eq", "")
+                                        | selectattr("templow", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9960,8 +9942,7 @@ actions:
                                         | map(attribute="templow") | list | first
                                         if forecast | default([])
                                         | selectattr("templow", "defined")
-                                        | rejectattr("templow", "none")
-                                        | rejectattr("templow", "eq", "")
+                                        | selectattr("templow", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9971,8 +9952,7 @@ actions:
                                         else "" }}',
                                       'precipitation': '{{ forecast | default([])
                                         | selectattr("precipitation", "defined")
-                                        | rejectattr("precipitation", "none")
-                                        | rejectattr("precipitation", "eq", "")
+                                        | selectattr("precipitation", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9981,8 +9961,7 @@ actions:
                                         | map(attribute="precipitation") | list | first
                                         if forecast | default([])
                                         | selectattr("precipitation", "defined")
-                                        | rejectattr("precipitation", "none")
-                                        | rejectattr("precipitation", "eq", "")
+                                        | selectattr("precipitation", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9992,8 +9971,7 @@ actions:
                                         else "" }}',
                                       'wind_speed': '{{ forecast | default([])
                                         | selectattr("wind_speed", "defined")
-                                        | rejectattr("wind_speed", "none")
-                                        | rejectattr("wind_speed", "eq", "")
+                                        | selectattr("wind_speed", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -10002,8 +9980,7 @@ actions:
                                         | map(attribute="wind_speed") | list | first
                                         if forecast | default([])
                                         | selectattr("wind_speed", "defined")
-                                        | rejectattr("wind_speed", "none")
-                                        | rejectattr("wind_speed", "eq", "")
+                                        | selectattr("wind_speed", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -10031,37 +10008,29 @@ actions:
                               - if: '{{ forecast_day | count > 0 }}'
                                 then:
                                   - variables:
+                                      # Lowest temperature of the day: each forecast slot gives its low temperature,
+                                      # or its temperature when it has no numeric low (e.g. hourly slots or twice_daily night slots)
                                       temp_min: >
-                                        {{
-                                          forecast_day
-                                            | selectattr("templow", "defined")
-                                            | rejectattr("templow", "none")
-                                            | map(attribute="templow") | map("float") | list | min
-                                          if forecast_day
-                                              | selectattr("templow", "defined")
-                                              | rejectattr("templow", "none")
-                                              | map(attribute="templow") | map("float") | list | count > 0
-                                          else
-                                            forecast_day
-                                            | selectattr("temperature", "defined")
-                                            | rejectattr("temperature", "none")
-                                            | rejectattr("temperature", "eq", "")
-                                            | map(attribute="temperature")
-                                            | map("float") | list | min | default("unknown")
-                                        }}
+                                        {%- set ns = namespace(lows=[]) -%}
+                                        {%- for slot in forecast_day -%}
+                                          {%- if slot.templow is defined and is_number(slot.templow) -%}
+                                            {%- set ns.lows = ns.lows + [slot.templow | float] -%}
+                                          {%- elif slot.temperature is defined and is_number(slot.temperature) -%}
+                                            {%- set ns.lows = ns.lows + [slot.temperature | float] -%}
+                                          {%- endif -%}  {#- if slot has a numeric low or temperature -#}
+                                        {%- endfor -%}
+                                        {{ ns.lows | min if ns.lows | count > 0 else "unknown" }}
                                       temp_max: >
                                         {{
                                           forecast_day
                                           | selectattr("temperature", "defined")
-                                          | rejectattr("temperature", "none")
-                                          | rejectattr("temperature", "eq", "")
+                                          | selectattr("temperature", "is_number")
                                           | map(attribute="temperature")
                                           | map("float") | list | max
                                           if
                                             forecast_day
                                             | selectattr("temperature", "defined")
-                                            | rejectattr("temperature", "none")
-                                            | rejectattr("temperature", "eq", "")
+                                            | selectattr("temperature", "is_number")
                                             | map(attribute="temperature")
                                             | map("float") | list | count > 0
                                           else None
@@ -10132,15 +10101,13 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("precipitation", "defined")
-                                          | rejectattr("precipitation", "none")
-                                          | rejectattr("precipitation", "eq", "")
+                                          | selectattr("precipitation", "is_number")
                                           | map(attribute="precipitation")
                                           | map("float") | list | sum | round(0)
                                           if
                                             forecast_day
                                             | selectattr("precipitation", "defined")
-                                            | rejectattr("precipitation", "none")
-                                            | rejectattr("precipitation", "eq", "")
+                                            | selectattr("precipitation", "is_number")
                                             | map(attribute="precipitation")
                                             | map("float") | list | count > 0
                                           else None
@@ -10149,15 +10116,13 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("precipitation_probability", "defined")
-                                          | rejectattr("precipitation_probability", "none")
-                                          | rejectattr("precipitation_probability", "eq", "")
+                                          | selectattr("precipitation_probability", "is_number")
                                           | map(attribute="precipitation_probability")
                                           | map("float") | list | max | round(0)
                                           if
                                             forecast_day
                                             | selectattr("precipitation_probability", "defined")
-                                            | rejectattr("precipitation_probability", "none")
-                                            | rejectattr("precipitation_probability", "eq", "")
+                                            | selectattr("precipitation_probability", "is_number")
                                             | map(attribute="precipitation_probability")
                                             | map("float") | list | count > 0
                                           else None
@@ -10166,15 +10131,13 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("pressure", "defined")
-                                          | rejectattr("pressure", "none")
-                                          | rejectattr("pressure", "eq", "")
+                                          | selectattr("pressure", "is_number")
                                           | map(attribute="pressure")
                                           | map("float") | list | max | round(0)
                                           if
                                             forecast_day
                                             | selectattr("pressure", "defined")
-                                            | rejectattr("pressure", "none")
-                                            | rejectattr("pressure", "eq", "")
+                                            | selectattr("pressure", "is_number")
                                             | map(attribute="pressure")
                                             | map("float") | list | count > 0
                                           else None
@@ -10183,15 +10146,13 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("wind_speed", "defined")
-                                          | rejectattr("wind_speed", "none")
-                                          | rejectattr("wind_speed", "eq", "")
+                                          | selectattr("wind_speed", "is_number")
                                           | map(attribute="wind_speed")
                                           | map("float") | list | max | round(0)
                                           if
                                             forecast_day
                                             | selectattr("wind_speed", "defined")
-                                            | rejectattr("wind_speed", "none")
-                                            | rejectattr("wind_speed", "eq", "")
+                                            | selectattr("wind_speed", "is_number")
                                             | map(attribute="wind_speed")
                                             | map("float") | list | count > 0
                                           else None
@@ -10200,8 +10161,7 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("hours_of_sun", "defined")
-                                          | rejectattr("hours_of_sun", "none")
-                                          | rejectattr("hours_of_sun", "eq", "")
+                                          | selectattr("hours_of_sun", "is_number")
                                           | map(attribute="hours_of_sun")
                                           | map("float")
                                           | list
@@ -10210,8 +10170,7 @@ actions:
                                           if
                                             forecast_day
                                             | selectattr("hours_of_sun", "defined")
-                                            | rejectattr("hours_of_sun", "none")
-                                            | rejectattr("hours_of_sun", "eq", "")
+                                            | selectattr("hours_of_sun", "is_number")
                                             | map(attribute="hours_of_sun")
                                             | map("float")
                                             | list
@@ -10222,8 +10181,7 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("uv_index", "defined")
-                                          | rejectattr("uv_index", "none")
-                                          | rejectattr("uv_index", "eq", "")
+                                          | selectattr("uv_index", "is_number")
                                           | map(attribute="uv_index")
                                           | map("float")
                                           | list
@@ -10232,8 +10190,7 @@ actions:
                                           if
                                             forecast_day
                                             | selectattr("uv_index", "defined")
-                                            | rejectattr("uv_index", "none")
-                                            | rejectattr("uv_index", "eq", "")
+                                            | selectattr("uv_index", "is_number")
                                             | map(attribute="uv_index")
                                             | map("float")
                                             | list
@@ -10244,8 +10201,7 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("thunderstorm_probability", "defined")
-                                          | rejectattr("thunderstorm_probability", "none")
-                                          | rejectattr("thunderstorm_probability", "eq", "")
+                                          | selectattr("thunderstorm_probability", "is_number")
                                           | map(attribute="thunderstorm_probability") | map("float")
                                           | list
                                           | max
@@ -10253,8 +10209,7 @@ actions:
                                           if
                                             forecast_day
                                             | selectattr("thunderstorm_probability", "defined")
-                                            | rejectattr("thunderstorm_probability", "none")
-                                            | rejectattr("thunderstorm_probability", "eq", "")
+                                            | selectattr("thunderstorm_probability", "is_number")
                                             | map(attribute="thunderstorm_probability")
                                             | map("float")
                                             | list
@@ -10265,8 +10220,7 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("humidity", "defined")
-                                          | rejectattr("humidity", "none")
-                                          | rejectattr("humidity", "eq", "")
+                                          | selectattr("humidity", "is_number")
                                           | map(attribute="humidity")
                                           | map("float")
                                           | list
@@ -10275,48 +10229,69 @@ actions:
                                           if
                                             forecast_day
                                             | selectattr("humidity", "defined")
-                                            | rejectattr("humidity", "none")
-                                            | rejectattr("humidity", "eq", "")
+                                            | selectattr("humidity", "is_number")
                                             | map(attribute="humidity")
                                             | map("float")
                                             | list
                                             | count > 0
                                           else None
                                         }}
-                                      parameters:
-                                        - name: hours_of_sun
-                                          visibility: '{{ is_number(hours_of_sun) }}'
-                                          value: '{{ (hours_of_sun ~ ("" if compact_unit_display else " ") ~ weather_units.hours_of_sun) if is_number(hours_of_sun) }}'
-                                          icon: '{{ nextion.icon.weather.sun }}'
-                                        - name: thunderstorm_probability
-                                          visibility: '{{ is_number(thunderstorm_probability) }}'
-                                          value: >-
-                                            {{ (thunderstorm_probability ~ ("" if compact_unit_display else " ") ~ weather_units.thunderstorm_probability)
-                                               if is_number(thunderstorm_probability) }}
-                                          icon: '{{ nextion.icon.weather.lightning }}'
-                                        - name: precipitation
-                                          visibility: '{{ is_number(precipitation) or is_number(precipitation_probability) }}'
-                                          value: >
-                                            {{ (precipitation ~ ("" if compact_unit_display else " ") ~ weather_units.precipitation) if is_number(precipitation) }}
-                                            {{ "-" if is_number(precipitation) and is_number(precipitation_probability) }}
-                                            {{ (precipitation_probability ~ ("" if compact_unit_display else " ") ~ weather_units.precipitation_probability) if is_number(precipitation_probability) }}
-                                          icon: '{{ nextion.icon.weather.rain }}'
-                                        - name: uv_index
-                                          visibility: '{{ is_number(uv_index) }}'
-                                          value: '{{ (uv_index ~ ("" if compact_unit_display else " ") ~ weather_units.uv_index) if is_number(uv_index) }}'
-                                          icon: '{{ nextion.icon.weather.protect }}'
-                                        - name: wind_speed
-                                          visibility: '{{ is_number(wind_speed) }}'
-                                          value: '{{ (wind_speed ~ ("" if compact_unit_display else " ") ~ weather_units.wind_speed) if is_number(wind_speed) }}'
-                                          icon: '{{ nextion.icon.weather.wind }}'
-                                        - name: humidity
-                                          visibility: '{{ is_number(humidity) }}'
-                                          value: '{{ (humidity ~ ("" if compact_unit_display else " ") ~ weather_units.humidity) if is_number(humidity) }}'
-                                          icon: '{{ "\uE58D" }}{# mdi:water-percent #}'
-                                        - name: pressure
-                                          visibility: '{{ is_number(pressure) }}'
-                                          value: '{{ (pressure ~ ("" if compact_unit_display else " ") ~ weather_units.pressure) if is_number(pressure) }}'
-                                          icon: '{{ nextion.icon.weather.gauge }}'
+                                      # Values shown in fields 1 to 5, in display order (only the visible ones are used)
+                                      parameters: >-
+                                        {%- macro with_unit(value, unit) -%}
+                                          {{- (value ~ ("" if compact_unit_display else " ") ~ unit) if is_number(value) -}}
+                                        {%- endmacro -%}
+                                        {%- set precipitation_value = [
+                                              with_unit(precipitation, weather_units.precipitation),
+                                              with_unit(precipitation_probability, weather_units.precipitation_probability)
+                                            ] | reject("eq", "") | join(" - ") -%}
+                                        {#- Humidity icon "\uE58D" is mdi:water-percent -#}
+                                        {{
+                                          [
+                                            {
+                                              "name": "hours_of_sun",
+                                              "visibility": is_number(hours_of_sun),
+                                              "value": with_unit(hours_of_sun, weather_units.hours_of_sun) | trim,
+                                              "icon": nextion.icon.weather.sun
+                                            },
+                                            {
+                                              "name": "thunderstorm_probability",
+                                              "visibility": is_number(thunderstorm_probability),
+                                              "value": with_unit(thunderstorm_probability, weather_units.thunderstorm_probability) | trim,
+                                              "icon": nextion.icon.weather.lightning
+                                            },
+                                            {
+                                              "name": "precipitation",
+                                              "visibility": is_number(precipitation) or is_number(precipitation_probability),
+                                              "value": precipitation_value | trim,
+                                              "icon": nextion.icon.weather.rain
+                                            },
+                                            {
+                                              "name": "uv_index",
+                                              "visibility": is_number(uv_index),
+                                              "value": with_unit(uv_index, weather_units.uv_index) | trim,
+                                              "icon": nextion.icon.weather.protect
+                                            },
+                                            {
+                                              "name": "wind_speed",
+                                              "visibility": is_number(wind_speed),
+                                              "value": with_unit(wind_speed, weather_units.wind_speed) | trim,
+                                              "icon": nextion.icon.weather.wind
+                                            },
+                                            {
+                                              "name": "humidity",
+                                              "visibility": is_number(humidity),
+                                              "value": with_unit(humidity, weather_units.humidity) | trim,
+                                              "icon": "\uE58D"
+                                            },
+                                            {
+                                              "name": "pressure",
+                                              "visibility": is_number(pressure),
+                                              "value": with_unit(pressure, weather_units.pressure) | trim,
+                                              "icon": nextion.icon.weather.gauge
+                                            }
+                                          ]
+                                        }}
 
                                   ##### Display weather PIC when available
                                   - if: '{{ condition not in ["unknown", None] }}'

@@ -58,11 +58,13 @@ Select a Weather entity to use.
 Most of the weather integrations are supported, however some may be able to provide more information than others.
 
 We run all of our tests with "Accuweather", so the parameters shown on the panel are targetting this integration and will be shown with your integration when available.
+Forecast values that the integration doesn't provide, or provides as something other than a number, are left out of the weather pages.
 
 ### Weather pages - Show maximum temperature first
 
 The weather pages show the forecast temperatures as `<min> / <max>` by default.
 Enable this option to show them as `<max> / <min>`.
+When the forecast has no low temperature for a period (for example in hourly forecasts), the temperature of that period is used to find the minimum.
 
 ### Outdoor temperature Sensor (Optional)
 
