@@ -1,0 +1,310 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHome Add-on for Climate control - PID Dual (two setpoints, heat and cool)              #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### PI/PWM control for slow systems such as underfloor heating, replacing the two-point       #####
+##### control of the dual add-on.                                                               #####
+##### - thermostat_embedded keeps holding setpoints and mode for display, chip and Blueprint,   #####
+#####   but only switches the dummy relay 0.                                                    #####
+##### - Two internal PID controllers do the actual control: target_temperature_low -> heat,     #####
+#####   target_temperature_high -> cool. The mode (off/heat/cool/heat_cool) is copied as well.  #####
+##### - The relays are modulated by slow PWM outputs.                                           #####
+#####################################################################################################
+##### ATTENTION: Do NOT combine with climate_heat, climate_cool, climate_dual,                  #####
+##### climate_pid_single or climate_backup. The climate base is included by this file.          #####
+#####################################################################################################
+---
+esphome:
+  build_flags:
+    - -D NSPANEL_EASY_ADDON_CLIMATE_DUAL  # Dual setpoint UI on the display, as with the dual add-on
+
+climate:
+  # Thermostat facade: holds setpoints and mode, deadband/overrun only drive the activity display
+  - id: !extend thermostat_embedded
+    heat_cool_mode: true  # Required for the HEAT_COOL mode, used by the "Home" preset
+    min_cooling_off_time: 1s
+    min_heating_off_time: 1s
+    min_cooling_run_time: 1s
+    min_heating_run_time: 1s
+    cool_deadband: ${cool_deadband} ${temp_units}
+    cool_overrun: ${cool_overrun} ${temp_units}
+    heat_deadband: ${heat_deadband} ${temp_units}
+    heat_overrun: ${heat_overrun} ${temp_units}
+    cool_action:
+      - switch.turn_on: relay_0   # Dummy, the relays are driven by the PID controllers
+    heat_action:
+      - switch.turn_on: relay_0   # Dummy
+    idle_action:
+      - switch.turn_off: relay_0  # Dummy
+    preset:
+      - name: "Off"
+        default_target_temperature_high: ${target_high} ${temp_units}
+        default_target_temperature_low: ${target_low} ${temp_units}
+        mode: "off"
+      - name: Home
+        default_target_temperature_high: ${target_high} ${temp_units}
+        default_target_temperature_low: ${target_low} ${temp_units}
+        mode: "heat_cool"
+
+globals:
+  # Demands of the controllers (0..1) before the heat/cool interlock in pid_dual_outputs
+  - id: pid_heat_demand
+    type: float
+    restore_value: false
+    initial_value: '0.0f'  # Must be quoted: ESPHome expects the C++ initializer as a string
+  - id: pid_cool_demand
+    type: float
+    restore_value: false
+    initial_value: '0.0f'  # Must be quoted: ESPHome expects the C++ initializer as a string
+  - id: pid_dual_activity  # Relay running after the interlock: 0 = none, 1 = heating, 2 = cooling
+    type: uint8_t
+    restore_value: false
+    initial_value: '0'  # Must be quoted: ESPHome expects the C++ initializer as a string
+
+output:
+  # The controllers write their demand here; pid_dual_outputs decides which relay may run
+  - platform: template
+    id: pid_heat_out
+    type: float
+    write_action:
+      - lambda: |-
+          id(pid_heat_demand) = state;
+          pid_dual_outputs->execute();
+
+  - platform: template
+    id: pid_cool_out
+    type: float
+    write_action:
+      - lambda: |-
+          id(pid_cool_demand) = state;
+          pid_dual_outputs->execute();
+
+  # Turn the arbitrated outputs (0..100 %) into on/off cycles of the relays.
+  # Interlock at the relay: switching one relay on always switches the other one off first.
+  - platform: slow_pwm
+    id: pid_heat_pwm
+    period: ${pwm_period}s
+    turn_on_action:
+      - switch.turn_off: relay_${cooler_relay}
+      - switch.turn_on: relay_${heater_relay}
+    turn_off_action:
+      - switch.turn_off: relay_${heater_relay}
+
+  - platform: slow_pwm
+    id: pid_cool_pwm
+    period: ${pwm_period}s
+    turn_on_action:
+      - switch.turn_off: relay_${heater_relay}
+      - switch.turn_on: relay_${cooler_relay}
+    turn_off_action:
+      - switch.turn_off: relay_${cooler_relay}
+
+script:
+  # Validates the relay selection at build time
+  - id: !extend dump_config
+    then:
+      - lambda: |-
+          static_assert((${heater_relay} == 1) or (${heater_relay} == 2), "heater_relay must be 1 or 2");
+          static_assert((${cooler_relay} == 1) or (${cooler_relay} == 2), "cooler_relay must be 1 or 2");
+          static_assert(${heater_relay} != ${cooler_relay}, "heater_relay and cooler_relay must select different relays");
+
+  # Heat/cool interlock, applied on every controller sample: in heat_cool mode, a retained integral term
+  # can keep one controller demanding while the other one starts. Only one relay may run: the controller
+  # whose setpoint is exceeded more wins, the other one is set to 0.
+  - id: pid_dual_outputs
+    mode: queued
+    then:
+      - lambda: |-
+          float heat = id(pid_heat_demand);
+          float cool = id(pid_cool_demand);
+          if (heat > 0.0f && cool > 0.0f) {
+            const float temp = pid_temperature->state;
+            const float low = thermostat_embedded->target_temperature_low;
+            const float high = thermostat_embedded->target_temperature_high;
+            const bool cooling_wins = (std::isnan(temp) || std::isnan(low) || std::isnan(high))
+                                          ? (cool >= heat)
+                                          : ((temp - high) >= (low - temp));
+            ESP_LOGD("${TAG_ADDON_CLIMATE_PID}", "Heat and cool demanded at once: %s wins",
+                     cooling_wins ? "cooling" : "heating");
+            if (cooling_wins) {
+              heat = 0.0f;
+            } else {
+              cool = 0.0f;
+            }
+          }
+          // The output that stops is set first
+          if (heat > 0.0f) {
+            id(pid_cool_pwm).set_level(cool);
+            id(pid_heat_pwm).set_level(heat);
+          } else {
+            id(pid_heat_pwm).set_level(heat);
+            id(pid_cool_pwm).set_level(cool);
+          }
+          // Activity shown on the display, from the relay outputs instead of the facade's hysteresis
+          const uint8_t activity = (heat > 0.0f) ? 1 : ((cool > 0.0f) ? 2 : 0);
+          if (activity != id(pid_dual_activity)) {
+            id(pid_dual_activity) = activity;
+            if (id(is_embedded_thermostat)) update_climate_chip->execute();
+          }
+
+  ###################################################################################################
+  ##### Display: replaces the climate chip of the climate base. The base derives the activity   #####
+  ##### from the thermostat facade, whose hysteresis does not drive the relays here. Here it    #####
+  ##### comes from the arbitrated controller outputs instead.                                   #####
+  ###################################################################################################
+  - id: !remove update_climate_chip
+
+  - id: update_climate_chip
+    mode: single
+    then:
+      - lambda: |-
+          const uint8_t mode = static_cast<uint8_t>(thermostat_embedded->mode);
+          uint8_t action = nspanel_easy::CLIMATE_ACTION_OFF;
+          if (thermostat_embedded->mode != climate::CLIMATE_MODE_OFF) {
+            if (id(pid_dual_activity) == 1) {
+              action = nspanel_easy::CLIMATE_ACTION_HEATING;
+            } else if (id(pid_dual_activity) == 2) {
+              action = nspanel_easy::CLIMATE_ACTION_COOLING;
+            } else {
+              action = nspanel_easy::CLIMATE_ACTION_IDLE;
+            }
+          }
+          const bool is_active = (action == nspanel_easy::CLIMATE_ACTION_COOLING ||
+                                  action == nspanel_easy::CLIMATE_ACTION_HEATING);
+
+          const auto visibility = static_cast<nspanel_easy::ClimateChipVisibility>(id(climate_chip_visibility));
+          bool visible = false;
+          if (visibility == nspanel_easy::CLIMATE_CHIP_ALWAYS) {
+            visible = true;
+          } else if (visibility == nspanel_easy::CLIMATE_CHIP_ACTIVE_ONLY) {
+            visible = is_active;
+          }
+
+          // Same icons and colors as the climate base
+          const char *icon = Icons::MDI_NONE;
+          uint16_t color = Colors::RGB565_BLACK;
+          if (visible) {
+            if (action == nspanel_easy::CLIMATE_ACTION_OFF) {
+              if (mode <= nspanel_easy::CLIMATE_MODE_AUTO) {
+                icon = climate_off_mode_icons[mode].icon;
+                color = climate_off_mode_icons[mode].color;
+              }
+            } else {
+              icon = climate_action_icons[action].icon;
+              color = climate_action_icons[action].color;
+            }
+          }
+
+          ChipState &the_chip = chip_states[CHIP_IDX_CLIMATE];
+          bool changed = false;
+          if (strcmp(the_chip.icon, icon) != 0) {
+            strncpy(the_chip.icon, icon, sizeof(the_chip.icon) - 1);
+            the_chip.icon[sizeof(the_chip.icon) - 1] = '\0';
+            changed = true;
+          }
+          if (the_chip.color != color) {
+            the_chip.color = color;
+            changed = true;
+          }
+          if (the_chip.visible != visible) {
+            the_chip.visible = visible;
+            changed = true;
+          }
+          if (changed) chip_render(CHIP_IDX_CLIMATE);
+
+          if (current_page_id != get_page_id("climate")) return;
+          if (!climate_embedded_visible) return;
+
+          // Target icon on the climate page: independent of the chip visibility, always show the mode, colored while active
+          const char *target_icon = Icons::MDI_NONE;
+          uint16_t target_color = Colors::RGB565_BLACK;
+          if (is_active) {
+            target_icon = climate_action_icons[action].icon;
+            target_color = climate_action_icons[action].color;
+          } else if (mode <= nspanel_easy::CLIMATE_MODE_AUTO) {
+            target_icon = climate_off_mode_icons[mode].icon;
+            target_color = climate_off_mode_icons[mode].color;
+          }
+          disp1->set_component_text("target_icon", target_icon);
+          disp1->set_component_font_color("target_icon", static_cast<uint16_t>(target_color));
+
+number:
+  - id: !extend pid_tuning_pwm_period
+    on_value:
+      - lambda: |-
+          if (isnan(x) || x < 60.0f) return;
+          const uint32_t ms = static_cast<uint32_t>(x * 1000.0f);
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "PWM period applied: %.0fs", x);
+          pid_heat_pwm->set_period(ms);
+          pid_cool_pwm->set_period(ms);
+
+interval:
+  # Copies mode and setpoints from the thermostat facade to the controllers.
+  # Change detection avoids needless state publishes. All values are °C internally.
+  - interval: ${pid_sync_interval}s
+    then:
+      - lambda: |-
+          static float last_heat_target = NAN;
+          static float last_cool_target = NAN;
+          static int   last_mode = -1;
+
+          const auto mode = thermostat_embedded->mode;
+          const float t_low  = thermostat_embedded->target_temperature_low;
+          const float t_high = thermostat_embedded->target_temperature_high;
+
+          const bool heat_enabled = (mode == climate::CLIMATE_MODE_HEAT ||
+                                     mode == climate::CLIMATE_MODE_HEAT_COOL);
+          const bool cool_enabled = (mode == climate::CLIMATE_MODE_COOL ||
+                                     mode == climate::CLIMATE_MODE_HEAT_COOL);
+
+          const bool mode_changed = (int(mode) != last_mode);
+          const bool heat_changed = mode_changed ||
+              (heat_enabled && (isnan(last_heat_target) || fabsf(t_low - last_heat_target) > 0.01f));
+          const bool cool_changed = mode_changed ||
+              (cool_enabled && (isnan(last_cool_target) || fabsf(t_high - last_cool_target) > 0.01f));
+
+          if (heat_changed) {
+            if (heat_enabled && isnan(t_low)) {
+              ESP_LOGW("${TAG_ADDON_CLIMATE_PID}", "Heat setpoint is NAN - sync skipped");
+            } else {
+              ESP_LOGD("${TAG_ADDON_CLIMATE_PID}", "Sync PID heat: enabled=%s target=%.2f°C",
+                       YESNO(heat_enabled), t_low);
+              auto call = pid_heat_embedded->make_call();
+              if (heat_enabled) {
+                call.set_mode(climate::CLIMATE_MODE_HEAT);
+                call.set_target_temperature(t_low);
+              } else {
+                call.set_mode(climate::CLIMATE_MODE_OFF);
+              }
+              call.perform();
+              last_heat_target = t_low;
+            }
+          }
+
+          if (cool_changed) {
+            if (cool_enabled && isnan(t_high)) {
+              ESP_LOGW("${TAG_ADDON_CLIMATE_PID}", "Cool setpoint is NAN - sync skipped");
+            } else {
+              ESP_LOGD("${TAG_ADDON_CLIMATE_PID}", "Sync PID cool: enabled=%s target=%.2f°C",
+                       YESNO(cool_enabled), t_high);
+              auto call = pid_cool_embedded->make_call();
+              if (cool_enabled) {
+                call.set_mode(climate::CLIMATE_MODE_COOL);
+                call.set_target_temperature(t_high);
+              } else {
+                call.set_mode(climate::CLIMATE_MODE_OFF);
+              }
+              call.perform();
+              last_cool_target = t_high;
+            }
+          }
+
+          last_mode = int(mode);
+      - script.execute: pid_integral_track
+
+packages:
+  climate_pid_base_package: !include nspanel_esphome_addon_climate_pid_base.yaml
+...

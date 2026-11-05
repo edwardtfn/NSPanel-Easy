@@ -1,0 +1,698 @@
+#####################################################################################################
+#####                 NSPanel Easy - https://github.com/edwardtfn/NSPanel-Easy                  #####
+#####################################################################################################
+##### ESPHome Add-on for Climate control - PID Single (one setpoint, central heat/cool mode)    #####
+##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
+##### For normal use with the Blueprint, no changes are necessary.                              #####
+#####################################################################################################
+##### PI/PWM control for slow systems such as underfloor heating, with a single setpoint.       #####
+##### - thermostat_embedded acts as a heat-only facade: one setpoint, modes off/heat. On the    #####
+#####   panel this means "room on/off" plus the setpoint. It only switches the dummy relay 0.   #####
+##### - The operating mode (heat or cool) is read from a Home Assistant entity, so it can be    #####
+#####   switched centrally (e.g. together with the heat pump). It is stored in flash, so the    #####
+#####   panel keeps regulating in the last mode while Home Assistant is unavailable.            #####
+##### - Two internal PID controllers (heat/cool) follow the same setpoint; exactly one is       #####
+#####   active. Both feed one slow PWM output on one relay (shared valve actuators).            #####
+##### - The display follows the operating mode: the climate chip and the climate page show      #####
+#####   the action of the active controller (fire/snowflake), and the mode button on the        #####
+#####   climate page switches between heat and cool.                                            #####
+##### - Boost: a switch opens the valve fully for a set time, bypassing the controller.         #####
+#####   It has a button on the climate page and, optionally, a chip on the home page and its    #####
+#####   remaining time on the climate page, all driven locally, so they also work without HA.   #####
+##### - Presets Comfort, Eco and Off, Comfort and Eco also as buttons on the climate page.      #####
+#####   Their temperatures follow Home Assistant entities (e.g. the helpers of a heating        #####
+#####   schedule) and are stored in flash. The panel marks the matching preset when the         #####
+#####   setpoint is set to one of them from elsewhere.                                          #####
+#####################################################################################################
+##### ATTENTION: Do NOT combine with climate_heat, climate_cool, climate_dual,                  #####
+##### climate_pid_dual or climate_backup. The climate base is included by this file.            #####
+#####################################################################################################
+---
+substitutions:
+  ##############################
+  ## Change only in your      ##
+  ## local yaml substitutions ##
+  ##############################
+  valve_relay: "1"                            # Relay switching the valve actuators (heating and cooling)
+  heater_relay: ${valve_relay}                # Reported by the climate base; the valve relay is driven by the PID
+  pid_mode_entity: input_select.climate_mode  # HA entity holding the central operating mode
+  pid_mode_heat_state: "Heat"                 # State of the mode entity that selects heating
+  pid_mode_cool_state: "Cool"                 # State of the mode entity that selects cooling
+  pid_boost_duration: "30"                    # Boost duration in minutes. Seed for the first boot only
+  pid_boost_chip: ""                          # User chip (chip01..chip07) taken over for the boost, or "" for none
+  pid_boost_value: ""                         # Climate page value slot (value01..value04) for the remaining time, or "" for none
+  ### Presets Comfort and Eco: temperatures from Home Assistant, seeds until the first value arrives ###
+  pid_comfort_entity: input_number.climate_comfort  # HA entity with the comfort temperature (in temp_units)
+  pid_eco_entity: input_number.climate_eco          # HA entity with the eco temperature (in temp_units)
+  pid_comfort_temp: ${70 if TEMP_UNIT_IS_FAHRENHEIT else 21}  # Comfort temperature until the entity reports
+  pid_eco_temp: ${64 if TEMP_UNIT_IS_FAHRENHEIT else 18}      # Eco temperature until the entity reports
+  pid_preset_buttons: "true"  # Comfort and Eco as buttons on the climate page instead of the preset picker
+  ### Entity names (override to keep existing entity IDs or to localize) ###
+  pid_name_mode: "PID Operating mode"
+  pid_name_boost: "PID Boost"
+  pid_name_boost_duration: "PID Boost duration"
+  pid_name_boost_end: "PID Boost end"
+  temp_max: ${113 if TEMP_UNIT_IS_FAHRENHEIT else 45}
+
+esphome:
+  build_flags:
+    - -D NSPANEL_EASY_ADDON_CLIMATE_HEAT  # Single setpoint UI on the display, as with the heat add-on
+
+globals:
+  - id: pid_cooling_mode  # Central operating mode: true = cool, false = heat
+    type: bool
+    restore_value: true
+    initial_value: 'false'  # Must be quoted: ESPHome expects the C++ initializer as a string
+
+  - id: pid_boost_active  # True while the boost holds the valve fully open
+    type: bool
+    restore_value: false
+    initial_value: 'false'  # Must be quoted: ESPHome expects the C++ initializer as a string
+
+  - id: pid_boost_end_ms  # millis() at which the running boost ends, for the remaining time on the display
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'  # Must be quoted: ESPHome expects the C++ initializer as a string
+
+  - id: pid_comfort_value  # Comfort temperature (°C): from Home Assistant, pid_comfort_temp until it reports
+    type: float
+    restore_value: true
+    initial_value: '(NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT ? ((${pid_comfort_temp}) - 32.0f) * 5.0f / 9.0f : (${pid_comfort_temp}))'
+
+  - id: pid_eco_value  # Eco temperature (°C): from Home Assistant, pid_eco_temp until it reports
+    type: float
+    restore_value: true
+    initial_value: '(NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT ? ((${pid_eco_temp}) - 32.0f) * 5.0f / 9.0f : (${pid_eco_temp}))'
+
+text_sensor:
+  - platform: homeassistant  # Central operating mode from Home Assistant
+    id: pid_mode_from_ha
+    entity_id: ${pid_mode_entity}
+    internal: true
+    on_value:
+      - lambda: |-
+          bool cooling;
+          if (x == "${pid_mode_cool_state}") {
+            cooling = true;
+          } else if (x == "${pid_mode_heat_state}") {
+            cooling = false;
+          } else {
+            ESP_LOGW("${TAG_ADDON_CLIMATE_PID}", "Unknown operating mode '%s' - ignored", x.c_str());
+            return;
+          }
+          if (cooling == id(pid_cooling_mode)) return;
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Operating mode changed: %s", cooling ? "cool" : "heat");
+          id(pid_cooling_mode) = cooling;
+          // A running boost ends with the operating mode it was started in
+          if (id(pid_boost_active)) {
+            pid_boost_run->stop();
+            id(pid_boost_active) = false;
+            id(pid_boost_switch).publish_state(false);
+            id(pid_boost_end_time).publish_state("");
+            ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Boost cancelled by operating mode change");
+          }
+          // Drop the integral terms, so nothing from the previous mode carries over
+          pid_heat_embedded->reset_integral_term();
+          pid_cool_embedded->reset_integral_term();
+          id(pid_heat_integral_stored) = 0.0f;
+          id(pid_cool_integral_stored) = 0.0f;
+          id(pid_valve_pwm).set_level(0.0f);
+      - script.execute: pid_sync
+      - component.update: pid_mode_active
+      - script.execute: pid_refresh_display
+
+  # End of the running boost as ISO timestamp; HA shows it as a live countdown ("in 25 minutes").
+  # A text sensor keeps the full precision (a float sensor would round epoch seconds by up to a minute).
+  # Empty, i.e. unknown in HA, while no boost is running.
+  - platform: template
+    id: pid_boost_end_time
+    name: ${pid_name_boost_end}
+    icon: mdi:timer-sand
+    device_class: timestamp
+    update_interval: never
+
+  - platform: template  # Active operating mode, for diagnostics in HA
+    id: pid_mode_active
+    name: ${pid_name_mode}
+    icon: mdi:sun-snowflake-variant
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return std::string(id(pid_cooling_mode) ? "${pid_mode_cool_state}" : "${pid_mode_heat_state}");
+
+climate:
+  # Heat-only facade: without cool_action the thermostat stays single setpoint (no two-point mode)
+  - id: !extend thermostat_embedded
+    min_heating_off_time: 1s
+    min_heating_run_time: 1s
+    heat_deadband: ${heat_deadband} ${temp_units}
+    heat_overrun: ${heat_overrun} ${temp_units}
+    heat_action:
+      - switch.turn_on: relay_0   # Dummy, the valve relay is driven by the PID controllers
+    idle_action:
+      - switch.turn_off: relay_0  # Dummy
+    # Comfort and Eco switch the room on. Their temperatures here are seeds only:
+    # pid_apply_preset replaces them with the values from Home Assistant.
+    preset:
+      - name: "Off"
+        default_target_temperature_low: ${target_low} ${temp_units}
+        mode: "off"
+      - name: Comfort
+        default_target_temperature_low: ${pid_comfort_temp} ${temp_units}
+        mode: "heat"
+      - name: Eco
+        default_target_temperature_low: ${pid_eco_temp} ${temp_units}
+        mode: "heat"
+    preset_change:
+      - script.execute: pid_apply_preset
+
+  # The controllers are defined in pid_base; their action drives the climate chip here
+  - id: !extend pid_heat_embedded
+    on_state:
+      - script.execute: pid_refresh_chip  # Action changed (heating/idle)
+
+  - id: !extend pid_cool_embedded
+    on_state:
+      - script.execute: pid_refresh_chip  # Action changed (cooling/idle)
+
+output:
+  # Both controllers feed one shared slow PWM output; only the controller of the active mode may write
+  - platform: template
+    id: pid_heat_out
+    type: float
+    write_action:
+      - lambda: |-
+          if (id(pid_boost_active)) return;  // The boost owns the valve
+          if (!id(pid_cooling_mode)) id(pid_valve_pwm).set_level(state);
+
+  - platform: template
+    id: pid_cool_out
+    type: float
+    write_action:
+      - lambda: |-
+          if (id(pid_boost_active)) return;  // The boost owns the valve
+          if (id(pid_cooling_mode)) id(pid_valve_pwm).set_level(state);
+
+  - platform: slow_pwm  # Turns the controller output (0..100 %) into on/off cycles of the valve relay
+    id: pid_valve_pwm
+    period: ${pwm_period}s
+    turn_on_action:
+      - switch.turn_on: relay_${valve_relay}
+    turn_off_action:
+      - switch.turn_off: relay_${valve_relay}
+
+script:
+  ###################################################################################################
+  ##### Display: replaces the climate chip of the climate base. The base derives icon and color #####
+  ##### from the thermostat facade, which is always a heater and does not drive the relay. Here #####
+  ##### they come from the operating mode and the action of the active controller instead.      #####
+  ###################################################################################################
+  - id: !remove update_climate_chip
+
+  - id: update_climate_chip
+    mode: single
+    then:
+      - lambda: |-
+          const bool room_on = (thermostat_embedded->mode != climate::CLIMATE_MODE_OFF);
+          const bool cooling = id(pid_cooling_mode);
+          climate::Climate *pid = cooling ? static_cast<climate::Climate *>(pid_cool_embedded)
+                                          : static_cast<climate::Climate *>(pid_heat_embedded);
+          const uint8_t mode = room_on ? (cooling ? nspanel_easy::CLIMATE_MODE_COOL : nspanel_easy::CLIMATE_MODE_HEAT) : nspanel_easy::CLIMATE_MODE_OFF;
+          uint8_t action = room_on ? static_cast<uint8_t>(pid->action) : static_cast<uint8_t>(nspanel_easy::CLIMATE_ACTION_OFF);
+          if (room_on && id(pid_boost_active)) {  // Boost: the valve is open regardless of the controller
+            action = cooling ? nspanel_easy::CLIMATE_ACTION_COOLING : nspanel_easy::CLIMATE_ACTION_HEATING;
+          }
+          const bool is_active = (action == nspanel_easy::CLIMATE_ACTION_COOLING || action == nspanel_easy::CLIMATE_ACTION_HEATING);
+
+          const auto visibility = static_cast<nspanel_easy::ClimateChipVisibility>(id(climate_chip_visibility));
+          bool visible = false;
+          if (visibility == nspanel_easy::CLIMATE_CHIP_ALWAYS) {
+            visible = true;
+          } else if (visibility == nspanel_easy::CLIMATE_CHIP_ACTIVE_ONLY) {
+            visible = is_active;
+          }
+
+          // Active: colored fire/snowflake. Idle: gray fire/snowflake, so the mode stays visible. Off: none.
+          const char *icon = Icons::MDI_NONE;
+          uint16_t color = Colors::RGB565_BLACK;
+          if (visible) {
+            if (is_active) {
+              icon = climate_action_icons[action].icon;
+              color = climate_action_icons[action].color;
+            } else {
+              icon = climate_off_mode_icons[mode].icon;
+              color = climate_off_mode_icons[mode].color;
+            }
+          }
+          ESP_LOGV("${TAG_ADDON_CLIMATE_PID}", "Climate chip: mode=%u action=%u visible=%s",
+                   static_cast<unsigned>(mode), static_cast<unsigned>(action), YESNO(visible));
+
+          ChipState &the_chip = chip_states[CHIP_IDX_CLIMATE];
+          bool changed = false;
+          if (strcmp(the_chip.icon, icon) != 0) {
+            strncpy(the_chip.icon, icon, sizeof(the_chip.icon) - 1);
+            the_chip.icon[sizeof(the_chip.icon) - 1] = '\0';
+            changed = true;
+          }
+          if (the_chip.color != color) {
+            the_chip.color = color;
+            changed = true;
+          }
+          if (the_chip.visible != visible) {
+            the_chip.visible = visible;
+            changed = true;
+          }
+          if (changed) chip_render(CHIP_IDX_CLIMATE);
+
+          if (current_page_id != get_page_id("climate")) return;
+          if (!climate_embedded_visible) return;
+
+          // Target icon on the climate page: always show the mode, colored while active
+          const char *target_icon = is_active ? climate_action_icons[action].icon : climate_off_mode_icons[mode].icon;
+          const uint16_t target_color = is_active ? climate_action_icons[action].color : climate_off_mode_icons[mode].color;
+          disp1->set_component_text("target_icon", target_icon);
+          disp1->set_component_font_color("target_icon", static_cast<uint16_t>(target_color));
+
+  # Refreshes the climate chip when the embedded thermostat is the panel's main climate entity
+  - id: pid_refresh_chip
+    mode: single
+    then:
+      - lambda: |-
+          if (id(is_embedded_thermostat)) update_climate_chip->execute();
+
+  # Refreshes chip and climate page after a change of the operating mode
+  - id: pid_refresh_display
+    mode: single
+    then:
+      - script.execute: pid_refresh_chip
+      - script.execute: pid_refresh_boost_ui
+      - lambda: |-
+          if (current_page_id == get_page_id("climate") and climate_embedded_visible) page_climate->execute();
+
+  # Boost on the display: boost button on the climate page (button05, the dry mode button, unused by
+  # the heat-only facade), and optionally its own chip on the home page (pid_boost_chip) and the
+  # remaining time in a climate page value slot (pid_boost_value). Both slots are taken from the Blueprint.
+  - id: pid_refresh_boost_ui
+    mode: queued
+    then:
+      - lambda: |-
+          const bool active = id(pid_boost_active);
+          const uint16_t color = id(pid_cooling_mode) ? Colors::RGB565_BLUE : Colors::RGB565_DEEP_ORANGE;
+
+          // Home page chip
+          const uint8_t idx = nspanel_easy::find_chip_index("${pid_boost_chip}");
+          if (idx != UINT8_MAX && idx >= CHIP_IDX_USER) {
+            const char *icon = active ? Icons::MDI_ROCKET_LAUNCH : Icons::MDI_NONE;
+            ChipState &the_chip = chip_states[idx];
+            bool changed = false;
+            if (strcmp(the_chip.icon, icon) != 0) {
+              strncpy(the_chip.icon, icon, sizeof(the_chip.icon) - 1);
+              the_chip.icon[sizeof(the_chip.icon) - 1] = '\0';
+              changed = true;
+            }
+            if (the_chip.color != color) {
+              the_chip.color = color;
+              changed = true;
+            }
+            if (the_chip.visible != active) {
+              the_chip.visible = active;
+              changed = true;
+            }
+            if (changed) chip_render(idx);
+          }
+
+          // Climate page
+          if (current_page_id != get_page_id("climate")) return;
+          if (!climate_embedded_visible) return;
+          const bool room_on = (thermostat_embedded->mode != climate::CLIMATE_MODE_OFF);
+          disp1->set_component_text("button05", Icons::MDI_ROCKET_LAUNCH);
+          disp1->set_component_font_color("climate.button05", static_cast<uint16_t>(
+            active ? color : (room_on ? Colors::RGB565_GRAY_LIGHT : Colors::RGB565_GRAY_DARK)));
+          disp1->show_component("button05");
+
+          static const std::string value_slot = "${pid_boost_value}";
+          if (value_slot.empty()) return;
+          const std::string value_icon = value_slot + "_icon";
+          if (active) {
+            const int32_t left_ms = static_cast<int32_t>(id(pid_boost_end_ms) - millis());
+            const uint32_t minutes = (left_ms > 0) ? static_cast<uint32_t>((left_ms + 59999) / 60000) : 0;
+            char buf[12];
+            snprintf(buf, sizeof(buf), "%" PRIu32 " min", minutes);
+            disp1->set_component_text(value_icon.c_str(), Icons::MDI_TIMER_SAND);
+            disp1->set_component_font_color(value_icon.c_str(), color);
+            disp1->set_component_text(value_slot.c_str(), buf);
+          } else {
+            disp1->set_component_text(value_icon.c_str(), "");
+            disp1->set_component_text(value_slot.c_str(), "");
+          }
+
+  # Remaining time on the climate page: redraw when the shown minute changes
+  - id: pid_boost_tick
+    mode: single
+    then:
+      - lambda: |-
+          static uint32_t last_minutes = UINT32_MAX;
+          if (!id(pid_boost_active)) {
+            last_minutes = UINT32_MAX;
+            return;
+          }
+          if (current_page_id != get_page_id("climate") || !climate_embedded_visible) return;
+          const int32_t left_ms = static_cast<int32_t>(id(pid_boost_end_ms) - millis());
+          const uint32_t minutes = (left_ms > 0) ? static_cast<uint32_t>((left_ms + 59999) / 60000) : 0;
+          if (minutes == last_minutes) return;
+          last_minutes = minutes;
+          pid_refresh_boost_ui->execute();
+
+  # Climate page: show the button of the current operating mode (heat or cool) instead of the
+  # fixed heat button of the heat-only facade. Runs after the base has drawn the page.
+  - id: !extend page_climate
+    then:
+      - lambda: |-
+          if (!climate_embedded_visible) return;
+          if (current_page_id != get_page_id("climate")) return;
+          const bool room_on = (thermostat_embedded->mode != climate::CLIMATE_MODE_OFF);
+          if (id(pid_cooling_mode)) {
+            disp1->hide_component("button03");  // Heat
+            disp1->show_component("button04");  // Cool
+            disp1->set_component_font_color("climate.button04", static_cast<uint16_t>(
+              room_on ? Colors::RGB565_BLUE : Colors::RGB565_GRAY_LIGHT));
+          } else {
+            disp1->show_component("button03");  // Heat, colored by the base
+            disp1->hide_component("button04");  // Cool
+          }
+
+          // Presets as buttons: Comfort on button01 and Eco on button02 (the auto and heat_cool mode
+          // buttons, unused by the heat-only facade), replacing the preset picker
+          if (!${pid_preset_buttons}) return;
+          // Highlighted by the setpoint, not by the selected preset: a manual change to another temperature
+          // clears the highlight, while ESPHome keeps the preset selected.
+          const float target = thermostat_embedded->target_temperature;
+          auto matches = [&](float value) { return !std::isnan(target) && fabsf(target - value) < 0.01f; };
+          const bool comfort = room_on && matches(id(pid_comfort_value));
+          const bool eco = room_on && !comfort && matches(id(pid_eco_value));
+          disp1->hide_component(hmi::climate::PRESET_BUTTON.name);
+          disp1->set_component_text("button01", Icons::MDI_SOFA);
+          disp1->set_component_font_color("climate.button01", static_cast<uint16_t>(
+            comfort ? Colors::RGB565_YELLOW_GOLDEN : Colors::RGB565_GRAY_LIGHT));
+          disp1->show_component("button01");
+          disp1->set_component_text("button02", Icons::MDI_LEAF);
+          disp1->set_component_font_color("climate.button02", static_cast<uint16_t>(
+            eco ? Colors::RGB565_GREEN : Colors::RGB565_GRAY_LIGHT));
+          disp1->show_component("button02");
+      - script.execute: pid_refresh_boost_ui
+
+  # The cool button sends hvac_mode "cool", which the heat-only facade rejects (logged by the base).
+  # In this add-on both mode buttons mean "room on", so map it to heat.
+  # The boost button (button05) sends hvac_mode "dry", which the facade rejects as well; it toggles the boost.
+  # With pid_preset_buttons, button01 ("auto") selects Comfort and button02 ("heat_cool") selects Eco.
+  - id: !extend change_climate_state
+    then:
+      - lambda: |-
+          if (!climate_embedded_visible) return;
+          if (key != "hvac_mode") return;
+          if (value == "cool") {
+            auto call = thermostat_embedded->make_call();
+            call.set_mode(climate::CLIMATE_MODE_HEAT);
+            call.perform();
+          } else if (value == "dry") {
+            if (id(pid_boost_active)) {
+              id(pid_boost_switch).turn_off();
+            } else {
+              id(pid_boost_switch).turn_on();
+            }
+          } else if (${pid_preset_buttons} && (value == "auto" || value == "heat_cool")) {
+            auto call = thermostat_embedded->make_call();
+            call.set_preset(value == "auto" ? climate::CLIMATE_PRESET_COMFORT : climate::CLIMATE_PRESET_ECO);
+            call.perform();
+          }
+
+  ###################################################################################################
+  ##### Boost: holds the valve fully open for pid_boost_duration minutes, then hands it back    #####
+  ##### to the active controller. The controllers keep running meanwhile. Switching the room    #####
+  ##### off or changing the operating mode ends the boost. Starting it again restarts the time. #####
+  ###################################################################################################
+  - id: pid_boost_run
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: return thermostat_embedded->mode == climate::CLIMATE_MODE_OFF;
+          then:
+            - lambda: |-
+                ESP_LOGW("${TAG_ADDON_CLIMATE_PID}", "Boost ignored: room is off");
+                id(pid_boost_switch).publish_state(false);
+            - script.execute: pid_refresh_boost_ui
+          else:
+            - lambda: |-
+                ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Boost started for %.0f min (%s)",
+                         id(pid_boost_duration).state, id(pid_cooling_mode) ? "cool" : "heat");
+                id(pid_boost_active) = true;
+                id(pid_boost_end_ms) = millis() + static_cast<uint32_t>(id(pid_boost_duration).state * 60000.0f);
+                id(pid_boost_switch).publish_state(true);
+                id(pid_valve_pwm).set_level(1.0f);
+                // End time for HA (shown as a live countdown); unknown if the clock is not synced yet
+                const auto now = id(time_provider).now();
+                if (now.is_valid()) {
+                  const time_t end = now.timestamp + static_cast<time_t>(id(pid_boost_duration).state * 60.0f);
+                  id(pid_boost_end_time).publish_state(ESPTime::from_epoch_utc(end).strftime("%Y-%m-%dT%H:%M:%S+00:00"));
+                } else {
+                  id(pid_boost_end_time).publish_state("");
+                }
+            - script.execute: pid_refresh_chip
+            - script.execute: pid_refresh_boost_ui
+            - delay: !lambda "return static_cast<uint32_t>(id(pid_boost_duration).state * 60000.0f);"
+            - script.execute: pid_boost_end
+
+  - id: pid_boost_stop
+    mode: single
+    then:
+      - script.stop: pid_boost_run
+      - script.execute: pid_boost_end
+
+  # Ends the boost and hands the valve back to the controller of the active mode
+  - id: pid_boost_end
+    mode: single
+    then:
+      - lambda: |-
+          if (!id(pid_boost_active)) return;
+          id(pid_boost_active) = false;
+          id(pid_boost_switch).publish_state(false);
+          id(pid_boost_end_time).publish_state("");
+          const bool room_on = (thermostat_embedded->mode != climate::CLIMATE_MODE_OFF);
+          const float output = id(pid_cooling_mode) ? -pid_cool_embedded->get_output_value()
+                                                    : pid_heat_embedded->get_output_value();
+          const float level = room_on ? std::min(1.0f, std::max(0.0f, output)) : 0.0f;
+          id(pid_valve_pwm).set_level(level);
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Boost ended, valve back to controller (%.0f %%)", level * 100.0f);
+      - script.execute: pid_refresh_chip
+      - script.execute: pid_refresh_boost_ui
+
+  # Validates the relay selection at build time
+  - id: !extend dump_config
+    then:
+      - lambda: |-
+          static_assert((${valve_relay} == 1) or (${valve_relay} == 2), "valve_relay must be 1 or 2");
+
+  # Claim the boost chip early in the boot sequence, before Home Assistant connects;
+  # the Blueprint can no longer write it
+  - id: !extend boot_preparation
+    then:
+      - lambda: |-
+          // Values stored as NAN by an earlier version: start from the seeds until Home Assistant reports
+          if (std::isnan(id(pid_comfort_value))) id(pid_comfort_value) = (NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT ? ((${pid_comfort_temp}) - 32.0f) * 5.0f / 9.0f : (${pid_comfort_temp}));
+          if (std::isnan(id(pid_eco_value))) id(pid_eco_value) = (NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT ? ((${pid_eco_temp}) - 32.0f) * 5.0f / 9.0f : (${pid_eco_temp}));
+          const uint8_t idx = nspanel_easy::find_chip_index("${pid_boost_chip}");
+          if (idx == UINT8_MAX || idx < CHIP_IDX_USER) return;
+          chip_states[idx].subscribed = true;  // Blocks Blueprint pushes for this slot
+          chip_states[idx].visible = false;
+          chip_states[idx].icon[0] = '\0';
+
+  # Draw the boost chip once the display is up. Rendered unconditionally: after a restart of the
+  # ESP alone, the display may still show the chip from before, while the shadow state is "hidden"
+  - id: !extend boot_nextion
+    then:
+      - lambda: |-
+          const uint8_t idx = nspanel_easy::find_chip_index("${pid_boost_chip}");
+          if (idx != UINT8_MAX && idx >= CHIP_IDX_USER) chip_render(idx);
+      - script.execute: pid_refresh_boost_ui
+
+  ###################################################################################################
+  ##### Presets: ESPHome presets have fixed temperatures, so after Comfort or Eco is applied,   #####
+  ##### the setpoint is replaced with the value from Home Assistant (stored in flash).          #####
+  ###################################################################################################
+  - id: pid_apply_preset
+    mode: restart
+    then:
+      - delay: 10ms  # Let the thermostat finish applying the preset first
+      - lambda: |-
+          if (!thermostat_embedded->preset.has_value()) return;
+          const climate::ClimatePreset preset = thermostat_embedded->preset.value();
+          float target = NAN;
+          if (preset == climate::CLIMATE_PRESET_COMFORT) {
+            target = id(pid_comfort_value);
+          } else if (preset == climate::CLIMATE_PRESET_ECO) {
+            target = id(pid_eco_value);
+          } else {
+            return;
+          }
+          if (std::isnan(target)) return;
+          if (fabsf(thermostat_embedded->target_temperature - target) < 0.01f) return;
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Preset %s: setpoint %.1f°C",
+                   preset == climate::CLIMATE_PRESET_COMFORT ? "comfort" : "eco", target);
+          auto call = thermostat_embedded->make_call();
+          call.set_target_temperature(target);
+          call.perform();
+
+  # Marks Comfort or Eco when the setpoint was set to its value from elsewhere (e.g. a schedule).
+  # A setpoint that matches neither keeps the last preset, as ESPHome cannot unselect a preset.
+  - id: pid_match_preset
+    mode: single
+    then:
+      - lambda: |-
+          if (thermostat_embedded->mode == climate::CLIMATE_MODE_OFF) return;
+          const float target = thermostat_embedded->target_temperature;
+          if (std::isnan(target)) return;
+          climate::ClimatePreset match = climate::CLIMATE_PRESET_NONE;
+          if (!std::isnan(id(pid_comfort_value)) && fabsf(target - id(pid_comfort_value)) < 0.01f) {
+            match = climate::CLIMATE_PRESET_COMFORT;
+          } else if (!std::isnan(id(pid_eco_value)) && fabsf(target - id(pid_eco_value)) < 0.01f) {
+            match = climate::CLIMATE_PRESET_ECO;
+          } else {
+            return;
+          }
+          if (!thermostat_embedded->has_custom_preset() && thermostat_embedded->preset.has_value() &&
+              thermostat_embedded->preset.value() == match) {
+            return;
+          }
+          ESP_LOGD("${TAG_ADDON_CLIMATE_PID}", "Setpoint matches preset %s",
+                   match == climate::CLIMATE_PRESET_COMFORT ? "comfort" : "eco");
+          // Preset and setpoint in one call: the setpoint overrides the seed of the preset
+          auto call = thermostat_embedded->make_call();
+          call.set_preset(match);
+          call.set_target_temperature(target);
+          call.perform();
+
+  # Copies room on/off, setpoint and operating mode from the thermostat facade to the controllers
+  - id: pid_sync
+    mode: queued
+    then:
+      - lambda: |-
+          const bool room_on = (thermostat_embedded->mode == climate::CLIMATE_MODE_HEAT);
+          const float target = thermostat_embedded->target_temperature;
+          const bool cooling = id(pid_cooling_mode);
+          const bool heat_on = room_on && !cooling;
+          const bool cool_on = room_on && cooling;
+
+          if (room_on && isnan(target)) {
+            ESP_LOGW("${TAG_ADDON_CLIMATE_PID}", "Setpoint is NAN - sync skipped");
+            return;
+          }
+
+          // Only calls perform() on a change, to avoid needless state publishes
+          auto apply = [&](climate::Climate *pid, bool on, climate::ClimateMode on_mode) {
+            const auto want = on ? on_mode : climate::CLIMATE_MODE_OFF;
+            const bool target_diff = on && (isnan(pid->target_temperature) ||
+                                            fabsf(pid->target_temperature - target) > 0.01f);
+            if (pid->mode == want && !target_diff) return;
+            auto call = pid->make_call();
+            call.set_mode(want);
+            if (on) call.set_target_temperature(target);
+            call.perform();
+          };
+
+          // Turn the inactive controller off first, then set the active one
+          if (cooling) {
+            apply(pid_heat_embedded, heat_on, climate::CLIMATE_MODE_HEAT);
+            apply(pid_cool_embedded, cool_on, climate::CLIMATE_MODE_COOL);
+          } else {
+            apply(pid_cool_embedded, cool_on, climate::CLIMATE_MODE_COOL);
+            apply(pid_heat_embedded, heat_on, climate::CLIMATE_MODE_HEAT);
+          }
+          if (!room_on && id(pid_boost_active)) pid_boost_stop->execute();  // Room off ends the boost
+          if (!room_on) id(pid_valve_pwm).set_level(0.0f);
+      - script.execute: pid_integral_track
+
+interval:
+  - interval: ${pid_sync_interval}s
+    then:
+      - script.execute: pid_sync
+      - script.execute: pid_match_preset
+  - interval: 5s
+    then:
+      - script.execute: pid_boost_tick
+
+sensor:
+  # Comfort and eco temperatures for the presets, from Home Assistant
+  - platform: homeassistant
+    id: pid_comfort_from_ha
+    entity_id: ${pid_comfort_entity}
+    internal: true
+    on_value:
+      - lambda: |-
+          if (std::isnan(x)) return;
+          #if NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          const float value = fahrenheit_to_celsius(x);
+          #else   // Celsius
+          const float value = x;
+          #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          if (!std::isnan(id(pid_comfort_value)) && fabsf(id(pid_comfort_value) - value) < 0.01f) return;
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Comfort temperature: %.1f°C", value);
+          id(pid_comfort_value) = value;
+      - script.execute: pid_apply_preset  # Follow the new value while Comfort is active
+      - script.execute: pid_match_preset
+
+  - platform: homeassistant
+    id: pid_eco_from_ha
+    entity_id: ${pid_eco_entity}
+    internal: true
+    on_value:
+      - lambda: |-
+          if (std::isnan(x)) return;
+          #if NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          const float value = fahrenheit_to_celsius(x);
+          #else   // Celsius
+          const float value = x;
+          #endif  // NSPANEL_EASY_HW_TEMPERATURE_IS_FAHRENHEIT
+          if (!std::isnan(id(pid_eco_value)) && fabsf(id(pid_eco_value) - value) < 0.01f) return;
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Eco temperature: %.1f°C", value);
+          id(pid_eco_value) = value;
+      - script.execute: pid_apply_preset  # Follow the new value while Eco is active
+      - script.execute: pid_match_preset
+
+number:
+  - id: !extend pid_tuning_pwm_period
+    on_value:
+      - lambda: |-
+          if (isnan(x) || x < 60.0f) return;
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "PWM period applied: %.0fs", x);
+          pid_valve_pwm->set_period(static_cast<uint32_t>(x * 1000.0f));
+
+  - platform: template
+    id: pid_boost_duration
+    name: ${pid_name_boost_duration}
+    entity_category: config
+    icon: mdi:timer-play-outline
+    unit_of_measurement: min
+    min_value: 5
+    max_value: 240
+    step: 5
+    initial_value: ${pid_boost_duration}
+    restore_value: true
+    optimistic: true
+    mode: ${pid_number_mode}
+
+switch:
+  - platform: template  # Boost: valve fully open for the set duration, turns itself off afterwards
+    id: pid_boost_switch
+    name: ${pid_name_boost}
+    icon: mdi:rocket-launch
+    optimistic: false  # State is published by the boost scripts
+    restore_mode: ALWAYS_OFF
+    turn_on_action:
+      - script.execute: pid_boost_run
+    turn_off_action:
+      - script.execute: pid_boost_stop
+
+packages:
+  climate_pid_base_package: !include nspanel_esphome_addon_climate_pid_base.yaml
+...
