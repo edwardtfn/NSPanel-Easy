@@ -18,7 +18,7 @@ Usage:
                        `git show origin/dev:nspanel_easy_blueprint.yaml > /tmp/reference.yaml`
   BLUEPRINT            Blueprint to test (default: nspanel_easy_blueprint.yaml)
 
-Requires PyYAML and Jinja2 (`pip install pyyaml jinja2`).
+Requires PyYAML and Jinja2, pinned in .github/requirements.txt (`pip install -r .github/requirements.txt`).
 Exit code: 0 when both render the same, 1 on any difference.
 """
 
