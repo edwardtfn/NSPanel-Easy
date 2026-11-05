@@ -10008,23 +10008,18 @@ actions:
                               - if: '{{ forecast_day | count > 0 }}'
                                 then:
                                   - variables:
+                                      # Lowest temperature of the day: each forecast slot gives its low temperature,
+                                      # or its temperature when it has no numeric low (e.g. hourly slots or twice_daily night slots)
                                       temp_min: >
-                                        {{
-                                          forecast_day
-                                            | selectattr("templow", "defined")
-                                            | selectattr("templow", "is_number")
-                                            | map(attribute="templow") | map("float") | list | min
-                                          if forecast_day
-                                              | selectattr("templow", "defined")
-                                              | selectattr("templow", "is_number")
-                                              | map(attribute="templow") | map("float") | list | count > 0
-                                          else
-                                            forecast_day
-                                            | selectattr("temperature", "defined")
-                                            | selectattr("temperature", "is_number")
-                                            | map(attribute="temperature")
-                                            | map("float") | list | min | default("unknown")
-                                        }}
+                                        {%- set ns = namespace(lows=[]) -%}
+                                        {%- for slot in forecast_day -%}
+                                          {%- if slot.templow is defined and is_number(slot.templow) -%}
+                                            {%- set ns.lows = ns.lows + [slot.templow | float] -%}
+                                          {%- elif slot.temperature is defined and is_number(slot.temperature) -%}
+                                            {%- set ns.lows = ns.lows + [slot.temperature | float] -%}
+                                          {%- endif -%}  {#- if slot has a numeric low or temperature -#}
+                                        {%- endfor -%}
+                                        {{ ns.lows | min if ns.lows | count > 0 else "unknown" }}
                                       temp_max: >
                                         {{
                                           forecast_day
