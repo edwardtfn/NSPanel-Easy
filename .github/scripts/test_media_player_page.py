@@ -60,7 +60,10 @@ ATTRIBUTE_SAMPLES = {
 }
 STATE_SAMPLES = ("playing", "paused", "idle", "off", "on", "unavailable", "unknown")
 # Titles and artists that Home Assistant parsed as other types when rendered as separate fields
-LITERAL_TEXTS = ("1979", "True", "None", "3.5", "[1, 2]")
+LITERAL_TEXTS = ("1979", "1.00", "+5", "True", "None", "3.5", "[1, 2]")
+# How the two iterations of a literal case relate: same state, or only that field changing to or from the literal
+LITERAL_MODES = ("same", "to_literal", "from_literal")
+PLAIN_TEXT = "Song"
 
 
 def ha_round(value, precision=0, method="common", default=...):
@@ -151,18 +154,33 @@ def random_state(rng, literal=None):
                               {name: value for name, value in attributes.items() if value is not ...})}
 
 
+def with_text(db, field, text):
+    """The same state with one attribute replaced."""
+    state = db[ENTITY]
+    return {ENTITY: MockState(ENTITY, state.state, dict(state.attributes, **{field: text}))}
+
+
 def cases():
-    """(iterations, literal): two iterations each, the second with the same or a changed state."""
+    """
+    (iterations, literal): two iterations each, the second with the same or a changed state. For a literal case,
+    literal is (field, text, [whether each iteration holds the literal text]).
+    """
     rng = random.Random(SEED)
     for index in range(CASES):
-        literal = ((rng.choice(("media_title", "media_artist")), rng.choice(LITERAL_TEXTS))
-                   if index % 10 == 0 else None)
-        first = random_state(rng, literal)
-        # With a literal-looking text, the signature differs from the reference, and so would the choice between a
-        # full refresh and a resync after a state change; the same state keeps that choice comparable.
-        second = first if literal is not None or rng.random() < 0.5 else random_state(rng)
         later = NOW + datetime.timedelta(seconds=rng.choice((5, 59, 60, 61, 120)))
-        yield [(first, NOW), (second, later)], literal
+        if index % 10 != 0:
+            first = random_state(rng)
+            second = first if rng.random() < 0.5 else random_state(rng)
+            yield [(first, NOW), (second, later)], None
+            continue
+        # With a literal-looking text, the signature differs from the reference, and so would the choice between a
+        # full refresh and a resync after other changes; changing only that field (or nothing) keeps it comparable.
+        field, text = rng.choice(("media_title", "media_artist")), rng.choice(LITERAL_TEXTS)
+        mode = rng.choice(LITERAL_MODES)
+        holds = {"same": [True, True], "to_literal": [False, True], "from_literal": [True, False]}[mode]
+        base = random_state(rng)
+        states = [with_text(base, field, text if held else PLAIN_TEXT) for held in holds]
+        yield [(states[0], NOW), (states[1], later)], (field, text, holds)
 
 
 def without_text(results, field):
@@ -178,15 +196,34 @@ def without_text(results, field):
     return stripped
 
 
-def sends_text(results, literal, enum):
+def page_data(sent):
+    """The data of the full refresh sent in an iteration, or None when there was none."""
+    return next((data for action, data in sent if action.endswith("_page_media_player")), None)
+
+
+def sends_text(actual, expected, literal, enum):
     """
-    Whether every full refresh sends the literal text in its own field, as the panel receives it (an unknown
-    state such as `None` is dropped as before).
+    Whether each full refresh sends the title or artist as the panel receives it: the literal text in its own
+    field when the iteration holds it (an unknown state such as `None` is dropped as before), otherwise the same
+    text as the reference. An iteration where the field changed must send a full refresh.
     """
-    field, text = literal
-    expected = "" if text in enum["states"]["unknown"] else text
-    refreshes = [data for sent, *_ in results for action, data in sent if action.endswith("_page_media_player")]
-    return bool(refreshes) and all(field in data and action_string(data[field]) == expected for data in refreshes)
+    field, text, holds = literal
+    wanted = "" if text in enum["states"]["unknown"] else text
+    for index, ((sent, *_), (expected_sent, *_)) in enumerate(zip(actual, expected)):
+        data, expected_data = page_data(sent), page_data(expected_sent)
+        changed = index > 0 and holds[index] != holds[index - 1]
+        if data is None:
+            if changed:
+                return False
+            continue
+        if field not in data or expected_data is None:
+            return False
+        try:
+            if action_string(data[field]) != (wanted if holds[index] else action_string(expected_data[field])):
+                return False
+        except ValueError:
+            return False
+    return True
 
 
 def main():
@@ -211,7 +248,7 @@ def main():
         if literal is None:
             same = actual == expected
         else:
-            same = (not isinstance(actual, str) and sends_text(actual, literal, candidate[1])
+            same = (not isinstance(actual, str) and sends_text(actual, expected, literal, candidate[1])
                     and without_text(actual, literal[0]) == without_text(expected, literal[0]))
             fixed += same
         if not same:

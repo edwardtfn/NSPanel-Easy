@@ -11595,17 +11595,23 @@ actions:
                                           - conditions: '{{ media_player.needs_full_refresh }}'
                                             sequence:
                                               - action: 'esphome.{{ action_prefix }}_page_media_player'
-                                                data:
-                                                  entity: '{{ entity_id }}'
-                                                  state: '{{ media_player.state if media_player.state is string else "" }}'
-                                                  is_volume_muted: '{{ media_player.is_volume_muted if media_player.is_volume_muted is boolean else false }}'
-                                                  volume_level: '{{ media_player.volume_level }}'
-                                                  media_title: '{{ media_player.media_title }}'
-                                                  media_artist: '{{ media_player.media_artist }}'
-                                                  media_duration: '{{ media_player.media_duration }}'
-                                                  media_position: '{{ media_player.media_position }}'
-                                                  media_position_delta: '{{ media_player.media_position_delta }}'
-                                                  supported_features: '{{ media_player.supported_features }}'
+                                                # A single template for all fields keeps the title and artist as text: rendered as separate fields,
+                                                # Home Assistant would parse a title such as `1.00` into the number 1.0.
+                                                data: >-
+                                                  {{
+                                                    {
+                                                      "entity": entity_id,
+                                                      "state": media_player.state if media_player.state is string else "",
+                                                      "is_volume_muted": media_player.is_volume_muted if media_player.is_volume_muted is boolean else false,
+                                                      "volume_level": media_player.volume_level,
+                                                      "media_title": media_player.media_title,
+                                                      "media_artist": media_player.media_artist,
+                                                      "media_duration": media_player.media_duration,
+                                                      "media_position": media_player.media_position,
+                                                      "media_position_delta": media_player.media_position_delta,
+                                                      "supported_features": media_player.supported_features
+                                                    }
+                                                  }}
                                                 continue_on_error: true
                                               - variables:
                                                   last_signature: '{{ media_player.signature }}'
