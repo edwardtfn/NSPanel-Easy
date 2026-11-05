@@ -13,6 +13,8 @@
 # 10. Creates a version tag and GitHub Release, described by the PR that triggered it
 # 11. Updates the stable and latest floating tags
 # 12. Announces the release on Discord
+# 13. Brings dev up to date with the released main, creating it if missing
+#     (runs in parallel with step 12, so a failure never blocks the announcement)
 #
 # The workflow skips execution if the head commit message contains
 # [skip-versioning], preventing loops caused by its own version bump and
@@ -611,6 +613,7 @@ jobs:
     outputs:
       released: ${{ steps.push_tag.outcome == 'success' }}
       version: ${{ needs.bump.outputs.version }}
+      release_sha: ${{ steps.capture_release_sha.outputs.sha }}
       release_url: ${{ steps.create_release.outputs.url }}
 
     steps:
@@ -694,6 +697,10 @@ jobs:
             exit 1
           }
 
+      - name: Capture release SHA
+        id: capture_release_sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       # -------------------------------------------------------------------
       # Tag and release (after binary commit, so tag points to final state)
       # -------------------------------------------------------------------
@@ -760,7 +767,8 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # Announce the new release on Discord.
-  # Always runs last — only when a release was actually published.
+  # Runs after the release, in parallel with sync-dev — only when a release
+  # was actually published.
   # ---------------------------------------------------------------------------
   notify-discord:
     name: Notify Discord
@@ -785,4 +793,81 @@ jobs:
             -H "Content-Type: application/json" \
             -d @- \
             "$DISCORD_WEBHOOK"
+
+  # ---------------------------------------------------------------------------
+  # Bring dev up to date with the released main, so the version bump and the
+  # pre-built firmware commits do not leave dev behind main.
+  # Runs in parallel with notify-discord, so a failure here never blocks the
+  # announcement. A conflict fails this job and is left for manual resolution;
+  # dev is never force-pushed.
+  # Note: pushes made with GITHUB_TOKEN do not trigger other workflows, so CI
+  # does not run on the updated dev.
+  # ---------------------------------------------------------------------------
+  sync-dev:
+    name: Sync dev with main
+    needs: [commit-and-release]
+    if: needs.commit-and-release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: sync-dev
+      cancel-in-progress: false
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout released main
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.commit-and-release.outputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Fast-forward, merge or create dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ needs.commit-and-release.outputs.release_sha }}
+          NEW_VERSION: ${{ needs.commit-and-release.outputs.version }}
+        run: |
+          if [[ -z "$RELEASE_SHA" ]]; then
+            echo "ERROR: release SHA is empty"
+            exit 1
+          fi
+
+          # Exit code 2 means the branch does not exist; any other failure is
+          # an error and must not be taken as a missing branch.
+          RC=0
+          git ls-remote --exit-code --heads origin dev > /dev/null || RC=$?
+          if [[ $RC -eq 2 ]]; then
+            echo "dev does not exist, creating it from ${RELEASE_SHA}"
+            git push origin "${RELEASE_SHA}:refs/heads/dev"
+            exit 0
+          elif [[ $RC -ne 0 ]]; then
+            echo "ERROR: could not query the dev branch (exit code ${RC})"
+            exit 1
+          fi  # if [[ $RC -eq 2 ]]
+
+          git fetch origin dev
+
+          if git merge-base --is-ancestor "$RELEASE_SHA" origin/dev; then
+            echo "dev already contains ${RELEASE_SHA}, nothing to do"
+          elif git merge-base --is-ancestor origin/dev "$RELEASE_SHA"; then
+            # Normal case: dev has nothing beyond the released main.
+            echo "Fast-forwarding dev to ${RELEASE_SHA}"
+            git push origin "${RELEASE_SHA}:refs/heads/dev"
+          else
+            # dev received commits during the release window: merge main into it.
+            echo "dev has diverged from main, merging ${RELEASE_SHA} into dev"
+            git checkout -B dev origin/dev
+            if ! git merge --no-ff "$RELEASE_SHA" -m "Merge main (v${NEW_VERSION}) into dev"; then
+              git merge --abort
+              echo "ERROR: merging main into dev conflicts; resolve it manually"
+              exit 1
+            fi
+            # A plain push: if dev moved again meanwhile, it is rejected rather than overwritten.
+            git push origin HEAD:refs/heads/dev
+          fi  # if git merge-base --is-ancestor "$RELEASE_SHA" origin/dev
 ...
