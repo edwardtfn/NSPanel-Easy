@@ -9929,8 +9929,7 @@ actions:
                                         else "" }}',
                                       'temperature': '{{ forecast | default([])
                                         | selectattr("temperature", "defined")
-                                        | rejectattr("temperature", "none")
-                                        | rejectattr("temperature", "eq", "")
+                                        | selectattr("temperature", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9939,8 +9938,7 @@ actions:
                                         | map(attribute="temperature") | list | first
                                         if forecast | default([])
                                         | selectattr("temperature", "defined")
-                                        | rejectattr("temperature", "none")
-                                        | rejectattr("temperature", "eq", "")
+                                        | selectattr("temperature", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9950,8 +9948,7 @@ actions:
                                         else "" }}',
                                       'templow': '{{ forecast | default([])
                                         | selectattr("templow", "defined")
-                                        | rejectattr("templow", "none")
-                                        | rejectattr("templow", "eq", "")
+                                        | selectattr("templow", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9960,8 +9957,7 @@ actions:
                                         | map(attribute="templow") | list | first
                                         if forecast | default([])
                                         | selectattr("templow", "defined")
-                                        | rejectattr("templow", "none")
-                                        | rejectattr("templow", "eq", "")
+                                        | selectattr("templow", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9971,8 +9967,7 @@ actions:
                                         else "" }}',
                                       'precipitation': '{{ forecast | default([])
                                         | selectattr("precipitation", "defined")
-                                        | rejectattr("precipitation", "none")
-                                        | rejectattr("precipitation", "eq", "")
+                                        | selectattr("precipitation", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9981,8 +9976,7 @@ actions:
                                         | map(attribute="precipitation") | list | first
                                         if forecast | default([])
                                         | selectattr("precipitation", "defined")
-                                        | rejectattr("precipitation", "none")
-                                        | rejectattr("precipitation", "eq", "")
+                                        | selectattr("precipitation", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -9992,8 +9986,7 @@ actions:
                                         else "" }}',
                                       'wind_speed': '{{ forecast | default([])
                                         | selectattr("wind_speed", "defined")
-                                        | rejectattr("wind_speed", "none")
-                                        | rejectattr("wind_speed", "eq", "")
+                                        | selectattr("wind_speed", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -10002,8 +9995,7 @@ actions:
                                         | map(attribute="wind_speed") | list | first
                                         if forecast | default([])
                                         | selectattr("wind_speed", "defined")
-                                        | rejectattr("wind_speed", "none")
-                                        | rejectattr("wind_speed", "eq", "")
+                                        | selectattr("wind_speed", "is_number")
                                         | selectattr("datetime", "defined")
                                         | rejectattr("datetime", "none")
                                         | rejectattr("datetime", "eq", "")
@@ -10035,19 +10027,16 @@ actions:
                                         {{
                                           forecast_day
                                             | selectattr("templow", "defined")
-                                            | rejectattr("templow", "none")
-                                            | rejectattr("templow", "eq", "")
+                                            | selectattr("templow", "is_number")
                                             | map(attribute="templow") | map("float") | list | min
                                           if forecast_day
                                               | selectattr("templow", "defined")
-                                              | rejectattr("templow", "none")
-                                              | rejectattr("templow", "eq", "")
+                                              | selectattr("templow", "is_number")
                                               | map(attribute="templow") | map("float") | list | count > 0
                                           else
                                             forecast_day
                                             | selectattr("temperature", "defined")
-                                            | rejectattr("temperature", "none")
-                                            | rejectattr("temperature", "eq", "")
+                                            | selectattr("temperature", "is_number")
                                             | map(attribute="temperature")
                                             | map("float") | list | min | default("unknown")
                                         }}
@@ -10055,15 +10044,13 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("temperature", "defined")
-                                          | rejectattr("temperature", "none")
-                                          | rejectattr("temperature", "eq", "")
+                                          | selectattr("temperature", "is_number")
                                           | map(attribute="temperature")
                                           | map("float") | list | max
                                           if
                                             forecast_day
                                             | selectattr("temperature", "defined")
-                                            | rejectattr("temperature", "none")
-                                            | rejectattr("temperature", "eq", "")
+                                            | selectattr("temperature", "is_number")
                                             | map(attribute="temperature")
                                             | map("float") | list | count > 0
                                           else None
@@ -10134,15 +10121,13 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("precipitation", "defined")
-                                          | rejectattr("precipitation", "none")
-                                          | rejectattr("precipitation", "eq", "")
+                                          | selectattr("precipitation", "is_number")
                                           | map(attribute="precipitation")
                                           | map("float") | list | sum | round(0)
                                           if
                                             forecast_day
                                             | selectattr("precipitation", "defined")
-                                            | rejectattr("precipitation", "none")
-                                            | rejectattr("precipitation", "eq", "")
+                                            | selectattr("precipitation", "is_number")
                                             | map(attribute="precipitation")
                                             | map("float") | list | count > 0
                                           else None
@@ -10151,15 +10136,13 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("precipitation_probability", "defined")
-                                          | rejectattr("precipitation_probability", "none")
-                                          | rejectattr("precipitation_probability", "eq", "")
+                                          | selectattr("precipitation_probability", "is_number")
                                           | map(attribute="precipitation_probability")
                                           | map("float") | list | max | round(0)
                                           if
                                             forecast_day
                                             | selectattr("precipitation_probability", "defined")
-                                            | rejectattr("precipitation_probability", "none")
-                                            | rejectattr("precipitation_probability", "eq", "")
+                                            | selectattr("precipitation_probability", "is_number")
                                             | map(attribute="precipitation_probability")
                                             | map("float") | list | count > 0
                                           else None
@@ -10168,15 +10151,13 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("pressure", "defined")
-                                          | rejectattr("pressure", "none")
-                                          | rejectattr("pressure", "eq", "")
+                                          | selectattr("pressure", "is_number")
                                           | map(attribute="pressure")
                                           | map("float") | list | max | round(0)
                                           if
                                             forecast_day
                                             | selectattr("pressure", "defined")
-                                            | rejectattr("pressure", "none")
-                                            | rejectattr("pressure", "eq", "")
+                                            | selectattr("pressure", "is_number")
                                             | map(attribute="pressure")
                                             | map("float") | list | count > 0
                                           else None
@@ -10185,15 +10166,13 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("wind_speed", "defined")
-                                          | rejectattr("wind_speed", "none")
-                                          | rejectattr("wind_speed", "eq", "")
+                                          | selectattr("wind_speed", "is_number")
                                           | map(attribute="wind_speed")
                                           | map("float") | list | max | round(0)
                                           if
                                             forecast_day
                                             | selectattr("wind_speed", "defined")
-                                            | rejectattr("wind_speed", "none")
-                                            | rejectattr("wind_speed", "eq", "")
+                                            | selectattr("wind_speed", "is_number")
                                             | map(attribute="wind_speed")
                                             | map("float") | list | count > 0
                                           else None
@@ -10202,8 +10181,7 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("hours_of_sun", "defined")
-                                          | rejectattr("hours_of_sun", "none")
-                                          | rejectattr("hours_of_sun", "eq", "")
+                                          | selectattr("hours_of_sun", "is_number")
                                           | map(attribute="hours_of_sun")
                                           | map("float")
                                           | list
@@ -10212,8 +10190,7 @@ actions:
                                           if
                                             forecast_day
                                             | selectattr("hours_of_sun", "defined")
-                                            | rejectattr("hours_of_sun", "none")
-                                            | rejectattr("hours_of_sun", "eq", "")
+                                            | selectattr("hours_of_sun", "is_number")
                                             | map(attribute="hours_of_sun")
                                             | map("float")
                                             | list
@@ -10224,8 +10201,7 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("uv_index", "defined")
-                                          | rejectattr("uv_index", "none")
-                                          | rejectattr("uv_index", "eq", "")
+                                          | selectattr("uv_index", "is_number")
                                           | map(attribute="uv_index")
                                           | map("float")
                                           | list
@@ -10234,8 +10210,7 @@ actions:
                                           if
                                             forecast_day
                                             | selectattr("uv_index", "defined")
-                                            | rejectattr("uv_index", "none")
-                                            | rejectattr("uv_index", "eq", "")
+                                            | selectattr("uv_index", "is_number")
                                             | map(attribute="uv_index")
                                             | map("float")
                                             | list
@@ -10246,8 +10221,7 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("thunderstorm_probability", "defined")
-                                          | rejectattr("thunderstorm_probability", "none")
-                                          | rejectattr("thunderstorm_probability", "eq", "")
+                                          | selectattr("thunderstorm_probability", "is_number")
                                           | map(attribute="thunderstorm_probability") | map("float")
                                           | list
                                           | max
@@ -10255,8 +10229,7 @@ actions:
                                           if
                                             forecast_day
                                             | selectattr("thunderstorm_probability", "defined")
-                                            | rejectattr("thunderstorm_probability", "none")
-                                            | rejectattr("thunderstorm_probability", "eq", "")
+                                            | selectattr("thunderstorm_probability", "is_number")
                                             | map(attribute="thunderstorm_probability")
                                             | map("float")
                                             | list
@@ -10267,8 +10240,7 @@ actions:
                                         {{
                                           forecast_day
                                           | selectattr("humidity", "defined")
-                                          | rejectattr("humidity", "none")
-                                          | rejectattr("humidity", "eq", "")
+                                          | selectattr("humidity", "is_number")
                                           | map(attribute="humidity")
                                           | map("float")
                                           | list
@@ -10277,8 +10249,7 @@ actions:
                                           if
                                             forecast_day
                                             | selectattr("humidity", "defined")
-                                            | rejectattr("humidity", "none")
-                                            | rejectattr("humidity", "eq", "")
+                                            | selectattr("humidity", "is_number")
                                             | map(attribute="humidity")
                                             | map("float")
                                             | list
