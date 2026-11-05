@@ -7931,111 +7931,88 @@ actions:
                           - variables:
                               wake_up_sensors_tmp: !input wake_up_sensors
                           - variables:
-                              subs_lists:
-                                wakeup: >-
-                                  {%- set sensors = [wake_up_sensors_tmp] if wake_up_sensors_tmp is string else wake_up_sensors_tmp -%}
-                                  {%- set ns = namespace(items=[]) -%}
-                                  {%- for sensor in sensors | default([], true) -%}
-                                    {%- set ns.items = ns.items + [{"entity": sensor, "component": "sensor%02d" | format(loop.index)}] -%}
-                                  {%- endfor -%}
-                                  {{ ns.items }}
-                                chips:
-                                  - entity: !input chip01
-                                    inverted: !input chip01_inverted
-                                    icon: !input chip01_icon
-                                    icon_color_rgb: !input chip01_icon_color
-                                    page: chips
-                                    component: chip01
-                                  - entity: !input chip02
-                                    inverted: !input chip02_inverted
-                                    icon: !input chip02_icon
-                                    icon_color_rgb: !input chip02_icon_color
-                                    page: chips
-                                    component: chip02
-                                  - entity: !input chip03
-                                    inverted: !input chip03_inverted
-                                    icon: !input chip03_icon
-                                    icon_color_rgb: !input chip03_icon_color
-                                    page: chips
-                                    component: chip03
-                                  - entity: !input chip04
-                                    inverted: !input chip04_inverted
-                                    icon: !input chip04_icon
-                                    icon_color_rgb: !input chip04_icon_color
-                                    page: chips
-                                    component: chip04
-                                  - entity: !input chip05
-                                    inverted: !input chip05_inverted
-                                    icon: !input chip05_icon
-                                    icon_color_rgb: !input chip05_icon_color
-                                    page: chips
-                                    component: chip05
-                                  - entity: !input chip06
-                                    inverted: !input chip06_inverted
-                                    icon: !input chip06_icon
-                                    icon_color_rgb: !input chip06_icon_color
-                                    page: chips
-                                    component: chip06
-                                  - entity: !input chip07
-                                    inverted: !input chip07_inverted
-                                    icon: !input chip07_icon
-                                    icon_color_rgb: !input chip07_icon_color
-                                    page: chips
-                                    component: chip07
-                                weather:
-                                  - entity: '{{ weather_entity }}'  # Weather picture
-                                    page: home
-                                    component: weather
-                                  - entity: '{{ outdoor_temp_entity }}'  # Outdoor temperature
-                                    attribute: '{{ "temperature" if outdoor_temp_entity == weather_entity else "" }}'
-                                    page: home
-                                    component: outdoor_temp
-                                  - entity: '{{ indoor_temp_entity }}'  # Indoor temperature
-                                    attribute: '{{ "current_temperature" if indoor_temp_entity.split(".")[0] == "climate" else "" }}'
-                                    page: home
-                                    component: indr_temp
-                                calibration:
-                                  - entity: '{{ temp_calibration_entity }}'  # Reference for the panel's temperature sensor
-                                    attribute: '{{ "current_temperature" if temp_calibration_entity.split(".")[0] == "climate" else "" }}'
-                                    page: calibration
-                                    # The component selects the mode: calibration only, or also the thermostat's direct source
-                                    component: '{{ "thermostat" if thermostat_use_temp_reference_tmp and states[thermostat_embedded] is not none else "temperature" }}'
-                                  # A climate entity's attribute is not re-sent when it disappears, so its state tells when it is unavailable
-                                  - entity: '{{ temp_calibration_entity if temp_calibration_entity.split(".")[0] == "climate" else "" }}'
-                                    page: calibration
-                                    component: availability
+                              # Home page chips: inputs only, so no templates to render
+                              subs_chips:
+                                - entity: !input chip01
+                                  inverted: !input chip01_inverted
+                                  icon: !input chip01_icon
+                                  icon_color_rgb: !input chip01_icon_color
+                                  component: chip01
+                                - entity: !input chip02
+                                  inverted: !input chip02_inverted
+                                  icon: !input chip02_icon
+                                  icon_color_rgb: !input chip02_icon_color
+                                  component: chip02
+                                - entity: !input chip03
+                                  inverted: !input chip03_inverted
+                                  icon: !input chip03_icon
+                                  icon_color_rgb: !input chip03_icon_color
+                                  component: chip03
+                                - entity: !input chip04
+                                  inverted: !input chip04_inverted
+                                  icon: !input chip04_icon
+                                  icon_color_rgb: !input chip04_icon_color
+                                  component: chip04
+                                - entity: !input chip05
+                                  inverted: !input chip05_inverted
+                                  icon: !input chip05_icon
+                                  icon_color_rgb: !input chip05_icon_color
+                                  component: chip05
+                                - entity: !input chip06
+                                  inverted: !input chip06_inverted
+                                  icon: !input chip06_icon
+                                  icon_color_rgb: !input chip06_icon_color
+                                  component: chip06
+                                - entity: !input chip07
+                                  inverted: !input chip07_inverted
+                                  icon: !input chip07_icon
+                                  icon_color_rgb: !input chip07_icon_color
+                                  component: chip07
 
                               ##### API subscriptions #####
                               # Components driven directly by ESPHome through Home Assistant state
                               # subscriptions. The panel renders these locally, so this automation does
                               # not trigger on their entities at all.
-                              api_subs_mapping: >
+                              # Built in a single template, so each panel's automation holds one template here
+                              # instead of one per field (issue #657).
+                              api_subscriptions: >-
+                                {%- set calibration_is_climate = temp_calibration_entity.split(".")[0] == "climate" -%}
+                                {%- set ns = namespace(wakeup=[]) -%}
+                                {%- set sensors = [wake_up_sensors_tmp] if wake_up_sensors_tmp is string else wake_up_sensors_tmp -%}
+                                {%- for sensor in sensors | default([], true) -%}
+                                  {%- set ns.wakeup = ns.wakeup + [{"entity": sensor, "component": "sensor%02d" | format(loop.index)}] -%}
+                                {%- endfor -%}
+                                {#- Weather picture, outdoor and indoor temperature -#}
+                                {%- set weather = [
+                                      {"entity": weather_entity, "page": "home", "component": "weather"},
+                                      {"entity": outdoor_temp_entity,
+                                       "attribute": "temperature" if outdoor_temp_entity == weather_entity else "",
+                                       "page": "home", "component": "outdoor_temp"},
+                                      {"entity": indoor_temp_entity,
+                                       "attribute": "current_temperature" if indoor_temp_entity.split(".")[0] == "climate" else "",
+                                       "page": "home", "component": "indr_temp"}
+                                    ] -%}
+                                {#- Reference for the panel's temperature sensor. The component selects the mode: calibration only,
+                                    or also the thermostat's direct source.
+                                    A climate entity's attribute is not re-sent when it disappears, so its state tells when it is unavailable -#}
+                                {%- set calibration = [
+                                      {"entity": temp_calibration_entity,
+                                       "attribute": "current_temperature" if calibration_is_climate else "",
+                                       "page": "calibration",
+                                       "component": "thermostat"
+                                                    if thermostat_use_temp_reference_tmp and states[thermostat_embedded] is not none
+                                                    else "temperature"},
+                                      {"entity": temp_calibration_entity if calibration_is_climate else "",
+                                       "page": "calibration", "component": "availability"}
+                                    ] -%}
                                 {{
                                   (
-                                    subs_lists.chips
-                                    | map('combine', {'page': 'chips'})
-                                    | list
-                                  ) + (
-                                    subs_lists.weather
-                                    | map('combine', {'page': 'home'})
-                                    | list
-                                  ) + (
-                                    home_page.custom_buttons
-                                    | map('combine', {'page': 'home'})
-                                    | list
-                                  ) + (
-                                    subs_lists.wakeup
-                                    | map('combine', {'page': 'wakeup'})
-                                    | list
-                                  ) + (
-                                    subs_lists.calibration
-                                    | map('combine', {'page': 'calibration'})
-                                    | list
+                                    (subs_chips | map("combine", {"page": "chips"}) | list)
+                                    + weather
+                                    + (home_page.custom_buttons | map("combine", {"page": "home"}) | list)
+                                    + (ns.wakeup | map("combine", {"page": "wakeup"}) | list)
+                                    + calibration
                                   )
-                                }}
-                              api_subscriptions: >
-                                {{
-                                  api_subs_mapping
                                   | selectattr("entity", "defined")
                                   | selectattr("entity", "string")
                                   | rejectattr("entity", "eq", "")
