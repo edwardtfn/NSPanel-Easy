@@ -376,7 +376,7 @@ AHC features with this add-on:
 
 #### How the output is formed
 
-Every `pid_sample_interval` seconds, each active controller computes an output between 0 and 100 % from two parts:
+Every `pid_sample_interval` seconds, each active controller computes an output between 0 and 100 % from two parts (with the default `pid_kd: 0`, see [Adjusting the parameters](#adjusting-the-parameters)):
 
 - **Proportional part (`kp`):** reacts to the current difference from the setpoint. With `kp` at `0.3`, a room 1 K below the setpoint adds 30 %.
 - **Integral part (`Tn`):** collects the difference over time. While the room stays too cold, it keeps rising until the output is enough.
