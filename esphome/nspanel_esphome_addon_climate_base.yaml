@@ -468,16 +468,28 @@ script:
     then:
       - lambda: |-
           update_climate_chip->stop();
+          render_climate_chip->stop();
 
+  # Shows the thermostat's action and mode. Add-ons whose relays are not switched by the thermostat
+  # (e.g. the PID add-ons) replace this script and pass their own action and mode to render_climate_chip.
   - id: update_climate_chip
     mode: single
     then:
       - lambda: |-
           ESP_LOGV("${TAG_ADDON_CLIMATE}", "Update climate chip");
-          ESP_LOGV("${TAG_ADDON_CLIMATE}", "  visibility: %" PRIu8, id(climate_chip_visibility));
+          render_climate_chip->execute(static_cast<int>(thermostat_embedded->action),
+                                       static_cast<int>(thermostat_embedded->mode));
 
-          const uint action = int(thermostat_embedded->action);
-          const uint mode =   int(thermostat_embedded->mode);
+  # Draws the climate chip and the target icon on the climate page for an action and a mode
+  - id: render_climate_chip
+    mode: single
+    parameters:
+      action: int  # nspanel_easy::ClimateAction
+      mode: int    # nspanel_easy::ClimateMode
+    then:
+      - lambda: |-
+          ESP_LOGV("${TAG_ADDON_CLIMATE}", "Render climate chip: action=%d mode=%d", action, mode);
+          ESP_LOGV("${TAG_ADDON_CLIMATE}", "  visibility: %" PRIu8, id(climate_chip_visibility));
 
           // Determine visibility based on user preference and current climate state
           const auto visibility = static_cast<nspanel_easy::ClimateChipVisibility>(id(climate_chip_visibility));
@@ -500,36 +512,31 @@ script:
           const char* icon = Icons::MDI_NONE;
           uint16_t color = Colors::RGB565_BLACK;
 
-          if (visible) {
-            if (action == nspanel_easy::CLIMATE_ACTION_OFF) {
-              // Handle OFF action — only reached when visibility != NEVER
-              if (mode <= nspanel_easy::CLIMATE_MODE_AUTO) {
-                icon =  climate_off_mode_icons[mode].icon;
-                color = climate_off_mode_icons[mode].color;
-              }
-            } else if (is_active) {
-              // Handle actively running states (heating/cooling/drying/fan)
-              icon =  climate_action_icons[action].icon;
-              color = climate_action_icons[action].color;
-            } else if (action == nspanel_easy::CLIMATE_ACTION_IDLE) {
-              // Handle idle — only reached when visibility == ALWAYS
-              icon =  climate_action_icons[nspanel_easy::CLIMATE_ACTION_IDLE].icon;
-              color = climate_action_icons[nspanel_easy::CLIMATE_ACTION_IDLE].color;
-            }
-          }  // #endif visible — icon/color remain NONE/BLACK when hidden
+          if (is_active) {
+            // Handle actively running states (heating/cooling/drying/fan)
+            icon =  climate_action_icons[action].icon;
+            color = climate_action_icons[action].color;
+          } else if (mode >= nspanel_easy::CLIMATE_MODE_OFF && mode <= nspanel_easy::CLIMATE_MODE_AUTO) {
+            // Handle off and idle: the mode in gray, so it stays recognizable (no icon when off)
+            icon =  climate_off_mode_icons[mode].icon;
+            color = climate_off_mode_icons[mode].color;
+          }
 
-          // Apply the icon and color to the climate chip
+          // Apply the icon and color to the climate chip (none when hidden)
+          const char* chip_icon = visible ? icon : Icons::MDI_NONE;
+          const uint16_t chip_color = visible ? color : static_cast<uint16_t>(Colors::RGB565_BLACK);
+
           // Update shadow state
           ChipState &the_chip = chip_states[CHIP_IDX_CLIMATE];
           bool changed = false;
 
-          if (strcmp(the_chip.icon, icon) != 0) {
-            strncpy(the_chip.icon, icon, sizeof(the_chip.icon) - 1);
+          if (strcmp(the_chip.icon, chip_icon) != 0) {
+            strncpy(the_chip.icon, chip_icon, sizeof(the_chip.icon) - 1);
             the_chip.icon[sizeof(the_chip.icon) - 1] = '\0';
             changed = true;
           }
-          if (the_chip.color != color) {
-            the_chip.color = color;
+          if (the_chip.color != chip_color) {
+            the_chip.color = chip_color;
             changed = true;
           }
           if (the_chip.visible != visible) {
@@ -542,7 +549,7 @@ script:
           if (current_page_id != get_page_id("climate")) return;
           if (!climate_embedded_visible) return;
 
-          // Apply the icon and color to the target icon on climate page
+          // Apply the icon and color to the target icon on climate page, independent of the chip visibility: always the mode, colored while active
           disp1->set_component_text("target_icon", icon);
           disp1->set_component_font_color("target_icon", static_cast<uint16_t>(color));
 

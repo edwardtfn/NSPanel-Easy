@@ -196,9 +196,10 @@ output:
 
 script:
   ###################################################################################################
-  ##### Display: replaces the climate chip of the climate base. The base derives icon and color #####
+  ##### Display: replaces the action source of the climate chip. The base takes action and mode #####
   ##### from the thermostat facade, which is always a heater and does not drive the relay. Here #####
-  ##### they come from the operating mode and the action of the active controller instead.      #####
+  ##### they come from the operating mode and the action of the active controller instead;     #####
+  ##### the base's render_climate_chip draws the chip and the climate page icon.                #####
   ###################################################################################################
   - id: !remove update_climate_chip
 
@@ -215,56 +216,9 @@ script:
           if (room_on && id(pid_boost_active)) {  // Boost: the valve is open regardless of the controller
             action = cooling ? nspanel_easy::CLIMATE_ACTION_COOLING : nspanel_easy::CLIMATE_ACTION_HEATING;
           }
-          const bool is_active = (action == nspanel_easy::CLIMATE_ACTION_COOLING || action == nspanel_easy::CLIMATE_ACTION_HEATING);
-
-          const auto visibility = static_cast<nspanel_easy::ClimateChipVisibility>(id(climate_chip_visibility));
-          bool visible = false;
-          if (visibility == nspanel_easy::CLIMATE_CHIP_ALWAYS) {
-            visible = true;
-          } else if (visibility == nspanel_easy::CLIMATE_CHIP_ACTIVE_ONLY) {
-            visible = is_active;
-          }
-
-          // Active: colored fire/snowflake. Idle: gray fire/snowflake, so the mode stays visible. Off: none.
-          const char *icon = Icons::MDI_NONE;
-          uint16_t color = Colors::RGB565_BLACK;
-          if (visible) {
-            if (is_active) {
-              icon = climate_action_icons[action].icon;
-              color = climate_action_icons[action].color;
-            } else {
-              icon = climate_off_mode_icons[mode].icon;
-              color = climate_off_mode_icons[mode].color;
-            }
-          }
-          ESP_LOGV("${TAG_ADDON_CLIMATE_PID}", "Climate chip: mode=%u action=%u visible=%s",
-                   static_cast<unsigned>(mode), static_cast<unsigned>(action), YESNO(visible));
-
-          ChipState &the_chip = chip_states[CHIP_IDX_CLIMATE];
-          bool changed = false;
-          if (strcmp(the_chip.icon, icon) != 0) {
-            strncpy(the_chip.icon, icon, sizeof(the_chip.icon) - 1);
-            the_chip.icon[sizeof(the_chip.icon) - 1] = '\0';
-            changed = true;
-          }
-          if (the_chip.color != color) {
-            the_chip.color = color;
-            changed = true;
-          }
-          if (the_chip.visible != visible) {
-            the_chip.visible = visible;
-            changed = true;
-          }
-          if (changed) chip_render(CHIP_IDX_CLIMATE);
-
-          if (current_page_id != get_page_id("climate")) return;
-          if (!climate_embedded_visible) return;
-
-          // Target icon on the climate page: always show the mode, colored while active
-          const char *target_icon = is_active ? climate_action_icons[action].icon : climate_off_mode_icons[mode].icon;
-          const uint16_t target_color = is_active ? climate_action_icons[action].color : climate_off_mode_icons[mode].color;
-          disp1->set_component_text("target_icon", target_icon);
-          disp1->set_component_font_color("target_icon", static_cast<uint16_t>(target_color));
+          ESP_LOGV("${TAG_ADDON_CLIMATE_PID}", "Climate chip: mode=%u action=%u",
+                   static_cast<unsigned>(mode), static_cast<unsigned>(action));
+          render_climate_chip->execute(action, mode);
 
   # Refreshes the climate chip when the embedded thermostat is the panel's main climate entity
   - id: pid_refresh_chip

@@ -143,9 +143,10 @@ script:
           }
 
   ###################################################################################################
-  ##### Display: replaces the climate chip of the climate base. The base derives the activity   #####
-  ##### from the thermostat facade, whose hysteresis does not drive the relays here. Here it    #####
-  ##### comes from the channel of the current PWM cycle instead.                                #####
+  ##### Display: replaces the action source of the climate chip. The base takes the action from #####
+  ##### the thermostat facade, whose hysteresis does not drive the relays here. Here it comes    #####
+  ##### from the channel of the current PWM cycle instead; the base's render_climate_chip draws #####
+  ##### the chip and the climate page icon.                                                     #####
   ###################################################################################################
   - id: !remove update_climate_chip
 
@@ -165,64 +166,7 @@ script:
               action = nspanel_easy::CLIMATE_ACTION_IDLE;
             }
           }
-          const bool is_active = (action == nspanel_easy::CLIMATE_ACTION_COOLING ||
-                                  action == nspanel_easy::CLIMATE_ACTION_HEATING);
-
-          const auto visibility = static_cast<nspanel_easy::ClimateChipVisibility>(id(climate_chip_visibility));
-          bool visible = false;
-          if (visibility == nspanel_easy::CLIMATE_CHIP_ALWAYS) {
-            visible = true;
-          } else if (visibility == nspanel_easy::CLIMATE_CHIP_ACTIVE_ONLY) {
-            visible = is_active;
-          }
-
-          // Same icons and colors as the climate base
-          const char *icon = Icons::MDI_NONE;
-          uint16_t color = Colors::RGB565_BLACK;
-          if (visible) {
-            if (action == nspanel_easy::CLIMATE_ACTION_OFF) {
-              if (mode <= nspanel_easy::CLIMATE_MODE_AUTO) {
-                icon = climate_off_mode_icons[mode].icon;
-                color = climate_off_mode_icons[mode].color;
-              }
-            } else {
-              icon = climate_action_icons[action].icon;
-              color = climate_action_icons[action].color;
-            }
-          }
-
-          ChipState &the_chip = chip_states[CHIP_IDX_CLIMATE];
-          bool changed = false;
-          if (strcmp(the_chip.icon, icon) != 0) {
-            strncpy(the_chip.icon, icon, sizeof(the_chip.icon) - 1);
-            the_chip.icon[sizeof(the_chip.icon) - 1] = '\0';
-            changed = true;
-          }
-          if (the_chip.color != color) {
-            the_chip.color = color;
-            changed = true;
-          }
-          if (the_chip.visible != visible) {
-            the_chip.visible = visible;
-            changed = true;
-          }
-          if (changed) chip_render(CHIP_IDX_CLIMATE);
-
-          if (current_page_id != get_page_id("climate")) return;
-          if (!climate_embedded_visible) return;
-
-          // Target icon on the climate page: independent of the chip visibility, always show the mode, colored while active
-          const char *target_icon = Icons::MDI_NONE;
-          uint16_t target_color = Colors::RGB565_BLACK;
-          if (is_active) {
-            target_icon = climate_action_icons[action].icon;
-            target_color = climate_action_icons[action].color;
-          } else if (mode <= nspanel_easy::CLIMATE_MODE_AUTO) {
-            target_icon = climate_off_mode_icons[mode].icon;
-            target_color = climate_off_mode_icons[mode].color;
-          }
-          disp1->set_component_text("target_icon", target_icon);
-          disp1->set_component_font_color("target_icon", static_cast<uint16_t>(target_color));
+          render_climate_chip->execute(action, mode);
 
 number:
 interval:

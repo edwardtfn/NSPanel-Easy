@@ -158,6 +158,11 @@ The climate page shows only the HVAC modes supported by the thermostat, based on
 With the default configuration, the `heat` add-on offers `Heat` and `Off`, the `cool` add-on offers `Cool` and `Off`, and the `dual` add-on offers `Heat/Cool`, `Heat`, `Cool` and `Off`.
 If you customize `thermostat_embedded` to support more modes (e.g. `auto_mode`, `dry_action` or `fan_only_action`), the matching buttons are shown automatically.
 
+The icon on the climate page shows what the thermostat is doing: colored while it is heating, cooling, drying or running the fan,
+otherwise the mode in gray (e.g. a gray fire while idle in `Heat`), and no icon while off.
+The climate chip on the home page shows the same icon, depending on **Main Climate - Chip Visibility** in the Blueprint:
+only while active (default), always, or never.
+
 ## Presets
 
 The thermostat presets are available on the climate page through the preset button, which opens a list with the available presets.
