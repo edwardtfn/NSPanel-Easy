@@ -487,14 +487,14 @@ script:
       - script.execute: pid_refresh_chip
       - script.execute: pid_refresh_boost_ui
 
-  # Claim the boost chip early in the boot sequence, before Home Assistant connects;
-  # the Blueprint can no longer write it
   # Validates the relay selection at build time
   - id: !extend dump_config
     then:
       - lambda: |-
           static_assert((${valve_relay} == 1) or (${valve_relay} == 2), "valve_relay must be 1 or 2");
 
+  # Claim the boost chip early in the boot sequence, before Home Assistant connects;
+  # the Blueprint can no longer write it
   - id: !extend boot_preparation
     then:
       - lambda: |-
