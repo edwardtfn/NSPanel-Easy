@@ -16,7 +16,6 @@ substitutions:
   heater_relay: "1"  # Possible values: 1/2
   temp_min: "4"      # Min supported temperature
   temp_max: "27"     # Max supported temperature
-  temp_step: "0.5"   # Temperature granularity
 
 packages:
   prebuilt_package: !include nspanel_esphome_prebuilt.yaml

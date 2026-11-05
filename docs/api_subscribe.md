@@ -16,6 +16,7 @@ automation run, no trace, no logbook entry.
 - [Action reference](#action-reference)
   - [`api_subscribe`](#api_subscribe)
   - [`api_subscribe_end`](#api_subscribe_end)
+  - [Push identifier](#push-identifier)
 - [Driving the panel without the Blueprint](#driving-the-panel-without-the-blueprint)
 - [State classification](#state-classification)
 - [Appearance resolution](#appearance-resolution)
@@ -78,8 +79,9 @@ the outdoor temperature.
    entity immediately. The panel classifies each state, and renders once a
    binding push has supplied appearance.
 3. **Push.** The Blueprint sends one `api_subscribe` call per component, then closes with
-   `api_subscribe_end` carrying how many it sent. Appearance is applied immediately; entity
-   bindings are staged.
+   `api_subscribe_end` carrying how many it sent. Every call carries the same `push_id`, so
+   overlapping pushes are kept apart: only the newest one is staged. Appearance is applied
+   immediately; entity bindings are staged.
 4. **Commit.** If the staged set differs from the persisted one, the panel saves it and restarts.
    If it matches, nothing happens — which is the normal case on every reconnect.
    If the save fails, the panel does **not** restart: it keeps the bindings it loaded at boot.
@@ -138,6 +140,7 @@ Registers one binding. Called once per subscribable component.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
+| `push_id` | string | Identifier of the push, the same for every call of one push, up to 23 characters. See [Push identifier](#push-identifier). |
 | `page` | string | Target page. `chips`, `home`, `wakeup` and `calibration` have renderers. |
 | `component` | string | Target component, e.g. `chip01`. |
 | `entity` | string | Home Assistant `entity_id`. |
@@ -152,6 +155,7 @@ Registers one binding. Called once per subscribable component.
 ```yaml
 action: esphome.my_panel_api_subscribe
 data:
+  push_id: "20261103T170405123456"
   page: chips
   component: chip01
   entity: binary_sensor.corridor_motion
@@ -174,16 +178,36 @@ Closes the push and states how many bindings were sent.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
+| `push_id` | string | Identifier of the push, as sent with its bindings. |
 | `count` | int | Number of `api_subscribe` calls made in this push. |
 
 ```yaml
 action: esphome.my_panel_api_subscribe_end
 data:
+  push_id: "20261103T170405123456"
   count: 7
 ```
 
 If the count does not match what the panel received, the push is discarded and the previously
 persisted bindings stay in effect. This prevents a truncated push from silently wiping bindings.
+
+### Push identifier
+
+The panel compares `push_id` values as strings to tell which push started last. A call with a newer
+`push_id` replaces the push being staged, and calls with an older one are ignored, so bindings from
+overlapping pushes are never saved together. Use a value that sorts by start time, such as a UTC
+timestamp with a fixed number of digits, as the Blueprint does. Keep a non-digit character in it (the
+`T` below): Home Assistant turns an all-digit template result into a number, and one this large cannot
+be stored by the recorder.
+
+```yaml
+push_id: '{{ utcnow().strftime("%Y%m%dT%H%M%S%f") }}'
+```
+
+Compute it once per push, before the first `api_subscribe` call, and send the same value with every
+call of that push, including `api_subscribe_end`. For one minute after a push ends, calls with an
+older `push_id` are still ignored as late calls of an older push, so if Home Assistant's clock moves
+backwards, a push sent within that minute is ignored.
 
 ## Driving the panel without the Blueprint
 
@@ -195,8 +219,11 @@ A minimal Home Assistant script that binds two chips and the home page weather p
 ```yaml
 alias: NSPanel bindings
 sequence:
+  - variables:
+      push_id: '{{ utcnow().strftime("%Y%m%dT%H%M%S%f") }}'
   - action: esphome.my_panel_api_subscribe
     data:
+      push_id: "{{ push_id }}"
       page: chips
       component: chip01
       entity: binary_sensor.front_door
@@ -209,6 +236,7 @@ sequence:
       inverted: false
   - action: esphome.my_panel_api_subscribe
     data:
+      push_id: "{{ push_id }}"
       page: chips
       component: chip02
       entity: cover.garage_door
@@ -221,6 +249,7 @@ sequence:
       inverted: false
   - action: esphome.my_panel_api_subscribe
     data:
+      push_id: "{{ push_id }}"
       page: home
       component: weather
       entity: weather.home
@@ -233,6 +262,7 @@ sequence:
       inverted: false
   - action: esphome.my_panel_api_subscribe_end
     data:
+      push_id: "{{ push_id }}"
       count: 3
 mode: single
 ```

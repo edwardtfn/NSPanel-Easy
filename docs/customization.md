@@ -230,7 +230,7 @@ Remove the `on_boot` code and set `ota_password` to the password used in that co
 
 The OTA update can be encrypted with the same key used by the [API encryption](#api-encryption).
 This keeps the firmware image confidential in transit, which includes your Wi-Fi password and API key, and also authenticates the uploader, so no OTA password is needed.
-It requires ESPHome 2026.9.0 or newer and the [API encryption](#api-encryption).
+It requires the [API encryption](#api-encryption).
 
 > [!IMPORTANT]
 > Once a panel runs firmware with OTA encryption required, it refuses OTA updates without the API encryption key.
@@ -251,14 +251,11 @@ How to get there depends on how your panel is updated today:
 - **Panel with a blank `ota_password`:** the panel must already run a firmware that offers the encryption.
   Check the device log for `Encryption: offered, plaintext accepted`.
   If it is not there, add the API encryption if needed and install once with `ota_encryption: false`, then add `ota_encryption: true` and install again.
-- **Panel with an OTA password (ESPHome 2026.10.0 or newer):** add `ota_encryption: true` and keep your current `ota_password` for one install.
+- **Panel with an OTA password:** add `ota_encryption: true` and keep your current `ota_password` for one install.
   The password is used only to send this update to the running firmware, and is not built into the new one.
   After that install, set `ota_password` back to blank (or remove it): ESPHome warns about it on every upload until then.
   If your configuration sets the password directly in `ota_std` (`- id: !extend ota_std` with `password:`), move it to `ota_password` for this install and remove that override,
   otherwise ESPHome rejects the password next to the required encryption.
-- **Panel with an OTA password (ESPHome 2026.9.x):** install once with the API encryption and your current `ota_password`,
-  so the device log shows `Encryption: offered, plaintext accepted`.
-  Then add `ota_encryption: true`, set `ota_password` back to blank (or remove it), and install again.
 
 After the migration, the device log should show `Encryption: required`.
 For more details, see ESPHome's [Enabling Encryption on an Existing Device](https://esphome.io/components/ota/esphome/#enabling-encryption-on-an-existing-device) guide.

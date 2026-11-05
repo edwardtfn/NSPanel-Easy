@@ -67,11 +67,12 @@ When a change affects a feature that is only included by specific packages (clim
   - `min_blueprint_version`, `min_tft_version` and `min_esphome_compiler_version` in `esphome/nspanel_esphome_version.yaml`.
   - `min_version` (Home Assistant) in the Blueprint header.
   - `min_esphome_version` in the Blueprint variables, when the Blueprint needs a newer ESPHome firmware (e.g. a new API action or a new field in an existing one).
-  - Set `min_blueprint_version` or `min_esphome_version` to `next` to require the release being created; the versioning workflow resolves it.
+  - To require the release being created, set `min_blueprint_version` to `${version}` and `min_esphome_version` to `next`; the versioning workflow resolves both.
+    Do not use `next` for `min_blueprint_version`: the firmware's version check cannot compare it, so development builds would report a false Blueprint mismatch.
 - API actions are versioned as `api_version`:
   `"MAJOR.MINOR"` in `esphome/nspanel_esphome_version.yaml` (provided by the firmware) and `[MAJOR, MINOR]` in the Blueprint variables (used by the Blueprint):
   - Adding an action: bump the firmware MINOR. When the Blueprint starts calling it, raise the Blueprint MINOR and set `min_esphome_version` to `next`, as only panel events carry the API version.
-  - Removing an action or changing its parameters: bump MAJOR (and reset MINOR to 0) in both, and set `min_blueprint_version` to `next`.
+  - Removing an action or changing its parameters: bump MAJOR (and reset MINOR to 0) in both, and set `min_blueprint_version` to `${version}`.
 - Never use `yq` for in-place writes on `nspanel_easy_blueprint.yaml` (corrupts Unicode escapes),
   `esphome/nspanel_esphome_version.yaml` or `.github/ISSUE_TEMPLATE/bug.yml` (strips blank lines, normalizes merge keys). Use `sed` for simple replacements or a dedicated Python script.
 
@@ -83,7 +84,7 @@ When a change affects a feature that is only included by specific packages (clim
 - Reference related issues in the description (`Closes #N` when resolved; a plain `#N` reference otherwise).
 - Do not hard-wrap text in PR descriptions, issues or release notes.
 - Keep PRs scoped to one logical change. Unrelated fixes go in separate PRs.
-- Target `main` from a short-lived feature branch.
+- Target `dev` from a short-lived feature branch. `main` only receives release PRs from `dev`.
 
 ## General coding rules
 
@@ -121,7 +122,7 @@ Follow ESPHome's C++ conventions and the repository `.clang-format`.
 ## Blueprint (nspanel_easy_blueprint.yaml)
 
 - Action calls to the panel use `nspanel_name`, not `device_name`.
-- Validate entity IDs with `"." in entity_id` combined with `states[entity_id] is not none`.
+- Validate entity IDs with `"." in entity_id` combined with `states[entity_id] is not none` (see the canonical checks below).
 - `has_value()` tests for a non-unknown/unavailable state, not existence.
 - Jinja2 `~` is string concatenation, not bitwise NOT.
 - `default()` arguments are evaluated eagerly; nested attribute access inside them can still raise. Use `default(x, true)` to also catch `None`.
@@ -130,6 +131,35 @@ Follow ESPHome's C++ conventions and the repository `.clang-format`.
 - Compare versions as integer tuples, never lexicographically.
 - Do not confuse `last_changed` with `last_updated`.
 - `ServiceNotFound` is re-raised by Home Assistant even with `continue_on_error`.
+
+### Size and repetition
+
+- Home Assistant expands YAML anchors when it loads the Blueprint: an anchored block is a full copy in every place it is used, in every panel's automation.
+  Anchors keep the file short, but only logic that exists once in the expanded configuration keeps the automation small (issue #657).
+- Compute a value once in `variables` and reuse it, instead of repeating the same expression in several templates.
+- Prefer data over template branches: a mapping of states to values is stored once, while a template written inside an anchor is copied with it (see `entity_state_styles`).
+- Pull requests that change the Blueprint get a metrics report in the "Validate Blueprint YAML" job summary (`.github/scripts/blueprint_metrics.py`).
+  Check that the expanded size and the number of distinct templates do not grow without a reason.
+- Refactorings of the "Variable Entity" anchor must keep its output: run `.github/scripts/test_variable_entity.py` against the Blueprint before the change.
+
+### Canonical checks
+
+Use one form per check, so the same test reads the same everywhere. Change existing code to these forms only in focused PRs, verifying edge cases (`None`, `""`, undefined).
+
+| Check | Form |
+| --- | --- |
+| Value that can be missing | `x is defined and ...` (see below) |
+| Non-empty string | `x is string and x \| length > 0` |
+| Entity ID | `x is string and "." in x and states[x] is not none`; inside the "Variable Entity" anchor, use `entity_id_valid`. |
+| State is unknown or unavailable | `x in enum.states.unknown` (also covers `None` and `""`); for an entity, `has_value(entity_id)` or `not has_value(entity_id)` |
+| State is on or off | `x in enum.states.on` / `enum.states.off`, plus `enum.states[domain]` for domain-specific states. |
+| RGB color | `x is list and x \| count == 3` |
+| Icon name | `x is string and x is match "mdi:"`, then the `all_icon_names` lookup on `(x.split("mdi:") \| last)`. |
+| Fallback that also replaces `None` | `x \| default(fallback, true)` |
+
+Do not compare states with literal lists such as `["unknown", "unavailable"]`.
+Test `is defined` only for values that can really be missing: event data (`nspanel_event.*`), attributes, trigger-dependent variables, keys of user-provided mappings and list items.
+Inputs always have a value, and variables set earlier in the same run are always defined, so they need no `is defined`.
 
 ## Nextion HMI (hmi/)
 
@@ -143,7 +173,9 @@ Follow ESPHome's C++ conventions and the repository `.clang-format`.
 - `vis` state is not preserved across page navigation, while `.txt` and `.pco` of global components are.
 - `rest` always returns to the boot page and resets globals to the values declared in `Program.s`.
 - Component names referenced from ESPHome must match the declared names exactly; wrong names produce silent `0x1A` errors.
-- Icons come from the MDI font pipeline in `hmi/dev/fonts/`; `all_icons.h` and `all_icons.json` are generated and must not be edited by hand.
+- Icons come from the MDI font pipeline in `hmi/dev/fonts/`; `all_icons.h`, `all_icons.json` and the Blueprint's `all_icon_names` / `special_icons` lines are generated and must not be edited by hand.
+- In the Blueprint, a fixed icon is its glyph with the icon name in a comment (`{{ "\uE392" }}{# mdi:thermostat #}`).
+  An icon name known only at run time is looked up in `all_icon_names`: its position gives the codepoint (U+E000 + position).
 
 ## Documentation
 
@@ -154,7 +186,7 @@ Follow ESPHome's C++ conventions and the repository `.clang-format`.
 ## Things agents must not do
 
 - Edit files under `versioning/` or bump versions manually.
-- Edit generated files (`all_icons.h`, `all_icons.json`, `hmi/dev/nextion2text/`) instead of their sources.
+- Edit generated files (`all_icons.h`, `all_icons.json`, the Blueprint's `all_icon_names` / `special_icons` lines, `hmi/dev/nextion2text/`) instead of their sources.
 - Commit compiled binaries (`.tft`, `.bin`) unless explicitly asked.
 - Reformat or restructure unrelated code in the same change.
 - Remove comments, docs or existing opt-in guards without being asked.
