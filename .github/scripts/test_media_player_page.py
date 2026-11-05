@@ -13,8 +13,9 @@ with the same or a changed state, a few seconds or more than a minute later.
 
 Home Assistant parses each rendered template on its own, so a title or artist that looks like a Python literal
 (for example `1979` or `True`) became a number or a boolean when rendered as a separate field, and was then
-dropped as not being text. For those cases the tested version must send the text as it is (a fix), and the
-rest of what the panel receives must match.
+dropped as not being text. For those cases the tested version must send the text in its own field (a fix), as
+the panel receives it after Home Assistant's `cv.string` validation of the action data, and the rest of what the
+panel receives must match.
 
 Usage:
   test_media_player_page.py REFERENCE_BLUEPRINT [BLUEPRINT]
@@ -131,50 +132,61 @@ def run(hass, loop, enum, iterations):
     return results
 
 
-def random_state(rng, literal_text=None):
-    """A mocked media player state; literal_text replaces the title or the artist when given."""
+def action_string(value):
+    """
+    A value as an ESPHome action's string argument receives it: Home Assistant validates the data with `cv.string`,
+    which keeps text, turns numbers and booleans back into text, and uses the rendered text of lists and dicts.
+    """
+    if value is None:
+        raise ValueError("string value is None")
+    return value if isinstance(value, str) else str(value)
+
+
+def random_state(rng, literal=None):
+    """A mocked media player state; literal is (field, text) replacing the title or the artist when given."""
     attributes = {name: rng.choice(samples) for name, samples in ATTRIBUTE_SAMPLES.items()}
-    if literal_text is not None:
-        attributes[rng.choice(("media_title", "media_artist"))] = literal_text
+    if literal is not None:
+        attributes[literal[0]] = literal[1]
     return {ENTITY: MockState(ENTITY, rng.choice(STATE_SAMPLES),
                               {name: value for name, value in attributes.items() if value is not ...})}
 
 
 def cases():
-    """(iterations, literal_text): two iterations each, the second with the same or a changed state."""
+    """(iterations, literal): two iterations each, the second with the same or a changed state."""
     rng = random.Random(SEED)
     for index in range(CASES):
-        literal_text = rng.choice(LITERAL_TEXTS) if index % 10 == 0 else None
-        first = random_state(rng, literal_text)
+        literal = ((rng.choice(("media_title", "media_artist")), rng.choice(LITERAL_TEXTS))
+                   if index % 10 == 0 else None)
+        first = random_state(rng, literal)
         # With a literal-looking text, the signature differs from the reference, and so would the choice between a
         # full refresh and a resync after a state change; the same state keeps that choice comparable.
-        second = first if literal_text is not None or rng.random() < 0.5 else random_state(rng)
+        second = first if literal is not None or rng.random() < 0.5 else random_state(rng)
         later = NOW + datetime.timedelta(seconds=rng.choice((5, 59, 60, 61, 120)))
-        yield [(first, NOW), (second, later)], literal_text
+        yield [(first, NOW), (second, later)], literal
 
 
-def without_text(results):
-    """Results with the title, the artist and the signature dropped."""
+def without_text(results, field):
+    """Results with the given field (title or artist) and the signature dropped."""
     stripped = []
     for sent, _signature, last_full_refresh, wait_completed in results:
         actions = []
         for action, data in sent:
             data = dict(data)
-            for key in ("media_title", "media_artist"):
-                data.pop(key, None)
+            data.pop(field, None)
             actions.append((action, data))
         stripped.append((actions, last_full_refresh, wait_completed))
     return stripped
 
 
-def sends_text(results, literal_text, enum):
-    """Whether the first full refresh sends the literal text as title or artist (unless it is an unknown state)."""
-    if literal_text in enum["states"]["unknown"]:
-        return True
-    for action, data in results[0][0]:
-        if action.endswith("_page_media_player"):
-            return literal_text in (str(data.get("media_title")), str(data.get("media_artist")))
-    return False
+def sends_text(results, literal, enum):
+    """
+    Whether every full refresh sends the literal text in its own field, as the panel receives it (an unknown
+    state such as `None` is dropped as before).
+    """
+    field, text = literal
+    expected = "" if text in enum["states"]["unknown"] else text
+    refreshes = [data for sent, *_ in results for action, data in sent if action.endswith("_page_media_player")]
+    return bool(refreshes) and all(field in data and action_string(data[field]) == expected for data in refreshes)
 
 
 def main():
@@ -189,23 +201,23 @@ def main():
     hass.env.tests["boolean"] = lambda value: isinstance(value, bool)
 
     differences = fixed = total = 0
-    for iterations, literal_text in cases():
+    for iterations, literal in cases():
         total += 1
         expected = run(hass, *reference, iterations)
         try:
             actual = run(hass, *candidate, iterations)
         except Exception as error:  # pylint: disable=broad-except - any error is a difference
             actual = f"ERROR: {error!r}"
-        if literal_text is None:
+        if literal is None:
             same = actual == expected
         else:
-            same = (not isinstance(actual, str) and sends_text(actual, literal_text, candidate[1])
-                    and without_text(actual) == without_text(expected))
+            same = (not isinstance(actual, str) and sends_text(actual, literal, candidate[1])
+                    and without_text(actual, literal[0]) == without_text(expected, literal[0]))
             fixed += same
         if not same:
             differences += 1
             if differences <= MAX_REPORTED_DIFFERENCES:
-                print(f"DIFF literal_text={literal_text!r}\n"
+                print(f"DIFF literal={literal!r}\n"
                       f"  states:    {[{k: (s.state, s.attributes) for k, s in db.items()} for db, _ in iterations]}\n"
                       f"  reference: {expected}\n  tested:    {actual}")
     print(f"{total} cases, {differences} differences, {fixed} fixed (title or artist looking like a literal)")
