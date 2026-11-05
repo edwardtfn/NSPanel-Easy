@@ -5,7 +5,8 @@
 #
 # Used by:
 #   - .github/workflows/esphome_build.yml (code_scan job)
-#   - .github/workflows/validate_blueprint.yml (yamllint, and PyYAML for .github/scripts/blueprint_metrics.py)
+#   - .github/workflows/validate_blueprint.yml (yamllint, PyYAML for .github/scripts/blueprint_metrics.py,
+#     and PyYAML and Jinja2 for the equivalence tests .github/scripts/test_*.py)
 #   - .github/workflows/validate_yamllint.yml
 #   - .github/workflows/validate_python.yml (flake8)
 #
@@ -16,5 +17,6 @@
 # so its updates do not trigger (or depend on) these unrelated workflows.
 
 flake8==7.5.0
+jinja2==3.1.6
 yamllint==1.38.0
 pyyaml==6.0.3
