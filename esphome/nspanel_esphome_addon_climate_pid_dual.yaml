@@ -217,8 +217,19 @@ script:
 
           if (current_page_id != get_page_id("climate")) return;
           if (!climate_embedded_visible) return;
-          disp1->set_component_text("target_icon", icon);
-          disp1->set_component_font_color("target_icon", static_cast<uint16_t>(color));
+
+          // Target icon on the climate page: independent of the chip visibility, always show the mode, colored while active
+          const char *target_icon = Icons::MDI_NONE;
+          uint16_t target_color = Colors::RGB565_BLACK;
+          if (is_active) {
+            target_icon = climate_action_icons[action].icon;
+            target_color = climate_action_icons[action].color;
+          } else if (mode <= nspanel_easy::CLIMATE_MODE_AUTO) {
+            target_icon = climate_off_mode_icons[mode].icon;
+            target_color = climate_off_mode_icons[mode].color;
+          }
+          disp1->set_component_text("target_icon", target_icon);
+          disp1->set_component_font_color("target_icon", static_cast<uint16_t>(target_color));
 
 number:
   - id: !extend pid_tuning_pwm_period
