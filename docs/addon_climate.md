@@ -443,8 +443,9 @@ The output becomes the on-time of each PWM cycle: 25 % of a 20-minute `PID PWM p
   **PID Cool output** is shown as a positive duty, like the heat output.
 - An output close to 100 % for hours, or an integral stuck at 100 % (`-100 %` when cooling), means the system cannot keep up:
   the flow temperature is too low (too high when cooling), or the setpoint too high for the heating system (too low for cooling).
-- A very low output and an integral close to 0 while the room is warm enough means the flow temperature is too high.
-  With a weather-compensated flow temperature, adjust the heating curve rather than the controller.
+- When heating, a very low output and an integral close to 0 while the room is warm enough means the flow temperature is too high.
+  When cooling, a very low output and an integral close to 0 while the room is cool enough means the flow temperature is too low.
+  With a weather-compensated flow temperature, adjust the heating (or cooling) curve rather than the controller.
 
 #### Adjusting the parameters
 
