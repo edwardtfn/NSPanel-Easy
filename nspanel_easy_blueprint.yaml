@@ -10036,10 +10036,12 @@ actions:
                                           forecast_day
                                             | selectattr("templow", "defined")
                                             | rejectattr("templow", "none")
+                                            | rejectattr("templow", "eq", "")
                                             | map(attribute="templow") | map("float") | list | min
                                           if forecast_day
                                               | selectattr("templow", "defined")
                                               | rejectattr("templow", "none")
+                                              | rejectattr("templow", "eq", "")
                                               | map(attribute="templow") | map("float") | list | count > 0
                                           else
                                             forecast_day
