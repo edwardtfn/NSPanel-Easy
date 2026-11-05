@@ -261,8 +261,9 @@ How it works:
   The operating mode (heat or cool) is read from `pid_mode_entity` and stored in flash,
   so the panel keeps the last mode while Home Assistant is unavailable.
   When the operating mode changes, the integral terms are reset and the valve is closed before the other controller takes over.
-  The display follows the operating mode: the climate chip and the icon on the climate page show a fire (heat) or a snowflake (cool),
-  colored while the valve is driven and gray while idle. On the climate page, the mode button shows heat or cool accordingly;
+  The display follows the operating mode: the icon on the climate page shows a fire (heat) or a snowflake (cool),
+  colored while the valve is driven and gray while idle. The climate chip shows the same when its visibility is set to always;
+  with the default visibility (only while active), it is hidden while the valve is idle. On the climate page, the mode button shows heat or cool accordingly;
   both buttons only switch the room on, the operating mode itself is changed in Home Assistant.
 - Presets: the dual add-on keeps `Off` and `Home`, as described in [Presets](#presets).
   The single add-on offers `Comfort`, `Eco` and `Off` instead, see [PID presets](#pid-presets-single-only).
