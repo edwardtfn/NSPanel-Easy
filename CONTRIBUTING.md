@@ -90,9 +90,8 @@ but doing so before pushing will save you a round trip.
 
 ## Branching
 
-Work on a feature branch and open a PR targeting `main`. There is no separate
-`dev` branch in the current workflow. Keep branches short-lived and scoped to
-a single logical change.
+Work on a feature branch and open a PR targeting `dev`.
+Keep branches short-lived and scoped to a single logical change.
 
 ---
 
