@@ -6152,7 +6152,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.main %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         for:
           seconds: 1
@@ -6202,7 +6202,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group01 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6225,7 +6225,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group02 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6248,7 +6248,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group03 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6271,7 +6271,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group04 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6294,7 +6294,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group05 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6317,7 +6317,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group06 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
