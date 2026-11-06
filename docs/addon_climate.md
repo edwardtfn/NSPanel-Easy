@@ -252,7 +252,8 @@ How it works:
 - The controller output (0-100 %) is turned into on/off cycles of the panel relay.
   The output is taken once at the start of each PWM cycle, so a change during the cycle never cuts a pulse short or switches the relay on twice.
   Each pulse lasts at least `pid_min_on_time` and each pause at least `pid_min_off_time`: a shorter pulse is skipped, a shorter pause keeps the relay on.
-  While the relay is idle, a new demand starts a new cycle right away, once the relay has been off for the minimum off-time.
+  If the current cycle has no on-time (output 0 % or pulse skipped), a new demand starts a new cycle right away, once the relay has been off for the minimum off-time.
+  If the current cycle already had a pulse, a changed output waits for the start of the next cycle.
   Switching the room off, changing the operating mode and the boost apply immediately.
 - The controllers regulate on the same temperature as the thermostat, so they follow the calibration reference as described in [Temperature source](#temperature-source).
 - The regulation runs entirely on the panel and keeps working without Home Assistant.
