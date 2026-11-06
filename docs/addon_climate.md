@@ -249,7 +249,11 @@ How it works:
 - The embedded thermostat (`thermostat_embedded`) stays in place as the user interface and setpoint holder,
   so the climate page, the climate chip and the Blueprint work as usual. It only switches the dummy relay `relay_0`.
 - Two internal PID controllers (heat and cool) do the actual control and are synced with the thermostat every `pid_sync_interval` seconds.
-- The controller output (0-100 %) is turned into on/off cycles of the panel relay by a `slow_pwm` output.
+- The controller output (0-100 %) is turned into on/off cycles of the panel relay.
+  The output is taken once at the start of each PWM cycle, so a change during the cycle never cuts a pulse short or switches the relay on twice.
+  Each pulse lasts at least `PID Min on time` and each pause at least `PID Min off time`: a shorter pulse is skipped, a shorter pause keeps the relay on.
+  While the relay is idle, a new demand starts a new cycle right away, once the relay has been off for the minimum off-time.
+  Switching the room off, changing the operating mode and the boost apply immediately.
 - The controllers regulate on the same temperature as the thermostat, so they follow the calibration reference as described in [Temperature source](#temperature-source).
 - The regulation runs entirely on the panel and keeps working without Home Assistant.
 - While a controller is off, its integral term is kept, so it continues from the learned value when switched on again.
@@ -283,6 +287,17 @@ How it works:
 
 <!-- Separates the two alerts -->
 
+> [!WARNING]
+> The PID packages are meant to drive zone valve actuators, not the heat source.
+> Do not connect the relay to the demand input of a boiler or heat pump: the PWM cycles switch it on and off several times per hour,
+> and short cycling wears out compressors and burners.
+> The valves also close more often than with two-point control. The heating system must handle all zones being closed at once,
+> e.g. with a bypass, an overflow valve or a buffer tank, so the heat source keeps its minimum flow. Check the requirements of your heat source before using these packages.
+> Each PWM cycle with an output between 0 and 100 % switches the relay twice: up to 144 times a day with the default 20-minute period,
+> and up to 576 times a day with the shortest period (5 minutes).
+
+<!-- Separates the two alerts -->
+
 > [!CAUTION]
 > When cooling through the floor, surfaces below the dew point collect condensation, which can damage the floor and building.
 > The PID packages do not monitor the dew point: the controllers, and the boost of the single package, open the valve regardless of humidity.
@@ -308,6 +323,8 @@ In PID mode, the deadband and overrun keys of the thermostat only affect the act
 | pid_kd | both | Optional | Number | `0.0` | Derivative term, usually not useful for slow systems. |
 | pid_deadband | both | Optional | Number in Kelvin | `0.25` | Deadband around the setpoint. Inside it, the proportional term is disabled and the integral term is slowed down. Also in Kelvin when `temp_units` is `°F`. Seed for the first boot only. |
 | pwm_period | both | Optional | Seconds | `1200` | PWM cycle time. Seed for the first boot only. |
+| pid_min_on_time | both | Optional | Seconds | `180` | Shortest relay on-time: a shorter pulse is skipped. Seed for the first boot only. |
+| pid_min_off_time | both | Optional | Seconds | `180` | Shortest relay off-time: a shorter pause keeps the relay on. Seed for the first boot only. |
 | pid_starting_integral | both | Optional | `0.0` to `1.0` | `0.0` | Integral term on the first boot, e.g. the typical average output in winter, to shorten the first settling. Afterwards the integral term is restored from flash. |
 | pid_sync_interval | both | Optional | Seconds | `10` | Interval for syncing the thermostat to the controllers. |
 | pid_sample_interval | both | Optional | Seconds | `30` | Interval between controller computations. The controllers average their output over 5 computations, or 15 inside the deadband, so this sets how long that smoothing lasts. |
@@ -335,6 +352,8 @@ Changes are applied immediately, without reflashing.
 | PID kp | `pid_name_kp` | Config | Proportional gain (`0.05` to `1.0`). Applies to both controllers. |
 | PID Tn | `pid_name_tn` | Config | Integral time in minutes (`10` to `600`). Applies to both controllers. |
 | PID PWM period | `pid_name_pwm_period` | Config | PWM cycle time in seconds (`300` to `3600`). |
+| PID Min on time | `pid_name_min_on_time` | Config | Shortest relay on-time in seconds (`0` to `900`). |
+| PID Min off time | `pid_name_min_off_time` | Config | Shortest relay off-time in seconds (`0` to `900`). |
 | PID Deadband | `pid_name_deadband` | Config | Deadband in Kelvin (`0.0` to `1.0`). |
 | PID Reset integral | `pid_name_reset_integral` | Config | Button resetting the integral terms of both controllers. |
 | PID Heat output | `pid_name_heat_output` | Diagnostic | Output of the heat controller (0-100 %). |
@@ -434,6 +453,8 @@ Every `pid_sample_interval` seconds, each active controller computes an output b
   Once settled, it holds the room's base load, for example "this room needs 25 % heating in winter", and the proportional part only corrects deviations.
 
 The output becomes the on-time of each PWM cycle: 25 % of a 20-minute `PID PWM period` keeps the valve relay on for 5 minutes and off for 15.
+With the default minimum times of 3 minutes, an output below 15 % of a 20-minute period skips the pulse, and an output above 85 % keeps the relay on for the whole cycle.
+The integral part makes up for skipped pulses over the following cycles, so the room still settles; the diagnostic outputs show the controller output, not the relay.
 
 #### Reading the diagnostic entities
 
@@ -456,6 +477,7 @@ The output becomes the on-time of each PWM cycle: 25 % of a 20-minute `PID PWM p
 | PID Tn | The room overshoots and swings slowly, over hours. | A lasting difference from the setpoint takes very long to disappear. |
 | PID PWM period | The relay should switch less often, or the valve actuators are slow (thermal actuators take a few minutes to open). | The system reacts fast, as radiators do. |
 | PID Deadband | The output reacts nervously to small temperature changes. | The temperature should be held more tightly. |
+| PID Min on time / PID Min off time | The valve actuators need longer to open or close, or the relay should switch less often. | The actuators react fast, or a short `PID PWM period` skips too many pulses. Keep their sum well below the period. |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -463,6 +485,7 @@ Use **PID Reset integral** only after a major change, such as a new heating curv
 
 As a starting point, the defaults suit underfloor heating in screed (`kp` `0.3`, `Tn` 180 minutes, 20-minute PWM period).
 Radiators react faster and usually work better with about `kp` `0.6`, `Tn` 50 minutes and a 10-minute PWM period, as in the [dual setpoints example](#example-dual-setpoints).
+With a 10-minute period, the default 3-minute minimum times skip outputs below 30 % and keep the relay on above 70 %; lower them if the valve actuators allow it.
 Leave `pid_kd` at `0`: the derivative part reacts to how fast the temperature changes, which does not help slow systems and amplifies sensor noise.
 
 #### Tuning procedure
