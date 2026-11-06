@@ -47,8 +47,8 @@ substitutions:
 | `GPIO_DISPLAY_NEXTION_TX_PIN` | `16`                           | Nextion display TX (MCU → Display)      |
 | `GPIO_DISPLAY_NEXTION_RX_PIN` | `17`                           | Nextion display RX (Display → MCU)      |
 | `GPIO_DISPLAY_POWER_PIN`      | `number: 4<br>inverted: true`  | Backlight / display power control       |
-| `GPIO_PSRAM_CLK_PIN`          | `5`                            | Optional PSRAM clock                    |
-| `GPIO_PSRAM_CS_PIN`           | `18`                           | Optional PSRAM chip select              |
+| `GPIO_PSRAM_CLK_PIN`          | `5`                            | PSRAM clock                             |
+| `GPIO_PSRAM_CS_PIN`           | `18`                           | PSRAM chip select                       |
 | `GPIO_RELAY_1_PIN`            | `22`                           | Relay 1 output                          |
 | `GPIO_RELAY_2_PIN`            | `19`                           | Relay 2 output                          |
 | `GPIO_TEMPERATURE_ADC_PIN`    | `38`                           | Analog input for NTC/temperature sensor |

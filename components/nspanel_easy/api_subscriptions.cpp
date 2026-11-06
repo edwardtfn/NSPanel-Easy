@@ -105,9 +105,10 @@ static uint8_t sub_unverified = 0;
 /**
  * @brief Allocate, preferring PSRAM and falling back to internal DRAM.
  *
- * Not every NSPanel carries PSRAM, so the fallback is mandatory rather than a
- * convenience. Allocations here are made once and never resized, which is what
- * lets the API hold raw pointers into the binding array.
+ * Every NSPanel carries PSRAM, so allocations normally land there. The internal
+ * DRAM fallback is defensive, covering a failed PSRAM initialization (e.g. a
+ * hardware defect). Allocations here are made once and never resized, which is
+ * what lets the API hold raw pointers into the binding array.
  *
  * @param bytes Size to allocate.
  * @return Zeroed allocation, or nullptr on failure.
