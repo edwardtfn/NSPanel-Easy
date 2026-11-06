@@ -10679,6 +10679,21 @@ actions:
                       entity_details_pages_debounce_ms: !input entity_details_pages_debounce
                       entity_details_pages_update_interval_s: !input entity_details_pages_update_interval
                       current_page_from_sensor: '{{ nspanel_event.page }}'
+                      # Domains whose entity changes refresh each entity details page after it opens. One shared
+                      # condition reads it, instead of a separate template per page (#636: fewer distinct templates).
+                      page_entity_domains:
+                        light: ["light"]
+                        cover: ["cover"]
+                        fan: ["fan"]
+                        media_player: ["media_player"]
+                        alarm: ["alarm_control_panel"]
+                        climate: ["climate"]
+                        button: ["button", "input_button"]
+                        switch: ["switch", "input_boolean"]
+                        water_heater: ["humidifier", "water_heater"]
+                        select: ["select", "input_select"]
+                        timer: ["timer"]
+                        vacuum: ["lawn_mower", "vacuum"]
                       # Cross-iteration state: the last redraw was driven by an entity change on a
                       # page that keeps pending presses (fan), so the next wait is a short settle
                       # pass that redraws once the entity has been quiet for the debounce time.
@@ -10698,7 +10713,7 @@ actions:
                             - alias: Light settings page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.light }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["light"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_light
                                 - &get_entity_id_from_event_or_trigger
                                   variables:
@@ -10991,7 +11006,7 @@ actions:
                             - alias: Cover settings page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.cover }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["cover"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_cover
                                 - *get_entity_id_from_event_or_trigger
                                 - *variable_entity
@@ -11167,7 +11182,7 @@ actions:
                             - alias: Fan settings page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.fan }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["fan"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_fan
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -11511,7 +11526,7 @@ actions:
                             - alias: Media player settings page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.media_player }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["media_player"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_media_player
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -11643,7 +11658,7 @@ actions:
                             - alias: Alarm settings page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.alarm }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["alarm_control_panel"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_alarm
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -11681,7 +11696,7 @@ actions:
                             - alias: Climate page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.climate }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["climate"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_climate
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -12134,7 +12149,7 @@ actions:
                             - alias: Button page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.button }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["button", "input_button"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_button
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
@@ -12172,7 +12187,7 @@ actions:
                             - alias: Switch page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.switch }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["switch", "input_boolean"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_switch
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
@@ -12210,7 +12225,7 @@ actions:
                             - alias: Water Heater page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.water_heater }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["humidifier", "water_heater"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_water_heater
                                 - &variables_water_heater_entity
                                   variables:
@@ -12590,7 +12605,7 @@ actions:
                             - alias: Select page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.select }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["select", "input_select"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_select
                                 - *get_entity_id_from_event_or_trigger
                                 - *variable_entity
@@ -12689,7 +12704,7 @@ actions:
                             - alias: Timer page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.timer }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["timer"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_timer
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
@@ -12779,7 +12794,7 @@ actions:
                             - alias: Vacuum / lawn mower page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.vacuum }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["lawn_mower", "vacuum"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_vacuum
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
