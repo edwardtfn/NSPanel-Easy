@@ -103,6 +103,20 @@ void PidPwmCycle::start_cycle_(uint32_t now_ms, uint32_t period_ms, uint32_t min
            this->on_ms_ / 1000, period_ms / 1000);
 }
 
+bool PidPwmCycle::switches_on_early_(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms,
+                                     uint32_t min_off_ms) const {
+  if (pid_pwm_on_time(this->pending_level_, period_ms, min_on_ms, min_off_ms) == 0)
+    return false;  // The new cycle keeps the relays off
+  const PidPwmChannel channel = this->pending_channel_;
+  if (this->on_ && this->channel_ == channel)
+    return false;  // The relay of the new cycle is already on
+  if (!this->on_ && this->was_on_ && (now_ms - this->off_since_ms_) < min_off_ms)
+    return true;  // The relays have not been off for the minimum off-time
+  // The relay of the new cycle's channel (dual package) has not been off for the minimum off-time
+  return channel <= PID_PWM_CHANNEL_COOL && this->channel_was_on_[channel] &&
+         (now_ms - this->channel_off_since_ms_[channel]) < min_off_ms;
+}
+
 bool PidPwmCycle::update(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms, uint32_t min_off_ms) {
   const PidPwmChannel last_channel = this->channel_;
   const bool last_on = this->on_;
@@ -110,11 +124,9 @@ bool PidPwmCycle::update(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms
   if (!this->started_ || this->restart_) {
     this->start_cycle_(now_ms, period_ms, min_on_ms, min_off_ms);
   } else if ((now_ms - this->cycle_start_ms_) >= period_ms) {
-    // A new cycle that would switch an off relay on waits until the relay has been off for the minimum
-    // off-time. Within a cycle, pid_pwm_on_time() keeps the pause long enough, but a pause spanning a
-    // cycle boundary (after a cycle without on-time) is only as long as the period, which can be shorter.
-    if (this->on_ || !this->was_on_ || (now_ms - this->off_since_ms_) >= min_off_ms ||
-        pid_pwm_on_time(this->pending_level_, period_ms, min_on_ms, min_off_ms) == 0)
+    // Within a cycle, pid_pwm_on_time() keeps the pause long enough, but a pause spanning a cycle boundary
+    // can be as short as the period, so a new cycle waits while it would switch a relay on too early
+    if (!this->switches_on_early_(now_ms, period_ms, min_on_ms, min_off_ms))
       this->start_cycle_(now_ms, period_ms, min_on_ms, min_off_ms);
   } else if (this->on_ms_ == 0 && !this->on_ && (!this->was_on_ || (now_ms - this->off_since_ms_) >= min_off_ms) &&
              pid_pwm_on_time(this->pending_level_, period_ms, min_on_ms, min_off_ms) > 0) {
@@ -127,6 +139,15 @@ bool PidPwmCycle::update(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms
     this->off_since_ms_ = now_ms;
   if (on)
     this->was_on_ = true;
+  // Off-time of the relay of each channel, as the dual package drives one relay per channel
+  for (uint8_t channel = PID_PWM_CHANNEL_HEAT; channel <= PID_PWM_CHANNEL_COOL; channel++) {
+    const bool was_on = last_on && (last_channel == channel);
+    const bool is_on = on && (this->channel_ == channel);
+    if (was_on && !is_on)
+      this->channel_off_since_ms_[channel] = now_ms;
+    if (is_on)
+      this->channel_was_on_[channel] = true;
+  }  // for (uint8_t channel = PID_PWM_CHANNEL_HEAT; ...)
   this->on_ = on;
   return (on != last_on) || (this->channel_ != last_channel);
 }

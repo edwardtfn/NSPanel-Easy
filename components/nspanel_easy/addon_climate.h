@@ -279,8 +279,9 @@ uint32_t pid_pwm_on_time(float level, uint32_t period_ms, uint32_t min_on_ms, ui
  * - the current cycle has no on-time, the relay has been off for at least the minimum off-time,
  *   and the pending level results in an on-time, so a new demand does not wait a full period.
  *
- * At the end of a cycle, a new cycle that would switch an off relay on waits until the relay has
- * been off for the minimum off-time, which can be longer than the period.
+ * At the end of a cycle, a new cycle that would switch a relay on waits until that relay has been
+ * off for the minimum off-time, which can be longer than the period. Both the shared output and,
+ * for the dual package, the relay of each channel are checked.
  */
 class PidPwmCycle {
  public:
@@ -322,6 +323,9 @@ class PidPwmCycle {
   /// @brief Latches the pending level and channel and starts a new cycle at @p now_ms.
   void start_cycle_(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms, uint32_t min_off_ms);
 
+  /// @brief Whether a new cycle now would switch a relay on before it has been off for @p min_off_ms.
+  bool switches_on_early_(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms, uint32_t min_off_ms) const;
+
   float pending_level_{0.0f};                            ///< Level for the next cycle
   PidPwmChannel pending_channel_{PID_PWM_CHANNEL_NONE};  ///< Channel for the next cycle
   PidPwmChannel channel_{PID_PWM_CHANNEL_NONE};          ///< Channel of the current cycle
@@ -332,6 +336,8 @@ class PidPwmCycle {
   bool started_{false};                                  ///< A cycle has been started since boot
   bool restart_{false};                                  ///< Start a new cycle on the next update()
   bool was_on_{false};                                   ///< The relay has been on since boot
+  uint32_t channel_off_since_ms_[3]{};                   ///< When each channel's relay last switched off
+  bool channel_was_on_[3]{};                             ///< Each channel's relay has been on since boot
 };
 
 /// @brief The PWM cycle shared by both PID controllers (only one PID add-on can be installed).
