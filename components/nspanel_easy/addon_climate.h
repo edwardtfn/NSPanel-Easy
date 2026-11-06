@@ -231,6 +231,111 @@ float thermostat_temp_resolve(float embedded, uint32_t max_age_ms);
 
 #endif  // NSPANEL_EASY_SUBSCRIBE
 
+#ifdef NSPANEL_EASY_ADDON_CLIMATE_PID
+
+// =============================================================================
+// PID Slow PWM
+// =============================================================================
+
+/**
+ * @enum PidPwmChannel
+ * @brief What a PWM cycle of the PID add-ons drives.
+ *
+ * Latched together with the level at the start of each cycle, so the including package
+ * knows which relay to drive (dual) or which operating mode the cycle belongs to (single).
+ */
+enum PidPwmChannel : uint8_t {
+  PID_PWM_CHANNEL_NONE = 0,  ///< No demand: the relays stay off for the whole cycle
+  PID_PWM_CHANNEL_HEAT = 1,  ///< The cycle heats
+  PID_PWM_CHANNEL_COOL = 2,  ///< The cycle cools
+};
+
+/**
+ * @brief Relay on-time of one PWM cycle, respecting the minimum on and off times.
+ *
+ * An on-time shorter than @p min_on_ms becomes 0 (relay off for the whole cycle), and an off-time
+ * shorter than @p min_off_ms becomes 0 (relay on for the whole cycle). If both minimums together
+ * exceed the period, the minimum on-time is checked first.
+ *
+ * @param level Output share (0..1); values outside this range are clamped, NaN counts as 0.
+ * @param period_ms Cycle length in milliseconds.
+ * @param min_on_ms Shortest on-time in milliseconds.
+ * @param min_off_ms Shortest off-time in milliseconds.
+ * @return On-time in milliseconds, between 0 and @p period_ms.
+ */
+uint32_t pid_pwm_on_time(float level, uint32_t period_ms, uint32_t min_on_ms, uint32_t min_off_ms);
+
+/**
+ * @class PidPwmCycle
+ * @brief Slow PWM of the PID add-ons, with the level latched once per cycle.
+ *
+ * ESPHome's slow_pwm compares the level against the elapsed time continuously, so a level change
+ * in the middle of a cycle can cut a pulse short or switch the relay on a second time. Here a new
+ * level only takes effect at the start of the next cycle, and its on-time is limited by
+ * pid_pwm_on_time(), so each pulse and each pause lasts at least the minimum times.
+ *
+ * A new cycle starts before the end of the current one when:
+ * - force_level() was called (explicit commands such as room off, mode change or boost), or
+ * - the current cycle has no on-time, the relay has been off for at least the minimum off-time,
+ *   and the pending level results in an on-time, so a new demand does not wait a full period.
+ */
+class PidPwmCycle {
+ public:
+  /**
+   * @brief Sets the level for the next cycle.
+   * @param level Output share (0..1).
+   * @param channel What the level drives.
+   */
+  void set_level(float level, PidPwmChannel channel);
+
+  /**
+   * @brief Sets the level and starts a new cycle with it on the next update().
+   *
+   * The minimum times still limit the on-time of the new cycle, but the current pulse or pause
+   * ends right away, regardless of how long it has lasted.
+   *
+   * @param level Output share (0..1).
+   * @param channel What the level drives.
+   */
+  void force_level(float level, PidPwmChannel channel);
+
+  /**
+   * @brief Advances the cycle; call it periodically (e.g. every second).
+   * @param now_ms Current time from millis().
+   * @param period_ms Cycle length in milliseconds.
+   * @param min_on_ms Shortest on-time in milliseconds.
+   * @param min_off_ms Shortest off-time in milliseconds.
+   * @return True when the relay state or the latched channel changed.
+   */
+  bool update(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms, uint32_t min_off_ms);
+
+  /// @brief Whether the relay of the latched channel should be on now.
+  bool is_on() const { return this->on_; }
+
+  /// @brief Channel latched for the current cycle; PID_PWM_CHANNEL_NONE when the cycle has no on-time.
+  PidPwmChannel channel() const { return this->channel_; }
+
+ protected:
+  /// @brief Latches the pending level and channel and starts a new cycle at @p now_ms.
+  void start_cycle_(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms, uint32_t min_off_ms);
+
+  float pending_level_{0.0f};                            ///< Level for the next cycle
+  PidPwmChannel pending_channel_{PID_PWM_CHANNEL_NONE};  ///< Channel for the next cycle
+  PidPwmChannel channel_{PID_PWM_CHANNEL_NONE};          ///< Channel of the current cycle
+  uint32_t cycle_start_ms_{0};                           ///< Start of the current cycle
+  uint32_t on_ms_{0};                                    ///< On-time of the current cycle
+  uint32_t off_since_ms_{0};                             ///< When the relay last switched off
+  bool on_{false};                                       ///< Relay state
+  bool started_{false};                                  ///< A cycle has been started since boot
+  bool restart_{false};                                  ///< Start a new cycle on the next update()
+  bool was_on_{false};                                   ///< The relay has been on since boot
+};
+
+/// @brief The PWM cycle shared by both PID controllers (only one PID add-on can be installed).
+extern PidPwmCycle pid_pwm_cycle;
+
+#endif  // NSPANEL_EASY_ADDON_CLIMATE_PID
+
 }  // namespace esphome::nspanel_easy
 
 #endif  // NSPANEL_EASY_ADDON_CLIMATE_BASE

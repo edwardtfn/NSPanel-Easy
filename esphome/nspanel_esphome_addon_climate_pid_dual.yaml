@@ -11,7 +11,7 @@
 #####   but only switches the dummy relay 0.                                                    #####
 ##### - Two internal PID controllers do the actual control: target_temperature_low -> heat,     #####
 #####   target_temperature_high -> cool. The mode (off/heat/cool/heat_cool) is copied as well.  #####
-##### - The relays are modulated by slow PWM outputs.                                           #####
+##### - The relays are modulated by the PWM cycle of the PID base.                             #####
 #####################################################################################################
 ##### ATTENTION: Do NOT combine with climate_heat, climate_cool, climate_dual,                  #####
 ##### climate_pid_single or climate_backup. The climate base is included by this file.          #####
@@ -59,10 +59,6 @@ globals:
     type: float
     restore_value: false
     initial_value: '0.0f'  # Must be quoted: ESPHome expects the C++ initializer as a string
-  - id: pid_dual_activity  # Relay running after the interlock: 0 = none, 1 = heating, 2 = cooling
-    type: uint8_t
-    restore_value: false
-    initial_value: '0'  # Must be quoted: ESPHome expects the C++ initializer as a string
 
 output:
   # The controllers write their demand here; pid_dual_outputs decides which relay may run
@@ -82,25 +78,6 @@ output:
           id(pid_cool_demand) = state;
           pid_dual_outputs->execute();
 
-  # Turn the arbitrated outputs (0..100 %) into on/off cycles of the relays.
-  # Interlock at the relay: switching one relay on always switches the other one off first.
-  - platform: slow_pwm
-    id: pid_heat_pwm
-    period: ${pwm_period}s
-    turn_on_action:
-      - switch.turn_off: relay_${cooler_relay}
-      - switch.turn_on: relay_${heater_relay}
-    turn_off_action:
-      - switch.turn_off: relay_${heater_relay}
-
-  - platform: slow_pwm
-    id: pid_cool_pwm
-    period: ${pwm_period}s
-    turn_on_action:
-      - switch.turn_off: relay_${heater_relay}
-      - switch.turn_on: relay_${cooler_relay}
-    turn_off_action:
-      - switch.turn_off: relay_${cooler_relay}
 
 script:
   # Validates the relay selection at build time
@@ -135,25 +112,40 @@ script:
               cool = 0.0f;
             }
           }
-          // The output that stops is set first
+          // The arbitrated output is latched by the PWM cycle (pid_base) at the start of its next cycle
           if (heat > 0.0f) {
-            id(pid_cool_pwm).set_level(cool);
-            id(pid_heat_pwm).set_level(heat);
+            nspanel_easy::pid_pwm_cycle.set_level(heat, nspanel_easy::PID_PWM_CHANNEL_HEAT);
+          } else if (cool > 0.0f) {
+            nspanel_easy::pid_pwm_cycle.set_level(cool, nspanel_easy::PID_PWM_CHANNEL_COOL);
           } else {
-            id(pid_heat_pwm).set_level(heat);
-            id(pid_cool_pwm).set_level(cool);
-          }
-          // Activity shown on the display, from the relay outputs instead of the facade's hysteresis
-          const uint8_t activity = (heat > 0.0f) ? 1 : ((cool > 0.0f) ? 2 : 0);
-          if (activity != id(pid_dual_activity)) {
-            id(pid_dual_activity) = activity;
+            nspanel_easy::pid_pwm_cycle.set_level(0.0f, nspanel_easy::PID_PWM_CHANNEL_NONE);
+          }  // if (heat > 0.0f)
+
+  # Drives the relays from the shared PWM cycle (pid_base), when its output changes.
+  # Interlock at the relay: the relay that stops is always switched off before the other one is switched on.
+  - id: pid_pwm_apply
+    mode: queued
+    then:
+      - lambda: |-
+          const bool on = nspanel_easy::pid_pwm_cycle.is_on();
+          const auto channel = nspanel_easy::pid_pwm_cycle.channel();
+          const bool heat = on && (channel == nspanel_easy::PID_PWM_CHANNEL_HEAT);
+          const bool cool = on && (channel == nspanel_easy::PID_PWM_CHANNEL_COOL);
+          if (!heat && relay_${heater_relay}->state) relay_${heater_relay}->turn_off();
+          if (!cool && relay_${cooler_relay}->state) relay_${cooler_relay}->turn_off();
+          if (heat && !relay_${heater_relay}->state) relay_${heater_relay}->turn_on();
+          if (cool && !relay_${cooler_relay}->state) relay_${cooler_relay}->turn_on();
+          // Activity shown on the display follows the channel of the current cycle, not the facade's hysteresis
+          static nspanel_easy::PidPwmChannel last_channel = nspanel_easy::PID_PWM_CHANNEL_NONE;
+          if (channel != last_channel) {
+            last_channel = channel;
             if (id(is_embedded_thermostat)) update_climate_chip->execute();
           }
 
   ###################################################################################################
   ##### Display: replaces the climate chip of the climate base. The base derives the activity   #####
   ##### from the thermostat facade, whose hysteresis does not drive the relays here. Here it    #####
-  ##### comes from the arbitrated controller outputs instead.                                   #####
+  ##### comes from the channel of the current PWM cycle instead.                                #####
   ###################################################################################################
   - id: !remove update_climate_chip
 
@@ -164,9 +156,10 @@ script:
           const uint8_t mode = static_cast<uint8_t>(thermostat_embedded->mode);
           uint8_t action = nspanel_easy::CLIMATE_ACTION_OFF;
           if (thermostat_embedded->mode != climate::CLIMATE_MODE_OFF) {
-            if (id(pid_dual_activity) == 1) {
+            const auto channel = nspanel_easy::pid_pwm_cycle.channel();
+            if (channel == nspanel_easy::PID_PWM_CHANNEL_HEAT) {
               action = nspanel_easy::CLIMATE_ACTION_HEATING;
-            } else if (id(pid_dual_activity) == 2) {
+            } else if (channel == nspanel_easy::PID_PWM_CHANNEL_COOL) {
               action = nspanel_easy::CLIMATE_ACTION_COOLING;
             } else {
               action = nspanel_easy::CLIMATE_ACTION_IDLE;
@@ -232,15 +225,6 @@ script:
           disp1->set_component_font_color("target_icon", static_cast<uint16_t>(target_color));
 
 number:
-  - id: !extend pid_tuning_pwm_period
-    on_value:
-      - lambda: |-
-          if (isnan(x) || x < 60.0f) return;
-          const uint32_t ms = static_cast<uint32_t>(x * 1000.0f);
-          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "PWM period applied: %.0fs", x);
-          pid_heat_pwm->set_period(ms);
-          pid_cool_pwm->set_period(ms);
-
 interval:
   # Copies mode and setpoints from the thermostat facade to the controllers.
   # Change detection avoids needless state publishes. All values are °C internally.
@@ -301,6 +285,15 @@ interval:
               last_cool_target = t_high;
             }
           }
+
+          // A mode change applies right away: the relay of a controller switched off stops without waiting for the end of the cycle
+          if (mode_changed) {
+            const auto channel = nspanel_easy::pid_pwm_cycle.channel();
+            if ((channel == nspanel_easy::PID_PWM_CHANNEL_HEAT && !heat_enabled) ||
+                (channel == nspanel_easy::PID_PWM_CHANNEL_COOL && !cool_enabled)) {
+              nspanel_easy::pid_pwm_cycle.force_level(0.0f, nspanel_easy::PID_PWM_CHANNEL_NONE);
+            }
+          }  // if (mode_changed)
 
           last_mode = int(mode);
       - script.execute: pid_integral_track
