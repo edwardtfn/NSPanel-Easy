@@ -11540,79 +11540,51 @@ actions:
                                         continue_on_error: true
                                       - delay:
                                           milliseconds: '{{ media_player_update_delay }}'
+                                      # All values of an iteration in a single template, so the loop holds one template here
+                                      # instead of one per value (issue #657).
+                                      # - Media player groups don't expose correct supported_features, so we override with a known-good mask:
+                                      #   PAUSE(1) + VOLUME_SET(4) + VOLUME_MUTE(8) + PREVIOUS_TRACK(16) + NEXT_TRACK(32) + TURN_ON(128) +
+                                      #   TURN_OFF(256) + PLAY_MEDIA(512) + STOP(4096) + PLAY(16384) = 21437
+                                      # - Title and artist are sanitized once for both the signature and the payload.
+                                      # - `signature` is a content fingerprint covering everything the ESPHome lambda
+                                      #   conditions UI writes on, EXCEPT media_position (resynced
+                                      #   cheaply between full refreshes). Order is fixed; '|' is a
+                                      #   safe separator since none of the fields can contain it
+                                      #   except free-text title/artist — and even if they do, a
+                                      #   collision only causes a missed cheap-path optimization,
+                                      #   not incorrect UI state (the 60s safety net catches it).
                                       - variables:
-                                          media_player:
-                                            state: '{{ states(entity_id) }}'
-                                            is_volume_muted: '{{ state_attr(entity_id, "is_volume_muted") | default(false) }}'
-                                            friendly_name: '{{ state_attr(entity_id, "friendly_name") | default("Media player") }}'
-                                            volume_level: '{{ (state_attr(entity_id, "volume_level") | round(2, default=0) * 100) | int(0) }}'
-                                            media_title: '{{ state_attr(entity_id, "media_title") }}'
-                                            media_artist: '{{ state_attr(entity_id, "media_artist") }}'
-                                            media_duration: '{{ state_attr(entity_id, "media_duration") | int(0) }}'
-                                            media_position: '{{ state_attr(entity_id, "media_position") | int(0) }}'
-                                            media_position_updated_at: '{{ state_attr(entity_id, "media_position_updated_at") | default(now()) }}'
-                                            # Media player groups don't expose correct supported_features, so we override with a known-good mask:
-                                            # PAUSE(1) + VOLUME_SET(4) + VOLUME_MUTE(8) + PREVIOUS_TRACK(16) + NEXT_TRACK(32) + TURN_ON(128) +
-                                            # TURN_OFF(256) + PLAY_MEDIA(512) + STOP(4096) + PLAY(16384) = 21437
-                                            supported_features: >
-                                              {{
-                                                (1+4+8+16+32+128+256+512+4096+16384)
-                                                if (state_attr(entity_id, "mass_player_type") | default("")) == "group"
-                                                else state_attr(entity_id, "supported_features") | int(0)
-                                              }}
-                                      # Sanitize title/artist once for both the signature and the payload.
-                                      - variables:
-                                          media_title_clean: >
-                                            {{
-                                              media_player.media_title
-                                              if
-                                                media_player.media_title is defined and
-                                                media_player.media_title is string and
-                                                media_player.media_title | length > 0 and
-                                                media_player.media_title not in enum.states.unknown
-                                              else ""
-                                            }}
-                                          media_artist_clean: >
-                                            {{
-                                              media_player.media_artist
-                                              if
-                                                media_player.media_artist is defined and
-                                                media_player.media_artist is string and
-                                                media_player.media_artist | length > 0 and
-                                                media_player.media_artist not in enum.states.unknown
-                                              else ""
-                                            }}
-                                          media_position_delta: >
-                                            {{
-                                              (((now() | as_timestamp) - (media_player.media_position_updated_at | as_timestamp | default(now() | as_timestamp, true))) | round(0) | int)
-                                              if
-                                                media_player.media_position_updated_at is defined and
-                                                media_player.media_position_updated_at not in [None, none, "", "unknown", "unavailable", false, 0]
-                                              else 0
-                                            }}
-                                          # Content fingerprint covering everything the ESPHome lambda
-                                          # conditions UI writes on, EXCEPT media_position (resynced
-                                          # cheaply between full refreshes). Order is fixed; '|' is a
-                                          # safe separator since none of the fields can contain it
-                                          # except free-text title/artist — and even if they do, a
-                                          # collision only causes a missed cheap-path optimization,
-                                          # not incorrect UI state (the 60s safety net catches it).
-                                          current_signature: >-
-                                            {{
-                                              (media_player.state | string) ~ '|' ~
-                                              (media_player.is_volume_muted | string) ~ '|' ~
-                                              (media_player.volume_level | string) ~ '|' ~
-                                              media_title_clean ~ '|' ~
-                                              media_artist_clean ~ '|' ~
-                                              (media_player.media_duration | string) ~ '|' ~
-                                              (media_player.supported_features | string)
-                                            }}
-                                          now_ts: '{{ now() | as_timestamp | int }}'
-                                          needs_full_refresh: >-
-                                            {{
-                                              current_signature != last_signature or
-                                              (now_ts - last_full_refresh) >= 60
-                                            }}
+                                          media_player: >-
+                                            {%- set title = state_attr(entity_id, "media_title") -%}
+                                            {%- set artist = state_attr(entity_id, "media_artist") -%}
+                                            {%- set updated_at = state_attr(entity_id, "media_position_updated_at") -%}
+                                            {%- set now_ts = now() | as_timestamp -%}
+                                            {%- set mp = {
+                                                  "state": states(entity_id),
+                                                  "is_volume_muted": state_attr(entity_id, "is_volume_muted"),
+                                                  "volume_level": (state_attr(entity_id, "volume_level") | round(2, default=0) * 100) | int(0),
+                                                  "media_title": title
+                                                                 if title is string and title | length > 0 and title not in enum.states.unknown
+                                                                 else "",
+                                                  "media_artist": artist
+                                                                  if artist is string and artist | length > 0 and artist not in enum.states.unknown
+                                                                  else "",
+                                                  "media_duration": state_attr(entity_id, "media_duration") | int(0),
+                                                  "media_position": state_attr(entity_id, "media_position") | int(0),
+                                                  "media_position_delta":
+                                                    ((now_ts - (updated_at | as_timestamp | default(now_ts, true))) | round(0) | int)
+                                                    if updated_at not in [None, "", "unknown", "unavailable", false, 0]
+                                                    else 0,
+                                                  "supported_features":
+                                                    (1+4+8+16+32+128+256+512+4096+16384)
+                                                    if (state_attr(entity_id, "mass_player_type") | default("")) == "group"
+                                                    else state_attr(entity_id, "supported_features") | int(0),
+                                                  "now_ts": now_ts | int
+                                                } -%}
+                                            {%- set signature = [mp.state, mp.is_volume_muted, mp.volume_level, mp.media_title, mp.media_artist,
+                                                                 mp.media_duration, mp.supported_features] | join("|") -%}
+                                            {{ dict(mp, signature=signature,
+                                                    needs_full_refresh=signature != last_signature or (mp.now_ts - last_full_refresh) >= 60) }}
                                       # Branch: full refresh when content changed or safety-net
                                       # cadence elapsed; otherwise cheap component_val resync of
                                       # prg_current only (skipped entirely when nothing to track).
@@ -11620,24 +11592,30 @@ actions:
                                       # nspanel_esphome_page_media_player.yaml (capped_pos logic).
                                       # If you change one, change the other.
                                       - choose:
-                                          - conditions: '{{ needs_full_refresh }}'
+                                          - conditions: '{{ media_player.needs_full_refresh }}'
                                             sequence:
                                               - action: 'esphome.{{ action_prefix }}_page_media_player'
-                                                data:
-                                                  entity: '{{ entity_id }}'
-                                                  state: '{{ media_player.state if media_player.state is string else "" }}'
-                                                  is_volume_muted: '{{ media_player.is_volume_muted if media_player.is_volume_muted is boolean else false }}'
-                                                  volume_level: '{{ media_player.volume_level }}'
-                                                  media_title: '{{ media_title_clean }}'
-                                                  media_artist: '{{ media_artist_clean }}'
-                                                  media_duration: '{{ media_player.media_duration }}'
-                                                  media_position: '{{ media_player.media_position }}'
-                                                  media_position_delta: '{{ media_position_delta }}'
-                                                  supported_features: '{{ media_player.supported_features }}'
+                                                # A single template for all fields keeps the title and artist as text: rendered as separate fields,
+                                                # Home Assistant would parse a title such as `1.00` into the number 1.0.
+                                                data: >-
+                                                  {{
+                                                    {
+                                                      "entity": entity_id,
+                                                      "state": media_player.state if media_player.state is string else "",
+                                                      "is_volume_muted": media_player.is_volume_muted if media_player.is_volume_muted is boolean else false,
+                                                      "volume_level": media_player.volume_level,
+                                                      "media_title": media_player.media_title,
+                                                      "media_artist": media_player.media_artist,
+                                                      "media_duration": media_player.media_duration,
+                                                      "media_position": media_player.media_position,
+                                                      "media_position_delta": media_player.media_position_delta,
+                                                      "supported_features": media_player.supported_features
+                                                    }
+                                                  }}
                                                 continue_on_error: true
                                               - variables:
-                                                  last_signature: '{{ current_signature }}'
-                                                  last_full_refresh: '{{ now_ts }}'
+                                                  last_signature: '{{ media_player.signature }}'
+                                                  last_full_refresh: '{{ media_player.now_ts }}'
                                           - conditions: '{{ media_player.media_duration > 0 and media_player.state == "playing" }}'
                                             sequence:
                                               - action: 'esphome.{{ action_prefix }}_component_val'
@@ -11646,7 +11624,7 @@ actions:
                                                   id: prg_current
                                                   val: >-
                                                     {%- set pos = [[media_player.media_position, 0] | max, media_player.media_duration] | min -%}
-                                                    {%- set delta = [media_position_delta, 0] | max -%}
+                                                    {%- set delta = [media_player.media_position_delta, 0] | max -%}
                                                     {{ pos + [delta, media_player.media_duration - pos] | min }}
                                                 continue_on_error: true
                                       - wait_template: '{{ states(currentpage) != pages.media_player }}'
