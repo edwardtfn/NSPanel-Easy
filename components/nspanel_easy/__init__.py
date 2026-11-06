@@ -25,6 +25,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 import logging
 
+AUTO_LOAD = ["json"]  # Entity snapshots from the Blueprint are JSON (entity_snapshot.cpp)
 CODEOWNERS = ["@edwardtfn"]
 
 _LOGGER = logging.getLogger(__name__)
