@@ -278,6 +278,9 @@ uint32_t pid_pwm_on_time(float level, uint32_t period_ms, uint32_t min_on_ms, ui
  * - force_level() was called (explicit commands such as room off, mode change or boost), or
  * - the current cycle has no on-time, the relay has been off for at least the minimum off-time,
  *   and the pending level results in an on-time, so a new demand does not wait a full period.
+ *
+ * At the end of a cycle, a new cycle that would switch an off relay on waits until the relay has
+ * been off for the minimum off-time, which can be longer than the period.
  */
 class PidPwmCycle {
  public:

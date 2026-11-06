@@ -110,7 +110,12 @@ bool PidPwmCycle::update(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms
   if (!this->started_ || this->restart_) {
     this->start_cycle_(now_ms, period_ms, min_on_ms, min_off_ms);
   } else if ((now_ms - this->cycle_start_ms_) >= period_ms) {
-    this->start_cycle_(now_ms, period_ms, min_on_ms, min_off_ms);
+    // A new cycle that would switch an off relay on waits until the relay has been off for the minimum
+    // off-time. Within a cycle, pid_pwm_on_time() keeps the pause long enough, but a pause spanning a
+    // cycle boundary (after a cycle without on-time) is only as long as the period, which can be shorter.
+    if (this->on_ || !this->was_on_ || (now_ms - this->off_since_ms_) >= min_off_ms ||
+        pid_pwm_on_time(this->pending_level_, period_ms, min_on_ms, min_off_ms) == 0)
+      this->start_cycle_(now_ms, period_ms, min_on_ms, min_off_ms);
   } else if (this->on_ms_ == 0 && !this->on_ && (!this->was_on_ || (now_ms - this->off_since_ms_) >= min_off_ms) &&
              pid_pwm_on_time(this->pending_level_, period_ms, min_on_ms, min_off_ms) > 0) {
     // Idle cycle and a new demand: start right away instead of waiting for the end of the cycle
