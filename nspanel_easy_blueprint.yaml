@@ -10074,197 +10074,82 @@ actions:
                                         {%- else -%}
                                           false
                                         {%- endif -%}
-                                      precipitation: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("precipitation", "defined")
-                                          | selectattr("precipitation", "is_number")
-                                          | map(attribute="precipitation")
-                                          | map("float") | list | sum | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("precipitation", "defined")
-                                            | selectattr("precipitation", "is_number")
-                                            | map(attribute="precipitation")
-                                            | map("float") | list | count > 0
-                                          else None
-                                        }}
-                                      precipitation_probability: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("precipitation_probability", "defined")
-                                          | selectattr("precipitation_probability", "is_number")
-                                          | map(attribute="precipitation_probability")
-                                          | map("float") | list | max | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("precipitation_probability", "defined")
-                                            | selectattr("precipitation_probability", "is_number")
-                                            | map(attribute="precipitation_probability")
-                                            | map("float") | list | count > 0
-                                          else None
-                                        }}
-                                      pressure: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("pressure", "defined")
-                                          | selectattr("pressure", "is_number")
-                                          | map(attribute="pressure")
-                                          | map("float") | list | max | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("pressure", "defined")
-                                            | selectattr("pressure", "is_number")
-                                            | map(attribute="pressure")
-                                            | map("float") | list | count > 0
-                                          else None
-                                        }}
-                                      wind_speed: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("wind_speed", "defined")
-                                          | selectattr("wind_speed", "is_number")
-                                          | map(attribute="wind_speed")
-                                          | map("float") | list | max | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("wind_speed", "defined")
-                                            | selectattr("wind_speed", "is_number")
-                                            | map(attribute="wind_speed")
-                                            | map("float") | list | count > 0
-                                          else None
-                                        }}
-                                      hours_of_sun: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("hours_of_sun", "defined")
-                                          | selectattr("hours_of_sun", "is_number")
-                                          | map(attribute="hours_of_sun")
-                                          | map("float")
-                                          | list
-                                          | sum
-                                          | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("hours_of_sun", "defined")
-                                            | selectattr("hours_of_sun", "is_number")
-                                            | map(attribute="hours_of_sun")
-                                            | map("float")
-                                            | list
-                                            | count > 0
-                                          else None
-                                        }}
-                                      uv_index: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("uv_index", "defined")
-                                          | selectattr("uv_index", "is_number")
-                                          | map(attribute="uv_index")
-                                          | map("float")
-                                          | list
-                                          | max
-                                          | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("uv_index", "defined")
-                                            | selectattr("uv_index", "is_number")
-                                            | map(attribute="uv_index")
-                                            | map("float")
-                                            | list
-                                            | count > 0
-                                          else None
-                                        }}
-                                      thunderstorm_probability: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("thunderstorm_probability", "defined")
-                                          | selectattr("thunderstorm_probability", "is_number")
-                                          | map(attribute="thunderstorm_probability") | map("float")
-                                          | list
-                                          | max
-                                          | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("thunderstorm_probability", "defined")
-                                            | selectattr("thunderstorm_probability", "is_number")
-                                            | map(attribute="thunderstorm_probability")
-                                            | map("float")
-                                            | list
-                                            | count > 0
-                                          else None
-                                        }}
-                                      humidity: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("humidity", "defined")
-                                          | selectattr("humidity", "is_number")
-                                          | map(attribute="humidity")
-                                          | map("float")
-                                          | list
-                                          | max
-                                          | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("humidity", "defined")
-                                            | selectattr("humidity", "is_number")
-                                            | map(attribute="humidity")
-                                            | map("float")
-                                            | list
-                                            | count > 0
-                                          else None
-                                        }}
+                                      # Values of the day from the forecast slots, as [field, how the slots combine]. One template computes
+                                      # them all, so the Blueprint has fewer distinct templates (#636). A value is none when no slot has a number.
+                                      forecast_values: >-
+                                        {%- set ns = namespace(values={}) -%}
+                                        {%- for field, operation in [
+                                             ["precipitation", "sum"],
+                                             ["precipitation_probability", "max"],
+                                             ["pressure", "max"],
+                                             ["wind_speed", "max"],
+                                             ["hours_of_sun", "sum"],
+                                             ["uv_index", "max"],
+                                             ["thunderstorm_probability", "max"],
+                                             ["humidity", "max"]
+                                           ] -%}
+                                          {%- set numbers = forecast_day
+                                               | selectattr(field, "defined")
+                                               | selectattr(field, "is_number")
+                                               | map(attribute=field)
+                                               | map("float")
+                                               | list -%}
+                                          {%- set value = ((numbers | sum if operation == "sum" else numbers | max) | round(0)) if numbers | count > 0 else none -%}
+                                          {%- set ns.values = dict(ns.values, **{field: value}) -%}
+                                        {%- endfor -%}
+                                        {{ ns.values }}
                                       # Values shown in fields 1 to 5, in display order (only the visible ones are used)
                                       parameters: >-
                                         {%- macro with_unit(value, unit) -%}
                                           {{- (value ~ ("" if compact_unit_display else " ") ~ unit) if is_number(value) -}}
                                         {%- endmacro -%}
                                         {%- set precipitation_value = [
-                                              with_unit(precipitation, weather_units.precipitation),
-                                              with_unit(precipitation_probability, weather_units.precipitation_probability)
+                                              with_unit(forecast_values.precipitation, weather_units.precipitation),
+                                              with_unit(forecast_values.precipitation_probability, weather_units.precipitation_probability)
                                             ] | reject("eq", "") | join(" - ") -%}
                                         {#- Humidity icon "\uE58D" is mdi:water-percent -#}
                                         {{
                                           [
                                             {
                                               "name": "hours_of_sun",
-                                              "visibility": is_number(hours_of_sun),
-                                              "value": with_unit(hours_of_sun, weather_units.hours_of_sun) | trim,
+                                              "visibility": is_number(forecast_values.hours_of_sun),
+                                              "value": with_unit(forecast_values.hours_of_sun, weather_units.hours_of_sun) | trim,
                                               "icon": nextion.icon.weather.sun
                                             },
                                             {
                                               "name": "thunderstorm_probability",
-                                              "visibility": is_number(thunderstorm_probability),
-                                              "value": with_unit(thunderstorm_probability, weather_units.thunderstorm_probability) | trim,
+                                              "visibility": is_number(forecast_values.thunderstorm_probability),
+                                              "value": with_unit(forecast_values.thunderstorm_probability, weather_units.thunderstorm_probability) | trim,
                                               "icon": nextion.icon.weather.lightning
                                             },
                                             {
                                               "name": "precipitation",
-                                              "visibility": is_number(precipitation) or is_number(precipitation_probability),
+                                              "visibility": is_number(forecast_values.precipitation) or is_number(forecast_values.precipitation_probability),
                                               "value": precipitation_value | trim,
                                               "icon": nextion.icon.weather.rain
                                             },
                                             {
                                               "name": "uv_index",
-                                              "visibility": is_number(uv_index),
-                                              "value": with_unit(uv_index, weather_units.uv_index) | trim,
+                                              "visibility": is_number(forecast_values.uv_index),
+                                              "value": with_unit(forecast_values.uv_index, weather_units.uv_index) | trim,
                                               "icon": nextion.icon.weather.protect
                                             },
                                             {
                                               "name": "wind_speed",
-                                              "visibility": is_number(wind_speed),
-                                              "value": with_unit(wind_speed, weather_units.wind_speed) | trim,
+                                              "visibility": is_number(forecast_values.wind_speed),
+                                              "value": with_unit(forecast_values.wind_speed, weather_units.wind_speed) | trim,
                                               "icon": nextion.icon.weather.wind
                                             },
                                             {
                                               "name": "humidity",
-                                              "visibility": is_number(humidity),
-                                              "value": with_unit(humidity, weather_units.humidity) | trim,
+                                              "visibility": is_number(forecast_values.humidity),
+                                              "value": with_unit(forecast_values.humidity, weather_units.humidity) | trim,
                                               "icon": "\uE58D"
                                             },
                                             {
                                               "name": "pressure",
-                                              "visibility": is_number(pressure),
-                                              "value": with_unit(pressure, weather_units.pressure) | trim,
+                                              "visibility": is_number(forecast_values.pressure),
+                                              "value": with_unit(forecast_values.pressure, weather_units.pressure) | trim,
                                               "icon": nextion.icon.weather.gauge
                                             }
                                           ]
