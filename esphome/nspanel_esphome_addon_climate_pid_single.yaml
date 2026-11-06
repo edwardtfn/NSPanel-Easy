@@ -12,7 +12,7 @@
 #####   switched centrally (e.g. together with the heat pump). It is stored in flash, so the    #####
 #####   panel keeps regulating in the last mode while Home Assistant is unavailable.            #####
 ##### - Two internal PID controllers (heat/cool) follow the same setpoint; exactly one is       #####
-#####   active. Both feed one slow PWM output on one relay (shared valve actuators).            #####
+#####   active. Both feed one PWM cycle on one relay (shared valve actuators).                  #####
 ##### - The display follows the operating mode: the climate chip and the climate page show      #####
 #####   the action of the active controller (fire/snowflake), and the mode button on the        #####
 #####   climate page switches between heat and cool.                                            #####
@@ -116,7 +116,7 @@ text_sensor:
           pid_cool_embedded->reset_integral_term();
           id(pid_heat_integral_stored) = 0.0f;
           id(pid_cool_integral_stored) = 0.0f;
-          id(pid_valve_pwm).set_level(0.0f);
+          nspanel_easy::pid_pwm_cycle.force_level(0.0f, nspanel_easy::PID_PWM_CHANNEL_NONE);
       - script.execute: pid_sync
       - component.update: pid_mode_active
       - script.execute: pid_refresh_display
@@ -176,14 +176,15 @@ climate:
       - script.execute: pid_refresh_chip  # Action changed (cooling/idle)
 
 output:
-  # Both controllers feed one shared slow PWM output; only the controller of the active mode may write
+  # Both controllers feed the shared PWM cycle (pid_base), which turns the controller output (0..100 %)
+  # into on/off cycles of the valve relay; only the controller of the active mode may write
   - platform: template
     id: pid_heat_out
     type: float
     write_action:
       - lambda: |-
           if (id(pid_boost_active)) return;  // The boost owns the valve
-          if (!id(pid_cooling_mode)) id(pid_valve_pwm).set_level(state);
+          if (!id(pid_cooling_mode)) nspanel_easy::pid_pwm_cycle.set_level(state, nspanel_easy::PID_PWM_CHANNEL_HEAT);
 
   - platform: template
     id: pid_cool_out
@@ -191,15 +192,7 @@ output:
     write_action:
       - lambda: |-
           if (id(pid_boost_active)) return;  // The boost owns the valve
-          if (id(pid_cooling_mode)) id(pid_valve_pwm).set_level(state);
-
-  - platform: slow_pwm  # Turns the controller output (0..100 %) into on/off cycles of the valve relay
-    id: pid_valve_pwm
-    period: ${pwm_period}s
-    turn_on_action:
-      - switch.turn_on: relay_${valve_relay}
-    turn_off_action:
-      - switch.turn_off: relay_${valve_relay}
+          if (id(pid_cooling_mode)) nspanel_easy::pid_pwm_cycle.set_level(state, nspanel_easy::PID_PWM_CHANNEL_COOL);
 
 script:
   ###################################################################################################
@@ -449,7 +442,8 @@ script:
                 id(pid_boost_active) = true;
                 id(pid_boost_end_ms) = millis() + static_cast<uint32_t>(id(pid_boost_duration).state * 60000.0f);
                 id(pid_boost_switch).publish_state(true);
-                id(pid_valve_pwm).set_level(1.0f);
+                nspanel_easy::pid_pwm_cycle.force_level(
+                    1.0f, id(pid_cooling_mode) ? nspanel_easy::PID_PWM_CHANNEL_COOL : nspanel_easy::PID_PWM_CHANNEL_HEAT);
                 // End time for HA (shown as a live countdown); unknown if the clock is not synced yet
                 const auto now = id(time_provider).now();
                 if (now.is_valid()) {
@@ -482,10 +476,23 @@ script:
           const float output = id(pid_cooling_mode) ? -pid_cool_embedded->get_output_value()
                                                     : pid_heat_embedded->get_output_value();
           const float level = room_on ? std::min(1.0f, std::max(0.0f, output)) : 0.0f;
-          id(pid_valve_pwm).set_level(level);
+          nspanel_easy::pid_pwm_cycle.force_level(
+              level, id(pid_cooling_mode) ? nspanel_easy::PID_PWM_CHANNEL_COOL : nspanel_easy::PID_PWM_CHANNEL_HEAT);
           ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Boost ended, valve back to controller (%.0f %%)", level * 100.0f);
       - script.execute: pid_refresh_chip
       - script.execute: pid_refresh_boost_ui
+
+  # Drives the valve relay from the shared PWM cycle (pid_base), when its output changes
+  - id: pid_pwm_apply
+    mode: queued
+    then:
+      - lambda: |-
+          const bool on = nspanel_easy::pid_pwm_cycle.is_on();
+          if (on && !relay_${valve_relay}->state) {
+            relay_${valve_relay}->turn_on();
+          } else if (!on && relay_${valve_relay}->state) {
+            relay_${valve_relay}->turn_off();
+          }  // if (on && !relay_${valve_relay}->state)
 
   # Validates the relay selection at build time
   - id: !extend dump_config
@@ -609,7 +616,7 @@ script:
             apply(pid_heat_embedded, heat_on, climate::CLIMATE_MODE_HEAT);
           }
           if (!room_on && id(pid_boost_active)) pid_boost_stop->execute();  // Room off ends the boost
-          if (!room_on) id(pid_valve_pwm).set_level(0.0f);
+          if (!room_on) nspanel_easy::pid_pwm_cycle.force_level(0.0f, nspanel_easy::PID_PWM_CHANNEL_NONE);
       - script.execute: pid_integral_track
 
 interval:
@@ -660,13 +667,6 @@ sensor:
       - script.execute: pid_match_preset
 
 number:
-  - id: !extend pid_tuning_pwm_period
-    on_value:
-      - lambda: |-
-          if (isnan(x) || x < 60.0f) return;
-          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "PWM period applied: %.0fs", x);
-          pid_valve_pwm->set_period(static_cast<uint32_t>(x * 1000.0f));
-
   - platform: template
     id: pid_boost_duration
     name: ${pid_name_boost_duration}

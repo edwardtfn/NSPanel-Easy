@@ -140,7 +140,10 @@ script:
           boot_log->execute("Boot", "Sending display settings");
           // While booting, the TFT's regular brightness holds the dimmed value, as pages apply it on touch or load
           // (`dim=brightness`). The regular value is sent when the boot completes (#485).
-          disp1->send_command_printf("brightness=%i",       int(display_dim_brightness->state));
+          // `resync_display` also runs this after the boot, so the regular value must be kept from then on (#682)
+          disp1->send_command_printf("brightness=%i", static_cast<int>(system_flags.boot_completed ?
+                                                                       display_brightness->state :
+                                                                       display_dim_brightness->state));
           disp1->send_command_printf("brightness_dim=%i",   int(display_dim_brightness->state));
           disp1->send_command_printf("brightness_sleep=%i", int(display_sleep_brightness->state));
           disp1->send_command_printf("wakeup_page_id=%" PRIu8, get_page_id(wakeup_page_name->current_option()));

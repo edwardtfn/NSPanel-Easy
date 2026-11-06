@@ -4,11 +4,15 @@
 
 #include "addon_climate.h"
 
-#ifdef NSPANEL_EASY_SUBSCRIBE
+#if defined(NSPANEL_EASY_SUBSCRIBE) || defined(NSPANEL_EASY_ADDON_CLIMATE_PID)
 #include <cmath>
 
 #include "esphome/core/log.h"
-#endif  // NSPANEL_EASY_SUBSCRIBE
+#endif  // NSPANEL_EASY_SUBSCRIBE || NSPANEL_EASY_ADDON_CLIMATE_PID
+
+#ifdef NSPANEL_EASY_ADDON_CLIMATE_PID
+#include <cinttypes>  // For PRIu32
+#endif                // NSPANEL_EASY_ADDON_CLIMATE_PID
 
 namespace esphome::nspanel_easy {
 
@@ -59,6 +63,96 @@ float thermostat_temp_resolve(float embedded, uint32_t max_age_ms) {
 }
 
 #endif  // NSPANEL_EASY_SUBSCRIBE
+
+#ifdef NSPANEL_EASY_ADDON_CLIMATE_PID
+
+static const char *const TAG_PID = "nspanel.addon.climate.pid";
+
+PidPwmCycle pid_pwm_cycle;
+
+uint32_t pid_pwm_on_time(float level, uint32_t period_ms, uint32_t min_on_ms, uint32_t min_off_ms) {
+  if (std::isnan(level) || level <= 0.0f)
+    return 0;
+  if (level >= 1.0f)
+    return period_ms;
+  const uint32_t on_ms = static_cast<uint32_t>(level * static_cast<float>(period_ms));
+  if (on_ms < min_on_ms)
+    return 0;  // Pulse too short: skip it
+  if ((period_ms - on_ms) < min_off_ms)
+    return period_ms;  // Pause too short: stay on
+  return on_ms;
+}
+
+void PidPwmCycle::set_level(float level, PidPwmChannel channel) {
+  this->pending_level_ = level;
+  this->pending_channel_ = channel;
+}
+
+void PidPwmCycle::force_level(float level, PidPwmChannel channel) {
+  this->set_level(level, channel);
+  this->restart_ = true;
+}
+
+void PidPwmCycle::start_cycle_(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms, uint32_t min_off_ms) {
+  this->cycle_start_ms_ = now_ms;
+  this->started_ = true;
+  this->restart_ = false;
+  this->on_ms_ = pid_pwm_on_time(this->pending_level_, period_ms, min_on_ms, min_off_ms);
+  this->channel_ = (this->on_ms_ > 0) ? this->pending_channel_ : PID_PWM_CHANNEL_NONE;
+  ESP_LOGD(TAG_PID, "PWM cycle: level %.0f %%, on for %" PRIu32 " of %" PRIu32 " s", this->pending_level_ * 100.0f,
+           this->on_ms_ / 1000, period_ms / 1000);
+}
+
+bool PidPwmCycle::switches_on_early_(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms,
+                                     uint32_t min_off_ms) const {
+  if (pid_pwm_on_time(this->pending_level_, period_ms, min_on_ms, min_off_ms) == 0)
+    return false;  // The new cycle keeps the relays off
+  const PidPwmChannel channel = this->pending_channel_;
+  if (this->on_ && this->channel_ == channel)
+    return false;  // The relay of the new cycle is already on
+  if (!this->on_ && this->was_on_ && (now_ms - this->off_since_ms_) < min_off_ms)
+    return true;  // The relays have not been off for the minimum off-time
+  // The relay of the new cycle's channel (dual package) has not been off for the minimum off-time
+  return channel <= PID_PWM_CHANNEL_COOL && this->channel_was_on_[channel] &&
+         (now_ms - this->channel_off_since_ms_[channel]) < min_off_ms;
+}
+
+bool PidPwmCycle::update(uint32_t now_ms, uint32_t period_ms, uint32_t min_on_ms, uint32_t min_off_ms) {
+  const PidPwmChannel last_channel = this->channel_;
+  const bool last_on = this->on_;
+
+  if (!this->started_ || this->restart_) {
+    this->start_cycle_(now_ms, period_ms, min_on_ms, min_off_ms);
+  } else if ((now_ms - this->cycle_start_ms_) >= period_ms) {
+    // Within a cycle, pid_pwm_on_time() keeps the pause long enough, but a pause spanning a cycle boundary
+    // can be as short as the period, so a new cycle waits while it would switch a relay on too early
+    if (!this->switches_on_early_(now_ms, period_ms, min_on_ms, min_off_ms))
+      this->start_cycle_(now_ms, period_ms, min_on_ms, min_off_ms);
+  } else if (this->on_ms_ == 0 && !this->on_ && (!this->was_on_ || (now_ms - this->off_since_ms_) >= min_off_ms) &&
+             pid_pwm_on_time(this->pending_level_, period_ms, min_on_ms, min_off_ms) > 0) {
+    // Idle cycle and a new demand: start right away instead of waiting for the end of the cycle
+    this->start_cycle_(now_ms, period_ms, min_on_ms, min_off_ms);
+  }  // if (!this->started_ || this->restart_)
+
+  const bool on = (this->on_ms_ > 0) && ((now_ms - this->cycle_start_ms_) < this->on_ms_);
+  if (this->on_ && !on)
+    this->off_since_ms_ = now_ms;
+  if (on)
+    this->was_on_ = true;
+  // Off-time of the relay of each channel, as the dual package drives one relay per channel
+  for (uint8_t channel = PID_PWM_CHANNEL_HEAT; channel <= PID_PWM_CHANNEL_COOL; channel++) {
+    const bool was_on = last_on && (last_channel == channel);
+    const bool is_on = on && (this->channel_ == channel);
+    if (was_on && !is_on)
+      this->channel_off_since_ms_[channel] = now_ms;
+    if (is_on)
+      this->channel_was_on_[channel] = true;
+  }  // for (uint8_t channel = PID_PWM_CHANNEL_HEAT; ...)
+  this->on_ = on;
+  return (on != last_on) || (this->channel_ != last_channel);
+}
+
+#endif  // NSPANEL_EASY_ADDON_CLIMATE_PID
 
 }  // namespace esphome::nspanel_easy
 

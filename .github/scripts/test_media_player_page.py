@@ -226,7 +226,16 @@ def sends_text(actual, expected, literal, enum):
     return True
 
 
+def run_safely(hass, version, iterations):
+    """Run one version; an error becomes a comparable result, so the same error in both versions is no difference."""
+    try:
+        return run(hass, *version, iterations)
+    except Exception as error:  # pylint: disable=broad-except - any error is a result to compare
+        return f"ERROR: {error!r}"
+
+
 def main():
+    """Compare both versions over all cases and report the differences."""
     if len(sys.argv) not in (2, 3):
         sys.exit(__doc__)
     reference = load(sys.argv[1])
@@ -240,15 +249,12 @@ def main():
     differences = fixed = total = 0
     for iterations, literal in cases():
         total += 1
-        expected = run(hass, *reference, iterations)
-        try:
-            actual = run(hass, *candidate, iterations)
-        except Exception as error:  # pylint: disable=broad-except - any error is a difference
-            actual = f"ERROR: {error!r}"
-        if literal is None:
+        expected = run_safely(hass, reference, iterations)
+        actual = run_safely(hass, candidate, iterations)
+        if literal is None or isinstance(actual, str) or isinstance(expected, str):
             same = actual == expected
         else:
-            same = (not isinstance(actual, str) and sends_text(actual, expected, literal, candidate[1])
+            same = (sends_text(actual, expected, literal, candidate[1])
                     and without_text(actual, literal[0]) == without_text(expected, literal[0]))
             fixed += same
         if not same:

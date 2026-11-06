@@ -7,7 +7,9 @@
 #####################################################################################################
 ##### Two internal PID controllers (heat and cool) with live tuning from Home Assistant.        #####
 ##### The including package defines their outputs `pid_heat_out` and `pid_cool_out`, keeps     #####
-##### them in sync with thermostat_embedded, and applies the PWM period.                        #####
+##### them in sync with thermostat_embedded, and drives its relays in `pid_pwm_apply`.          #####
+##### The PWM cycle (nspanel_easy::pid_pwm_cycle) is timed here: the level is latched once per  #####
+##### cycle and limited by the minimum on and off times.                                        #####
 #####################################################################################################
 ##### ATTENTION: Do not include directly; use climate_pid_single or climate_pid_dual.           #####
 #####################################################################################################
@@ -23,6 +25,9 @@ substitutions:
   pid_kd: "0.0"                 # Derivative term, not useful for slow systems
   pid_deadband: "0.25"          # Deadband around the setpoint in Kelvin (also when temp_units is °F)
   pwm_period: "1200"            # PWM cycle time in seconds
+  pid_min_on_time: "180"        # Shortest relay on-time in seconds; shorter pulses are skipped
+  pid_min_off_time: "180"       # Shortest relay off-time in seconds; shorter pauses keep the relay on
+  pid_min_time_limit: "60"      # Lower limit in seconds for both minimum times (above 0), checked at build time
   pid_starting_integral: "0.0"  # Integral term on the first boot (0.0..1.0); afterwards it is restored from flash
   pid_sync_interval: "10"       # Seconds between syncs thermostat -> PID controllers
   pid_sample_interval: "30"     # Seconds between PID computations, so the output averaging covers a fixed time
@@ -36,6 +41,8 @@ substitutions:
   pid_name_tn: "PID Tn"
   pid_name_pwm_period: "PID PWM period"
   pid_name_deadband: "PID Deadband"
+  pid_name_min_on_time: "PID Min on time"
+  pid_name_min_off_time: "PID Min off time"
   pid_name_reset_integral: "PID Reset integral"
   TAG_ADDON_CLIMATE_PID: nspanel.addon.climate.pid
 
@@ -115,10 +122,18 @@ script:
           #ifdef NSPANEL_EASY_ADDON_CLIMATE_ONOFF
             #error "The PID add-ons cannot be combined with the climate heat, cool or dual add-ons: both would drive the thermostat and the relays."
           #endif  // NSPANEL_EASY_ADDON_CLIMATE_ONOFF
+          static_assert((${pid_min_time_limit}) > 0, "pid_min_time_limit must be above 0");
+          static_assert((${pid_min_time_limit}) <= 900, "pid_min_time_limit must not exceed 900");
+          static_assert((${pid_min_on_time}) >= (${pid_min_time_limit}) && (${pid_min_on_time}) <= 900,
+                        "pid_min_on_time must be between pid_min_time_limit and 900");
+          static_assert((${pid_min_off_time}) >= (${pid_min_time_limit}) && (${pid_min_off_time}) <= 900,
+                        "pid_min_off_time must be between pid_min_time_limit and 900");
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "Add-on climate PID:");
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  kp: %.3f", pid_tuning_kp->state);
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Tn: %.0f min", pid_tuning_tn->state);
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  PWM period: %.0f s", pid_tuning_pwm_period->state);
+          ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Min on time: %.0f s", pid_tuning_min_on_time->state);
+          ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Min off time: %.0f s", pid_tuning_min_off_time->state);
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Deadband: %.2f K", pid_tuning_deadband->state);
 
   # Keeps each controller's integral term while it is off: stores it when the controller switches off,
@@ -166,6 +181,24 @@ script:
             return (tn_s > 0.0f) ? pid_tuning_kp->state / tn_s : 0.0f;
 
 interval:
+  # Times the PWM cycle shared by both controllers. Each cycle latches the level once, so a level change in the
+  # middle of a cycle cannot cut a pulse short or switch the relay on twice, and limits the on-time by the minimum
+  # on and off times. The including package drives its relays in pid_pwm_apply when the cycle's output changes.
+  - interval: 1s
+    then:
+      - lambda: |-
+          const float period_s = pid_tuning_pwm_period->state;
+          const float min_on_s = pid_tuning_min_on_time->state;
+          const float min_off_s = pid_tuning_min_off_time->state;
+          if (std::isnan(period_s) || period_s < 60.0f) return;
+          if (std::isnan(min_on_s) || min_on_s < 0.0f) return;
+          if (std::isnan(min_off_s) || min_off_s < 0.0f) return;
+          if (nspanel_easy::pid_pwm_cycle.update(millis(), static_cast<uint32_t>(period_s * 1000.0f),
+                                                 static_cast<uint32_t>(min_on_s * 1000.0f),
+                                                 static_cast<uint32_t>(min_off_s * 1000.0f))) {
+            pid_pwm_apply->execute();
+          }
+
   # Saves the integral term of each running controller, so a reboot continues from it.
   # Every 30 minutes, to keep flash writes low; a slow system's integral changes little in that time.
   - interval: 30min
@@ -248,7 +281,7 @@ number:
     on_value:
       - script.execute: apply_pid_tuning
 
-  # Applied to the PWM outputs by the including package, which extends this entity's on_value
+  # Read by the PWM cycle (interval above); a new value takes effect from the next cycle
   - platform: template
     id: pid_tuning_pwm_period
     name: ${pid_name_pwm_period}
@@ -262,6 +295,50 @@ number:
     restore_value: true
     optimistic: true
     mode: ${pid_number_mode}
+    on_value:
+      - lambda: |-
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "PWM period applied: %.0fs", x);
+
+  # Minimum relay on and off times, read by the PWM cycle like the period.
+  # They protect valve actuators (a thermal actuator needs minutes to open), and relays from short pulses.
+  # Internal on purpose, so they are not changed from Home Assistant without understanding them; set them with
+  # pid_min_on_time / pid_min_off_time. Not restored, so a changed substitution applies after the next flash.
+  # To expose them, extend them in the local yaml with `internal: false` (see docs/addon_climate.md).
+  - platform: template
+    id: pid_tuning_min_on_time
+    name: ${pid_name_min_on_time}
+    internal: true
+    entity_category: config
+    icon: mdi:timer-check-outline
+    unit_of_measurement: s
+    min_value: ${pid_min_time_limit}
+    max_value: 900
+    step: 30
+    initial_value: ${pid_min_on_time}
+    restore_value: false
+    optimistic: true
+    mode: ${pid_number_mode}
+    on_value:
+      - lambda: |-
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Min on time applied: %.0fs", x);
+
+  - platform: template
+    id: pid_tuning_min_off_time
+    name: ${pid_name_min_off_time}
+    internal: true
+    entity_category: config
+    icon: mdi:timer-pause-outline
+    unit_of_measurement: s
+    min_value: ${pid_min_time_limit}
+    max_value: 900
+    step: 30
+    initial_value: ${pid_min_off_time}
+    restore_value: false
+    optimistic: true
+    mode: ${pid_number_mode}
+    on_value:
+      - lambda: |-
+          ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Min off time applied: %.0fs", x);
 
   - platform: template
     id: pid_tuning_deadband
