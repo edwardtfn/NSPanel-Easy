@@ -133,7 +133,16 @@ def cases():
         }
 
 
+def run_safely(hass, version, case):
+    """Run one version; an error becomes a comparable result, so the same error in both versions is no difference."""
+    try:
+        return run(hass, *version, case)
+    except Exception as error:  # pylint: disable=broad-except - any error is a result to compare
+        return f"ERROR: {error!r}"
+
+
 def main():
+    """Compare both versions over all cases and report the differences."""
     if len(sys.argv) not in (2, 3):
         sys.exit(__doc__)
     reference = load(sys.argv[1])
@@ -146,11 +155,8 @@ def main():
     differences = total = 0
     for case in cases():
         total += 1
-        expected = run(hass, *reference, case)
-        try:
-            actual = run(hass, *candidate, case)
-        except Exception as error:  # pylint: disable=broad-except - any error is a difference
-            actual = f"ERROR: {error!r}"
+        expected = run_safely(hass, reference, case)
+        actual = run_safely(hass, candidate, case)
         if actual != expected:
             differences += 1
             if differences <= MAX_REPORTED_DIFFERENCES:
