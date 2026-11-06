@@ -251,7 +251,7 @@ How it works:
 - Two internal PID controllers (heat and cool) do the actual control and are synced with the thermostat every `pid_sync_interval` seconds.
 - The controller output (0-100 %) is turned into on/off cycles of the panel relay.
   The output is taken once at the start of each PWM cycle, so a change during the cycle never cuts a pulse short or switches the relay on twice.
-  Each pulse lasts at least `PID Min on time` and each pause at least `PID Min off time`: a shorter pulse is skipped, a shorter pause keeps the relay on.
+  Each pulse lasts at least `pid_min_on_time` and each pause at least `pid_min_off_time`: a shorter pulse is skipped, a shorter pause keeps the relay on.
   While the relay is idle, a new demand starts a new cycle right away, once the relay has been off for the minimum off-time.
   Switching the room off, changing the operating mode and the boost apply immediately.
 - The controllers regulate on the same temperature as the thermostat, so they follow the calibration reference as described in [Temperature source](#temperature-source).
@@ -323,8 +323,9 @@ In PID mode, the deadband and overrun keys of the thermostat only affect the act
 | pid_kd | both | Optional | Number | `0.0` | Derivative term, usually not useful for slow systems. |
 | pid_deadband | both | Optional | Number in Kelvin | `0.25` | Deadband around the setpoint. Inside it, the proportional term is disabled and the integral term is slowed down. Also in Kelvin when `temp_units` is `°F`. Seed for the first boot only. |
 | pwm_period | both | Optional | Seconds | `1200` | PWM cycle time. Seed for the first boot only. |
-| pid_min_on_time | both | Optional | Seconds | `180` | Shortest relay on-time: a shorter pulse is skipped. Seed for the first boot only. |
-| pid_min_off_time | both | Optional | Seconds | `180` | Shortest relay off-time: a shorter pause keeps the relay on. Seed for the first boot only. |
+| pid_min_on_time | both | Optional | Seconds, `pid_min_time_limit` to `900` | `180` | Shortest relay on-time: a shorter pulse is skipped. Not exposed to Home Assistant, see [Exposing the minimum times](#exposing-the-minimum-times). |
+| pid_min_off_time | both | Optional | Seconds, `pid_min_time_limit` to `900` | `180` | Shortest relay off-time: a shorter pause keeps the relay on. Not exposed to Home Assistant. |
+| pid_min_time_limit | both | Optional | Seconds, `1` to `900` | `60` | Lower limit of both minimum times, checked at build time. |
 | pid_starting_integral | both | Optional | `0.0` to `1.0` | `0.0` | Integral term on the first boot, e.g. the typical average output in winter, to shorten the first settling. Afterwards the integral term is restored from flash. |
 | pid_sync_interval | both | Optional | Seconds | `10` | Interval for syncing the thermostat to the controllers. |
 | pid_sample_interval | both | Optional | Seconds | `30` | Interval between controller computations. The controllers average their output over 5 computations, or 15 inside the deadband, so this sets how long that smoothing lasts. |
@@ -352,8 +353,6 @@ Changes are applied immediately, without reflashing.
 | PID kp | `pid_name_kp` | Config | Proportional gain (`0.05` to `1.0`). Applies to both controllers. |
 | PID Tn | `pid_name_tn` | Config | Integral time in minutes (`10` to `600`). Applies to both controllers. |
 | PID PWM period | `pid_name_pwm_period` | Config | PWM cycle time in seconds (`300` to `3600`). |
-| PID Min on time | `pid_name_min_on_time` | Config | Shortest relay on-time in seconds (`0` to `900`). |
-| PID Min off time | `pid_name_min_off_time` | Config | Shortest relay off-time in seconds (`0` to `900`). |
 | PID Deadband | `pid_name_deadband` | Config | Deadband in Kelvin (`0.0` to `1.0`). |
 | PID Reset integral | `pid_name_reset_integral` | Config | Button resetting the integral terms of both controllers. |
 | PID Heat output | `pid_name_heat_output` | Diagnostic | Output of the heat controller (0-100 %). |
@@ -366,6 +365,25 @@ Changes are applied immediately, without reflashing.
 | PID Boost end | `pid_name_boost_end` | - | *Single only:* end of the running boost as timestamp, shown as a countdown in Home Assistant; unknown while no boost is running. |
 
 <!-- markdownlint-enable MD013 -->
+
+#### Exposing the minimum times
+
+The minimum on and off times are not exposed to Home Assistant on purpose: values that are too short can damage valve actuators or the heating system.
+They are set with `pid_min_on_time` and `pid_min_off_time`, and a changed value applies after the next installation.
+If you understand the impact and want to change them from Home Assistant, expose them in your local yaml:
+
+```yaml
+number:
+  - id: !extend pid_tuning_min_on_time
+    internal: false
+    restore_value: true  # Keep the value set in Home Assistant across reboots
+  - id: !extend pid_tuning_min_off_time
+    internal: false
+    restore_value: true
+```
+
+They then appear as `PID Min on time` and `PID Min off time` (names set by `pid_name_min_on_time` and `pid_name_min_off_time`), in seconds from `pid_min_time_limit` to `900`.
+With `restore_value: true`, the substitutions only seed the first boot, like the other tuning entities.
 
 ### PID boost (single only)
 
@@ -477,7 +495,7 @@ The integral part makes up for skipped pulses over the following cycles, so the 
 | PID Tn | The room overshoots and swings slowly, over hours. | A lasting difference from the setpoint takes very long to disappear. |
 | PID PWM period | The relay should switch less often, or the valve actuators are slow (thermal actuators take a few minutes to open). | The system reacts fast, as radiators do. |
 | PID Deadband | The output reacts nervously to small temperature changes. | The temperature should be held more tightly. |
-| PID Min on time / PID Min off time | The valve actuators need longer to open or close, or the relay should switch less often. | The actuators react fast, or a short `PID PWM period` skips too many pulses. Keep their sum well below the period. |
+| `pid_min_on_time` / `pid_min_off_time` | The valve actuators need longer to open or close, or the relay should switch less often. | The actuators react fast, or a short `PID PWM period` skips too many pulses. Keep their sum well below the period. |
 
 <!-- markdownlint-enable MD013 -->
 

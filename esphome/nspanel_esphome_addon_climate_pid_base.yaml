@@ -27,6 +27,7 @@ substitutions:
   pwm_period: "1200"            # PWM cycle time in seconds
   pid_min_on_time: "180"        # Shortest relay on-time in seconds; shorter pulses are skipped
   pid_min_off_time: "180"       # Shortest relay off-time in seconds; shorter pauses keep the relay on
+  pid_min_time_limit: "60"      # Lower limit in seconds for both minimum times (above 0), checked at build time
   pid_starting_integral: "0.0"  # Integral term on the first boot (0.0..1.0); afterwards it is restored from flash
   pid_sync_interval: "10"       # Seconds between syncs thermostat -> PID controllers
   pid_sample_interval: "30"     # Seconds between PID computations, so the output averaging covers a fixed time
@@ -121,6 +122,12 @@ script:
           #ifdef NSPANEL_EASY_ADDON_CLIMATE_ONOFF
             #error "The PID add-ons cannot be combined with the climate heat, cool or dual add-ons: both would drive the thermostat and the relays."
           #endif  // NSPANEL_EASY_ADDON_CLIMATE_ONOFF
+          static_assert((${pid_min_time_limit}) > 0, "pid_min_time_limit must be above 0");
+          static_assert((${pid_min_time_limit}) <= 900, "pid_min_time_limit must not exceed 900");
+          static_assert((${pid_min_on_time}) >= (${pid_min_time_limit}) && (${pid_min_on_time}) <= 900,
+                        "pid_min_on_time must be between pid_min_time_limit and 900");
+          static_assert((${pid_min_off_time}) >= (${pid_min_time_limit}) && (${pid_min_off_time}) <= 900,
+                        "pid_min_off_time must be between pid_min_time_limit and 900");
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "Add-on climate PID:");
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  kp: %.3f", pid_tuning_kp->state);
           ESP_LOGCONFIG("${TAG_ADDON_CLIMATE_PID}", "  Tn: %.0f min", pid_tuning_tn->state);
@@ -294,17 +301,21 @@ number:
 
   # Minimum relay on and off times, read by the PWM cycle like the period.
   # They protect valve actuators (a thermal actuator needs minutes to open), and relays from short pulses.
+  # Internal on purpose, so they are not changed from Home Assistant without understanding them; set them with
+  # pid_min_on_time / pid_min_off_time. Not restored, so a changed substitution applies after the next flash.
+  # To expose them, extend them in the local yaml with `internal: false` (see docs/addon_climate.md).
   - platform: template
     id: pid_tuning_min_on_time
     name: ${pid_name_min_on_time}
+    internal: true
     entity_category: config
     icon: mdi:timer-check-outline
     unit_of_measurement: s
-    min_value: 0
+    min_value: ${pid_min_time_limit}
     max_value: 900
     step: 30
     initial_value: ${pid_min_on_time}
-    restore_value: true
+    restore_value: false
     optimistic: true
     mode: ${pid_number_mode}
     on_value:
@@ -314,14 +325,15 @@ number:
   - platform: template
     id: pid_tuning_min_off_time
     name: ${pid_name_min_off_time}
+    internal: true
     entity_category: config
     icon: mdi:timer-pause-outline
     unit_of_measurement: s
-    min_value: 0
+    min_value: ${pid_min_time_limit}
     max_value: 900
     step: 30
     initial_value: ${pid_min_off_time}
-    restore_value: true
+    restore_value: false
     optimistic: true
     mode: ${pid_number_mode}
     on_value:
