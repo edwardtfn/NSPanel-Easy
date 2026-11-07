@@ -101,11 +101,13 @@ script:
     mode: single
     then:
       - lambda: |-
-          if (current_page_id == get_page_id("notification"))
-            goto_page->execute(home_page_id);
           notification_label = "";
           notification_text = "";
+          // Refresh before leaving the page: goto_page sends the page command right away, and home's
+          // Preinitialize applies vis_home on entry, so the mask must already hold the cleared state
           notification_refresh->execute(false);
+          if (current_page_id == get_page_id("notification"))
+            goto_page->execute(home_page_id);
 
   - id: notification_play_sound
     mode: single
@@ -144,6 +146,11 @@ script:
     then:
       - lambda: |-
           if (current_page_id != get_page_id("notification")) return;
+          if (notification_text.empty()) {
+            // Cleared while the page was loading: leave instead of showing a blank page
+            goto_page->execute(home_page_id);
+            return;
+          }  // if (notification_text.empty())
           disp1->set_component_text("notifi_label", notification_label.c_str());
           disp1->set_component_text("notifi_text01", wrapText(notification_text.c_str(),
                                                               display_portrait ? 23 : 32,
