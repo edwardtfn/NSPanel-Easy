@@ -272,6 +272,7 @@ script:
     then:
       - lambda: |-
           if (!is_home_page()) return;
+          home_vis_apply_pending();
           page_home->execute();
 
   - id: page_home
