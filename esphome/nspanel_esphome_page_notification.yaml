@@ -146,6 +146,11 @@ script:
     then:
       - lambda: |-
           if (current_page_id != get_page_id("notification")) return;
+          if (notification_text.empty()) {
+            // Cleared while the page was loading: leave instead of showing a blank page
+            goto_page->execute(home_page_id);
+            return;
+          }  // if (notification_text.empty())
           disp1->set_component_text("notifi_label", notification_label.c_str());
           disp1->set_component_text("notifi_text01", wrapText(notification_text.c_str(),
                                                               display_portrait ? 23 : 32,
