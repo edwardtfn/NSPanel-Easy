@@ -1,0 +1,61 @@
+on keyb_num.load:
+  dim=brightness
+  if(api==0)
+  {
+    page page_id.val
+  }
+  sendme
+
+on b1.up:
+  pin.txt+=b1.txt
+
+on bclose.up:
+  page page_id.val
+
+on b2.up:
+  pin.txt+=b2.txt
+
+on b3.up:
+  pin.txt+=b3.txt
+
+on b4.up:
+  pin.txt+=b4.txt
+
+on b5.up:
+  pin.txt+=b5.txt
+
+on b6.up:
+  pin.txt+=b6.txt
+
+on b7.up:
+  pin.txt+=b7.txt
+
+on b8.up:
+  pin.txt+=b8.txt
+
+on b9.up:
+  pin.txt+=b9.txt
+
+on bclear.up:
+  pin.txt=""
+
+on b0.up:
+  pin.txt+=b0.txt
+
+on benter.up:
+  aux.txt="keyb_num,"+domain.txt+","+key.txt+","+pin.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints aux.txt,0
+  printh 00
+  printh FF FF FF
+
+on bview.down:
+  if(pin.pw==1)
+  {
+    pin.pw=0
+  }else
+  {
+    pin.pw=1
+  }

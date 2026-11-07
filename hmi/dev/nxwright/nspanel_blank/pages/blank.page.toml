@@ -1,0 +1,164 @@
+[page]
+name = "blank"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 2
+bco = "#081c42"
+pic = "picture-0000"
+
+[[component]]
+name = "qr0"
+type = "qr-code"
+sendkey = 3
+x = 15
+y = 160
+w = 125
+h = 125
+pco = "#081c42"
+txt = "https://github.com/edwardtfn/NSPanel-Easy/blob/main/docs/nspanel_blank.md"
+txt_maxl = 73
+
+[[component]]
+name = "tm0"
+type = "timer"
+tim = 65500
+
+[[component]]
+name = "tm_esphome"
+type = "timer"
+tim = 30000
+
+[[component]]
+name = "nspanel_easy"
+type = "text"
+sendkey = 3
+x = 15
+y = 15
+w = 270
+h = 48
+sta = 0
+font = "ubuntu26_language"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = "NSPanel Easy"
+txt_maxl = 12
+
+[[component]]
+name = "baud_rate"
+type = "text"
+sendkey = 3
+x = 295
+y = 15
+w = 125
+h = 30
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "tft_version"
+type = "text"
+sendkey = 3
+x = 220
+y = 230
+w = 200
+h = 30
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+txt = "TFT version"
+txt_maxl = 20
+
+[[component]]
+name = "sys_framework"
+type = "text"
+sendkey = 3
+x = 295
+y = 45
+w = 125
+h = 30
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "ver_firmware"
+type = "text"
+sendkey = 3
+x = 220
+y = 260
+w = 200
+h = 30
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+txt = "ESP: Waiting..."
+txt_maxl = 20
+
+[[component]]
+name = "counter"
+type = "variable"
+
+[[component]]
+name = "aux1"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "va0"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "va1"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "csv"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 255
+
+[[component]]
+name = "version"
+type = "variable"
+sta = 1
+txt = "2026.8.0"
+txt_maxl = 8
+
+[[component]]
+name = "t0"
+type = "text"
+x = 15
+y = 290
+w = 450
+h = 30
+sta = 0
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = "http://github.com/edwardtfn/NSPanel-Easy"
+txt_maxl = 40

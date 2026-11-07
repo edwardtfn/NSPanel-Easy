@@ -1,0 +1,396 @@
+[page]
+name = "alarm"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 480
+h = 320
+bco = "#000000"
+pic = "picture-0037"
+
+[[component]]
+name = "page_label"
+type = "text"
+sendkey = 3
+x = 48
+y = 8
+w = 300
+h = 30
+font = "font-02"
+bco = "#000000"
+pco = "#ffffff"
+xcen = 0
+txt = "Alarm Control Panel"
+txt_maxl = 100
+
+[[component]]
+name = "icon_state"
+type = "text"
+sendkey = 3
+x = 12
+y = 8
+w = 35
+h = 35
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "lastclick"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 255
+
+[[component]]
+name = "bt_home_pic"
+type = "picture"
+x = 40
+y = 65
+w = 100
+h = 100
+groupid0 = -876163633
+groupid1 = 1377933511
+pic = "picture-0045"
+
+[[component]]
+name = "bt_home_text"
+type = "text"
+x = 49
+y = 116
+w = 82
+h = 40
+groupid0 = -876163633
+groupid1 = 1377933511
+bco = "#181818"
+pco = "#292c29"
+ycen = 2
+txt = "Home"
+txt_maxl = 22
+
+[[component]]
+name = "bt_away_pic"
+type = "picture"
+x = 175
+y = 65
+w = 100
+h = 100
+groupid0 = -112891390
+groupid1 = -1825784054
+pic = "picture-0045"
+
+[[component]]
+name = "bt_away_text"
+type = "text"
+x = 184
+y = 116
+w = 82
+h = 40
+groupid0 = -112891390
+groupid1 = -1825784054
+bco = "#181818"
+pco = "#292c29"
+ycen = 2
+txt = "Away"
+txt_maxl = 22
+
+[[component]]
+name = "bt_night_pic"
+type = "picture"
+x = 310
+y = 65
+w = 100
+h = 100
+groupid0 = 1981576128
+groupid1 = -528070456
+pic = "picture-0045"
+
+[[component]]
+name = "bt_night_text"
+type = "text"
+x = 319
+y = 116
+w = 82
+h = 40
+groupid0 = 1981576128
+groupid1 = -528070456
+bco = "#181818"
+pco = "#292c29"
+ycen = 2
+txt = "Night"
+txt_maxl = 22
+
+[[component]]
+name = "bt_vacat_pic"
+type = "picture"
+x = 40
+y = 196
+w = 100
+h = 100
+groupid0 = -800810804
+groupid1 = 1207066068
+pic = "picture-0045"
+
+[[component]]
+name = "bt_vacat_text"
+type = "text"
+x = 49
+y = 246
+w = 82
+h = 40
+groupid0 = -800810804
+groupid1 = 1207066068
+bco = "#181818"
+pco = "#292c29"
+ycen = 2
+txt = "Vacation"
+txt_maxl = 22
+
+[[component]]
+name = "bt_bypass_pic"
+type = "picture"
+x = 175
+y = 196
+w = 100
+h = 100
+groupid0 = -1178901345
+groupid1 = 1366436279
+pic = "picture-0045"
+
+[[component]]
+name = "bt_bypass_text"
+type = "text"
+x = 184
+y = 246
+w = 82
+h = 40
+groupid0 = -1178901345
+groupid1 = 1366436279
+bco = "#181818"
+pco = "#292c29"
+ycen = 2
+txt = "Bypass"
+txt_maxl = 22
+
+[[component]]
+name = "bt_disarm_pic"
+type = "picture"
+x = 310
+y = 196
+w = 100
+h = 100
+groupid0 = 588891642
+groupid1 = 199430946
+pic = "picture-0045"
+
+[[component]]
+name = "bt_disarm_text"
+type = "text"
+x = 319
+y = 246
+w = 82
+h = 40
+groupid0 = 588891642
+groupid1 = 199430946
+bco = "#181818"
+pco = "#292c29"
+ycen = 2
+txt = "Disarm"
+txt_maxl = 22
+
+[[component]]
+name = "bt_home_icon"
+type = "text"
+x = 46
+y = 75
+w = 35
+h = 35
+groupid0 = -876163633
+groupid1 = 1377933511
+font = "font-08"
+bco = "#181818"
+picc = "picture-0000"
+pco = "#292c29"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_away_icon"
+type = "text"
+x = 181
+y = 75
+w = 35
+h = 35
+groupid0 = -112891390
+groupid1 = -1825784054
+font = "font-08"
+bco = "#181818"
+picc = "picture-0000"
+pco = "#292c29"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_night_icon"
+type = "text"
+x = 316
+y = 75
+w = 35
+h = 35
+groupid0 = 1981576128
+groupid1 = -528070456
+font = "font-08"
+bco = "#181818"
+picc = "picture-0000"
+pco = "#292c29"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_vacat_icon"
+type = "text"
+x = 46
+y = 206
+w = 35
+h = 35
+groupid0 = -800810804
+groupid1 = 1207066068
+font = "font-08"
+bco = "#181818"
+picc = "picture-0000"
+pco = "#292c29"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_bypass_icon"
+type = "text"
+x = 181
+y = 206
+w = 35
+h = 35
+groupid0 = -1178901345
+groupid1 = 1366436279
+font = "font-08"
+bco = "#181818"
+picc = "picture-0000"
+pco = "#292c29"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_disarm_icon"
+type = "text"
+x = 316
+y = 206
+w = 35
+h = 35
+groupid0 = 588891642
+groupid1 = 199430946
+font = "font-08"
+bco = "#181818"
+picc = "picture-0000"
+pco = "#292c29"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_home"
+type = "hotspot"
+sendkey = 3
+x = 40
+y = 65
+w = 100
+h = 100
+groupid0 = -876163633
+groupid1 = 1377933511
+
+[[component]]
+name = "bt_away"
+type = "hotspot"
+sendkey = 3
+x = 175
+y = 65
+w = 100
+h = 100
+groupid0 = -112891390
+groupid1 = -1825784054
+
+[[component]]
+name = "bt_night"
+type = "hotspot"
+sendkey = 3
+x = 310
+y = 65
+w = 100
+h = 100
+groupid0 = 1981576128
+groupid1 = -528070456
+
+[[component]]
+name = "bt_vacat"
+type = "hotspot"
+sendkey = 3
+x = 40
+y = 196
+w = 100
+h = 100
+groupid0 = -800810804
+groupid1 = 1207066068
+
+[[component]]
+name = "bt_bypass"
+type = "hotspot"
+sendkey = 3
+x = 175
+y = 196
+w = 100
+h = 100
+groupid0 = -1178901345
+groupid1 = 1366436279
+
+[[component]]
+name = "bt_disarm"
+type = "hotspot"
+sendkey = 3
+x = 310
+y = 196
+w = 100
+h = 100
+groupid0 = 588891642
+groupid1 = 199430946
+
+[[component]]
+name = "code_format"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 15
+
+[[component]]
+name = "code_arm_req"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 1
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 385
+y = 0
+w = 95
+h = 48
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3

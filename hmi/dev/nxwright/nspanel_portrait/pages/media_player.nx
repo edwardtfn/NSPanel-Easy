@@ -1,0 +1,181 @@
+on media_player.load:
+  if(api==0)
+  {
+    page home_page_id
+  }
+  // Page background
+  media_player.pic=pic_background_main
+  // Top header text components — named because button_back (id 3)
+  // sits between them and the volume range, breaking the sequence.
+  page_label.picc=pic_background_main
+  page_label.pco=color_pco_main
+  icon_state.picc=pic_background_main
+  icon_state.pco=color_pco_main
+  // Volume row text components (ids 5..8) — vol_slider (id 4) is
+  // intentionally skipped; its colors are managed at design time.
+  for(sys0=5;sys0<=8;sys0++)
+  {
+    b[sys0].picc=pic_background_main
+    b[sys0].pco=color_pco_main
+  }
+  // Track / artist / playback controls (ids 10..17) — time_progress
+  // (id 9) is intentionally skipped; its color is managed by the
+  // ESPHome runtime which sets active blue or theme-aware dim per
+  // playback state.
+  for(sys0=10;sys0<=17;sys0++)
+  {
+    b[sys0].picc=pic_background_main
+    b[sys0].pco=color_pco_main
+  }
+  // Variables and timers (ids 18+) have no visual representation
+  // and are skipped.
+  button_back.font=button_back_font
+  button_back.pco=color_pco_navigation
+  button_back.picc2=pic_background_main
+  dim=brightness
+  sendme
+
+on button_back.down:
+  page back_page_id
+
+on vol_slider.up:
+  covx vol_slider.val,va0.txt,0,0
+  vol_text.txt=va0.txt+"%"
+  timer0.en=1
+
+on vol_slider.slide:
+  covx vol_slider.val,va0.txt,0,0
+  vol_text.txt=va0.txt+"%"
+  timer0.en=1
+
+on bt_vol_down.up:
+  if(vol_slider.val>0)
+  {
+    vol_slider.val--
+    covx vol_slider.val,va0.txt,0,0
+    vol_text.txt=va0.txt+"%"
+    timer0.en=1
+  }
+
+on bt_vol_up.up:
+  if(vol_slider.val<100)
+  {
+    vol_slider.val++
+    covx vol_slider.val,va0.txt,0,0
+    vol_text.txt=va0.txt+"%"
+    timer0.en=1
+  }
+
+on bt_mute.up:
+  if(is_muted.val==0)
+  {
+    va0.txt="true"
+  }else
+  {
+    va0.txt="false"
+  }
+  lastclick.txt="media_player,volume_mute,"+va0.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on bt_prev.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "media_player,media_previous_track",0
+  printh 00
+  printh FF FF FF
+
+on bt_play_pause.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "media_player,media_play_pause",0
+  printh 00
+  printh FF FF FF
+
+on bt_next.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "media_player,media_next_track",0
+  printh 00
+  printh FF FF FF
+
+on bt_on_off.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "media_player,toggle",0
+  printh 00
+  printh FF FF FF
+
+on timer0.timer:
+  timer0.en=0
+  covx vol_slider.val,va0.txt,0,0
+  vol_text.txt=va0.txt+"%"
+  lastclick.txt="media_player,volume_set,"+va0.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on prg_timer.timer:
+  if(prg_current.val<prg_total.val&&prg_total.val>0)
+  {
+    prg_current.val++
+    time_progress.val=100*prg_current.val/prg_total.val
+    covx prg_current.val,time_current.txt,0,0
+  }
+  // Progress - Total
+  sys0=prg_total.val/3600 //hours
+  sys2=prg_total.val%3600 //remainder
+  sys1=sys2/60 //minutes
+  sys2%=60 //seconds
+  time_total.txt=""
+  if(sys0>0)
+  {
+    covx sys0,time_total.txt,0,0
+    time_total.txt+=":"
+    if(sys1<10)
+    {
+      time_total.txt+="0"
+    }
+  }
+  covx sys1,va0.txt,0,0
+  time_total.txt+=va0.txt+":"
+  if(sys2<10)
+  {
+    time_total.txt+="0"
+  }
+  covx sys2,va0.txt,0,0
+  time_total.txt+=va0.txt
+  // Progress - Current
+  sys0=prg_current.val/3600 //hours
+  sys2=prg_current.val%3600 //remainder
+  sys1=sys2/60 //minutes
+  sys2%=60 //seconds
+  time_current.txt=""
+  if(sys0>0)
+  {
+    covx sys0,time_current.txt,0,0
+    time_current.txt+=":"
+    if(sys1<10)
+    {
+      time_current.txt+="0"
+    }
+  }
+  covx sys1,va0.txt,0,0
+  time_current.txt+=va0.txt+":"
+  if(sys2<10)
+  {
+    time_current.txt+="0"
+  }
+  covx sys2,va0.txt,0,0
+  time_current.txt+=va0.txt

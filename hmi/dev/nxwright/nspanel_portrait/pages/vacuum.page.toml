@@ -1,0 +1,161 @@
+[page]
+name = "vacuum"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 320
+h = 480
+sta = 2
+bco = "#000000"
+pic = "picture-0000"
+
+[[component]]
+name = "page_label"
+type = "text"
+sendkey = 3
+x = 46
+y = 8
+w = 204
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "icon_state"
+type = "text"
+sendkey = 3
+x = 10
+y = 8
+w = 35
+h = 35
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 260
+y = 0
+w = 60
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "vacuum_pic"
+type = "picture"
+x = 80
+y = 100
+w = 160
+h = 160
+
+[[component]]
+name = "battery_icon"
+type = "text"
+x = 225
+y = 364
+w = 35
+h = 35
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+
+[[component]]
+name = "battery_value"
+type = "text"
+sendkey = 3
+x = 260
+y = 364
+w = 60
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "state_label"
+type = "text"
+sendkey = 3
+x = 80
+y = 67
+w = 160
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+ycen = 2
+txt = ""
+
+[[component]]
+name = "bt_start_pause"
+type = "text"
+sendkey = 3
+x = 65
+y = 275
+w = 60
+h = 60
+sta = 0
+font = "font-10"
+picc = "picture-0000"
+pco = "#e7e3e7"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_stop"
+type = "text"
+sendkey = 3
+x = 130
+y = 275
+w = 60
+h = 60
+sta = 0
+font = "font-10"
+picc = "picture-0000"
+pco = "#e7e3e7"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_return"
+type = "text"
+sendkey = 3
+x = 195
+y = 275
+w = 60
+h = 60
+sta = 0
+font = "font-10"
+picc = "picture-0000"
+pco = "#e7e3e7"
+txt = ""
+txt_maxl = 3

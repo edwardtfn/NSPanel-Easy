@@ -1,0 +1,567 @@
+[page]
+name = "climate"
+type = "page"
+vscope = 1
+sendkey = 3
+x = 0
+y = 0
+w = 320
+h = 480
+sta = 2
+pic = "picture-0037"
+
+[[component]]
+name = "swipe"
+type = "touch-capture"
+
+[[component]]
+name = "swipestore"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "current_temp"
+type = "text"
+sendkey = 3
+x = 5
+y = 48
+w = 310
+h = 55
+sta = 0
+font = "font-05"
+bco = "#000000"
+picc = "picture-0037"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 25
+isbr = 1
+
+[[component]]
+name = "decrease_temp"
+type = "hotspot"
+sendkey = 3
+x = 0
+y = 253
+w = 43
+h = 55
+
+[[component]]
+name = "increase_temp"
+type = "hotspot"
+sendkey = 3
+x = 273
+y = 253
+w = 47
+h = 55
+
+[[component]]
+name = "page_label"
+type = "text"
+sendkey = 3
+x = 46
+y = 8
+w = 204
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0037"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "slider_high"
+type = "slider"
+sendkey = 3
+x = 49
+y = 253
+w = 222
+h = 25
+sta = 0
+psta = 1
+picc = "picture-0037"
+picc1 = "picture-0037"
+pic2 = "picture-0038"
+val = 215
+maxval = 400
+
+[[component]]
+name = "target_icon"
+type = "text"
+sendkey = 3
+x = 10
+y = 8
+w = 35
+h = 35
+sta = 0
+font = "SarasaGothicSC-Regular"
+picc = "picture-0037"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "value01_icon"
+type = "text"
+sendkey = 3
+x = 35
+y = 118
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = ""
+
+[[component]]
+name = "value01"
+type = "text"
+sendkey = 3
+x = 65
+y = 118
+w = 70
+h = 30
+sta = 0
+font = "font-02"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 6
+
+[[component]]
+name = "value02_icon"
+type = "text"
+sendkey = 3
+x = 34
+y = 158
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = ""
+
+[[component]]
+name = "value02"
+type = "text"
+sendkey = 3
+x = 64
+y = 158
+w = 70
+h = 30
+sta = 0
+font = "font-02"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 6
+
+[[component]]
+name = "value03_icon"
+type = "text"
+sendkey = 3
+x = 190
+y = 118
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = ""
+
+[[component]]
+name = "value03"
+type = "text"
+sendkey = 3
+x = 220
+y = 118
+w = 70
+h = 30
+sta = 0
+font = "font-02"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 6
+
+[[component]]
+name = "value04_icon"
+type = "text"
+sendkey = 3
+x = 187
+y = 158
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = ""
+
+[[component]]
+name = "value04"
+type = "text"
+sendkey = 3
+x = 217
+y = 158
+w = 70
+h = 30
+sta = 0
+font = "font-02"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 6
+
+[[component]]
+name = "button01"
+type = "text"
+sendkey = 3
+x = 2
+y = 347
+w = 45
+h = 66
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button02"
+type = "text"
+sendkey = 3
+x = 47
+y = 347
+w = 45
+h = 66
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button03"
+type = "text"
+sendkey = 3
+x = 92
+y = 347
+w = 45
+h = 66
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button04"
+type = "text"
+sendkey = 3
+x = 137
+y = 347
+w = 45
+h = 66
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button05"
+type = "text"
+sendkey = 3
+x = 182
+y = 347
+w = 45
+h = 66
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button06"
+type = "text"
+sendkey = 3
+x = 227
+y = 347
+w = 45
+h = 66
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button07"
+type = "text"
+sendkey = 3
+x = 272
+y = 347
+w = 45
+h = 66
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "climatesetting"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 50
+
+[[component]]
+name = "lastclick"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 255
+
+[[component]]
+name = "timer0"
+type = "timer"
+tim = 1000
+en = 0
+
+[[component]]
+name = "temp_offset"
+type = "variable"
+
+[[component]]
+name = "temp_step"
+type = "variable"
+val = 1
+
+[[component]]
+name = "button08"
+type = "text"
+sendkey = 3
+x = 78
+y = 413
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#292c29"
+txt = ""
+
+[[component]]
+name = "button09"
+type = "text"
+sendkey = 3
+x = 204
+y = 413
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#292c29"
+txt = ""
+
+[[component]]
+name = "target_high"
+type = "text"
+sendkey = 3
+x = 176
+y = 206
+w = 125
+h = 40
+sta = 0
+font = "font-04"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = ""
+
+[[component]]
+name = "temp_number0"
+type = "variable"
+
+[[component]]
+name = "va2"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 260
+y = 0
+w = 60
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0037"
+bco = "#000000"
+picc2 = "picture-0037"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "click_comp"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 8
+
+[[component]]
+name = "click_timer"
+type = "timer"
+tim = 800
+en = 0
+
+[[component]]
+name = "slider_low"
+type = "slider"
+sendkey = 3
+x = 49
+y = 278
+w = 222
+h = 25
+sta = 0
+psta = 1
+picc = "picture-0037"
+picc1 = "picture-0037"
+pic2 = "picture-0038"
+val = 185
+maxval = 400
+
+[[component]]
+name = "active_slider"
+type = "variable"
+val = 1
+
+[[component]]
+name = "target_low"
+type = "text"
+sendkey = 3
+x = 8
+y = 307
+w = 125
+h = 40
+sta = 0
+font = "font-04"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 0
+ycen = 0
+txt = ""
+
+[[component]]
+name = "is_temp_range"
+type = "variable"
+
+[[component]]
+name = "climateslider"
+type = "slider"
+sendkey = 3
+x = 49
+y = 267
+w = 222
+h = 25
+sta = 0
+psta = 1
+picc = "picture-0037"
+picc1 = "picture-0037"
+pic2 = "picture-0038"
+val = 200
+maxval = 400
+
+[[component]]
+name = "timer1"
+type = "timer"
+tim = 1000
+en = 0
+
+[[component]]
+name = "timer2"
+type = "timer"
+tim = 1000
+en = 0
+
+[[component]]
+name = "temp_number1"
+type = "variable"
+
+[[component]]
+name = "temp_number2"
+type = "variable"
+
+[[component]]
+name = "temp_unit"
+type = "variable"
+sta = 1
+txt = "°"
+
+[[component]]
+name = "temp_low_max"
+type = "variable"
+
+[[component]]
+name = "temp_high_min"
+type = "variable"
+
+[[component]]
+name = "temp_gap"
+type = "variable"
+
+[[component]]
+name = "button_font"
+type = "variable"
+vscope = 1
+val = 8
+
+[[component]]
+name = "preset_button"
+type = "text"
+sendkey = 3
+x = 141
+y = 413
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#292c29"
+txt = ""
+txt_maxl = 3

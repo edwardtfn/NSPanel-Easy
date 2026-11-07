@@ -1,0 +1,119 @@
+on boot.load:
+  dim=brightness_dim
+  covx baud,tmp_baudrate.txt,0,0
+  sys_baudrate.txt="Baud rate: "
+  sys_baudrate.txt+=tmp_baudrate.txt
+  sys_baudrate.txt+=" bps"
+  ver_tft.txt="TFT: "+version.txt
+  sendme
+
+on boot.loadend:
+  line 14,336,305,336,WHITE
+  line 305,336,305,477,WHITE
+  line 14,336,14,477,WHITE
+  line 14,477,305,477,WHITE
+  line 16,338,303,338,WHITE
+  line 303,338,303,475,WHITE
+  line 16,338,16,475,WHITE
+  line 16,475,305,475,WHITE
+  vis log_title,1
+  line 14,76,305,76,WHITE
+  line 305,76,305,192,WHITE
+  line 14,76,14,192,WHITE
+  line 14,192,305,192,WHITE
+  line 16,78,303,78,WHITE
+  line 303,78,303,190,WHITE
+  line 16,78,16,190,WHITE
+  line 16,190,305,190,WHITE
+  vis ver_title,1
+  line 14,206,305,206,WHITE
+  line 305,206,305,322,WHITE
+  line 14,206,14,322,WHITE
+  line 14,322,305,322,WHITE
+  line 16,208,303,208,WHITE
+  line 303,208,303,320,WHITE
+  line 16,208,16,320,WHITE
+  line 16,320,305,320,WHITE
+  vis sys_title,1
+
+on log_scroll.timer:
+  strlen log_body.txt,log_len.val
+  log_pos.val=0
+  log_line_count.val=0
+  log_start_pos.val=0
+  log_end_pos.val=0
+  log_temp.txt=""
+  // Count the number of lines (instances of \r)
+  while(log_pos.val<log_len.val)
+  {
+    // Extract each character to find \r
+    substr log_body.txt,log_temp.txt,log_pos.val,2
+    if(log_temp.txt=="\r")
+    {
+      log_line_count.val++
+      // Record the position of the first \r
+      if(log_line_count.val==1)
+      {
+        log_start_pos.val=log_pos.val
+      }
+      // Record the position of the second \r
+      if(log_line_count.val==2)
+      {
+        log_end_pos.val=log_pos.val
+      }
+    }
+    log_pos.val++
+  }
+  // Check if the number of lines exceeds the maximum allowed
+  if(log_line_count.val>log_max_lines.val)
+  {
+    // If more than max_lines, remove the first line
+    if(log_end_pos.val>0)
+    {
+      // Remove the first line including the newline character
+      substr log_body.txt,log_body.txt,log_start_pos.val+1,log_len.val-log_start_pos.val-1
+    }
+  }
+  doevents
+
+on bt_reboot.up:
+  log_body.txt+="Click button 'Reboot'\r"
+  if(api==0)
+  {
+    rest
+  }
+
+on tm_esphome.timer:
+  counter.val++
+  if(counter.val>60)
+  {
+    rest
+  }
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "boot,params,",0
+  covx display_mode,va0.txt,0,0
+  prints va0.txt,0
+  prints ",",0
+  covx hard_coded_display_mode,va0.txt,0,0
+  prints va0.txt,0
+  prints ",",0
+  prints version.txt,0
+  prints ",",0
+  covx magic_flag_found_at_boot,va0.txt,0,0
+  prints va0.txt,0
+  printh 00
+  printh FF FF FF
+
+on tm_display_ack.timer:
+  if(display_ack>0)
+  {
+    tm_display_ack.en=0
+  }else
+  {
+    // Send aknowledge flag to ESPHome
+    printh 93
+    prints "display_ack",0
+    printh 00 01 FF FF FF
+  }

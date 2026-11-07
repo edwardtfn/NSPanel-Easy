@@ -1,0 +1,299 @@
+[page]
+name = "popup_select"
+type = "page"
+sendkey = 1
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 0
+
+[[component]]
+name = "card"
+type = "text"
+x = 50
+y = 20
+w = 350
+h = 264
+style = 1
+borderc = "#52596b"
+borderw = 4
+font = "font-02"
+bco = "#f7f7f7"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "header_bg"
+type = "text"
+x = 54
+y = 24
+w = 342
+h = 28
+font = "font-02"
+bco = "#bdc3ce"
+pco = "#212431"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "btn_back"
+type = "text"
+sendkey = 1
+x = 54
+y = 24
+w = 44
+h = 28
+font = "font-02"
+bco = "#bdc3ce"
+pco = "#212431"
+txt = "<"
+txt_maxl = 1
+
+[[component]]
+name = "lbl_title"
+type = "text"
+sendkey = 2
+x = 108
+y = 24
+w = 240
+h = 28
+font = "font-02"
+bco = "#bdc3ce"
+pco = "#212431"
+txt = "Select"
+txt_maxl = 50
+
+[[component]]
+name = "lbl_hint"
+type = "text"
+x = 118
+y = 280
+w = 214
+h = 26
+font = "font-02"
+bco = "#bdc3ce"
+pco = "#212431"
+txt = ""
+
+[[component]]
+name = "opt0"
+type = "dual-state-button"
+x = 58
+y = 54
+w = 334
+h = 26
+style = 0
+font = "font-02"
+bco = "#dee3e7"
+bco2 = "#29598c"
+pco = "#212431"
+xcen = 0
+txt = "Option 1"
+txt_maxl = 50
+
+[[component]]
+name = "opt1"
+type = "dual-state-button"
+x = 58
+y = 82
+w = 334
+h = 26
+style = 0
+font = "font-02"
+bco = "#dee3e7"
+bco2 = "#29598c"
+pco = "#212431"
+xcen = 0
+txt = "Option 2"
+txt_maxl = 50
+
+[[component]]
+name = "opt2"
+type = "dual-state-button"
+x = 58
+y = 110
+w = 334
+h = 26
+style = 0
+font = "font-02"
+bco = "#dee3e7"
+bco2 = "#29598c"
+pco = "#212431"
+xcen = 0
+txt = "Option 3"
+txt_maxl = 50
+
+[[component]]
+name = "opt3"
+type = "dual-state-button"
+x = 58
+y = 138
+w = 334
+h = 26
+style = 0
+font = "font-02"
+bco = "#dee3e7"
+bco2 = "#29598c"
+pco = "#212431"
+xcen = 0
+txt = "Option 4"
+txt_maxl = 50
+
+[[component]]
+name = "opt4"
+type = "dual-state-button"
+x = 58
+y = 166
+w = 334
+h = 26
+style = 0
+font = "font-02"
+bco = "#dee3e7"
+bco2 = "#29598c"
+pco = "#212431"
+xcen = 0
+txt = "Option 5"
+txt_maxl = 50
+
+[[component]]
+name = "opt5"
+type = "dual-state-button"
+x = 58
+y = 194
+w = 334
+h = 26
+style = 0
+font = "font-02"
+bco = "#dee3e7"
+bco2 = "#29598c"
+pco = "#212431"
+xcen = 0
+txt = "Option 6"
+txt_maxl = 50
+
+[[component]]
+name = "opt6"
+type = "dual-state-button"
+x = 58
+y = 222
+w = 334
+h = 26
+style = 0
+font = "font-02"
+bco = "#dee3e7"
+bco2 = "#29598c"
+pco = "#212431"
+xcen = 0
+txt = "Option 7"
+txt_maxl = 50
+
+[[component]]
+name = "opt7"
+type = "dual-state-button"
+x = 58
+y = 250
+w = 334
+h = 26
+style = 0
+font = "font-02"
+bco = "#dee3e7"
+bco2 = "#29598c"
+pco = "#212431"
+xcen = 0
+txt = "Option 8"
+txt_maxl = 50
+
+[[component]]
+name = "caller_page_id"
+type = "variable"
+
+[[component]]
+name = "opt_count"
+type = "variable"
+
+[[component]]
+name = "total_count"
+type = "variable"
+
+[[component]]
+name = "selection_mask"
+type = "variable"
+
+[[component]]
+name = "select_mode"
+type = "variable"
+
+[[component]]
+name = "render"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "init"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "btn_prev"
+type = "text"
+x = 58
+y = 280
+w = 60
+h = 26
+font = "SarasaGothicSC-Regular"
+bco = "#bdc3ce"
+pco = "#212431"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "btn_next"
+type = "text"
+x = 332
+y = 280
+w = 60
+h = 26
+font = "SarasaGothicSC-Regular"
+bco = "#bdc3ce"
+pco = "#212431"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "press_y"
+type = "variable"
+
+[[component]]
+name = "tap_slot"
+type = "variable"
+
+[[component]]
+name = "tap_eval"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "card_h"
+type = "variable"
+
+[[component]]
+name = "hs_prev"
+type = "hotspot"
+sendkey = 1
+x = 50
+y = 278
+w = 175
+h = 42
+
+[[component]]
+name = "hs_next"
+type = "hotspot"
+sendkey = 1
+x = 225
+y = 278
+w = 175
+h = 42

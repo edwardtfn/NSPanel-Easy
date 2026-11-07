@@ -1,0 +1,28 @@
+on confirm.load:
+  dim=brightness
+  if(page_name.txt=="tft_upload")
+  {
+    vis bt_accept,0
+    vis bt_clear,0
+    vis bclose,0
+  }else if(api==0)
+  {
+    page home_page_id
+  }
+  sendme
+
+on bclose.up:
+  page page_id.val
+
+on bt_accept.up:
+  aux.txt=page_name.txt+",short_click,"+component.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints aux.txt,0
+  printh 00
+  printh FF FF FF
+  page page_id.val
+
+on bt_clear.up:
+  page page_id.val
