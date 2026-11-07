@@ -1,0 +1,3 @@
+# Follow the shared nxwright_env.sh that the HMI scripts source.
+external-sources=true
+source-path=SCRIPTDIR

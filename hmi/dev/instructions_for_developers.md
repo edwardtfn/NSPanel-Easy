@@ -116,19 +116,34 @@ scripts:
 
 ## Nextion
 
-### Editor version
+### Source and build
 
-Nextion Editor v1.68.2 or later is required. The TFTs use macros (named global events called with `call <macro>`),
-which older Editors cannot open or compile.
+The display projects live as text in `hmi/src/<project>/`, in the [nxwright](https://github.com/nixiewright/nxwright) source format.
+That source is the source of truth: `hmi/<project>.hmi` and `hmi/<project>.tft` are built from it and committed,
+because releases serve the TFT files from the repository.
 
-To compile without a Windows machine (or in automation),
-[sztupy/nextion-editor-docker](https://github.com/sztupy/nextion-editor-docker) provides Nextion Editor 1.68.2
-under Wine, with scripts to build TFT files from HMI files.
+- Page code is in `pages/*.nx`, components in `pages/*.page.toml`, macros in `macros.nx` and global code in `program.nx`.
+  Code is strict Nextion syntax.
+- Pictures are PNG files in `pictures/`. Fonts are not stored per project: `fonts.sha256` lists them,
+  and the build takes them from `hmi/dev/fonts` by checksum.
+- The display firmware comes from `hmi/dev/firmware/`, a minimal TFT carrying the Nextion Editor 1.68.2 firmware,
+  and every build checks that the TFT files carry it unchanged.
+
+Scripts in `hmi/dev/scripts/` (run them with `bash`; they install the pinned nxwright on first use, which needs Python 3.11 or later):
+
+- `hmi_build.sh [project ...]` builds the HMI and TFT files from the source.
+- `hmi_import.sh [project ...]` brings changes made in the Nextion Editor back into the source.
+- `hmi_sync.sh` is what CI runs on pull requests: for each project, it imports the HMI file when it changed in a later commit
+  than its source, then rebuilds everything. CI commits the result to the pull request branch.
+
+Working in the Nextion Editor is still supported: open the built `.hmi` file (v1.68.2 or later, since the projects use macros),
+make the change, save, and commit the `.hmi` file. CI imports it into the source and rebuilds.
+Do not change the same project in the Editor and in the source in the same commit: CI refuses that when the two disagree.
 
 ### Macros
 
 Use a macro for code repeated across components or pages, so it is changed in one place.
-`scripts/generate_nxwright.sh` exports the macros to `macros.nx` in `hmi/dev/nxwright/<hmi_name>/`, so they show in reviews.
+Macros are in `macros.nx` in each project's source folder.
 
 Macros only reach global data: the system variables (`sys0` to `sys3`), the variables declared in `Program.s`
 and global-scope components on the `home` page. Pass inputs in system variables, return results in a global-scope

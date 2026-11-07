@@ -19,5 +19,5 @@ __pycache__/
 
 local
 
-# Pinned nxwright venv installed by generate_nxwright.sh
+# Pinned nxwright venv installed by the HMI scripts (nxwright_env.sh)
 /hmi/dev/.cache

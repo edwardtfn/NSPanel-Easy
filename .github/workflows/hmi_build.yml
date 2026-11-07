@@ -1,0 +1,152 @@
+---
+name: Build HMI
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+    paths:
+      - 'hmi/**'
+      - '.github/workflows/hmi_build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ===========================================================================
+  # Build — executes pull request code, so it stays read-only
+  # ===========================================================================
+  build:
+    name: Build HMI and TFT from source
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.drift.outputs.changed }}
+    steps:
+      # Full history, without file contents: hmi_sync.sh reads which commit
+      # last changed each HMI file and its source.
+      - name: Check out pull request head
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: '0'
+          filter: 'blob:none'
+          persist-credentials: false
+          repository: >-
+            ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      # Invoked through bash: the exec bit does not survive every Windows clone.
+      - name: Import Nextion Editor changes and build
+        run: bash hmi/dev/scripts/hmi_sync.sh
+
+      # status, not diff: a new project or font is untracked and invisible to diff.
+      - name: Detect drift
+        id: drift
+        run: |
+          if [ -z "$(git status --porcelain -- hmi)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "HMI tree is up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git --no-pager status --short -- hmi
+          fi
+
+      # What changed in each TFT's user code, for review in the job summary.
+      - name: Summarize TFT changes
+        if: steps.drift.outputs.changed == 'true'
+        run: |
+          nxwright="$(ls -d hmi/dev/.cache/nxwright-*/bin/nxwright | head -n 1)"
+          {
+            echo "## TFT changes"
+            for tft in hmi/*.tft; do
+              if git diff --quiet -- "${tft}"; then
+                continue
+              fi
+              echo "### ${tft}"
+              if git cat-file -e "HEAD:${tft}" 2>/dev/null; then
+                git show "HEAD:${tft}" > /tmp/previous.tft
+                "${nxwright}" tft-listing /tmp/previous.tft > /tmp/previous.lst 2>&1 || true
+                "${nxwright}" tft-listing "${tft}" > /tmp/current.lst 2>&1 || true
+                echo '```diff'
+                diff -u /tmp/previous.lst /tmp/current.lst | tail -n +3 | head -n 200 || true
+                echo '```'
+              else
+                echo "New file."
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the updated HMI tree
+        if: steps.drift.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: hmi
+          path: |
+            hmi/*.hmi
+            hmi/*.tft
+            hmi/src
+            hmi/dev/fonts
+          retention-days: 1
+
+  # ===========================================================================
+  # Write-back — never executes pull request code, so it may hold write access
+  # ===========================================================================
+  commit:
+    name: Commit built files
+    needs: build
+    if: >-
+      needs.build.outputs.changed == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pull request branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: '1'
+          ref: ${{ github.head_ref }}
+
+      # Wipe first so removed projects, pages and pictures disappear from the tree.
+      - name: Drop the previous build and source
+        run: rm -rf hmi/*.hmi hmi/*.tft hmi/src hmi/dev/fonts
+
+      - name: Download the updated HMI tree
+        uses: actions/download-artifact@v8
+        with:
+          name: hmi
+          path: hmi
+
+      - name: Commit built files
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: Build HMI and TFT from source"
+          file_pattern: 'hmi'
+
+  # ===========================================================================
+  # Fork pull requests get a read-only token, so drift must be fixed by hand
+  # ===========================================================================
+  report:
+    name: Report uncommittable drift
+    needs: build
+    if: >-
+      needs.build.outputs.changed == 'true' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name != github.repository)
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report drift
+        run: |
+          echo "::error::The HMI tree is out of date. Run hmi/dev/scripts/hmi_import.sh" \
+               "for HMI files changed in the Nextion Editor, then" \
+               "hmi/dev/scripts/hmi_build.sh, and commit the result."
+          exit 1
+...
