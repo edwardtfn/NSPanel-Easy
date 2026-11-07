@@ -11195,7 +11195,7 @@ actions:
                                     ##### Construction-only: icons, pictures, payloads and visibility #####
                                     - if: '{{ page_constructor }}'
                                       then:
-                                        - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
                                           data:
                                             page: mem
                                             id: command
@@ -11224,7 +11224,7 @@ actions:
                                               {{ ns.items }}
                                           continue_on_error: true
                                         - *delay_default
-                                        - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                        - action: 'esphome.{{ action_prefix }}_components_visibility'
                                           data:
                                             page: fan
                                             ids: >-
@@ -11232,7 +11232,7 @@ actions:
                                             visible: true
                                           continue_on_error: true
                                         - *delay_default
-                                        - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                        - action: 'esphome.{{ action_prefix }}_components_visibility'
                                           data:
                                             page: fan
                                             ids: >-
@@ -11247,7 +11247,7 @@ actions:
                                     # page constructor and any redraw after the entity went quiet (settle
                                     # pass or fallback refresh) clear every slot, covering requests that
                                     # never make the pressed slot the active one.
-                                    - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
                                       data:
                                         page: mem
                                         id: command
@@ -11307,7 +11307,7 @@ actions:
                                               {%- else -%}
                                                 {{ [current_preset_mode] + (preset_modes_raw[:31] | reject("equalto", current_preset_mode) | list) }}
                                               {%- endif -%}
-                                        - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
                                           data:
                                             page: mem
                                             id: popup_select_context
@@ -11315,21 +11315,21 @@ actions:
                                               - 'fan_preset_mode'
                                           continue_on_error: true
                                         - *delay_default
-                                        - action: 'esphome.{{ nspanel_name }}_component_val'
+                                        - action: 'esphome.{{ action_prefix }}_component_val'
                                           data:
                                             page: mem
                                             id: popup_select_mode
                                             val: 0
                                           continue_on_error: true
                                         - *delay_default
-                                        - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
                                           data:
                                             page: mem
                                             id: popup_select_options
                                             txt_list: '{{ preset_modes_truncated }}'
                                           continue_on_error: true
                                         - *delay_default
-                                        - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                        - action: 'esphome.{{ action_prefix }}_components_visibility'
                                           data:
                                             page: fan
                                             ids:
@@ -11341,7 +11341,7 @@ actions:
                                         ##### Modes as buttons, for fans without speed control #####
                                         - if: '{{ preset_buttons }}'
                                           then:
-                                            - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                            - action: 'esphome.{{ action_prefix }}_component_text_list'
                                               data:
                                                 page: mem
                                                 id: command
@@ -11359,7 +11359,7 @@ actions:
                                                   {{ ns.items }}
                                               continue_on_error: true
                                             - *delay_default
-                                            - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                            - action: 'esphome.{{ action_prefix }}_components_visibility'
                                               data:
                                                 page: fan
                                                 ids: >-
@@ -11369,7 +11369,7 @@ actions:
                                             - *delay_default
                                             - if: '{{ preset_modes_raw | length < 5 }}'
                                               then:
-                                                - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                                - action: 'esphome.{{ action_prefix }}_components_visibility'
                                                   data:
                                                     page: fan
                                                     ids: >-
@@ -11379,7 +11379,7 @@ actions:
                                                 - *delay_default
 
                                     ##### Always (construction and updates): push current preset_mode #####
-                                    - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
                                       data:
                                         page: mem
                                         id: popup_select_current
@@ -11397,7 +11397,7 @@ actions:
                                         # constructor and any redraw after the entity went quiet (settle
                                         # pass or fallback refresh), so intermediate states reported
                                         # during a transition keep the press pending.
-                                        - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
                                           data:
                                             page: mem
                                             id: command
