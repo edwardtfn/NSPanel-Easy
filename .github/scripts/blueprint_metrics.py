@@ -18,7 +18,7 @@ Reported:
 
 Usage:
   blueprint_metrics.py [BLUEPRINT] [--base BASE_BLUEPRINT] [--markdown] [--output FILE]
-                       [--top N] [--warn-distinct N]
+                       [--top N] [--warn-distinct N] [--max-distinct N]
 
   BLUEPRINT        Blueprint file (default: nspanel_easy_blueprint.yaml)
   --base           Another version of the Blueprint to compare against
@@ -30,8 +30,15 @@ Usage:
   --warn-distinct  Print a GitHub Actions warning when the number of distinct
                    templates reaches N (default: 1024, Spook's template cache
                    size; 0 disables it)
+  --max-distinct   Fail (exit code 1, with a GitHub Actions error) when the
+                   number of distinct templates is above N, keeping a margin
+                   below Spook's template cache (default: 0, disabled)
 
-The exit code is always 0: the metrics inform, they don't block.
+With --base, a warning is also printed when the number of distinct templates
+grows compared with the base.
+
+The exit code is 0 unless --max-distinct is exceeded: the other metrics
+inform, they don't block. The report is written before failing.
 """
 
 import argparse
@@ -324,6 +331,8 @@ def main():
     parser.add_argument("--top", type=int, default=15, help="rows per table")
     parser.add_argument("--warn-distinct", type=int, default=1024,
                         help="warn when distinct templates reach this number (0 disables)")
+    parser.add_argument("--max-distinct", type=int, default=0,
+                        help="fail when distinct templates are above this number (0 disables)")
     args = parser.parse_args()
 
     try:
@@ -343,6 +352,14 @@ def main():
     if args.warn_distinct and current["templates_distinct"] >= args.warn_distinct:
         print(f"::warning file={args.blueprint}::{current['templates_distinct']:,} distinct templates, at or above "
               f"{args.warn_distinct:,} (Spook's template cache size): inspections re-parse every template")
+    if base and current["templates_distinct"] > base["templates_distinct"]:
+        print(f"::warning file={args.blueprint}::Distinct templates grow from {base['templates_distinct']:,} to "
+              f"{current['templates_distinct']:,}: the margin below Spook's template cache (1,024) gets smaller")
+    if args.max_distinct and current["templates_distinct"] > args.max_distinct:
+        print(f"::error file={args.blueprint}::{current['templates_distinct']:,} distinct templates, above the "
+              f"limit of {args.max_distinct:,} (margin below Spook's template cache of 1,024, issue #636): "
+              f"reduce the templates, or raise --max-distinct in validate_blueprint.yml as a deliberate decision")
+        return 1
     return 0
 
 
