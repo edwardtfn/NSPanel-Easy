@@ -13971,6 +13971,13 @@ actions:
               {%- set replaced = as_timestamp(this.last_changed, 0) if this is defined and this else 0 -%}
               {{ trigger.id != "automation_reloaded" or replaced == 0 or (as_timestamp(now()) - replaced) < 60 }}
 
+          # The panel's actions are named after its device name. Without the "Device name" sensor (panel not
+          # connected yet, restarting, or the sensor disabled) and without an override, the name can only be
+          # guessed from the entity ids, which no longer match after a rename and lead to calls of actions that
+          # don't exist. The panel requests its settings itself once it connects, so nothing is lost by stopping.
+          - condition: >-
+              {{ (device_name_override is string and device_name_override | length > 0) or has_value(device_name_sensor) }}
+
           - delay: >  # Prevents all panels updating simultaneously in large systems
               {% set ns = namespace(panels=[]) %}
               {% for s in states.sensor | selectattr("entity_id", "search", "_device_name$") %}
