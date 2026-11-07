@@ -212,6 +212,28 @@ api:
               }
             }
 
+    # State and attributes of the entities shown on an entity details page, for the firmware to render.
+    # The Blueprint sends the raw data instead of computing each text and value itself (issue #636).
+    - action: entity_snapshot
+      variables:
+        snapshot: string  # JSON: {"page", "constructor", "entities": [{"role", "entity_id", "exists", "state", "name", "attributes"}]}
+      then:
+        - lambda: |-
+            ESP_LOGV("${TAG_API}", "Action: entity_snapshot (%zu bytes)", snapshot.size());
+            if (snapshot.size() > ENTITY_SNAPSHOT_MAX_SIZE) {
+              ESP_LOGW("${TAG_API}", "Entity snapshot of %zu bytes is above %zu, ignored", snapshot.size(),
+                       ENTITY_SNAPSHOT_MAX_SIZE);
+              return;
+            }  // if (snapshot too large)
+            if (!parse_entity_snapshot(snapshot, entity_snapshot)) {
+              ESP_LOGW("${TAG_API}", "Invalid entity snapshot, ignored");
+              return;
+            }  // if (invalid snapshot)
+            ESP_LOGD("${TAG_API}", "Entity snapshot for page '%s' (%zu entities, constructor: %s)",
+                     entity_snapshot.page.c_str(), entity_snapshot.entities.size(),
+                     YESNO(entity_snapshot.constructor));
+            entity_snapshot_received->execute();
+
     - action: icon  # Updates icon, color, and visibility for display components
       variables:
         page: string       # Page name for visibility control (mandatory).
@@ -281,6 +303,14 @@ esphome:
     - -D NSPANEL_EASY_API
 
 script:
+  # Runs when an entity snapshot arrives; each page extends it and renders its own snapshot.
+  # The snapshot is in `entity_snapshot`, valid until the next one arrives.
+  - id: entity_snapshot_received
+    mode: restart
+    then:
+      - lambda: |-
+          ESP_LOGV("${TAG_API}", "Script: entity_snapshot_received (page '%s')", entity_snapshot.page.c_str());
+
   - id: action_component_color
     mode: single
     parameters:

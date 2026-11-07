@@ -23,7 +23,7 @@ substitutions:
   # MAJOR: bump (and reset MINOR to 0) when an API action is removed or its parameters change,
   #        and also set min_blueprint_version to '${version}', as older Blueprints can no longer call it
   # The Blueprint declares the API version it uses in its 'api_version' variable
-  api_version: "2.0"
+  api_version: "2.1"
 
   # Minimum required TFT version for compatibility
   # Must be manually updated with Nextion Editor
