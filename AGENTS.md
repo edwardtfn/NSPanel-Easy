@@ -187,6 +187,7 @@ Inputs always have a value, and variables set earlier in the same run are always
 ## Things agents must not do
 
 - Edit files under `versioning/` or bump versions manually.
+- Change the Blueprint version on `dev` (`9999.99.9`, a development marker set by the versioning workflow) in a pull request; the release sets the real version.
 - Edit generated files (`all_icons.h`, `all_icons.json`, the Blueprint's `all_icon_names` / `special_icons` lines, `hmi/dev/nxwright/`) instead of their sources.
 - Commit compiled binaries (`.tft`, `.bin`) unless explicitly asked.
 - Reformat or restructure unrelated code in the same change.
