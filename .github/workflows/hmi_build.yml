@@ -59,8 +59,11 @@ jobs:
       # What changed in each TFT's user code, for review in the job summary.
       - name: Summarize TFT changes
         if: steps.drift.outputs.changed == 'true'
+        shell: bash
         run: |
-          nxwright="$(ls -d hmi/dev/.cache/nxwright-*/bin/nxwright | head -n 1)"
+          # shellcheck source=/dev/null
+          source hmi/dev/scripts/nxwright_env.sh
+          nxwright="${NXWRIGHT}"
           {
             echo "## TFT changes"
             for tft in hmi/*.tft; do
