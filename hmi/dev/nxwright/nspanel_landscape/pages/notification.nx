@@ -1,0 +1,65 @@
+on notification.load:
+  if(api==0)
+  {
+    page home_page_id
+  }
+  notification.pic=pic_background_main
+  button_back.font=button_back_font
+  button_back.picc=pic_background_main
+  button_back.picc2=pic_background_main
+  button_back.pco=color_pco_navigation
+  notifi_label.picc=pic_background_main
+  notifi_label.pco=color_pco_main
+  notifi_text01.picc=pic_background_main
+  notifi_text01.pco=color_pco_main
+  bt_accept.picc=pic_background_main
+  bt_accept.picc2=pic_background_main
+  bt_clear.picc=pic_background_main
+  bt_clear.picc2=pic_background_main
+  dim=brightness
+  sendme
+
+on swipe.down:
+  swipestore.en=1 // Start swipestore timer
+
+on swipe.up:
+  swipestore.en=0
+  // Touch has ended, x
+  if(tch0==0)
+  {
+    swipec=swipex-tch2
+    // From Left to Right
+    if(swipec>swipedx)
+    {
+      //page
+    }
+    // Right to Left
+    swipec2=0-swipedx
+    if(swipec<swipec2)
+    {
+      //page
+    }
+  }
+  // Touch has ended, y
+  if(tch1==0)
+  {
+    swipec=swipey-tch3
+    // From Up to Down
+    if(swipec>100)
+    {
+      //page
+    }
+    // Down to Up
+    swipec2=0-swipedy
+    if(swipec<-100)
+    {
+      //page
+    }
+  }
+
+on swipestore.timer:
+  swipex=tch0
+  swipey=tch1
+
+on button_back.down:
+  page home_page_id

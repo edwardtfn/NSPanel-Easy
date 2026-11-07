@@ -25,7 +25,7 @@ Follow these guidelines carefully to ensure a smooth and consistent release proc
 
 2. **Generate new TFT files**:
    - Compile each modified `.hmi` file to generate the updated `.tft` files. Use Nextion Editor v1.68.2 or later, as the project uses macros.
-   - Run `scripts/generate_nextion_txt.sh` to generate the text files showing what's updated from the HMI.
+   - Run `scripts/generate_nextion_txt.sh` and `scripts/generate_nxwright.sh` to generate the text files showing what's updated from the HMI.
 
 3. **Create a new branch with the version name**:
    - After updating the version in all required files, create a new branch from the `dev` branch with the new version number prefixed with `v`:

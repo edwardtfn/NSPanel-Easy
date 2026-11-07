@@ -1,0 +1,356 @@
+on home.load:
+  back_page_id=home_page_id
+  // restore chips
+  for(sys0=11;sys0<=20;sys0++)
+  {
+    b[sys0].font=chip_font
+  }
+  // set component visibility
+  sys0=vis_home
+  for(sys1=0;sys1<=17;sys1++)
+  {
+    sys2=sys0%2
+    sys0=sys0/2
+    if(sys1==0)
+    {
+      vis indr_temp,sys2
+      vis indr_temp_icon,sys2
+    }else if(sys1==1)
+    {
+      vis outdoor_temp,sys2
+    }else if(sys1==2)
+    {
+      vis bt_icon,sys2
+    }else if(sys1==3)
+    {
+      vis bt_utilities,sys2
+    }else if(sys1==4)
+    {
+      vis bt_notific,sys2
+    }else if(sys1==5)
+    {
+      vis bt_qrcode,sys2
+    }else if(sys1==6)
+    {
+      vis bt_entities,sys2
+    }else if(sys1==7)
+    {
+      vis button01,sys2
+    }else if(sys1==8)
+    {
+      vis button02,sys2
+    }else if(sys1==9)
+    {
+      vis button03,sys2
+    }else if(sys1==10)
+    {
+      vis button04,sys2
+    }else if(sys1==11)
+    {
+      vis button05,sys2
+    }else if(sys1==12)
+    {
+      vis button06,sys2
+    }else if(sys1==13)
+    {
+      vis button07,sys2
+    }else if(sys1==14)
+    {
+      vis value01,sys2
+      vis value01_icon,sys2
+    }else if(sys1==15)
+    {
+      vis value02,sys2
+      vis value02_icon,sys2
+    }else if(sys1==16)
+    {
+      vis value03,sys2
+      vis value03_icon,sys2
+    }else
+    {
+      vis value04,sys2
+      vis value04_icon,sys2
+    }
+  }
+  // HW Button's labels
+  if(display_mode==3)
+  {
+    vis left_bt_text,0
+    vis right_bt_text,0
+  }
+  dim=brightness
+  sendme
+
+on swipe.down:
+  swipestore.en=1 // Start swipestore timer
+  dim=brightness // Set brightness to saved value (from HA)
+
+on swipe.up:
+  swipestore.en=0
+  // Touch has ended, x
+  if(tch0==0)
+  {
+    swipec=swipex-tch2
+    // From Left to Right
+    if(swipec>swipedx)
+    {
+      // Navigate back based on active status
+      if(api==0)
+      {
+        call report_api_unavailable
+      }else if(is_buttonpage04>=1)
+      {
+        page buttonpage04
+      }else if(is_buttonpage03>=1)
+      {
+        page buttonpage03
+      }else if(is_buttonpage02>=1)
+      {
+        page buttonpage02
+      }else if(is_buttonpage01>=1)
+      {
+        page buttonpage01
+      }
+    }
+    // Right to Left swipe now navigates to home, looping back to the start.
+    swipec2=0-swipedx
+    if(swipec<swipec2)
+    {
+      // Navigate back based on active status
+      if(api==0)
+      {
+        call report_api_unavailable
+      }else if(is_buttonpage01>=1)
+      {
+        page buttonpage01
+      }else if(is_buttonpage02>=1)
+      {
+        page buttonpage02
+      }else if(is_buttonpage03>=1)
+      {
+        page buttonpage03
+      }else if(is_buttonpage04>=1)
+      {
+        page buttonpage04
+      }
+    }
+  }
+  // Touch has ended, y
+  if(tch1==0)
+  {
+    swipec=swipey-tch3
+    // From Up to Down
+    if(swipec>100)
+    {
+      if(api==0)
+      {
+        call report_api_unavailable
+      }else if(is_buttonpage04>=1&&is_buttonpage03>=1)
+      {
+        page buttonpage03
+      }else if(is_buttonpage04>=1&&is_buttonpage02>=1)
+      {
+        page buttonpage02
+      }else if(is_buttonpage04>=1&&is_buttonpage01>=1)
+      {
+        page buttonpage01
+      }else if(is_buttonpage03>=1&&is_buttonpage02>=1)
+      {
+        page buttonpage02
+      }else if(is_buttonpage03>=1&&is_buttonpage01>=1)
+      {
+        page buttonpage01
+      }else if(is_buttonpage02>=1&&is_buttonpage01>=1)
+      {
+        page buttonpage01
+      }
+    }
+    // Down to Up
+    swipec2=0-swipedy
+    if(swipec<-100)
+    {
+      // Navigate back up the sequence based on active status
+      if(api==0)
+      {
+        call report_api_unavailable
+      }else if(is_buttonpage01>=1&&is_buttonpage02>=1)
+      {
+        page buttonpage02
+      }else if(is_buttonpage01>=1&&is_buttonpage03>=1)
+      {
+        page buttonpage03
+      }else if(is_buttonpage01>=1&&is_buttonpage04>=1)
+      {
+        page buttonpage04
+      }else if(is_buttonpage02>=1&&is_buttonpage03>=1)
+      {
+        page buttonpage03
+      }else if(is_buttonpage02>=1&&is_buttonpage04>=1)
+      {
+        page buttonpage04
+      }else if(is_buttonpage03>=1&&is_buttonpage04>=1)
+      {
+        page buttonpage04
+      }
+    }
+  }
+
+on swipestore.timer:
+  swipex=tch0
+  swipey=tch1
+
+on time.down:
+  settings_timer.en=1
+
+on time.up:
+  settings_timer.en=0
+
+on date.down:
+  settings_timer.en=1
+
+on date.up:
+  settings_timer.en=0
+
+on wifi_icon.down:
+  settings_timer.en=1
+
+on wifi_icon.up:
+  settings_timer.en=0
+
+on bt_notific.up:
+  if(api==1)
+  {
+    page notification
+  }else
+  {
+    call report_api_unavailable
+  }
+
+on bt_entities.up:
+  if(api==1)
+  {
+    if(is_entitypage01>0)
+    {
+      page entitypage01
+    }else if(is_entitypage02>0)
+    {
+      page entitypage02
+    }else if(is_entitypage03>0)
+    {
+      page entitypage03
+    }else if(is_entitypage04>0)
+    {
+      page entitypage04
+    }
+  }else
+  {
+    call report_api_unavailable
+  }
+
+on button07.down:
+  short_click_tm.en=0
+  click_comp.txt="button07"
+  click_timer.en=1
+
+on button07.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on meridiem.down:
+  settings_timer.en=1
+
+on meridiem.up:
+  settings_timer.en=0
+
+on settings_timer.timer:
+  page settings
+
+on button01.down:
+  short_click_tm.en=0
+  click_comp.txt="button01"
+  click_timer.en=1
+
+on button01.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on button02.down:
+  short_click_tm.en=0
+  click_comp.txt="button02"
+  click_timer.en=1
+
+on button02.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on button03.down:
+  short_click_tm.en=0
+  click_comp.txt="button03"
+  click_timer.en=1
+
+on button03.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on click_timer.timer:
+  short_click_tm.en=0
+  click_timer.en=0
+  if(click_comp.txt!="")
+  {
+    lastclick.txt="home,long_click,"+click_comp.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints lastclick.txt,0
+    printh 00
+    printh FF FF FF
+    click_comp.txt=""
+  }
+
+on button04.down:
+  short_click_tm.en=0
+  click_comp.txt="button04"
+  click_timer.en=1
+
+on button04.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on button05.down:
+  short_click_tm.en=0
+  click_comp.txt="button05"
+  click_timer.en=1
+
+on button05.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on button06.down:
+  short_click_tm.en=0
+  click_comp.txt="button06"
+  click_timer.en=1
+
+on button06.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on bt_icon.down:
+  settings_timer.en=1
+
+on bt_icon.up:
+  settings_timer.en=0
+
+on short_click_tm.timer:
+  click_timer.en=0
+  short_click_tm.en=0
+  if(click_comp.txt!="")
+  {
+    lastclick.txt="home,short_click,"+click_comp.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints lastclick.txt,0
+    printh 00
+    printh FF FF FF
+    click_comp.txt=""
+  }

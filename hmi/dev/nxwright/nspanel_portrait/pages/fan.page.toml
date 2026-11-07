@@ -1,0 +1,291 @@
+[page]
+name = "fan"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 320
+h = 480
+sta = 2
+bco = "#000000"
+pic = "picture-0000"
+
+[[component]]
+name = "fan_value"
+type = "text"
+sendkey = 3
+x = 119
+y = 118
+w = 83
+h = 20
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "page_label"
+type = "text"
+sendkey = 3
+x = 46
+y = 8
+w = 204
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "fanslider"
+type = "slider"
+vscope = 1
+sendkey = 3
+x = 119
+y = 143
+w = 85
+h = 235
+mode = 1
+sta = 2
+psta = 1
+pic = "picture-0039"
+pic1 = "picture-0040"
+pic2 = "picture-0018"
+val = 0
+maxval = 4
+
+[[component]]
+name = "swipe"
+type = "touch-capture"
+
+[[component]]
+name = "swipestore"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "icon_state"
+type = "text"
+sendkey = 3
+x = 10
+y = 8
+w = 35
+h = 35
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "fansetting"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 255
+
+[[component]]
+name = "va0"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "button_up"
+type = "button"
+sendkey = 3
+x = 244
+y = 123
+w = 60
+h = 60
+sta = 0
+style = 0
+font = "font-10"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#e7e3e7"
+pco2 = "#292c29"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button_down"
+type = "button"
+sendkey = 3
+x = 244
+y = 302
+w = 60
+h = 60
+sta = 0
+style = 0
+font = "font-10"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#292c29"
+pco2 = "#292c29"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "timer0"
+type = "timer"
+tim = 1000
+en = 0
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 260
+y = 0
+w = 60
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_oscillate"
+type = "text"
+sendkey = 3
+x = 15
+y = 120
+w = 60
+h = 60
+sta = 0
+font = "font-10"
+picc = "picture-0000"
+pco = "#e7e3e7"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "power_button"
+type = "text"
+sendkey = 3
+x = 15
+y = 395
+w = 60
+h = 60
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#e7e7e7"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "mode_button"
+type = "text"
+sendkey = 3
+x = 15
+y = 200
+w = 60
+h = 60
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#e7e7e7"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "mode_bt1"
+type = "dual-state-button"
+sendkey = 1
+x = 100
+y = 143
+w = 150
+h = 40
+sta = 2
+font = "font-02"
+pic = "picture-0116"
+pic2 = "picture-0114"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "mode_bt2"
+type = "dual-state-button"
+sendkey = 1
+x = 100
+y = 192
+w = 150
+h = 40
+sta = 2
+font = "font-02"
+pic = "picture-0120"
+pic2 = "picture-0118"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "mode_bt3"
+type = "dual-state-button"
+sendkey = 1
+x = 100
+y = 241
+w = 150
+h = 40
+sta = 2
+font = "font-02"
+pic = "picture-0124"
+pic2 = "picture-0122"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "mode_bt4"
+type = "dual-state-button"
+sendkey = 1
+x = 100
+y = 290
+w = 150
+h = 40
+sta = 2
+font = "font-02"
+pic = "picture-0128"
+pic2 = "picture-0126"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "mode_bt5"
+type = "dual-state-button"
+sendkey = 1
+x = 100
+y = 339
+w = 150
+h = 40
+sta = 2
+font = "font-02"
+pic = "picture-0132"
+pic2 = "picture-0130"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 20

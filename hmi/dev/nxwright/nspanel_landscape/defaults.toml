@@ -1,0 +1,1126 @@
+# Defaults of newly added components, per type: what a source folder leaves out.
+# Written by nxwright defaults from objects.HMI.
+
+[waveform]
+events = [
+    "down",
+    "up",
+]
+
+[waveform.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 200
+h = 200
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+dir = 0
+ch = 1
+bco = 0
+picc = 65535
+pic = 65535
+gdc = 1024
+gdw = 40
+gdh = 40
+objWid = 0
+objHig = 0
+pco0 = 64495
+pco1 = 65519
+pco2 = 63488
+pco3 = 2016
+inittrue = 0
+dis = 100
+molloc_s = 0
+molloc = 0
+
+[slider]
+events = [
+    "down",
+    "up",
+    "slide",
+]
+
+[slider.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 200
+h = 25
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+mode = 0
+sta = 1
+psta = 0
+wid = 255
+hig = 255
+dis = 100
+pic = 65535
+picc = 65535
+bco = 1024
+pic1 = 65535
+picc1 = 65535
+bco1 = 64235
+pic2 = 65535
+pco = 16384
+val = 50
+maxval = 100
+minval = 0
+ch = 25
+
+[gmov]
+events = [
+    "down",
+    "up",
+    "playend",
+]
+
+[gmov.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 128
+h = 128
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+from = 0
+vid = 65535
+path = ""
+path_m = 255
+en = 1
+loop = 1
+dis = 100
+tim = 0
+stim = 0
+qty = 0
+molloc_s = 12000
+molloc = 12000
+
+[video]
+events = [
+    "down",
+    "up",
+    "playend",
+]
+
+[video.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 128
+h = 128
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+from = 0
+vid = 65535
+path = ""
+path_m = 255
+en = 1
+loop = 1
+fps = 1
+dis = 100
+tim = 0
+stim = 0
+qty = 0
+molloc_s = 64000
+molloc = 64000
+
+[audio]
+events = [
+    "playend",
+]
+
+[audio.attributes]
+vscope = 0
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+from = 0
+vid = 65535
+path = ""
+path_m = 255
+en = 1
+loop = 1
+fps = 1
+dis = 100
+tim = 0
+stim = 0
+qty = 0
+molloc_s = 64000
+molloc = 64000
+
+[touch-capture]
+events = [
+    "down",
+    "up",
+]
+
+[touch-capture.attributes]
+vscope = 0
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+val = 0
+
+[timer]
+events = [
+    "timer",
+]
+
+[timer.attributes]
+vscope = 0
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+tim = 400
+en = 1
+
+[variable]
+events = []
+
+[variable.attributes]
+vscope = 0
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 0
+txt = "newtxt"
+txt_maxl = 10
+val = 0
+
+[dual-state-button]
+events = [
+    "down",
+    "up",
+]
+
+[dual-state-button.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 60
+h = 60
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 4
+borderc = 0
+borderw = 2
+font = 0
+pic = 65535
+picc = 65535
+bco = 50712
+pic2 = 65535
+picc2 = 65535
+bco2 = 1024
+pco = 0
+pco2 = 65535
+xcen = 1
+ycen = 1
+val = 0
+txt = "newtxt"
+txt_maxl = 10
+isbr = 0
+spax = 0
+spay = 0
+
+[number]
+events = [
+    "down",
+    "up",
+]
+
+[number.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 100
+h = 30
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 0
+key = 255
+borderc = 0
+borderw = 2
+font = 0
+bco = 65535
+picc = 65535
+pic = 65535
+pco = 0
+xcen = 1
+ycen = 1
+val = 0
+lenth = 0
+format = 0
+isbr = 1
+spax = 0
+spay = 0
+
+[scrolling-text]
+events = [
+    "down",
+    "up",
+]
+
+[scrolling-text.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 240
+h = 30
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 0
+key = 255
+borderc = 0
+borderw = 2
+font = 0
+bco = 65535
+picc = 65535
+pic = 65535
+pco = 0
+xcen = 1
+ycen = 1
+dir = 1
+dis = 4
+tim = 150
+en = 1
+txt = "newtxt"
+txt_maxl = 10
+isbr = 0
+spax = 0
+spay = 0
+vvs0 = 0
+vvs1 = 0
+vvs2 = 0
+vvs3 = 0
+
+[checkbox]
+events = [
+    "down",
+    "up",
+]
+
+[checkbox.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 20
+h = 20
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+style = 2
+borderw = 2
+borderc = 0
+bco = 65535
+pco = 0
+val = 1
+
+[radio]
+events = [
+    "down",
+    "up",
+]
+
+[radio.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 20
+h = 20
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+bco = 65535
+pco = 0
+val = 1
+
+[qr-code]
+events = [
+    "down",
+    "up",
+]
+
+[qr-code.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 180
+h = 180
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 0
+dis = 8
+bco = 65535
+pco = 0
+pic = 65535
+txt = "https://nextion.itead.cc"
+txt_maxl = 30
+
+[xfloat]
+events = [
+    "down",
+    "up",
+]
+
+[xfloat.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 100
+h = 30
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 0
+key = 255
+borderc = 0
+borderw = 2
+font = 0
+bco = 65535
+picc = 65535
+pic = 65535
+pco = 0
+xcen = 1
+ycen = 1
+val = 0
+vvs0 = 0
+vvs1 = 0
+isbr = 1
+spax = 0
+spay = 0
+
+[external-picture]
+events = [
+    "down",
+    "up",
+]
+
+[external-picture.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 120
+h = 120
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+path = ""
+path_m = 255
+
+[combo-box]
+events = [
+    "down",
+    "up",
+]
+
+[combo-box.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 100
+h = 42
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 0
+borderc = 0
+borderw = 2
+font = 0
+bco = 65535
+picc = 65535
+pic = 65535
+pco = 0
+xcen = 1
+ycen = 1
+spax = 0
+dis = 25
+txt = "40V"
+txt_maxl = 32
+up = 1
+pco3 = 42292
+bco1 = 65535
+pco1 = 0
+path = "40V\r\n60V\r\n80V\r\n100V\r\n120V\r\n140V"
+path_m = 256
+dir = 1
+qty = 4
+vvs0 = 8
+val = 0
+bco2 = 31
+pco2 = 65535
+hig = 42
+down = 0
+mode = 2
+wid = 12
+vvs1 = 2
+ch = 8
+drastate = 0
+
+[sliding-text]
+events = [
+    "down",
+    "up",
+]
+
+[sliding-text.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 120
+h = 120
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 0
+key = 255
+borderc = 0
+borderw = 2
+font = 0
+bco = 65535
+picc = 65535
+pic = 65535
+pco = 0
+xcen = 0
+leftshow = 0
+left = 1
+ch = 8
+txt = "000\r\n111\r\n222\r\n333\r\n444\r\n666\r\n777\r\n777\r\n888\r\n999"
+txt_maxl = 256
+isbr = 1
+spax = 0
+spay = 0
+path = ""
+path_m = 0
+maxval_y = 0
+val_y = 0
+
+[file-stream]
+events = []
+
+[file-stream.attributes]
+vscope = 0
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+val = 0
+qty = 0
+en = 0
+open = 357
+read = 869
+write = 869
+close = 101
+find = 357
+molloc_s = 10752
+molloc = 10752
+
+[file-browser]
+events = [
+    "down",
+    "up",
+]
+
+[file-browser.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 240
+h = 240
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 2
+borderc = 0
+borderw = 2
+font = 0
+bco = 65535
+picc = 65535
+pic = 65535
+pco = 0
+pco2 = 65535
+bco2 = 31
+xcen = 1
+autoleft = 0
+left = 1
+ch = 8
+dir = "sd0/"
+dir_m = 255
+filter = "*.*"
+filter_m = 64
+val = -1
+txt = ""
+txt_m = 255
+qty = 0
+dis = 3
+spax = 24
+spay = 8
+maxval_y = 0
+val_y = 0
+psta = 1
+pic1 = 0
+pic2 = 1
+vvs2 = ""
+vvs2_m = 64
+buffsize = 32000
+buff = 0
+up = 0
+fwarning = 1
+
+[data-record]
+events = [
+    "down",
+    "up",
+]
+
+[data-record.attributes]
+vscope = 1
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 240
+h = 240
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 2
+borderc = 0
+borderw = 2
+font = 0
+bco = 65535
+picc = 65535
+pic = 65535
+pco = 0
+xcen = 0
+init = 0
+path = "sd0/1.data"
+path_m = 255
+lenth = 63
+maxval = 1000
+dez = 3
+format = ""
+format_m = 256
+dir = "head0^head1^head2"
+dir_m = 255
+mode = 1
+dis = 1
+order = 0
+qty = 0
+spax = 0
+hig = 32
+autoleft = 0
+left = 1
+gdc = 50712
+gdw = 1
+gdh = 1
+bco1 = 23765
+pco1 = 65535
+bco2 = 31
+pco2 = 65535
+filter = ""
+filter_m = 31
+val = -1
+txt = ""
+txt_m = 255
+insert = 357
+delete = 512
+up = 613
+clear = 101
+ch = 8
+maxval_y = 0
+val_y = 0
+maxval_x = 0
+val_x = 0
+molloc_s = 10752
+molloc = 10752
+
+[switch]
+events = [
+    "down",
+    "up",
+]
+
+[switch.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 80
+h = 30
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+dez = 0
+val = 0
+bco = 50712
+pco = 65535
+bco2 = 1024
+pco2 = 65535
+pco1 = 0
+font = 0
+dis = 100
+txt = "False/True"
+txt_maxl = 24
+
+[select]
+events = [
+    "down",
+    "up",
+]
+
+[select.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 90
+h = 200
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 0
+borderc = 0
+borderw = 2
+font = 0
+bco = 65535
+picc = 65535
+pic = 65535
+pco = 0
+pco2 = 31
+spax = 0
+hig = 42
+dis = 1
+pco1 = 31
+txt = ""
+txt_maxl = 255
+val = 0
+ch = 8
+path = "01\r\n02\r\n03\r\n04\r\n05\r\n06\r\n07\r\n08\r\n09\r\n10\r\n11\r\n12"
+path_m = 1024
+
+[button]
+events = [
+    "down",
+    "up",
+]
+
+[button.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 100
+h = 50
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 4
+borderc = 0
+borderw = 2
+font = 0
+pic = 65535
+picc = 65535
+bco = 50712
+pic2 = 65535
+picc2 = 65535
+bco2 = 1024
+pco = 0
+pco2 = 65535
+xcen = 1
+ycen = 1
+val = 0
+txt = "newtxt"
+txt_maxl = 10
+isbr = 0
+spax = 0
+spay = 0
+
+[progress-bar]
+events = [
+    "down",
+    "up",
+]
+
+[progress-bar.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 128
+h = 30
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 0
+dez = 0
+val = 50
+dis = 25
+bco = 48631
+bpic = 65535
+pco = 1024
+ppic = 65535
+
+[hotspot]
+events = [
+    "down",
+    "up",
+]
+
+[hotspot.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 60
+h = 60
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+
+[picture]
+events = [
+    "down",
+    "up",
+]
+
+[picture.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 60
+h = 60
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+pic = 65535
+
+[crop]
+events = [
+    "down",
+    "up",
+]
+
+[crop.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 60
+h = 60
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+picc = 65535
+vvs0 = 0
+vvs1 = 0
+
+[text]
+events = [
+    "down",
+    "up",
+]
+
+[text.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 100
+h = 30
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 1
+style = 0
+key = 255
+borderc = 0
+borderw = 2
+font = 0
+bco = 65535
+picc = 65535
+pic = 65535
+pco = 0
+xcen = 1
+ycen = 1
+pw = 0
+txt = "newtxt"
+txt_maxl = 10
+isbr = 0
+spax = 0
+spay = 0
+
+[page]
+events = [
+    "load",
+    "loadend",
+    "down",
+    "up",
+    "unload",
+]
+
+[page.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 800
+h = 480
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+up = 255
+down = 255
+left = 255
+right = 255
+sta = 1
+bco = 65535
+pic = 65535
+
+[gauge]
+events = [
+    "down",
+    "up",
+]
+
+[gauge.attributes]
+vscope = 0
+drag = 0
+sendkey = 0
+aph = 127
+movex = 0
+movey = 0
+x = 0
+y = 0
+w = 220
+h = 220
+effect = 0
+first = 0
+time = 300
+lockobj = 0
+groupid0 = 0
+groupid1 = 0
+sta = 3
+picc = 65535
+bco = 65535
+pic = 65535
+val = 0
+format = 0
+up = 32767
+down = 30
+left = 0
+pco = 1024
+pco2 = 63488
+hig = 24
+wid = 2
+vvs0 = 1
+vvs1 = 7
+vvs2 = 2
