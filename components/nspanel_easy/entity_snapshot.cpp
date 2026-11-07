@@ -51,18 +51,23 @@ bool parse_entity_snapshot(const std::string &json, EntitySnapshot &snapshot) {
   const bool parsed = json::parse_json(json, [&snapshot](JsonObject root) -> bool {
     snapshot.page = root["page"] | "";
     snapshot.constructor = root["constructor"] | false;
-    for (JsonObjectConst item : root["entities"].as<JsonArrayConst>()) {
+    // Ranges are kept in locals: iterating over the result of as<>() directly makes GCC warn about a
+    // dangling reference to the temporary proxy (-Wdangling-reference).
+    const JsonArrayConst items = root["entities"].as<JsonArrayConst>();
+    for (JsonObjectConst item : items) {
       SnapshotEntity entity;
       entity.role = item["role"] | "";
       entity.entity_id = item["entity_id"] | "";
       entity.state = item["state"] | "unknown";
       entity.name = item["name"] | "";
       entity.exists = item["exists"] | false;
-      for (JsonPairConst attribute : item["attributes"].as<JsonObjectConst>()) {
+      const JsonObjectConst attributes = item["attributes"].as<JsonObjectConst>();
+      for (JsonPairConst attribute : attributes) {
         const std::string key = attribute.key().c_str();
         if (attribute.value().is<JsonArrayConst>()) {
           std::vector<std::string> texts;
-          for (JsonVariantConst element : attribute.value().as<JsonArrayConst>()) {
+          const JsonArrayConst elements = attribute.value().as<JsonArrayConst>();
+          for (JsonVariantConst element : elements) {
             std::string text;
             if (json_to_text(element, text)) {
               texts.push_back(std::move(text));
