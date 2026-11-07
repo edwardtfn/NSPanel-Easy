@@ -6395,26 +6395,34 @@ actions:
   - alias: Global variables
     variables:
       ##### GENERAL #####
-      action_prefix: >
+      # Where the device name for the panel's action names comes from, decided once per run:
+      # "override" (input), "event" (the panel's own event), "sensor" ("Device name" sensor), or "entity_ids",
+      # a guess from the entity ids that no longer matches after a rename. Steps that must not guess check it.
+      action_prefix_source: >-
         {%- if device_name_override is string and device_name_override | length > 0 -%}
-          {{ device_name_override | regex_replace("[^a-zA-Z0-9]", "_") | regex_replace("_+", "_") | lower }}
-        {%- else -%}
-          {{
-            trigger.event.data.device_name
-            if
+          override
+        {%- elif
               trigger is defined and
               trigger.event is defined and
               trigger.event.data is defined and
               trigger.event.data.device_name is defined and
-              trigger.event.data.device_name is string and trigger.event.data.device_name | length > 0
-            else
-              (
-                states(device_name_sensor)
-                if has_value(device_name_sensor)
-                else entity_prefix
-              )
-          }}
-        {%- endif %}
+              trigger.event.data.device_name is string and trigger.event.data.device_name | length > 0 -%}
+          event
+        {%- elif has_value(device_name_sensor) -%}
+          sensor
+        {%- else -%}
+          entity_ids
+        {%- endif -%}
+      action_prefix: >-
+        {%- if action_prefix_source == "override" -%}
+          {{ device_name_override | regex_replace("[^a-zA-Z0-9]", "_") | regex_replace("_+", "_") | lower }}
+        {%- elif action_prefix_source == "event" -%}
+          {{ trigger.event.data.device_name }}
+        {%- elif action_prefix_source == "sensor" -%}
+          {{ states(device_name_sensor) }}
+        {%- else -%}
+          {{ entity_prefix }}
+        {%- endif -%}
 
       nspanel_name: '{{ action_prefix }}'
       # Device name with the action prefix appended when they differ,
@@ -13975,8 +13983,8 @@ actions:
           # connected yet, restarting, or the sensor disabled) and without an override, the name can only be
           # guessed from the entity ids, which no longer match after a rename and lead to calls of actions that
           # don't exist. The panel requests its settings itself once it connects, so nothing is lost by stopping.
-          - condition: >-
-              {{ (device_name_override is string and device_name_override | length > 0) or has_value(device_name_sensor) }}
+          # Checked against the source action_prefix was built from, so both always agree.
+          - condition: '{{ action_prefix_source != "entity_ids" }}'
 
           - delay: >  # Prevents all panels updating simultaneously in large systems
               {% set ns = namespace(panels=[]) %}
