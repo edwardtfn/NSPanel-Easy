@@ -128,7 +128,8 @@ under Wine, with scripts to build TFT files from HMI files.
 ### Macros
 
 Use a macro for code repeated across components or pages, so it is changed in one place.
-`scripts/generate_nextion_txt.sh` exports the macros to `Macros.txt` next to `Program.s.txt`, so they show in reviews.
+`scripts/generate_nextion_txt.sh` exports the macros to `Macros.txt` next to `Program.s.txt`, and
+`scripts/generate_nxwright.sh` exports them to `macros.nx` in `hmi/dev/nxwright/<hmi_name>/`, so they show in reviews.
 
 Macros only reach global data: the system variables (`sys0` to `sys3`), the variables declared in `Program.s`
 and global-scope components on the `home` page. Pass inputs in system variables, return results in a global-scope

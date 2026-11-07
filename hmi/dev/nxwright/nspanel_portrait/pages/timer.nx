@@ -1,0 +1,152 @@
+on timer.load:
+  if(api==0)
+  {
+    page home_page_id
+  }
+  // Background and theme
+  timer.pic=pic_background_main
+  if(theme==1)
+  {
+    button_back.picc2=pic_background_main
+    icon_state.picc=pic_background_main
+    page_label.picc=pic_background_main
+    countdown.picc=pic_background_main
+    duration_label.picc=pic_background_main
+    bt_play_pic.pic=92
+    bt_cancel_pic.pic=93
+    bt_finish_pic.pic=94
+  }
+  button_back.font=button_back_font
+  button_back.pco=color_pco_navigation
+  // Default: idle state
+  vis bt_cancel_pic,0
+  vis bt_cancel_icon,0
+  vis bt_cancel_hs,0
+  vis bt_finish_pic,0
+  vis bt_finish_icon,0
+  vis bt_finish_hs,0
+  dim=brightness
+  sendme
+
+on button_back.down:
+  page back_page_id
+
+on tick.timer:
+  // Decrement
+  if(timer_state.val==1&&remaining.val>0)
+  {
+    remaining.val--
+  }
+  // Select font and build string based on remaining seconds
+  if(remaining.val>=3600)
+  {
+    countdown.font=6
+    sys0=remaining.val/3600
+    sys2=remaining.val%3600
+    sys1=sys2/60
+    sys2=sys2%60
+    covx sys0,va0.txt,0,0
+    countdown.txt=va0.txt+time_sep.txt
+    if(sys1<10)
+    {
+      countdown.txt+="0"
+    }
+    covx sys1,va0.txt,0,0
+    countdown.txt+=va0.txt+time_sep.txt
+    if(sys2<10)
+    {
+      countdown.txt+="0"
+    }
+    covx sys2,va0.txt,0,0
+    countdown.txt+=va0.txt
+  }else
+  {
+    if(remaining.val>=60)
+    {
+      countdown.font=11
+      sys1=remaining.val/60
+      sys2=remaining.val%60
+      covx sys1,va0.txt,0,0
+      countdown.txt=va0.txt+time_sep.txt
+      if(sys2<10)
+      {
+        countdown.txt+="0"
+      }
+      covx sys2,va0.txt,0,0
+      countdown.txt+=va0.txt
+    }else
+    {
+      countdown.font=12
+      covx remaining.val,countdown.txt,0,0
+    }
+  }
+  // Stop timer when expired
+  if(remaining.val==0)
+  {
+    tick.en=0
+    timer_state.val=0
+    bt_play_icon.txt=icon_play.txt
+    vis bt_cancel_pic,0
+    vis bt_cancel_icon,0
+    vis bt_cancel_hs,0
+    vis bt_finish_pic,0
+    vis bt_finish_icon,0
+    vis bt_finish_hs,0
+  }
+
+on bt_play_hs.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  if(timer_state.val==1)
+  {
+    prints "timer,pause",0
+  }else
+  {
+    prints "timer,start",0
+  }
+  printh 00
+  printh FF FF FF
+
+on bt_cancel_hs.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "timer,cancel",0
+  printh 00
+  printh FF FF FF
+
+on bt_finish_hs.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "timer,finish",0
+  printh 00
+  printh FF FF FF
+
+on refresh_bts.timer:
+  refresh_bts.en=0
+  if(timer_state.val==1)  // Active
+  {
+    bt_play_icon.txt=icon_pause.txt
+  }else
+  {
+    bt_play_icon.txt=icon_play.txt
+  }
+  if(timer_state.val>0)  // Active or paused
+  {
+    vis bt_cancel_pic,1
+    vis bt_cancel_icon,1
+    vis bt_cancel_hs,1
+    vis bt_finish_pic,1
+    vis bt_finish_icon,1
+    vis bt_finish_hs,1
+  }else // Idle
+  {
+    vis bt_cancel_pic,0
+    vis bt_cancel_icon,0
+    vis bt_cancel_hs,0
+    vis bt_finish_pic,0
+    vis bt_finish_icon,0
+    vis bt_finish_hs,0
+  }

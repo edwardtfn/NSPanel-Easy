@@ -1,0 +1,249 @@
+[page]
+name = "settings"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 2
+pic = "picture-0000"
+
+[[component]]
+name = "brightslider"
+type = "slider"
+sendkey = 3
+x = 15
+y = 80
+w = 420
+h = 36
+sta = 2
+psta = 1
+pic = "picture-0082"
+picc = "picture-0081"
+pic1 = "picture-0081"
+picc1 = "picture-0082"
+pic2 = "picture-0038"
+val = 80
+
+[[component]]
+name = "dimslider"
+type = "slider"
+sendkey = 3
+x = 15
+y = 147
+w = 420
+h = 36
+sta = 2
+psta = 1
+pic = "picture-0084"
+picc = "picture-0084"
+pic1 = "picture-0083"
+picc1 = "picture-0083"
+pic2 = "picture-0038"
+val = 20
+
+[[component]]
+name = "bright_text"
+type = "text"
+sendkey = 3
+x = 347
+y = 58
+w = 88
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = "80%"
+txt_maxl = 4
+
+[[component]]
+name = "dim_text"
+type = "text"
+sendkey = 3
+x = 347
+y = 125
+w = 88
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+txt = "20%"
+txt_maxl = 4
+
+[[component]]
+name = "lbl_bright"
+type = "text"
+sendkey = 3
+x = 15
+y = 58
+w = 88
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = "Bright"
+txt_maxl = 25
+
+[[component]]
+name = "lbl_dim"
+type = "text"
+sendkey = 3
+x = 15
+y = 125
+w = 88
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = "Dim"
+txt_maxl = 25
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 385
+y = 0
+w = 95
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "tm_bright"
+type = "timer"
+tim = 750
+en = 0
+
+[[component]]
+name = "tm_dim"
+type = "timer"
+tim = 750
+en = 0
+
+[[component]]
+name = "tm_debug"
+type = "timer"
+tim = 5000
+en = 0
+
+[[component]]
+name = "csv"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 50
+
+[[component]]
+name = "bt_reboot_pic"
+type = "picture"
+x = 57
+y = 210
+w = 60
+h = 60
+pic = "picture-0085"
+
+[[component]]
+name = "bt_sleep_pic"
+type = "picture"
+x = 177
+y = 210
+w = 60
+h = 60
+pic = "picture-0086"
+
+[[component]]
+name = "bt_theme_pic"
+type = "picture"
+x = 297
+y = 210
+w = 60
+h = 60
+pic = "picture-0087"
+
+[[component]]
+name = "bt_reboot_icon"
+type = "text"
+x = 62
+y = 215
+w = 50
+h = 50
+font = "font-10"
+bco = "#292c29"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "bt_sleep_icon"
+type = "text"
+x = 182
+y = 215
+w = 50
+h = 50
+font = "font-10"
+bco = "#292c29"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "bt_theme_icon"
+type = "text"
+x = 302
+y = 215
+w = 50
+h = 50
+font = "font-10"
+bco = "#292c29"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "bt_reboot_hs"
+type = "hotspot"
+sendkey = 3
+x = 52
+y = 205
+w = 70
+h = 70
+
+[[component]]
+name = "bt_sleep_hs"
+type = "hotspot"
+sendkey = 3
+x = 172
+y = 205
+w = 70
+h = 70
+
+[[component]]
+name = "bt_theme_hs"
+type = "hotspot"
+sendkey = 3
+x = 292
+y = 205
+w = 70
+h = 70

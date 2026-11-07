@@ -1,0 +1,15 @@
+on qrcode.load:
+  qrcode.pic=pic_background_main
+  button_back.font=button_back_font
+  button_back.picc=pic_background_main
+  button_back.picc2=pic_background_main
+  button_back.pco=color_pco_navigation
+  icon_state.picc=pic_background_main
+  icon_state.pco=color_pco_main
+  page_label.picc=pic_background_main
+  page_label.pco=color_pco_main
+  dim=brightness
+  sendme
+
+on button_back.down:
+  page home_page_id

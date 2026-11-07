@@ -1,0 +1,105 @@
+on blank.load:
+  dim=100
+  covx baud,baud_rate.txt,0,0
+  baud_rate.txt+=" bps"
+  tft_version.txt="TFT: v"+version.txt
+  sendme
+
+on blank.down:
+  dim=100
+  tm0.en=1
+
+on blank.up:
+  dim=100
+  tm0.en=1
+
+on qr0.down:
+  dim=100
+  tm0.en=1
+
+on qr0.up:
+  dim=100
+  tm0.en=1
+
+on tm0.timer:
+  if(dim>50)
+  {
+    dim=50
+  }else if(dim>25)
+  {
+    dim=25
+  }else if(dim>10)
+  {
+    dim=10
+  }else
+  {
+    dim=0
+    tm0.en=0
+  }
+
+on tm_esphome.timer:
+  counter.val++
+  if(counter.val>60)
+  {
+    rest
+  }
+  covx counter.val,aux1.txt,0,0
+  ver_firmware.txt="ESP: Retry #"+aux1.txt
+  covx baud,baud_rate.txt,0,0
+  baud_rate.txt+=" bps"
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "blank,params,",0
+  covx display_mode,va0.txt,0,0
+  prints va0.txt,0
+  prints ",",0
+  covx hard_coded_display_mode,va0.txt,0,0
+  prints va0.txt,0
+  prints ",",0
+  prints version.txt,0
+  prints ",",0
+  covx magic_flag_found_at_boot,va0.txt,0,0
+  prints va0.txt,0
+  printh 00
+  printh FF FF FF
+
+on nspanel_easy.down:
+  dim=100
+  tm0.en=1
+
+on nspanel_easy.up:
+  dim=100
+  tm0.en=1
+
+on baud_rate.down:
+  dim=100
+  tm0.en=1
+
+on baud_rate.up:
+  dim=100
+  tm0.en=1
+
+on tft_version.down:
+  dim=100
+  tm0.en=1
+
+on tft_version.up:
+  dim=100
+  tm0.en=1
+
+on sys_framework.down:
+  dim=100
+  tm0.en=1
+
+on sys_framework.up:
+  dim=100
+  tm0.en=1
+
+on ver_firmware.down:
+  dim=100
+  tm0.en=1
+
+on ver_firmware.up:
+  dim=100
+  tm0.en=1

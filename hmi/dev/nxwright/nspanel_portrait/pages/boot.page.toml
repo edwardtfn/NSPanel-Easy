@@ -1,0 +1,288 @@
+[page]
+name = "boot"
+type = "page"
+x = 0
+y = 0
+w = 320
+h = 480
+sta = 2
+bco = "#4282b5"
+pic = "picture-0032"
+
+[[component]]
+name = "log_body"
+type = "text"
+x = 20
+y = 349
+w = 280
+h = 119
+groupid0 = 902360959
+groupid1 = -743349853
+sta = 0
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+ycen = 0
+txt = ""
+txt_maxl = 800
+
+[[component]]
+name = "nspanel_easy"
+type = "text"
+x = 15
+y = 36
+w = 170
+h = 30
+sta = 0
+font = "font-03"
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+ycen = 0
+txt = "NSPanel Easy"
+txt_maxl = 12
+
+[[component]]
+name = "ver_title"
+type = "text"
+x = 20
+y = 62
+w = 67
+h = 30
+groupid0 = 615243540
+groupid1 = 1085526768
+sta = 0
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+txt = " Versions"
+txt_maxl = 9
+
+[[component]]
+name = "ver_tft"
+type = "text"
+x = 20
+y = 93
+w = 175
+h = 30
+groupid0 = 615243540
+groupid1 = 1085526768
+sta = 0
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+txt = "TFT: Waiting..."
+txt_maxl = 25
+
+[[component]]
+name = "version"
+type = "variable"
+sta = 1
+txt = "22.4"
+txt_maxl = 5
+
+[[component]]
+name = "ver_firmware"
+type = "text"
+x = 20
+y = 123
+w = 175
+h = 30
+groupid0 = 615243540
+groupid1 = 1085526768
+sta = 0
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+txt = "Firmware: Waiting..."
+txt_maxl = 30
+
+[[component]]
+name = "ver_blueprint"
+type = "text"
+x = 20
+y = 153
+w = 175
+h = 30
+groupid0 = 615243540
+groupid1 = 1085526768
+sta = 0
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+txt = "Blueprint: Waiting..."
+txt_maxl = 30
+
+[[component]]
+name = "sys_title"
+type = "text"
+x = 20
+y = 195
+w = 58
+h = 27
+groupid0 = -554846624
+groupid1 = 1124451396
+sta = 0
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+txt = " System"
+txt_maxl = 9
+
+[[component]]
+name = "sys_ip"
+type = "text"
+x = 20
+y = 223
+w = 175
+h = 30
+groupid0 = -554846624
+groupid1 = 1124451396
+sta = 0
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+txt = "IP: Waiting..."
+txt_maxl = 20
+
+[[component]]
+name = "sys_framework"
+type = "text"
+x = 20
+y = 253
+w = 175
+h = 30
+groupid0 = -554846624
+groupid1 = 1124451396
+sta = 0
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+txt = "Framework: Waiting..."
+txt_maxl = 30
+
+[[component]]
+name = "sys_baudrate"
+type = "text"
+x = 20
+y = 283
+w = 175
+h = 30
+groupid0 = -554846624
+groupid1 = 1124451396
+sta = 0
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+txt = "Baud rate: Waiting..."
+txt_maxl = 30
+
+[[component]]
+name = "log_title"
+type = "text"
+x = 20
+y = 325
+w = 35
+h = 27
+groupid0 = 902360959
+groupid1 = -743349853
+sta = 0
+bco = "#4282b5"
+picc = "picture-0032"
+pco = "#ffffff"
+xcen = 0
+txt = " Log"
+txt_maxl = 9
+
+[[component]]
+name = "log_scroll"
+type = "timer"
+
+[[component]]
+name = "log_len"
+type = "variable"
+
+[[component]]
+name = "log_pos"
+type = "variable"
+
+[[component]]
+name = "log_line_count"
+type = "variable"
+
+[[component]]
+name = "log_start_pos"
+type = "variable"
+
+[[component]]
+name = "log_end_pos"
+type = "variable"
+
+[[component]]
+name = "log_temp"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 2
+
+[[component]]
+name = "bt_reboot"
+type = "dual-state-button"
+sendkey = 3
+x = 225
+y = 36
+w = 80
+h = 30
+picc = "picture-0033"
+picc2 = "picture-0034"
+bco2 = "#2192ff"
+txt = "Reboot"
+txt_maxl = 6
+
+[[component]]
+name = "tmp_baudrate"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 8
+
+[[component]]
+name = "log_max_lines"
+type = "variable"
+val = 7
+
+[[component]]
+name = "counter"
+type = "variable"
+
+[[component]]
+name = "tm_esphome"
+type = "timer"
+tim = 1000
+
+[[component]]
+name = "va0"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "va1"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "tm_display_ack"
+type = "timer"
+tim = 1000

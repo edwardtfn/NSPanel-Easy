@@ -21,7 +21,7 @@ Supported display models: EU (landscape), US portrait, and US landscape.
 - `components/nspanel_easy/` - External component (C++ sources and `__init__.py`).
   Page-specific code is gated by `NSPANEL_EASY_PAGE_*` build flags defined in the matching `esphome/nspanel_esphome_page_*.yaml`.
 - `nspanel_easy_blueprint.yaml` - Single Blueprint file (very large; edit surgically).
-- `hmi/` - `.hmi` sources and compiled `.tft` files. `hmi/dev/` holds developer tooling, fonts, images and the `nextion2text` output.
+- `hmi/` - `.hmi` sources and compiled `.tft` files. `hmi/dev/` holds developer tooling, fonts, images and the generated `nextion2text` and `nxwright` text dumps.
 - `docs/` - User documentation. Update it whenever user-visible behavior changes.
 - `.test/` - ESPHome configurations used by the CI build matrix.
 - `prebuilt/` - Prebuilt firmware configuration and binaries (experimental).
@@ -164,7 +164,8 @@ Inputs always have a value, and variables set earlier in the same run are always
 ## Nextion HMI (hmi/)
 
 - `.hmi` and `.tft` files are binary. Do not attempt to edit them directly.
-  Propose Nextion event code as text for the maintainer to apply in Nextion Editor, and review changes through the generated text in `hmi/dev/nextion2text/`.
+  Propose Nextion event code as text for the maintainer to apply in Nextion Editor, and review changes through the generated text in `hmi/dev/nxwright/` or `hmi/dev/nextion2text/`.
+  In `hmi/dev/nxwright/`, page code is in `pages/*.nx`, components in `pages/*.page.toml` and macros in `macros.nx`.
 - `if` conditions and commands such as `fill` and `cirs` do not accept inline arithmetic. Pre-compute values into scratch variables (`sys0`..`sys2`, `sya0`..`sya1`) first.
 - Array indexes must also be pre-computed: `sys2=sys0+11` then `vis b[sys2],0`, never `vis b[sys0+11],0`.
 - Variable names are limited to 14 characters.
@@ -186,7 +187,7 @@ Inputs always have a value, and variables set earlier in the same run are always
 ## Things agents must not do
 
 - Edit files under `versioning/` or bump versions manually.
-- Edit generated files (`all_icons.h`, `all_icons.json`, the Blueprint's `all_icon_names` / `special_icons` lines, `hmi/dev/nextion2text/`) instead of their sources.
+- Edit generated files (`all_icons.h`, `all_icons.json`, the Blueprint's `all_icon_names` / `special_icons` lines, `hmi/dev/nextion2text/`, `hmi/dev/nxwright/`) instead of their sources.
 - Commit compiled binaries (`.tft`, `.bin`) unless explicitly asked.
 - Reformat or restructure unrelated code in the same change.
 - Remove comments, docs or existing opt-in guards without being asked.

@@ -7,6 +7,7 @@ on:
     paths:
       - 'hmi/**.hmi'
       - 'hmi/dev/nextion2text/**'
+      - 'hmi/dev/nxwright/**'
       - 'hmi/dev/scripts/**'
       - '.github/workflows/generate_nextion_txt.yml'
   workflow_dispatch:
@@ -63,14 +64,64 @@ jobs:
           path: hmi/dev/nextion2text
           retention-days: 1
 
+  # nxwright is on trial alongside Nextion2Text: a failure here is reported but
+  # never fails the workflow, and never blocks the Nextion2Text write-back.
+  generate-nxwright:
+    name: Regenerate nxwright source from HMI
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    outputs:
+      changed: ${{ steps.drift.outputs.changed }}
+    steps:
+      - name: Check out pull request head
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: '1'
+          persist-credentials: false
+          repository: >-
+            ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      # Invoked through bash: the exec bit does not survive every Windows clone.
+      - name: Regenerate nxwright source
+        run: bash hmi/dev/scripts/generate_nxwright.sh
+
+      # status, not diff: a new panel or page is untracked and invisible to diff.
+      - name: Detect drift
+        id: drift
+        run: |
+          if [ -z "$(git status --porcelain -- hmi/dev/nxwright)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "nxwright output is up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git --no-pager status --short -- hmi/dev/nxwright
+          fi
+
+      - name: Upload regenerated output
+        if: steps.drift.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: nxwright
+          path: hmi/dev/nxwright
+          retention-days: 1
+
   # ===========================================================================
   # Write-back — never executes pull request code, so it may hold write access
   # ===========================================================================
+  # A single job commits both outputs, so two pushes never race on the branch.
   commit:
     name: Commit regenerated output
-    needs: generate
+    needs:
+      - generate
+      - generate-nxwright
     if: >-
-      needs.generate.outputs.changed == 'true' &&
+      always() &&
+      needs.generate.result == 'success' &&
+      (needs.generate.outputs.changed == 'true' ||
+       needs.generate-nxwright.outputs.changed == 'true') &&
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository
     permissions:
@@ -84,36 +135,62 @@ jobs:
           ref: ${{ github.head_ref }}
 
       # Wipe first so pages removed from the HMI disappear from the tree.
-      - name: Drop the previous output
+      - name: Drop the previous Nextion2Text output
+        if: needs.generate.outputs.changed == 'true'
         run: rm -rf hmi/dev/nextion2text
 
-      - name: Download regenerated output
+      - name: Download regenerated Nextion2Text output
+        if: needs.generate.outputs.changed == 'true'
         uses: actions/download-artifact@v8
         with:
           name: nextion2text
           path: hmi/dev/nextion2text
 
+      # Wipe first so pages removed from the HMI disappear from the tree.
+      - name: Drop the previous nxwright output
+        if: needs.generate-nxwright.outputs.changed == 'true'
+        run: rm -rf hmi/dev/nxwright
+
+      - name: Download regenerated nxwright output
+        if: needs.generate-nxwright.outputs.changed == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: nxwright
+          path: hmi/dev/nxwright
+
       - name: Commit regenerated output
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: "chore: Regenerate Nextion2Text output"
-          file_pattern: 'hmi/dev/nextion2text'
+          commit_message: "chore: Regenerate HMI text dumps"
+          file_pattern: 'hmi/dev/nextion2text hmi/dev/nxwright'
 
   # ===========================================================================
   # Fork pull requests get a read-only token, so drift must be fixed by hand
   # ===========================================================================
   report:
     name: Report uncommittable drift
-    needs: generate
+    needs:
+      - generate
+      - generate-nxwright
     if: >-
-      needs.generate.outputs.changed == 'true' &&
+      always() &&
+      (needs.generate.outputs.changed == 'true' ||
+       needs.generate-nxwright.outputs.changed == 'true') &&
       (github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name != github.repository)
     permissions:
       contents: read
     runs-on: ubuntu-latest
     steps:
-      - name: Report drift
+      # A warning only while nxwright is on trial.
+      - name: Report nxwright drift
+        if: needs.generate-nxwright.outputs.changed == 'true'
+        run: |
+          echo "::warning::nxwright output is out of date. Run" \
+               "hmi/dev/scripts/generate_nxwright.sh and commit the result."
+
+      - name: Report Nextion2Text drift
+        if: needs.generate.outputs.changed == 'true'
         run: |
           echo "::error::Nextion2Text output is out of date. Run" \
                "hmi/dev/scripts/generate_nextion_txt.sh and commit the result."
