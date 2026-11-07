@@ -1,0 +1,231 @@
+on water_heater.load:
+  if(api==0)
+  {
+    page home_page_id
+  }
+  water_heater.pic=climate.b[0].pic
+  // page_label
+  page_label.picc=water_heater.pic
+  page_label.pco=color_pco_main
+  // button_back
+  button_back.picc=water_heater.pic
+  button_back.picc2=water_heater.pic
+  button_back.pco=color_pco_navigation
+  // current_temp
+  current_temp.picc=water_heater.pic
+  current_temp.pco=color_pco_main
+  // target_icon
+  vis target_icon,0
+  target_icon.picc=water_heater.pic
+  target_icon.pco=color_pco_main
+  // target
+  target.picc=water_heater.pic
+  target.pco=color_pco_main
+  // values 01-04
+  for(sys0=8;sys0<=15;sys0++)
+  {
+    b[sys0].picc=water_heater.pic
+    b[sys0].pco=color_pco_secondary
+  }
+  // buttons 01-08
+  for(sys0=16;sys0<=23;sys0++)
+  {
+    vis b[sys0],0
+    b[sys0].picc=water_heater.pic
+    b[sys0].font=button_font.val
+  }
+  // other
+  vis slider,0
+  vis decrease_temp,0
+  vis increase_temp,0
+  dim=brightness
+  sendme
+
+on water_heater.unload:
+  if(timer0.en==1)
+  {
+    timer0.en=0
+    covx temp_number0.val,va1.txt,0,0
+    climatesetting.txt="water_heater,temperature,"+va1.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints climatesetting.txt,0
+    printh 00
+    printh FF FF FF
+  }
+
+on swipe.down:
+  swipestore.en=1 // Start swipestore timer
+
+on swipe.up:
+  swipestore.en=0
+  // Touch has ended, x
+  if(tch0==0)
+  {
+    swipec=swipex-tch2
+    // From Left to Right
+    if(swipec>swipedx)
+    {
+      //page
+    }
+    // Right to Left
+    swipec2=0-swipedx
+    if(swipec<swipec2)
+    {
+      //page
+    }
+  }
+  // Touch has ended, y
+  if(tch1==0)
+  {
+    swipec=swipey-tch3
+    // From Up to Down
+    if(swipec>100)
+    {
+      //page
+    }
+    // Down to Up
+    swipec2=0-swipedy
+    if(swipec<-100)
+    {
+      //page
+    }
+  }
+
+on swipestore.timer:
+  swipex=tch0
+  swipey=tch1
+
+on decrease_temp.down:
+  if(slider.val>0)
+  {
+    slider.val--
+    temp_number0.val=slider.val*temp_step.val
+    temp_number0.val+=temp_offset.val
+    sys0=temp_number0.val
+    sys1=temp_step.val
+    call format_tenths
+    target.txt=home.tenths_txt.txt+temp_unit.txt
+  }
+
+on decrease_temp.up:
+  timer0.en=1
+
+on increase_temp.down:
+  if(slider.val<slider.maxval)
+  {
+    slider.val++
+    temp_number0.val=slider.val*temp_step.val
+    temp_number0.val+=temp_offset.val
+    sys0=temp_number0.val
+    sys1=temp_step.val
+    call format_tenths
+    target.txt=home.tenths_txt.txt+temp_unit.txt
+  }
+
+on increase_temp.up:
+  timer0.en=1
+
+on button01.up:
+  lastclick.txt="water_heater,operation_mode,on"
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on button02.up:
+  lastclick.txt="water_heater,operation_mode,eco"
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on button03.up:
+  lastclick.txt="water_heater,operation_mode,electric"
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on button04.up:
+  lastclick.txt="water_heater,operation_mode,gas"
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on button05.up:
+  lastclick.txt="water_heater,operation_mode,heat_pump"
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on button06.up:
+  lastclick.txt="water_heater,operation_mode,performance"
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on button07.up:
+  lastclick.txt="water_heater,operation_mode,high_demand"
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on button08.up:
+  lastclick.txt="water_heater,operation_mode,off"
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on button_back.down:
+  page back_page_id
+
+on slider.up:
+  temp_number0.val=slider.val*temp_step.val
+  temp_number0.val+=temp_offset.val
+  sys0=temp_number0.val
+  sys1=temp_step.val
+  call format_tenths
+  target.txt=home.tenths_txt.txt+temp_unit.txt
+  timer0.en=1
+
+on slider.slide:
+  temp_number0.val=slider.val*temp_step.val
+  temp_number0.val+=temp_offset.val
+  sys0=temp_number0.val
+  sys1=temp_step.val
+  call format_tenths
+  target.txt=home.tenths_txt.txt+temp_unit.txt
+
+on timer0.timer:
+  timer0.en=0
+  covx temp_number0.val,va1.txt,0,0
+  climatesetting.txt="water_heater,temperature,"+va1.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints climatesetting.txt,0
+  printh 00
+  printh FF FF FF

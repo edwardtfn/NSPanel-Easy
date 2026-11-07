@@ -1,0 +1,9 @@
+on select.load:
+  if(api==0)
+  {
+    page home_page_id
+  }
+  // set background image based on theme
+  select.pic=pic_background_main
+  dim=brightness
+  sendme

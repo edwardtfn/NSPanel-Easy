@@ -1,0 +1,235 @@
+[page]
+name = "timer"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 2
+bco = "#000000"
+pic = "picture-0000"
+
+[[component]]
+name = "page_label"
+type = "text"
+sendkey = 3
+x = 48
+y = 8
+w = 300
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "icon_state"
+type = "text"
+sendkey = 3
+x = 12
+y = 8
+w = 35
+h = 35
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 385
+y = 0
+w = 95
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "remaining"
+type = "variable"
+
+[[component]]
+name = "timer_state"
+type = "variable"
+val = -2
+
+[[component]]
+name = "dur_secs"
+type = "variable"
+
+[[component]]
+name = "time_sep"
+type = "variable"
+sta = 1
+txt = ":"
+txt_maxl = 1
+
+[[component]]
+name = "va0"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "tick"
+type = "timer"
+tim = 1000
+en = 0
+
+[[component]]
+name = "countdown"
+type = "text"
+x = 10
+y = 44
+w = 430
+h = 160
+sta = 0
+font = "font-06"
+picc = "picture-0000"
+pco = "#f7f7f7"
+txt = ""
+txt_maxl = 16
+
+[[component]]
+name = "duration_label"
+type = "text"
+x = 175
+y = 277
+w = 100
+h = 30
+sta = 0
+font = "font-02"
+picc = "picture-0000"
+pco = "#bdc3ce"
+txt = ""
+txt_maxl = 16
+
+[[component]]
+name = "bt_play_pic"
+type = "picture"
+x = 57
+y = 210
+w = 60
+h = 60
+pic = "picture-0085"
+
+[[component]]
+name = "bt_cancel_pic"
+type = "picture"
+x = 177
+y = 210
+w = 60
+h = 60
+pic = "picture-0086"
+
+[[component]]
+name = "bt_finish_pic"
+type = "picture"
+x = 297
+y = 210
+w = 60
+h = 60
+pic = "picture-0087"
+
+[[component]]
+name = "bt_play_icon"
+type = "text"
+x = 62
+y = 215
+w = 50
+h = 50
+font = "font-10"
+bco = "#292c29"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "bt_cancel_icon"
+type = "text"
+x = 182
+y = 215
+w = 50
+h = 50
+font = "font-10"
+bco = "#292c29"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "bt_finish_icon"
+type = "text"
+x = 302
+y = 215
+w = 50
+h = 50
+font = "font-10"
+bco = "#292c29"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "bt_play_hs"
+type = "hotspot"
+sendkey = 3
+x = 52
+y = 205
+w = 70
+h = 70
+
+[[component]]
+name = "bt_cancel_hs"
+type = "hotspot"
+sendkey = 3
+x = 172
+y = 205
+w = 70
+h = 70
+
+[[component]]
+name = "bt_finish_hs"
+type = "hotspot"
+sendkey = 3
+x = 292
+y = 205
+w = 70
+h = 70
+
+[[component]]
+name = "icon_play"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "icon_pause"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "refresh_bts"
+type = "timer"
+tim = 50
+en = 0

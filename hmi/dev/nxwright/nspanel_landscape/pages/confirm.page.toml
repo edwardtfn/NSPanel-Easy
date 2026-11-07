@@ -1,0 +1,132 @@
+[page]
+name = "confirm"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 0
+
+[[component]]
+name = "t0"
+type = "text"
+sendkey = 3
+x = 120
+y = 20
+w = 215
+h = 276
+style = 1
+borderc = "#18b2ff"
+bco = "#393c39"
+txt = ""
+
+[[component]]
+name = "bclose"
+type = "button"
+sendkey = 3
+x = 297
+y = 23
+w = 35
+h = 35
+style = 0
+font = "font-08"
+bco = "#393c39"
+bco2 = "#ff0000"
+pco = "#ffffff"
+ycen = 0
+txt = ""
+
+[[component]]
+name = "page_id"
+type = "variable"
+vscope = 1
+txt = "home"
+
+[[component]]
+name = "title"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 129
+y = 24
+w = 168
+h = 70
+font = "font-03"
+bco = "#393c39"
+pco = "#ffffff"
+xcen = 0
+ycen = 0
+txt = "Please confirm"
+txt_maxl = 50
+
+[[component]]
+name = "aux"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 255
+
+[[component]]
+name = "bt_accept"
+type = "button"
+sendkey = 3
+x = 127
+y = 224
+w = 100
+h = 68
+style = 0
+font = "font-10"
+picc = "picture-0000"
+bco = "#393c39"
+picc2 = "picture-0000"
+pco = "#00ff42"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_clear"
+type = "button"
+sendkey = 3
+x = 228
+y = 224
+w = 100
+h = 68
+style = 0
+font = "font-10"
+bco = "#393c39"
+bco2 = "#ffc7c6"
+pco = "#ff0000"
+txt = ""
+
+[[component]]
+name = "body"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 129
+y = 95
+w = 197
+h = 126
+font = "font-03"
+bco = "#393c39"
+pco = "#ffffff"
+xcen = 0
+ycen = 0
+txt = "Please confirm"
+txt_maxl = 25
+
+[[component]]
+name = "page_name"
+type = "variable"
+vscope = 1
+sta = 1
+txt = ""
+txt_maxl = 12
+
+[[component]]
+name = "component"
+type = "variable"
+vscope = 1
+sta = 1
+txt = ""

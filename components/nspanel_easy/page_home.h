@@ -73,6 +73,16 @@ bool home_vis_set(const char *component, bool visible);
 
 void home_vis_resend();
 
+/**
+ * @brief Apply to the live home page the visibility bits changed while it was not current.
+ *
+ * home_vis_set() writes the vis_home mask, which home's Preinitialize applies on
+ * entry. A change sent after the page command, but before the display reports
+ * the new page, misses both Preinitialize and the live write. Called on entry
+ * to home, this applies only those bits, so it usually sends nothing.
+ */
+void home_vis_apply_pending();
+
 /// @brief Number of value slots on the home page (value01..value04).
 static constexpr uint8_t HOME_VALUE_COUNT = 4;
 

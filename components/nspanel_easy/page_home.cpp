@@ -46,6 +46,9 @@ uint8_t parse_home_button_index(const char *component) {
 
 uint32_t home_vis_mask = 0;
 
+/// @brief Bits changed while home was not the current page, re-applied live on entry.
+static uint32_t home_vis_pending = 0;
+
 bool home_vis_set(const char *component, bool visible) {
   if (nextion_display == nullptr) {
     return false;  // Boot has not handed the display over yet
@@ -63,6 +66,10 @@ bool home_vis_set(const char *component, bool visible) {
     }
     home_vis_mask = updated;
     nextion_display->send_command_printf("vis_home=%" PRIu32, home_vis_mask);
+    if (!is_home_page()) {
+      // The page may already be loading, with Preinitialize applying the previous mask
+      home_vis_pending |= bit;
+    }  // if (!is_home_page())
     return true;
   }  // for each known home component
 
@@ -91,6 +98,32 @@ void home_vis_resend() {
     const bool visible = ((home_vis_mask >> entry.bit) & 1U) != 0;
     nextion_display->set_component_visibility(entry.component, visible);
   }
+  home_vis_pending = 0;  // Every bit was just applied live
+}
+
+void home_vis_apply_pending() {
+  if (home_vis_pending == 0) {
+    return;  // Nothing changed while away
+  }
+  if (nextion_display == nullptr) {
+    ESP_LOGE(TAG, "Missing Nextion display pointer");
+    return;
+  }
+  if (!is_home_page()) {
+    return;  // Keep the bits for the next entry
+  }
+
+  // A bit that changed after the page command was sent reached the display
+  // after Preinitialize had walked the mask, so the page may show its previous
+  // state. Only the changed bits are applied, companions included.
+  for (const auto &entry : HOME_VIS_BITS) {
+    if (((home_vis_pending >> entry.bit) & 1U) == 0) {
+      continue;
+    }
+    const bool visible = ((home_vis_mask >> entry.bit) & 1U) != 0;
+    nextion_display->set_component_visibility(entry.component, visible);
+  }  // for each known home component
+  home_vis_pending = 0;
 }
 
 /// @brief Blueprint default colour of the home values and their icons (RGB 200, 204, 200).

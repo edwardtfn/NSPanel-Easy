@@ -1,0 +1,634 @@
+[page]
+name = "utilities"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 2
+pic = "picture-0000"
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 385
+y = 0
+w = 95
+h = 40
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "title_icon"
+type = "text"
+sendkey = 3
+x = 12
+y = 8
+w = 35
+h = 35
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "title"
+type = "text"
+sendkey = 3
+x = 48
+y = 8
+w = 300
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "home_icon"
+type = "text"
+x = 338
+y = 145
+w = 48
+h = 48
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+txt = "賈"
+txt_maxl = 4
+
+[[component]]
+name = "home_label"
+type = "text"
+x = 380
+y = 140
+w = 70
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#c6c3c6"
+ycen = 2
+txt = ""
+
+[[component]]
+name = "home"
+type = "text"
+x = 380
+y = 160
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "homeb"
+type = "text"
+x = 380
+y = 180
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "home_line"
+type = "slider"
+x = 120
+y = 171
+w = 210
+h = 4
+bco = "#c6c3c6"
+bco1 = "#c6c3c6"
+pco = "#e7e7e7"
+
+[[component]]
+name = "grid_icon"
+type = "text"
+x = 71
+y = 145
+w = 48
+h = 48
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "grid_label"
+type = "text"
+x = 4
+y = 140
+w = 70
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#c6c3c6"
+ycen = 2
+txt = ""
+
+[[component]]
+name = "grid"
+type = "text"
+x = 4
+y = 160
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "gridb"
+type = "text"
+x = 4
+y = 180
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "group01_icon"
+type = "text"
+x = 71
+y = 55
+w = 48
+h = 48
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "group01_label"
+type = "text"
+x = 63
+y = 40
+w = 70
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#c6c3c6"
+ycen = 2
+txt = ""
+
+[[component]]
+name = "group01"
+type = "text"
+x = 4
+y = 60
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "group01b"
+type = "text"
+x = 4
+y = 80
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "group01_line"
+type = "slider"
+x = 92
+y = 106
+w = 4
+h = 40
+mode = 1
+wid = 5
+bco = "#c6c3c6"
+bco1 = "#c6c3c6"
+pco = "#e7e7e7"
+
+[[component]]
+name = "group02_icon"
+type = "text"
+x = 71
+y = 235
+w = 48
+h = 48
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "group02_label"
+type = "text"
+x = 63
+y = 280
+w = 70
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#c6c3c6"
+ycen = 0
+txt = ""
+
+[[component]]
+name = "group02"
+type = "text"
+x = 4
+y = 240
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "group02b"
+type = "text"
+x = 4
+y = 260
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "group02_line"
+type = "slider"
+x = 92
+y = 194
+w = 4
+h = 40
+mode = 1
+wid = 5
+bco = "#c6c3c6"
+bco1 = "#c6c3c6"
+pco = "#e7e7e7"
+
+[[component]]
+name = "group03_icon"
+type = "text"
+x = 202
+y = 55
+w = 48
+h = 48
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "group03_label"
+type = "text"
+x = 194
+y = 40
+w = 70
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#c6c3c6"
+ycen = 2
+txt = ""
+
+[[component]]
+name = "group03"
+type = "text"
+x = 230
+y = 118
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "group03b"
+type = "text"
+x = 230
+y = 138
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "group03_line"
+type = "slider"
+x = 223
+y = 105
+w = 4
+h = 66
+mode = 1
+wid = 5
+bco = "#c6c3c6"
+bco1 = "#c6c3c6"
+pco = "#e7e7e7"
+
+[[component]]
+name = "group04_icon"
+type = "text"
+x = 202
+y = 235
+w = 48
+h = 48
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "group04_label"
+type = "text"
+x = 194
+y = 280
+w = 70
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#c6c3c6"
+ycen = 0
+txt = ""
+
+[[component]]
+name = "group04"
+type = "text"
+x = 230
+y = 205
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "group04b"
+type = "text"
+x = 230
+y = 185
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "group04_line"
+type = "slider"
+x = 223
+y = 174
+w = 4
+h = 61
+mode = 1
+wid = 5
+bco = "#c6c3c6"
+bco1 = "#c6c3c6"
+pco = "#e7e7e7"
+
+[[component]]
+name = "group05_icon"
+type = "text"
+x = 338
+y = 55
+w = 48
+h = 48
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "group05_label"
+type = "text"
+x = 329
+y = 40
+w = 70
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#c6c3c6"
+ycen = 2
+txt = ""
+
+[[component]]
+name = "group05"
+type = "text"
+x = 380
+y = 60
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "group05b"
+type = "text"
+x = 380
+y = 80
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "group05_line"
+type = "slider"
+x = 360
+y = 105
+w = 4
+h = 40
+mode = 1
+wid = 5
+bco = "#c6c3c6"
+bco1 = "#c6c3c6"
+pco = "#e7e7e7"
+
+[[component]]
+name = "group06_icon"
+type = "text"
+x = 338
+y = 235
+w = 48
+h = 48
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "group06_label"
+type = "text"
+x = 329
+y = 280
+w = 70
+h = 20
+sta = 0
+font = "font-01"
+picc = "picture-0000"
+pco = "#c6c3c6"
+ycen = 0
+txt = ""
+
+[[component]]
+name = "group06"
+type = "text"
+x = 380
+y = 240
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "group06b"
+type = "text"
+x = 380
+y = 260
+w = 70
+h = 20
+sta = 0
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+
+[[component]]
+name = "group06_line"
+type = "slider"
+x = 360
+y = 195
+w = 4
+h = 40
+mode = 1
+wid = 5
+bco = "#c6c3c6"
+bco1 = "#c6c3c6"
+pco = "#e7e7e7"
+
+[[component]]
+name = "tm_movement"
+type = "timer"
+tim = 150
+
+[[component]]
+name = "home_line_d"
+type = "variable"
+val = 1
+
+[[component]]
+name = "group01_line_d"
+type = "variable"
+val = -1
+
+[[component]]
+name = "group02_line_d"
+type = "variable"
+val = 1
+
+[[component]]
+name = "group03_line_d"
+type = "variable"
+val = -1
+
+[[component]]
+name = "group04_line_d"
+type = "variable"
+val = 1
+
+[[component]]
+name = "group05_line_d"
+type = "variable"
+val = -1
+
+[[component]]
+name = "group06_line_d"
+type = "variable"
+val = 1
+
+[[component]]
+name = "last_component"
+type = "variable"

@@ -1,0 +1,498 @@
+[page]
+name = "entitypage03"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 320
+h = 480
+sta = 2
+bco = "#000000"
+pic = "picture-0000"
+
+[[component]]
+name = "swipe"
+type = "touch-capture"
+
+[[component]]
+name = "swipestore"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "value01_label"
+type = "text"
+sendkey = 3
+x = 40
+y = 60
+w = 150
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 60
+isbr = 1
+
+[[component]]
+name = "value05_label"
+type = "text"
+sendkey = 3
+x = 40
+y = 260
+w = 150
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 60
+isbr = 1
+
+[[component]]
+name = "value04_label"
+type = "text"
+sendkey = 3
+x = 40
+y = 210
+w = 150
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 60
+isbr = 1
+
+[[component]]
+name = "value02_label"
+type = "text"
+sendkey = 3
+x = 40
+y = 110
+w = 150
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 60
+isbr = 1
+
+[[component]]
+name = "value03_label"
+type = "text"
+sendkey = 3
+x = 40
+y = 160
+w = 150
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 60
+isbr = 1
+
+[[component]]
+name = "page_label"
+type = "text"
+sendkey = 3
+x = 10
+y = 0
+w = 244
+h = 30
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+ycen = 2
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "value06_label"
+type = "text"
+sendkey = 3
+x = 40
+y = 310
+w = 150
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 60
+isbr = 1
+
+[[component]]
+name = "value07_label"
+type = "text"
+sendkey = 3
+x = 40
+y = 360
+w = 150
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 60
+isbr = 1
+
+[[component]]
+name = "value08_label"
+type = "text"
+sendkey = 3
+x = 40
+y = 410
+w = 150
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 60
+isbr = 1
+
+[[component]]
+name = "value01_icon"
+type = "text"
+sendkey = 3
+x = 5
+y = 60
+w = 28
+h = 50
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 5
+isbr = 1
+
+[[component]]
+name = "value02_icon"
+type = "text"
+sendkey = 3
+x = 5
+y = 110
+w = 28
+h = 50
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 5
+isbr = 1
+
+[[component]]
+name = "value03_icon"
+type = "text"
+sendkey = 3
+x = 5
+y = 160
+w = 28
+h = 50
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 5
+isbr = 1
+
+[[component]]
+name = "value04_icon"
+type = "text"
+sendkey = 3
+x = 5
+y = 210
+w = 28
+h = 50
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 5
+isbr = 1
+
+[[component]]
+name = "value05_icon"
+type = "text"
+sendkey = 3
+x = 5
+y = 260
+w = 28
+h = 50
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 5
+isbr = 1
+
+[[component]]
+name = "value06_icon"
+type = "text"
+sendkey = 3
+x = 5
+y = 310
+w = 28
+h = 50
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 5
+isbr = 1
+
+[[component]]
+name = "value07_icon"
+type = "text"
+sendkey = 3
+x = 5
+y = 360
+w = 28
+h = 50
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 5
+isbr = 1
+
+[[component]]
+name = "value08_icon"
+type = "text"
+sendkey = 3
+x = 5
+y = 410
+w = 28
+h = 50
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 5
+isbr = 1
+
+[[component]]
+name = "value01"
+type = "text"
+sendkey = 3
+x = 199
+y = 60
+w = 120
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 30
+isbr = 1
+
+[[component]]
+name = "value02"
+type = "text"
+sendkey = 3
+x = 199
+y = 110
+w = 120
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 30
+isbr = 1
+
+[[component]]
+name = "value03"
+type = "text"
+sendkey = 3
+x = 199
+y = 160
+w = 120
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 30
+isbr = 1
+
+[[component]]
+name = "value04"
+type = "text"
+sendkey = 3
+x = 199
+y = 210
+w = 120
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 30
+isbr = 1
+
+[[component]]
+name = "value05"
+type = "text"
+sendkey = 3
+x = 199
+y = 260
+w = 120
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 30
+isbr = 1
+
+[[component]]
+name = "value06"
+type = "text"
+sendkey = 3
+x = 199
+y = 310
+w = 120
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 30
+isbr = 1
+
+[[component]]
+name = "value07"
+type = "text"
+sendkey = 3
+x = 199
+y = 360
+w = 120
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 30
+isbr = 1
+
+[[component]]
+name = "value08"
+type = "text"
+sendkey = 3
+x = 199
+y = 410
+w = 120
+h = 50
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 30
+isbr = 1
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 260
+y = 0
+w = 60
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "page_index"
+type = "text"
+sendkey = 3
+x = 110
+y = 460
+w = 100
+h = 20
+sta = 0
+font = "font-09"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#848284"
+txt = ""
+txt_maxl = 12

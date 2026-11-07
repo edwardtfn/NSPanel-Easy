@@ -1,0 +1,413 @@
+[page]
+name = "light"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 320
+h = 480
+sta = 2
+bco = "#000000"
+pic = "picture-0000"
+
+[[component]]
+name = "light_value"
+type = "text"
+x = 117
+y = 169
+w = 83
+h = 20
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "page_label"
+type = "text"
+sendkey = 3
+x = 46
+y = 8
+w = 204
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "lightslider"
+type = "slider"
+sendkey = 3
+x = 117
+y = 194
+w = 85
+h = 235
+mode = 1
+sta = 2
+psta = 1
+pic = "picture-0028"
+pic1 = "picture-0029"
+pic2 = "picture-0018"
+val = 0
+
+[[component]]
+name = "ring"
+type = "number"
+sendkey = 3
+x = 312
+y = 440
+w = 8
+h = 40
+sta = 0
+font = "font-01"
+bco = "#000000"
+picc = "picture-0000"
+xcen = 2
+
+[[component]]
+name = "field"
+type = "number"
+sendkey = 3
+x = 305
+y = 440
+w = 9
+h = 40
+sta = 0
+font = "font-01"
+bco = "#000000"
+picc = "picture-0000"
+xcen = 2
+
+[[component]]
+name = "hsv2rgb"
+type = "hotspot"
+sendkey = 3
+x = 51
+y = 459
+w = 40
+h = 20
+
+[[component]]
+name = "rgb888to565"
+type = "hotspot"
+sendkey = 3
+x = 8
+y = 458
+w = 40
+h = 20
+
+[[component]]
+name = "temp_value"
+type = "text"
+sendkey = 3
+x = 117
+y = 169
+w = 83
+h = 20
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "tempslider"
+type = "slider"
+sendkey = 3
+x = 117
+y = 194
+w = 85
+h = 235
+mode = 1
+sta = 2
+psta = 1
+pic = "picture-0021"
+pic1 = "picture-0021"
+pic2 = "picture-0095"
+val = 0
+maxval = 6535
+minval = 2000
+
+[[component]]
+name = "colorwheel"
+type = "picture"
+sendkey = 3
+x = 61
+y = 211
+w = 200
+h = 200
+pic = "picture-0017"
+
+[[component]]
+name = "rgb565"
+type = "variable"
+
+[[component]]
+name = "va1"
+type = "variable"
+sta = 1
+txt_maxl = 20
+
+[[component]]
+name = "va2"
+type = "variable"
+sta = 1
+
+[[component]]
+name = "va3"
+type = "variable"
+sta = 1
+
+[[component]]
+name = "currenttab"
+type = "variable"
+
+[[component]]
+name = "light_value_2"
+type = "text"
+x = 25
+y = 123
+w = 50
+h = 20
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "temp_value_2"
+type = "text"
+x = 129
+y = 123
+w = 55
+h = 20
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "icon_state"
+type = "text"
+sendkey = 3
+x = 10
+y = 8
+w = 35
+h = 35
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "lightsetting"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 255
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 260
+y = 0
+w = 60
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "power_button"
+type = "text"
+sendkey = 3
+x = 228
+y = 405
+w = 60
+h = 60
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#e7e7e7"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "r"
+type = "variable"
+
+[[component]]
+name = "g"
+type = "variable"
+
+[[component]]
+name = "b"
+type = "variable"
+
+[[component]]
+name = "h"
+type = "variable"
+
+[[component]]
+name = "s"
+type = "variable"
+
+[[component]]
+name = "v"
+type = "variable"
+
+[[component]]
+name = "p"
+type = "variable"
+
+[[component]]
+name = "q"
+type = "variable"
+
+[[component]]
+name = "t"
+type = "variable"
+
+[[component]]
+name = "f"
+type = "variable"
+
+[[component]]
+name = "effect_button"
+type = "text"
+sendkey = 3
+x = 25
+y = 405
+w = 60
+h = 60
+sta = 0
+font = "font-10"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#e7e7e7"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "light_button"
+type = "dual-state-button"
+sendkey = 2
+x = 25
+y = 71
+w = 50
+h = 50
+sta = 2
+pic = "picture-0022"
+pic2 = "picture-0023"
+val = 1
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "temp_button"
+type = "dual-state-button"
+sendkey = 2
+x = 134
+y = 71
+w = 50
+h = 50
+sta = 2
+pic = "picture-0024"
+pic2 = "picture-0025"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "color_button"
+type = "dual-state-button"
+sendkey = 2
+x = 243
+y = 71
+w = 50
+h = 50
+sta = 2
+pic = "picture-0026"
+pic2 = "picture-0027"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "sub_calc"
+type = "hotspot"
+x = 0
+y = 0
+w = 60
+h = 60
+
+[[component]]
+name = "va_active"
+type = "variable"
+
+[[component]]
+name = "va_lastF"
+type = "variable"
+
+[[component]]
+name = "va_lastR"
+type = "variable"
+
+[[component]]
+name = "va_idle"
+type = "variable"
+
+[[component]]
+name = "va_committed"
+type = "variable"
+
+[[component]]
+name = "tm_poll"
+type = "timer"
+tim = 100
+en = 0
+
+[[component]]
+name = "sub_hsv"
+type = "hotspot"
+x = 0
+y = 0
+w = 60
+h = 60
+
+[[component]]
+name = "sub_send"
+type = "hotspot"
+x = 0
+y = 0
+w = 60
+h = 60
+
+[[component]]
+name = "features"
+type = "timer"
+tim = 50
+en = 0

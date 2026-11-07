@@ -1,0 +1,182 @@
+[page]
+name = "screensaver"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 320
+h = 480
+bco = "#000000"
+
+[[component]]
+name = "wakeup"
+type = "touch-capture"
+
+[[component]]
+name = "swipe"
+type = "touch-capture"
+
+[[component]]
+name = "swipestore"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "text"
+type = "text"
+x = 0
+y = 45
+w = 320
+h = 390
+font = "font-06"
+bco = "#000000"
+pco = "#424142"
+txt = ""
+txt_maxl = 1000
+isbr = 1
+
+[[component]]
+name = "apply_settings"
+type = "timer"
+tim = 50
+
+[[component]]
+name = "chip_relay1"
+type = "text"
+x = 15
+y = 2
+w = 30
+h = 30
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip_relay2"
+type = "text"
+x = 44
+y = 2
+w = 30
+h = 30
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip_climate"
+type = "text"
+x = 73
+y = 2
+w = 30
+h = 30
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip01"
+type = "text"
+x = 102
+y = 2
+w = 30
+h = 30
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip02"
+type = "text"
+x = 131
+y = 2
+w = 30
+h = 30
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip03"
+type = "text"
+x = 160
+y = 2
+w = 30
+h = 30
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip04"
+type = "text"
+x = 189
+y = 2
+w = 30
+h = 30
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip05"
+type = "text"
+x = 218
+y = 2
+w = 30
+h = 30
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip06"
+type = "text"
+x = 247
+y = 2
+w = 30
+h = 30
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip07"
+type = "text"
+x = 276
+y = 2
+w = 30
+h = 30
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3

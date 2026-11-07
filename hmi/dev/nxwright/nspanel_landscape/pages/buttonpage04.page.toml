@@ -1,0 +1,601 @@
+[page]
+name = "buttonpage04"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 2
+bco = "#000000"
+pic = "picture-0000"
+
+[[component]]
+name = "swipe"
+type = "touch-capture"
+
+[[component]]
+name = "swipestore"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "page_label"
+type = "text"
+sendkey = 3
+x = 10
+y = 0
+w = 300
+h = 30
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+ycen = 2
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "lastclick"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "page_index"
+type = "text"
+sendkey = 3
+x = 190
+y = 300
+w = 100
+h = 20
+sta = 0
+font = "font-09"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#848284"
+txt = ""
+txt_maxl = 12
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 385
+y = 0
+w = 95
+h = 45
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "click_comp"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 8
+
+[[component]]
+name = "click_timer"
+type = "timer"
+tim = 800
+en = 0
+
+[[component]]
+name = "page_name"
+type = "variable"
+sta = 1
+txt = "buttonpage04"
+txt_maxl = 12
+
+[[component]]
+name = "confirm"
+type = "variable"
+
+[[component]]
+name = "button01pic"
+type = "text"
+x = 17
+y = 45
+w = 100
+h = 100
+sta = 0
+picc = "picture-0000"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "button02pic"
+type = "text"
+x = 124
+y = 45
+w = 100
+h = 100
+sta = 0
+picc = "picture-0000"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "button03pic"
+type = "text"
+x = 231
+y = 45
+w = 100
+h = 100
+sta = 0
+picc = "picture-0000"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "button04pic"
+type = "text"
+x = 338
+y = 45
+w = 100
+h = 100
+sta = 0
+picc = "picture-0000"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "button05pic"
+type = "text"
+x = 17
+y = 176
+w = 100
+h = 100
+sta = 0
+picc = "picture-0000"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "button06pic"
+type = "text"
+x = 124
+y = 176
+w = 100
+h = 100
+sta = 0
+picc = "picture-0000"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "button07pic"
+type = "text"
+x = 231
+y = 176
+w = 100
+h = 100
+sta = 0
+picc = "picture-0000"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "button08pic"
+type = "text"
+x = 338
+y = 176
+w = 100
+h = 100
+sta = 0
+picc = "picture-0000"
+txt = ""
+txt_maxl = 0
+
+[[component]]
+name = "button01text"
+type = "text"
+x = 26
+y = 96
+w = 82
+h = 40
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+ycen = 2
+txt = ""
+txt_maxl = 22
+
+[[component]]
+name = "button02text"
+type = "text"
+x = 133
+y = 96
+w = 82
+h = 40
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+ycen = 2
+txt = ""
+txt_maxl = 22
+
+[[component]]
+name = "button03text"
+type = "text"
+x = 240
+y = 96
+w = 82
+h = 40
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+ycen = 2
+txt = ""
+txt_maxl = 22
+
+[[component]]
+name = "button04text"
+type = "text"
+x = 347
+y = 96
+w = 82
+h = 40
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+ycen = 2
+txt = ""
+txt_maxl = 22
+
+[[component]]
+name = "button05text"
+type = "text"
+x = 26
+y = 226
+w = 82
+h = 40
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+ycen = 2
+txt = ""
+txt_maxl = 22
+
+[[component]]
+name = "button06text"
+type = "text"
+x = 133
+y = 226
+w = 82
+h = 40
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+ycen = 2
+txt = ""
+txt_maxl = 22
+
+[[component]]
+name = "button07text"
+type = "text"
+x = 240
+y = 226
+w = 82
+h = 40
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+ycen = 2
+txt = ""
+txt_maxl = 22
+
+[[component]]
+name = "button08text"
+type = "text"
+x = 347
+y = 226
+w = 82
+h = 40
+sta = 0
+bco = "#000000"
+picc = "picture-0000"
+ycen = 2
+txt = ""
+txt_maxl = 22
+
+[[component]]
+name = "button01icon"
+type = "text"
+x = 16
+y = 49
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+
+[[component]]
+name = "button02icon"
+type = "text"
+x = 123
+y = 49
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+
+[[component]]
+name = "button03icon"
+type = "text"
+x = 230
+y = 49
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+
+[[component]]
+name = "button04icon"
+type = "text"
+x = 337
+y = 49
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+
+[[component]]
+name = "button05icon"
+type = "text"
+x = 16
+y = 180
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+
+[[component]]
+name = "button06icon"
+type = "text"
+x = 123
+y = 180
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+
+[[component]]
+name = "button07icon"
+type = "text"
+x = 230
+y = 180
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+
+[[component]]
+name = "button08icon"
+type = "text"
+x = 337
+y = 180
+w = 48
+h = 48
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+
+[[component]]
+name = "button01bri"
+type = "text"
+x = 63
+y = 55
+w = 48
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "button02bri"
+type = "text"
+x = 170
+y = 55
+w = 48
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "button03bri"
+type = "text"
+x = 277
+y = 55
+w = 48
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "button04bri"
+type = "text"
+x = 384
+y = 55
+w = 48
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "button05bri"
+type = "text"
+x = 63
+y = 186
+w = 48
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "button06bri"
+type = "text"
+x = 170
+y = 186
+w = 48
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "button07bri"
+type = "text"
+x = 277
+y = 186
+w = 48
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "button08bri"
+type = "text"
+x = 384
+y = 186
+w = 48
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+txt = ""
+txt_maxl = 4
+
+[[component]]
+name = "button01"
+type = "hotspot"
+sendkey = 3
+x = 17
+y = 45
+w = 100
+h = 100
+
+[[component]]
+name = "button02"
+type = "hotspot"
+sendkey = 3
+x = 124
+y = 45
+w = 100
+h = 100
+
+[[component]]
+name = "button03"
+type = "hotspot"
+sendkey = 3
+x = 231
+y = 45
+w = 100
+h = 100
+
+[[component]]
+name = "button04"
+type = "hotspot"
+sendkey = 3
+x = 338
+y = 45
+w = 100
+h = 100
+
+[[component]]
+name = "button05"
+type = "hotspot"
+sendkey = 3
+x = 17
+y = 176
+w = 100
+h = 100
+
+[[component]]
+name = "button06"
+type = "hotspot"
+sendkey = 3
+x = 124
+y = 176
+w = 100
+h = 100
+
+[[component]]
+name = "button07"
+type = "hotspot"
+sendkey = 3
+x = 231
+y = 176
+w = 100
+h = 100
+
+[[component]]
+name = "button08"
+type = "hotspot"
+sendkey = 3
+x = 338
+y = 176
+w = 100
+h = 100

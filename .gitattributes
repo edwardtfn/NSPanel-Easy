@@ -3,3 +3,7 @@
 *.sh text eol=lf
 *.yaml text eol=lf
 hmi/dev/nextion2text/**/*.txt text eol=lf
+hmi/dev/nxwright/**/*.nx text eol=lf
+hmi/dev/nxwright/**/*.toml text eol=lf
+hmi/dev/nxwright/**/*.sha256 text eol=lf
+hmi/dev/nxwright/**/*.png binary
