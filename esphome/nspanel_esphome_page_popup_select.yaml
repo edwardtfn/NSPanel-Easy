@@ -21,6 +21,15 @@ display:
             if (page_id != get_page_id("popup_select")) return;
             if (touch_event) return;
 
+            // The picker reports option taps, swipes and page changes as releases only, so the global press
+            // handler never sees them: reset the timers here, or the page falls back while it is in use.
+            // Back and taps outside the card leave the page, which already resets the timers.
+            if (component_id == POPUP_SELECT_ID_BTN_PREV || component_id == POPUP_SELECT_ID_BTN_NEXT ||
+                (component_id >= POPUP_SELECT_ID_OPT0 && component_id < POPUP_SELECT_ID_OPT0 + POPUP_SELECT_SLOTS)) {
+              brightness_dim_hold = false;  // A touch always restores the regular brightness
+              timer_reset_all->execute();
+            }  // if (navigation or option)
+
             // Page navigation (footer hotspots, or a swipe, which the display reports as these hotspots)
             if (component_id == POPUP_SELECT_ID_BTN_PREV || component_id == POPUP_SELECT_ID_BTN_NEXT) {
               const uint8_t page_count = popup_select_page_count();
