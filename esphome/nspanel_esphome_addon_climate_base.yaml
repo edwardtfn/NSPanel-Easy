@@ -516,11 +516,24 @@ script:
             // Handle actively running states (heating/cooling/drying/fan)
             icon =  climate_action_icons[action].icon;
             color = climate_action_icons[action].color;
-          } else if (mode >= nspanel_easy::CLIMATE_MODE_OFF && mode <= nspanel_easy::CLIMATE_MODE_AUTO) {
-            // Handle off and idle: the mode in gray, so it stays recognizable (no icon when off)
-            icon =  climate_off_mode_icons[mode].icon;
-            color = climate_off_mode_icons[mode].color;
-          }
+          } else {
+            // Handle off and idle: the mode in gray, so it stays recognizable (no icon when off).
+            // Only the modes in climate_off_mode_icons are looked up; an unknown mode shows no icon.
+            switch (mode) {
+              case nspanel_easy::CLIMATE_MODE_OFF:
+              case nspanel_easy::CLIMATE_MODE_HEAT_COOL:
+              case nspanel_easy::CLIMATE_MODE_COOL:
+              case nspanel_easy::CLIMATE_MODE_HEAT:
+              case nspanel_easy::CLIMATE_MODE_FAN_ONLY:
+              case nspanel_easy::CLIMATE_MODE_DRY:
+              case nspanel_easy::CLIMATE_MODE_AUTO:
+                icon =  climate_off_mode_icons[mode].icon;
+                color = climate_off_mode_icons[mode].color;
+                break;
+              default:
+                break;
+            }  // switch (mode)
+          }  // if (is_active)
 
           // Apply the icon and color to the climate chip (none when hidden)
           const char* chip_icon = visible ? icon : Icons::MDI_NONE;
