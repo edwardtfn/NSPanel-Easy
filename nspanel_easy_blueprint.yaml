@@ -12880,7 +12880,7 @@ actions:
                           wait_template: &condition_details_page_sensors_ready >
                             {{
                               repeat.index > 1 or (
-                                states(currentpage) == original_state.page and
+                                states(currentpage) in entity_details_pages_open and
                                 states(detailed_entity) == original_state.entity_id
                               )
                             }}
