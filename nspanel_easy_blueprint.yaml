@@ -10572,6 +10572,14 @@ actions:
                       entity_details_pages_debounce_ms: !input entity_details_pages_debounce
                       entity_details_pages_update_interval_s: !input entity_details_pages_update_interval
                       current_page_from_sensor: '{{ nspanel_event.page }}'
+                      # Pages that keep this page's refreshes going: the select page opens the picker on top of
+                      # itself, which shows the same entity, so changes from Home Assistant still reach it
+                      entity_details_pages_open: >-
+                        {{
+                          [original_state.page, pages.popup_select]
+                          if original_state.page == pages.select
+                          else [original_state.page]
+                        }}
                       # Domains whose entity changes refresh each entity details page after it opens. One shared
                       # condition reads it, instead of a separate template per page (#636: fewer distinct templates).
                       page_entity_domains:
@@ -12872,7 +12880,7 @@ actions:
                           wait_template: &condition_details_page_sensors_ready >
                             {{
                               repeat.index > 1 or (
-                                states(currentpage) == original_state.page and
+                                states(currentpage) in entity_details_pages_open and
                                 states(detailed_entity) == original_state.entity_id
                               )
                             }}
@@ -12886,7 +12894,7 @@ actions:
                               original_state.entity_id_valid and
                               original_state.entity_id == (states(detailed_entity) if detailed_entity | length > 0 else '') and
                               original_state.page in pages.detailed_entity and
-                              original_state.page == states(currentpage)
+                              states(currentpage) in entity_details_pages_open
                             }}
                         - variables:
                             page_constructor: false
@@ -12904,7 +12912,7 @@ actions:
                             milliseconds: !input entity_details_pages_debounce
                         - wait_template: >
                             {{
-                              original_state.page != states(currentpage) or
+                              states(currentpage) not in entity_details_pages_open or
                               states(detailed_entity) != original_state.entity_id or
                               (
                                 states[original_state.entity_id].last_updated | string
@@ -12922,7 +12930,8 @@ actions:
                           continue_on_timeout: true
                         - condition: *conditions_entity_details_pages_loop
                         - variables:
-                            current_page_from_sensor: '{{ states(currentpage) }}'
+                            # Still the page this loop renders, also while the select page's picker is shown
+                            current_page_from_sensor: '{{ original_state.page }}'
                             # No entity change before the timeout: settle pass or fallback refresh
                             refresh_settled: '{{ not wait.completed }}'
                         - variables:

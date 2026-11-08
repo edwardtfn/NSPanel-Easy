@@ -124,7 +124,16 @@ script:
               ESP_LOGD("${TAG_PAGE_POPUP_SELECT}", "Cache complete on select page, opening picker");
               std::string placeholder_title = "${LOCALIZATION[LANG].select.please_select}";
               popup_select_open->execute(last_page_id, placeholder_title);
-            }
+            } else if (current_page_id == get_page_id("popup_select")) {
+              // The picker is open: show the new selection on the option page being browsed, without
+              // repainting the card or jumping to the page holding the selection
+              const uint8_t first = popup_select_page * POPUP_SELECT_SLOTS;
+              const uint32_t page_mask = (popup_select_cache_mask >> first) & ((1u << POPUP_SELECT_SLOTS) - 1u);
+              ESP_LOGD("${TAG_PAGE_POPUP_SELECT}", "Selection changed while open (mask=%" PRIu32 ")",
+                                                    popup_select_cache_mask);
+              disp1->send_command_printf("selection_mask.val=%" PRIu32, page_mask);
+              disp1->send_command("render.en=1");
+            }  // if (current_page_id == get_page_id("popup_select"))
             return;
           }
 
