@@ -823,10 +823,10 @@ blueprint:
 
             When enabled, these values are updated even when the Home page is not visible or while the panel is sleeping, so they are already current when the page opens.
 
-            When disabled, their changes are ignored while the Home page is not visible, and the values are updated when the page opens.
+            When disabled (default), their changes are ignored while the Home page is not visible, and the values are updated right after the page opens, so an outdated value may show for a moment.
 
             Everything else on the Home page (chips, custom buttons, weather, temperatures and climate) is always kept up to date, regardless of this setting.
-          default: true
+          default: false
           selector:
             boolean:
     chips:
