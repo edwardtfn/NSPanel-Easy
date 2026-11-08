@@ -69,6 +69,7 @@ y = 132
 w = 288
 h = 180
 sta = 0
+dir = 1
 
 [[component]]
 name = "value_now"

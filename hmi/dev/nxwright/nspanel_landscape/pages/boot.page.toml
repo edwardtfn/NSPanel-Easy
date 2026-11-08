@@ -82,7 +82,7 @@ txt_maxl = 25
 name = "version"
 type = "variable"
 sta = 1
-txt = "22.4"
+txt = "22.5"
 txt_maxl = 5
 
 [[component]]
