@@ -2,7 +2,6 @@
 .DS_Store
 **/.DS_Store
 
-Nextion2Text.*
 SyncAll.cmd
 SyncNextion2TXT.cmd
 *.cmd
@@ -20,5 +19,5 @@ __pycache__/
 
 local
 
-# Pinned Nextion2Text copy fetched by generate_nextion_txt.sh
+# Pinned nxwright venv installed by generate_nxwright.sh
 /hmi/dev/.cache
