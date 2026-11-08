@@ -146,8 +146,8 @@ txt_maxl = 255
 name = "version"
 type = "variable"
 sta = 1
-txt = "2026.8.0"
-txt_maxl = 8
+txt = "2026.11"
+txt_maxl = 7
 
 [[component]]
 name = "t0"
