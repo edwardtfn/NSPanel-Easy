@@ -819,10 +819,14 @@ blueprint:
         home_page_background_update:
           name: Home page - Update in the background
           description: >
-            When enabled, the Home page will be updated even when not visible or while the panel is sleeping, enhancing the user's experience when navigating between the pages.
+            Applies only to the Home page entity states (*Entity State 01* to *04*).
 
-            Disabling this may save some network and database consumption, with the cost of some slowness when constructing the Home page.
-          default: true
+            When enabled, these values are updated even when the Home page is not visible or while the panel is sleeping, so they are already current when the page opens.
+
+            When disabled (default), their changes are ignored while the Home page is not visible, and the values are updated right after the page opens, so an outdated value may show for a moment.
+
+            Everything else on the Home page (chips, custom buttons, weather, temperatures and climate) is always kept up to date, regardless of this setting.
+          default: false
           selector:
             boolean:
     chips:
@@ -14100,24 +14104,6 @@ actions:
         sequence:
           - *climate_custom_buttons
 
-      - alias: Update climate page values
-        conditions:
-          - condition: trigger
-            id: trigger_climatepage_value_state
-          - '{{ pages.current == pages.climate }}'
-        sequence:
-          - *variables-climate_page
-          - repeat:
-              for_each: >
-                {{
-                  climate_page_entities
-                  | selectattr("entity", "defined")
-                  | selectattr("entity", "eq", trigger.entity_id)
-                  | list
-                }}
-              sequence:
-                - *display_value
-
       - alias: Update entities pages
         conditions:
           - condition: trigger
@@ -14193,15 +14179,45 @@ actions:
                   val: '{{ 1 if button_state_new else 0 }}'
                 continue_on_error: true
 
-      - alias: Update home page - Entities
+      - alias: Update page values
+        # Home, climate, water heater and humidifier page values share one copy of `display_value`,
+        # instead of one per page (issue #657)
         conditions:
           - condition: trigger
-            id: home_values_state
+            id:
+              - home_values_state
+              - trigger_climatepage_value_state
+              - trigger_water_heater_page_value_state
+              - trigger_humidifier_page_value_state
         sequence:
+          - *variables-climate_page
+          - *variables_water_heater_page
+          - *variables_humidifier_page
           - repeat:
               for_each: >
+                {%- set detailed_entity_domain = states(detailed_entity).split(".")[0] -%}
+                {%- if trigger.id == "home_values_state" -%}
+                  {%- set page_entities = home_page.entity_value -%}
+                {%- elif trigger.id == "trigger_climatepage_value_state" and pages.current == pages.climate -%}
+                  {%- set page_entities = climate_page_entities -%}
+                {#- The water heater page also shows humidifiers, so the page's entity selects the values -#}
+                {%- elif
+                      trigger.id == "trigger_water_heater_page_value_state" and
+                      pages.current == pages.water_heater and
+                      detailed_entity_domain == "water_heater"
+                -%}
+                  {%- set page_entities = water_heater_page_entities -%}
+                {%- elif
+                      trigger.id == "trigger_humidifier_page_value_state" and
+                      pages.current == pages.water_heater and
+                      detailed_entity_domain == "humidifier"
+                -%}
+                  {%- set page_entities = humidifier_page_entities -%}
+                {%- else -%}
+                  {%- set page_entities = [] -%}
+                {%- endif -%}
                 {{
-                  home_page.entity_value
+                  page_entities
                   | selectattr("entity", "defined")
                   | selectattr("entity", "eq", trigger.entity_id)
                   | list
@@ -14210,6 +14226,7 @@ actions:
                 - *display_value
           - alias: Graph page - Current value
             if:
+              - '{{ trigger.id == "home_values_state" }}'
               - '{{ pages.current == pages.graph }}'
               - '{{ states(detailed_entity) == trigger.entity_id }}'
             then:
@@ -14248,42 +14265,4 @@ actions:
           - repeat:
               for_each: '{{ pages_utilities.groups | selectattr("name", "in", groups) | list }}'
               sequence: *refresh_page_utilities_group
-
-      - alias: Update water heater page values
-        conditions:
-          - condition: trigger
-            id: trigger_water_heater_page_value_state
-          - '{{ pages.current == pages.water_heater }}'
-          - '{{ states(detailed_entity).split(".")[0] == "water_heater" }}'  # The page may be showing a humidifier
-        sequence:
-          - *variables_water_heater_page
-          - repeat:
-              for_each: >
-                {{
-                  water_heater_page_entities
-                  | selectattr("entity", "defined")
-                  | selectattr("entity", "eq", trigger.entity_id)
-                  | list
-                }}
-              sequence:
-                - *display_value
-
-      - alias: Update humidifier page values
-        conditions:
-          - condition: trigger
-            id: trigger_humidifier_page_value_state
-          - '{{ pages.current == pages.water_heater }}'  # Humidifiers are shown on the water heater page
-          - '{{ states(detailed_entity).split(".")[0] == "humidifier" }}'
-        sequence:
-          - *variables_humidifier_page
-          - repeat:
-              for_each: >
-                {{
-                  humidifier_page_entities
-                  | selectattr("entity", "defined")
-                  | selectattr("entity", "eq", trigger.entity_id)
-                  | list
-                }}
-              sequence:
-                - *display_value
 ...
