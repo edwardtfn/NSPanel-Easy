@@ -1,0 +1,95 @@
+// entity_snapshot.cpp
+
+#include "entity_snapshot.h"
+
+#include "esphome/components/json/json_util.h"
+
+namespace esphome::nspanel_easy {
+
+EntitySnapshot entity_snapshot;
+
+std::string SnapshotEntity::attribute(const std::string &key, const std::string &fallback) const {
+  const auto it = this->attributes.find(key);
+  return (it == this->attributes.end()) ? fallback : it->second;
+}
+
+const std::vector<std::string> *SnapshotEntity::list(const std::string &key) const {
+  const auto it = this->lists.find(key);
+  return (it == this->lists.end()) ? nullptr : &it->second;
+}
+
+const SnapshotEntity *EntitySnapshot::find(const std::string &role) const {
+  for (const auto &entity : this->entities) {
+    if (entity.role == role) {
+      return &entity;
+    }  // if (entity.role == role)
+  }  // for each entity
+  return nullptr;
+}
+
+/**
+ * @brief JSON value as text: strings as they are, numbers and booleans in their JSON form.
+ * @param value Value to convert.
+ * @param text Receives the text.
+ * @return false for null, objects and lists, which have no text form here.
+ */
+static bool json_to_text(JsonVariantConst value, std::string &text) {
+  if (value.isNull() || value.is<JsonObjectConst>() || value.is<JsonArrayConst>()) {
+    return false;
+  }  // if (no text form)
+  if (value.is<const char *>()) {
+    text = value.as<const char *>();
+    return true;
+  }  // if (string)
+  text.clear();
+  serializeJson(value, text);
+  return true;
+}
+
+bool parse_entity_snapshot(const std::string &json, EntitySnapshot &snapshot) {
+  snapshot = EntitySnapshot{};
+  const bool parsed = json::parse_json(json, [&snapshot](JsonObject root) -> bool {
+    snapshot.page = root["page"] | "";
+    snapshot.constructor = root["constructor"] | false;
+    // Ranges are kept in locals: iterating over the result of as<>() directly makes GCC warn about a
+    // dangling reference to the temporary proxy (-Wdangling-reference).
+    const JsonArrayConst items = root["entities"].as<JsonArrayConst>();
+    for (JsonObjectConst item : items) {
+      SnapshotEntity entity;
+      entity.role = item["role"] | "";
+      entity.entity_id = item["entity_id"] | "";
+      entity.state = item["state"] | "unknown";
+      entity.name = item["name"] | "";
+      entity.exists = item["exists"] | false;
+      const JsonObjectConst attributes = item["attributes"].as<JsonObjectConst>();
+      for (JsonPairConst attribute : attributes) {
+        const std::string key = attribute.key().c_str();
+        if (attribute.value().is<JsonArrayConst>()) {
+          std::vector<std::string> texts;
+          const JsonArrayConst elements = attribute.value().as<JsonArrayConst>();
+          for (JsonVariantConst element : elements) {
+            std::string text;
+            if (json_to_text(element, text)) {
+              texts.push_back(std::move(text));
+            }  // if (element has a text form)
+          }  // for each list element
+          entity.lists[key] = std::move(texts);
+        } else {
+          std::string text;
+          if (json_to_text(attribute.value(), text)) {
+            entity.attributes[key] = std::move(text);
+          }  // if (attribute has a text form)
+        }  // if (list attribute)
+      }  // for each attribute
+      snapshot.entities.push_back(std::move(entity));
+    }  // for each entity
+    return true;
+  });
+  if (!parsed || snapshot.page.empty()) {
+    snapshot = EntitySnapshot{};
+    return false;
+  }  // if (not parsed or no page)
+  return true;
+}
+
+}  // namespace esphome::nspanel_easy
