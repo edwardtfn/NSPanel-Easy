@@ -50,9 +50,9 @@ struct SnapshotEntity {
  * instead of the Blueprint computing every text and value with its own templates (issue #636).
  */
 struct EntitySnapshot {
-  std::string page;         ///< Page the snapshot is for, e.g. "select"
-  bool constructor{false};  ///< True for the first snapshot after the page opens
-  std::vector<SnapshotEntity> entities;
+  std::string page;                      ///< Page the snapshot is for, e.g. "select"
+  bool constructor{false};               ///< True for the first snapshot after the page opens
+  std::vector<SnapshotEntity> entities;  ///< Entities shown on the page, each with its role
 
   /**
    * @brief Entity with a given role.

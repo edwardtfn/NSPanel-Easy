@@ -386,6 +386,12 @@ script:
             return;
           }
 
+          // An empty list has no text to show; the packages extending this script still get it (e.g. to clear a list)
+          if (txt_list.empty()) {
+            ESP_LOGV("${TAG_API}", "  Empty list, no text to write");
+            return;
+          }  // if (txt_list.empty())
+
           std::string txt_str = txt_list.back();
           if      (txt_str == "${SENTINEL_UNAVAILABLE}") txt_str = "${LOCALIZATION[LANG].unavailable}";
           else if (txt_str == "${SENTINEL_UNKNOWN}")     txt_str = "${LOCALIZATION[LANG].unknown}";
