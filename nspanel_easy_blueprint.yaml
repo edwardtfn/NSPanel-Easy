@@ -5432,6 +5432,16 @@ triggers:
         event_data:
           device_id: !input nspanel_name
 
+      # Fired by this automation itself to render the current page again (e.g. after a reload). The same id
+      # as the panel's events, so it is handled by "Page changed", where each page's rendering lives once
+      # in the automation (#657).
+      - alias: Page refresh request
+        id: nspanel_event
+        trigger: event
+        event_type: nspanel_easy_page_refresh_request
+        event_data:
+          device_id: !input nspanel_name
+
       - alias: Automation reloaded
         id: automation_reloaded
         trigger: event
@@ -13996,18 +14006,20 @@ actions:
                   continue_on_error: true
                 - *delay_default
 
-          - choose:
-              ## PAGE HOME ##
-              - conditions: '{{ pages.current == pages.home }}'
-                sequence: *refresh_page_home
-
-              ## PAGE BUTTON PAGES 01 - 04 ##
-              - conditions: '{{ pages.current in pages.buttonpages }}'
-                sequence: *refresh_page_buttonpage
-
-              ## ENTITY PAGES ##
-              - conditions: '{{ pages.current in pages.entitypages }}'
-                sequence: *refresh_entity_pages
+          ##### Render the current page again (as user may have changed something) #####
+          # Rendered by "Page changed" in a run of its own, instead of a copy of each page's rendering here,
+          # which Home Assistant would expand into the automation again (#657). As for a page change, the
+          # labels and icons are sent too, so changes to them show without leaving the page.
+          # Limited to the pages refreshed here before: an entity details page already has a run refreshing it.
+          - alias: Request current page refresh
+            if: '{{ pages.current == pages.home or pages.current in pages.buttonpages or pages.current in pages.entitypages }}'
+            then:
+              - event: nspanel_easy_page_refresh_request
+                event_data:
+                  device_id: '{{ nspanel_deviceid }}'
+                  device_name: '{{ action_prefix }}'  # Read by `action_prefix` in the run handling the request
+                  type: page_changed
+                  page: '{{ pages.current }}'
 
       - alias: Update button's entities
         conditions:
