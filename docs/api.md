@@ -15,6 +15,8 @@ This document provides details on custom actions designed for integration with H
   - [Component Value Action (`component_val`)](#component-value-action-component_val): Updates the value of a specified component on the display.
   - [Components Visibility Action (`components_visibility`)](#components-visibility-action-components_visibility): Hides or shows a specified component on the display.
   - [Entity Details Show Action (`entity_details_show`)](#entity-details-show-action-entity_details_show): Displays detailed information for a specific entity.
+  - [Entity Snapshot Action (`entity_snapshot`)](#entity-snapshot-action-entity_snapshot):
+    Sends the state and attributes of the entities on an entity details page, for the panel to render.
   - [Hardware Button State Indication Action (`hw_button_state`)](#hardware-button-state-indication-action-hw_button_state):
     Updates the visual state (on/off) of the left and right hardware button indicators on the panel.
   - [Icon Action (`icon`)](#icon-action-icon): Updates a chip or custom button's icon, color, and visibility.
@@ -73,6 +75,7 @@ You can look up the action names available on your Home Assistant instance under
 | [`component_val`](#component-value-action-component_val) | [Component Value Action](#component-value-action-component_val) | Updates the value of a specified component on the display. |
 | [`components_visibility`](#components-visibility-action-components_visibility) | [Components Visibility Action](#components-visibility-action-components_visibility) | Hides or shows a specified component on the display. |
 | [`entity_details_show`](#entity-details-show-action-entity_details_show) | [Entity Details Show Action](#entity-details-show-action-entity_details_show) | Displays detailed information for a specific entity. |
+| [`entity_snapshot`](#entity-snapshot-action-entity_snapshot) | [Entity Snapshot Action](#entity-snapshot-action-entity_snapshot) | Sends the state and attributes of the entities on an entity details page, for the panel to render. |
 | [`hw_button_state`](#hardware-button-state-indication-action-hw_button_state) | [Hardware Button State Indication Action](#hardware-button-state-indication-action-hw_button_state) | Updates the visual state (on/off) of the left and right hardware button indicators on the panel. |
 | [`icon`](#icon-action-icon) | [Icon Action](#icon-action-icon) | Updates a chip or custom button's icon, color, and visibility. |
 | [`notification_clear`](#notification-clear-action-notification_clear) | [Notification Clear Action](#notification-clear-action-notification_clear) | Clears the current notification from the screen. |
@@ -466,6 +469,39 @@ data:
 > Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
 > This setup provides a direct and user-friendly way to access and return from detailed entity information, enhancing the interface's usability.
 <!-- markdownlint-enable MD028 -->
+
+### Entity Snapshot Action: `entity_snapshot`
+
+Sends the state and attributes of the entities shown on an entity details page, and the panel renders the page from them.
+The NSPanel Easy Blueprint uses it for the select page; other entity details pages still receive each text and value from the Blueprint.
+
+**Usage:**
+Meant for the Blueprint, which sends a snapshot when an entity details page opens and whenever one of its entities changes.
+
+**Parameters:**
+
+- `snapshot` (string): JSON with the page and its entities:
+  - `page` (string): page the snapshot is for, e.g. `select`.
+  - `constructor` (boolean): `true` for the first snapshot after the page opens, which also sets the parts that do not change while it is open.
+  - `entities` (list): one object per entity, with:
+    - `role` (string): role of the entity on the page; `main` for the entity the page shows.
+    - `entity_id` (string), `exists` (boolean), `state` (string) and `name` (string, the entity's friendly name).
+    - `attributes` (object): the attributes the page needs (for the select page: `options`).
+
+  Snapshots larger than 8 KB are ignored.
+
+**Home Assistant Example:**
+
+```yaml
+action: esphome.<your_panel_name>_entity_snapshot
+data:
+  snapshot: >-
+    {"page": "select", "constructor": true, "entities": [{"role": "main", "entity_id": "input_select.mode",
+    "exists": true, "state": "Auto", "name": "Mode", "attributes": {"options": ["Auto", "Manual"]}}]}
+```
+
+> [!NOTE]
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
 
 ### Hardware Button State Indication Action: `hw_button_state`
 
