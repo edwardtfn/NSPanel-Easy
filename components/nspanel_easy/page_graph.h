@@ -21,6 +21,7 @@
  * The Graph page shows the last 24 hours of a numeric Home Assistant sensor as 5-minute means,
  * opened by tapping one of the Home page entity values. The Blueprint sends the values read from
  * the recorder statistics; the panel keeps them, scales them to the waveform height and draws them.
+ * The waveform flows right to left: points are sent oldest first, so the newest one is on the right edge.
  */
 
 namespace esphome::nspanel_easy {
