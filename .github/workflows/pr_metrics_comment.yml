@@ -1,0 +1,172 @@
+---
+name: PR metrics comments
+
+# Posts CI metrics of a PR as comments, one per report, updated on every run instead of adding new ones:
+# - Blueprint metrics, from validate_blueprint.yml
+# - RAM and flash usage of the ESPHome builds (ESPHome latest), from esphome_build.yml
+#
+# It runs on workflow_run, so its token can write to PRs from forks too. It never checks out or runs code from the PR
+# (only the scripts of the default branch): artifacts and job logs of the triggering run are untrusted data, and the
+# PR number from the artifact is only used when that PR's head is the commit of the triggering run.
+# Note: workflow_run only uses the version of this file on the default branch.
+
+# yamllint disable-line rule:truthy
+on:
+  workflow_run:
+    workflows: ["Validate Blueprint YAML", "Build ESPHome"]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  # Serialize per report and PR branch, so two runs cannot both create a comment
+  group: >-
+    pr-metrics-comment-${{ github.event.workflow_run.workflow_id }}-${{
+    github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  # ===========================================================================
+  # Blueprint metrics
+  # ===========================================================================
+  blueprint:
+    name: Blueprint metrics
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.name == 'Validate Blueprint YAML'
+      && github.event.workflow_run.event == 'pull_request'
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      # Default branch only, never the PR
+      - name: Checkout scripts
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Download metrics
+        id: download
+        uses: actions/download-artifact@v8
+        # No artifact when the run was cancelled before it was uploaded
+        continue-on-error: true
+        with:
+          name: blueprint-metrics
+          path: ${{ runner.temp }}/metrics
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Post or update the comment
+        if: steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          METRICS_DIR: ${{ runner.temp }}/metrics
+        run: |
+          body_file="$RUNNER_TEMP/comment_body.md"
+          update_args=()
+          blueprint_changed="$(head -c 8 "$METRICS_DIR/blueprint_changed" 2>/dev/null | tr -cd 'a-z')"
+          if [[ "$blueprint_changed" == "true" && -f "$METRICS_DIR/report.md" ]]; then
+            {
+              # First section (the metrics table) visible, the other sections collapsed
+              head -c 60000 "$METRICS_DIR/report.md" | awk '
+                /^### / { sections++ }
+                sections == 2 && !opened { print "<details><summary>More Blueprint metrics</summary>\n"; opened = 1 }
+                { print }
+                END { if (opened) print "\n</details>" }'
+              echo
+              echo "Commit ${HEAD_SHA:0:7}. This comment is updated on every push."
+            } > "$body_file"
+          else
+            # A PR that no longer changes the Blueprint: update an existing comment, never create one
+            {
+              echo "### Blueprint metrics"
+              echo
+              echo "Commit ${HEAD_SHA:0:7} no longer changes the Blueprint."
+            } > "$body_file"
+            update_args=(--update-only)
+          fi  # if the Blueprint changed
+          python3 .github/scripts/upsert_pr_comment.py --pr-number-file "$METRICS_DIR/pr_number" \
+            --marker blueprint-metrics --body-file "$body_file" "${update_args[@]}"
+
+  # ===========================================================================
+  # ESPHome build sizes
+  # ===========================================================================
+  esphome:
+    name: ESPHome build sizes
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.name == 'Build ESPHome'
+      && github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion != 'cancelled'
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      # Default branch only, never the PR
+      - name: Checkout scripts
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Download PR data
+        id: download
+        uses: actions/download-artifact@v8
+        # No artifact when the run was cancelled before it was uploaded
+        continue-on-error: true
+        with:
+          name: esphome-build-pr
+          path: ${{ runner.temp }}/pr
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      # Only the builds with ESPHome latest, from the logs of the jobs that built (succeeded or failed)
+      - name: Collect build sizes
+        if: steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          logs_dir="$RUNNER_TEMP/logs"
+          mkdir -p "$logs_dir"
+          : > "$RUNNER_TEMP/index.tsv"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
+            --jq '.jobs[]
+              | select((.name | endswith("(latest)")) and (.conclusion == "success" or .conclusion == "failure"))
+              | [.id, .conclusion, .name] | @tsv' > "$RUNNER_TEMP/jobs.tsv"
+          while IFS=$'\t' read -r job_id conclusion name; do
+            [[ "$job_id" =~ ^[0-9]+$ ]] || continue
+            log_file="$logs_dir/$job_id.log"
+            if ! gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$job_id/logs" > "$log_file"; then
+              echo "::warning::Log of job $job_id is not available"
+              : > "$log_file"
+            fi  # if the log could not be downloaded
+            printf '%s\t%s\t%s\n' "$log_file" "$conclusion" "$name" >> "$RUNNER_TEMP/index.tsv"
+          done < "$RUNNER_TEMP/jobs.tsv"
+          python3 .github/scripts/esphome_size_report.py "$RUNNER_TEMP/index.tsv" --output "$RUNNER_TEMP/report.md"
+          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post or update the comment
+        if: steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          body_file="$RUNNER_TEMP/comment_body.md"
+          update_args=()
+          # Without builds (no relevant changes): update an existing comment, never create one
+          if [[ ! -s "$RUNNER_TEMP/index.tsv" ]]; then
+            update_args=(--update-only)
+          fi  # if no build ran
+          {
+            cat "$RUNNER_TEMP/report.md"
+            echo
+            echo "Commit ${HEAD_SHA:0:7}. This comment is updated on every push."
+          } > "$body_file"
+          python3 .github/scripts/upsert_pr_comment.py --pr-number-file "$RUNNER_TEMP/pr/pr_number" \
+            --marker esphome-build-sizes --body-file "$body_file" "${update_args[@]}"
+...
