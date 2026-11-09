@@ -151,7 +151,7 @@ struct ButtonSlot {
   char value[SUB_STATE_LEN];         ///< Value attribute (brightness, position, ...) or last_triggered
   char color[SUB_STATE_LEN];         ///< Colour attribute: rgb_color (light) or action (humidifier)
   char state_entity[SUB_STATE_LEN];  ///< State of the State Indicator Entity
-  char icon_attr[SUB_STATE_LEN];     ///< Last `icon` attribute, to report changes
+  char icon_attr[SUB_STATE_LEN];     ///< Last `icon` attribute, to detect changes
   uint32_t flash_until;              ///< End of a momentary flash, in millis(); 0 when none
   bool has_state_entity;             ///< A State Indicator Entity is bound
   bool dirty;                        ///< Needs drawing
@@ -493,8 +493,7 @@ static void button_draw_slot(uint8_t page_idx, uint8_t button_idx, ButtonSlot &s
     if (binding.domain == SUB_DOMAIN_CLIMATE && rt.action[0] != '\0' && !sub_state_in(rt.action, SUB_UNUSABLE_STATES)) {
       effective = rt.action;
     }
-    const SubAppearance look = resolve_sub_appearance(static_cast<SubDomain>(binding.domain), binding.device_class,
-                                                      effective, rt.color_on, rt.color_off);
+    const SubAppearance look = resolve_binding_appearance(binding, effective, rt.color_on, rt.color_off);
     if (look.icon != nullptr) {
       icon = look.icon;
       color = look.color;
@@ -674,25 +673,24 @@ void buttons_sub_render(const SubBinding &binding, const SubRuntime &rt, const c
     }  // case state entity
 
     case 'i': {  // The entity's own icon attribute
-      // The first value is the one the Blueprint resolved for this session; only later changes are reported
+      // The first value is the one the Blueprint sent with the binding; only later changes are applied
       if (rt.state[0] == '\0' || strcmp(slot.icon_attr, rt.state) == 0) {
         return;
       }
-      const bool report = slot.icon_attr[0] != '\0' && strncmp(rt.state, "mdi:", 4) == 0;
+      const bool changed = slot.icon_attr[0] != '\0' && strncmp(rt.state, "mdi:", 4) == 0;
       strncpy(slot.icon_attr, rt.state, sizeof(slot.icon_attr) - 1);
       slot.icon_attr[sizeof(slot.icon_attr) - 1] = '\0';
-      if (report) {
+      if (changed) {
         char component[9];
         snprintf(component, sizeof(component), "button%02u", static_cast<unsigned>(button_idx + 1));
         char glyph[4];
         if (sub_icon_lookup(rt.state, glyph, sizeof(glyph))) {
-          ESP_LOGV(TAG, "%s.%s: icon changed to '%s' (cached)", binding.page, component, rt.state);
-          sub_push_icon(binding.page, component, glyph, "");  // Already cached; draws the button
+          ESP_LOGV(TAG, "%s.%s: icon changed to '%s'", binding.page, component, rt.state);
+          sub_set_icon(binding.page, component, glyph);  // Draws the button
         } else {
-          ESP_LOGD(TAG, "%s.%s: icon changed to '%s'; requesting it", binding.page, component, rt.state);
-          fire_ha_event("icon_request", {{"page", binding.page}, {"component", component}, {"icon", rt.state}});
+          ESP_LOGW(TAG, "%s.%s: icon '%s' is not known", binding.page, component, rt.state);
         }
-      }  // if (report)
+      }  // if (changed)
       return;  // The main binding draws the button once its icon is set
     }  // case icon
 

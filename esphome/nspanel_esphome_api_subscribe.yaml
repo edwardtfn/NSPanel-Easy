@@ -39,15 +39,14 @@ api:
         page: string          # Target page, e.g. "chips"
         component: string     # Target component, e.g. "chip01"
         entity: string        # Home Assistant entity_id
-        device_class: string  # HA device_class; only consulted for the cover domain
+        device_class: string  # HA device_class, for the icon by domain, device class and state
         attribute: string     # HA entity's attribute to subscribe to
         icon_on: string       # Icon for the active state; empty to resolve on-device
         icon_off: string      # Icon for the inactive state; empty to resolve on-device
         color_on: int[]       # RGB array for the active state
         color_off: int[]      # RGB array for the inactive state
         inverted: bool        # Render as visible while the entity is inactive
-        icon_name: string     # MDI name of an icon the binding uses (e.g. "mdi:lamp"), to seed the icon cache; empty for none
-        icon_name_glyph: string  # Codepoint of icon_name
+        icon_name: string     # Icon by name (e.g. "mdi:lamp") when icon_on is empty; empty for none
       then:
         - lambda: |-
             blueprint_setting_received();
@@ -62,24 +61,33 @@ api:
               icon_off.c_str(),
               color_on.size() == 3 ? rgbTo565(color_on) : 0,
               color_off.size() == 3 ? rgbTo565(color_off) : 0, inverted,
-              icon_name.c_str(), icon_name_glyph.c_str()
+              icon_name.c_str()
             );
             api_subscribe_debounce->execute();
             api_subscribe_watchdog->execute();
 
-    ##### Icon of a bound component, sent in answer to an `icon_request` event. #####
-    # The firmware holds no table of MDI names, so a change of an entity's own `icon` attribute to a
-    # name it has not seen yet is resolved by the Blueprint. The answer is kept in the icon cache, so
-    # each name is requested once per boot. Appearance is not persisted, so no restart follows.
-    - action: api_subscribe_icon
+    ##### Icon names: the Blueprint's all_icon_names, sent in chunks once per session. #####
+    # The names are in codepoint order (U+E000 + position), so only the names travel and the panel works out
+    # every codepoint. Kept in PSRAM, never persisted, so no restart follows.
+    - action: api_subscribe_icon_names
       variables:
-        page: string       # Target page, e.g. "buttonpage01"
-        component: string  # Target component, e.g. "button03"
-        icon: string       # Icon codepoint
-        name: string       # Icon name the codepoint belongs to, e.g. "mdi:lightbulb"
+        start: int         # Position of the first name of the chunk; 0 starts a new list
+        names: string      # Comma-separated names, without "mdi:"
       then:
         - lambda: |-
-            sub_push_icon(page.c_str(), component.c_str(), icon.c_str(), name.c_str());
+            sub_icon_names_add(static_cast<uint16_t>(start), names);
+
+    ##### Icon table: the Blueprint's device class icons and domain defaults, sent in chunks once per session. #####
+    # Lets the panel resolve the icon of an entity from its domain, device class and state. Kept in PSRAM, never
+    # persisted, so no restart follows.
+    - action: api_subscribe_icon_table
+      variables:
+        start: bool        # First chunk of the session: clear the previous table
+        keys: string[]     # "<domain>.<device_class>-<state>", "<domain>.<device_class>" or "<domain>"
+        glyphs: string[]   # Icons, one per key: a codepoint, or an icon name (resolved with the icon names)
+      then:
+        - lambda: |-
+            sub_icon_table_add(start, keys, glyphs);
 
     ##### End marker. Sent after every binding, carrying how many were sent. #####
     - action: api_subscribe_end

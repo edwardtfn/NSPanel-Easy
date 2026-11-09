@@ -35,10 +35,8 @@
  * The extra bindings use the button's component with a role suffix, e.g.
  * "button03:v", so every target stays unique for the subscription engine.
  *
- * An `icon` attribute change to a name the icon cache does not hold cannot be
- * resolved here, as the firmware holds no table of MDI names. It is reported to
- * the Blueprint (`icon_request` event), which answers through sub_push_icon();
- * the answer is cached, so each name is requested once per boot.
+ * An `icon` attribute change is resolved on the panel, with the icon names the
+ * Blueprint sends once per session (see sub_icon_lookup()).
  */
 
 namespace esphome::nspanel_easy {
