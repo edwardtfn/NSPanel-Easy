@@ -74,4 +74,17 @@ extern EntitySnapshot entity_snapshot;
  */
 bool parse_entity_snapshot(const std::string &json, EntitySnapshot &snapshot);
 
+/**
+ * @brief Write the title and the title icon of an entity details page, from a snapshot entity.
+ *
+ * Writes `page_label` (the title of the button that opened the page, else the
+ * entity's name) and `icon_state` (the icon of that button, else the entity's
+ * icon, resolved on the panel), as the Blueprint did. Nothing is written for a
+ * missing entity.
+ *
+ * @param entity The page's main entity.
+ * @return The icon written, for pages that show it elsewhere too; empty when nothing was written.
+ */
+std::string details_render_title(const SnapshotEntity &entity);
+
 }  // namespace esphome::nspanel_easy

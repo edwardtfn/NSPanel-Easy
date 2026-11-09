@@ -74,6 +74,28 @@ script:
           disp1->set_component_value("color_pending", ${page_switch_color_pending});
           disp1->set_component_value("color_thumb", ${page_switch_color_thumb});
 
+  # Renders the switch page from the Blueprint's entity snapshot (#636): title and icon, then the state,
+  # as the Blueprint wrote them
+  - id: !extend entity_snapshot_received
+    then:
+      - lambda: |-
+          if (entity_snapshot.page != "switch") return;
+          const SnapshotEntity *entity = entity_snapshot.find("main");
+          if (entity == nullptr) {
+            ESP_LOGW("${TAG_PAGE_SWITCH}", "Snapshot without a main entity, ignored");
+            return;
+          }  // if (no main entity)
+          const HomeAssistantEntity ha_entity = extractHomeAssistantEntity(entity->entity_id);
+          if (ha_entity.domain != "switch" && ha_entity.domain != "input_boolean") {
+            ESP_LOGW("${TAG_PAGE_SWITCH}", "Unsupported entity for switch page: %s", entity->entity_id.c_str());
+            return;
+          }  // if (not a switch)
+          blueprint_setting_received();
+          details_render_title(*entity);
+          // 1 on, 0 off, -1 for any other state (unavailable, unknown)
+          disp1->set_component_value("state", entity->state == "on" ? 1 : (entity->state == "off" ? 0 : -1));
+          disp1->send_command("render.en=1");
+
   - id: !extend reset_globals
     then:
       - lambda: |-
