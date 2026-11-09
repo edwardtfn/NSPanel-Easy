@@ -638,38 +638,17 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
                       uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name);
 
-/// @brief Most entries of the icon table (device class rules and domain defaults).
-static constexpr uint16_t SUB_ICON_TABLE_SIZE = 384;
-
-/// @brief Longest icon table key, null included ("sensor.volatile_organic_compounds_parts" is 40).
+/// @brief Longest icon rule key, null included ("sensor.volatile_organic_compounds_parts" is 40).
 static constexpr uint8_t SUB_ICON_KEY_LEN = 48;
-
-/**
- * @brief Add entries to the icon table, sent by the Blueprint once per session.
- *
- * The table holds the Blueprint's icon rules, keyed as the Blueprint keys them:
- *   - "<domain>.<device_class>-<state>" (e.g. "binary_sensor.door-on");
- *   - "<domain>.<device_class>" for the domains whose device class icon does
- *     not depend on the state (button, event, sensor);
- *   - "<domain>" for the domain default (e.g. "light").
- * It is kept in PSRAM, never evicted and never persisted. Sent in chunks; the
- * first chunk of a session clears the previous table.
- *
- * @param start First chunk: clear the table first.
- * @param keys Keys, as above.
- * @param glyphs Icons, one per key: a codepoint, or an icon name resolved with the icon names (which the
- *               Blueprint sends first).
- */
-void sub_icon_table_add(bool start, const std::vector<std::string> &keys, const std::vector<std::string> &glyphs);
 
 /**
  * @brief Resolve the icon and colour of a binding in its current state.
  *
  * The multi-state domains are resolved by resolve_sub_appearance(). The others
- * use the icon table: the device class icon for the state (the exact state
- * first, then "on"/"off" by how the state classifies), then the domain
- * default. Used when the Blueprint pushed no icon (no override, no `icon`
- * attribute).
+ * use the icon rules (ICON_RULES, icon_rules.h): the device class icon for the
+ * state (the exact state first, then "on"/"off" by how the state classifies),
+ * then the domain default (for the state first, e.g. the sun at night). Used
+ * when the Blueprint pushed no icon (no override, no `icon` attribute).
  *
  * @param binding The binding.
  * @param state Effective state string; hvac_action for climate when usable.

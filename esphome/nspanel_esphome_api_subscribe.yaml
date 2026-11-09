@@ -77,18 +77,6 @@ api:
         - lambda: |-
             sub_icon_names_add(static_cast<uint16_t>(start), names);
 
-    ##### Icon table: the Blueprint's device class icons and domain defaults, sent in chunks once per session. #####
-    # Lets the panel resolve the icon of an entity from its domain, device class and state. Kept in PSRAM, never
-    # persisted, so no restart follows.
-    - action: api_subscribe_icon_table
-      variables:
-        start: bool        # First chunk of the session: clear the previous table
-        keys: string[]     # "<domain>.<device_class>-<state>", "<domain>.<device_class>" or "<domain>"
-        glyphs: string[]   # Icons, one per key: a codepoint, or an icon name (resolved with the icon names)
-      then:
-        - lambda: |-
-            sub_icon_table_add(start, keys, glyphs);
-
     ##### End marker. Sent after every binding, carrying how many were sent. #####
     - action: api_subscribe_end
       variables:
