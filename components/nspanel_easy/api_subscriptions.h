@@ -630,13 +630,17 @@ void sub_subscribe_all();
  * @param color_on RGB565 colour for the active state.
  * @param color_off RGB565 colour for the inactive state.
  * @param inverted Show while the entity is inactive.
+ * @param icon_name MDI name of an icon the binding uses, e.g. "mdi:lamp", to seed the icon cache; empty for
+ *                  none. The icon may be needed again later, when the entity's own `icon` attribute changes.
+ * @param icon_name_glyph Codepoint of icon_name.
  */
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
-                      uint16_t color_on, uint16_t color_off, bool inverted);
+                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name,
+                      const char *icon_name_glyph);
 
 /// @brief Icon names kept by the icon cache; the oldest entry is replaced when full.
-static constexpr uint8_t SUB_ICON_CACHE_SIZE = 64;
+static constexpr uint8_t SUB_ICON_CACHE_SIZE = 128;
 
 /**
  * @brief Look up the codepoint of an MDI icon name in the icon cache.

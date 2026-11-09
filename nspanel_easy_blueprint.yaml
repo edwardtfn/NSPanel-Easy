@@ -7760,6 +7760,22 @@ actions:
                                     - variables:
                                         forced_icon_state: 'off'
                                     - *variable_entity
+                                    # Seeds the panel's icon cache with the icon the binding uses by name (override, else the
+                                    # entity's own `icon` attribute), so a later change back to it needs no request
+                                    - variables:
+                                        sub_icon_cache: >-
+                                          {%- set icon_attr = state_attr(entity_id, "icon") -%}
+                                          {%- set name =
+                                                repeat.item.icon if overlap_icon_valid
+                                                else (icon_attr if icon_attr is string and icon_attr is match "mdi:" else "") -%}
+                                          {%- set icon_name = name.split(":")[1] if name else "" -%}
+                                          {%- if icon_name in special_icons -%}
+                                            {%- set glyph = special_icons[icon_name] -%}
+                                          {%- else -%}
+                                            {%- set position = all_icon_names.find("," ~ icon_name ~ ",") if icon_name else -1 -%}
+                                            {%- set glyph = ("%c" | format(57344 + all_icon_names[:position].count(","))) if position >= 0 else "" -%}
+                                          {%- endif -%}
+                                          {{ {"name": name if glyph else "", "glyph": glyph} }}
                                     - variables:
                                         sub_icon_off: '{{ "" if resolved_on_device and not overlap_icon_valid else entity_icon }}'
 
@@ -7776,6 +7792,8 @@ actions:
                                         color_on: '{{ repeat.item.icon_color_rgb if icon_color_rgb_valid else nextion.color.on }}'
                                         color_off: '{{ repeat.item.icon_color_rgb if icon_color_rgb_valid else nextion.color.off }}'
                                         inverted: '{{ repeat.item.inverted | default(false) }}'
+                                        icon_name: '{{ sub_icon_cache.name }}'
+                                        icon_name_glyph: '{{ sub_icon_cache.glyph }}'
                                       continue_on_error: true
                                     - *delay_default
 

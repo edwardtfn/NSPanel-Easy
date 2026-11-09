@@ -46,6 +46,8 @@ api:
         color_on: int[]       # RGB array for the active state
         color_off: int[]      # RGB array for the inactive state
         inverted: bool        # Render as visible while the entity is inactive
+        icon_name: string     # MDI name of an icon the binding uses (e.g. "mdi:lamp"), to seed the icon cache; empty for none
+        icon_name_glyph: string  # Codepoint of icon_name
       then:
         - lambda: |-
             blueprint_setting_received();
@@ -59,7 +61,8 @@ api:
               icon_on.c_str(),
               icon_off.c_str(),
               color_on.size() == 3 ? rgbTo565(color_on) : 0,
-              color_off.size() == 3 ? rgbTo565(color_off) : 0, inverted
+              color_off.size() == 3 ? rgbTo565(color_off) : 0, inverted,
+              icon_name.c_str(), icon_name_glyph.c_str()
             );
             api_subscribe_debounce->execute();
             api_subscribe_watchdog->execute();

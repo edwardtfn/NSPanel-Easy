@@ -109,6 +109,8 @@ static bool sub_push_superseded(const char *push_id) {
 /// @brief Consecutive commits that never received an end marker.
 static uint8_t sub_unverified = 0;
 
+static void sub_icon_store(const char *name, const char *glyph);
+
 /**
  * @brief Allocate, preferring PSRAM and falling back to internal DRAM.
  *
@@ -415,7 +417,11 @@ void sub_subscribe_all() {
 
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
-                      uint16_t color_on, uint16_t color_off, bool inverted) {
+                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name,
+                      const char *icon_name_glyph) {
+  // Whatever happens to the binding, the name and its codepoint are valid for the icon cache
+  sub_icon_store(icon_name, icon_name_glyph);
+
   if (!sub_target_allowed(page, component)) {
     ESP_LOGW(TAG, "%s.%s is driven locally and cannot be bound", page, component);
     return;
