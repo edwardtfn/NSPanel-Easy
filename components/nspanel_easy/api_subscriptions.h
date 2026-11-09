@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "all_icons.h"
 #include "nextion_constants.h"
@@ -43,7 +44,7 @@ enum class Visibility : uint8_t {
 };
 
 /// @brief Persisted format version. Bump whenever SubBinding's layout changes.
-static constexpr uint8_t SUB_FORMAT_VERSION = 5;  // 5: SUB_PAGE_LEN fits the button pages
+static constexpr uint8_t SUB_FORMAT_VERSION = 6;  // 6: SUB_DEVICE_CLASS_LEN fits every device class
 
 /// @brief Upper bound on bindings; storage is allocated to the configured count, not this.
 #ifndef NSPANEL_EASY_SUB_MAX
@@ -84,7 +85,7 @@ static constexpr uint16_t SUB_CHUNK_COUNT = (SUB_MAX + SUB_CHUNK_SIZE - 1) / SUB
 
 static constexpr uint8_t SUB_ATTR_LEN = 24;                             ///< Longest stored attribute name
 static constexpr uint8_t SUB_COMPONENT_LEN = 16;                        ///< Longest stored component name
-static constexpr uint8_t SUB_DEVICE_CLASS_LEN = 16;                     ///< Longest device_class in use ("garage_door")
+static constexpr uint8_t SUB_DEVICE_CLASS_LEN = 40;                     ///< Longest device_class, null included
 static constexpr uint8_t SUB_ENTITY_LEN = NSPANEL_EASY_SUB_ENTITY_LEN;  ///< entity_id buffer, null included
 static constexpr uint8_t SUB_PAGE_LEN = 13;                             ///< Longest stored page name ("buttonpage01")
 static constexpr uint8_t SUB_STATE_LEN = 64;  ///< Longest state or attribute ("mdi:..." names)
@@ -166,7 +167,7 @@ struct SubBinding {
   char entity[SUB_ENTITY_LEN];              ///< entity_id; empty means the slot is unused
   char page[SUB_PAGE_LEN];                  ///< Target page, e.g. "chips"
   char component[SUB_COMPONENT_LEN];        ///< Target component, e.g. "chip01"
-  char device_class[SUB_DEVICE_CLASS_LEN];  ///< HA device_class; cover only, empty when unset
+  char device_class[SUB_DEVICE_CLASS_LEN];  ///< HA device_class, empty when unset
   char attribute[SUB_ATTR_LEN];             ///< Attribute to read instead of the state; empty to use the state
   uint8_t domain;                           ///< SubDomain, derived from entity at bind time
   bool inverted;                            ///< Show while the entity is inactive
@@ -638,6 +639,47 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
                       uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name,
                       const char *icon_name_glyph);
+
+/// @brief Most entries of the icon table (device class rules and domain defaults).
+static constexpr uint16_t SUB_ICON_TABLE_SIZE = 384;
+
+/// @brief Longest icon table key, null included ("sensor.volatile_organic_compounds_parts" is 40).
+static constexpr uint8_t SUB_ICON_KEY_LEN = 48;
+
+/**
+ * @brief Add entries to the icon table, sent by the Blueprint once per session.
+ *
+ * The table holds the Blueprint's icon rules, keyed as the Blueprint keys them:
+ *   - "<domain>.<device_class>-<state>" (e.g. "binary_sensor.door-on");
+ *   - "<domain>.<device_class>" for the domains whose device class icon does
+ *     not depend on the state (button, event, sensor);
+ *   - "<domain>" for the domain default (e.g. "light").
+ * It is kept in PSRAM, never evicted and never persisted. Sent in chunks; the
+ * first chunk of a session clears the previous table.
+ *
+ * @param start First chunk: clear the table first.
+ * @param keys Keys, as above.
+ * @param glyphs Codepoints, one per key.
+ */
+void sub_icon_table_add(bool start, const std::vector<std::string> &keys, const std::vector<std::string> &glyphs);
+
+/**
+ * @brief Resolve the icon and colour of a binding in its current state.
+ *
+ * The multi-state domains are resolved by resolve_sub_appearance(). The others
+ * use the icon table: the device class icon for the state (the exact state
+ * first, then "on"/"off" by how the state classifies), then the domain
+ * default. Used when the Blueprint pushed no icon (no override, no `icon`
+ * attribute).
+ *
+ * @param binding The binding.
+ * @param state Effective state string; hvac_action for climate when usable.
+ * @param color_on Colour for active states.
+ * @param color_off Colour for inactive states.
+ * @return Icon codepoint and RGB565 colour; a null icon when nothing matches.
+ */
+SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *state, uint16_t color_on,
+                                         uint16_t color_off);
 
 /// @brief Icon names kept by the icon cache; the oldest entry is replaced when full.
 static constexpr uint8_t SUB_ICON_CACHE_SIZE = 128;

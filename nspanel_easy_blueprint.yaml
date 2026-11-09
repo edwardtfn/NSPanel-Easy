@@ -7709,6 +7709,45 @@ actions:
                               # too large for the recorder to store with the action call.
                               - variables:
                                   push_id: '{{ utcnow().strftime("%Y%m%dT%H%M%S%f") }}'
+                              # Icon table: the device class icons and the domain defaults, so the panel resolves the icon of
+                              # an entity from its domain, device class and state. Not persisted, so sent every session.
+                              - variables:
+                                  sub_icon_table: >-
+                                    {%- macro glyph_of(icon_name) -%}
+                                      {%- if icon_name in special_icons -%}
+                                        {{ special_icons[icon_name] }}
+                                      {%- else -%}
+                                        {%- set position = all_icon_names.find("," ~ icon_name ~ ",") -%}
+                                        {{ ("%c" | format(57344 + all_icon_names[:position].count(","))) if position >= 0 else "" }}
+                                      {%- endif -%}
+                                    {%- endmacro -%}
+                                    {%- set ns = namespace(keys=[], glyphs=[]) -%}
+                                    {%- for domain, rules in device_class_icons.items() -%}
+                                      {%- for key, icon_name in rules.items() -%}
+                                        {%- set glyph = glyph_of(icon_name) | string -%}
+                                        {%- if glyph | length > 0 -%}
+                                          {%- set ns.keys = ns.keys + [domain ~ "." ~ key] -%}
+                                          {%- set ns.glyphs = ns.glyphs + [glyph] -%}
+                                        {%- endif -%}
+                                      {%- endfor -%}
+                                    {%- endfor -%}
+                                    {%- for domain, glyph in nextion.icon.domain.items() -%}
+                                      {%- set ns.keys = ns.keys + [domain] -%}
+                                      {%- set ns.glyphs = ns.glyphs + [glyph] -%}
+                                    {%- endfor -%}
+                                    {{ {"keys": ns.keys, "glyphs": ns.glyphs} }}
+                              - alias: Icon table
+                                repeat:
+                                  for_each: '{{ range(0, sub_icon_table["keys"] | count, 50) | list }}'
+                                  sequence:
+                                    - action: 'esphome.{{ action_prefix }}_api_subscribe_icon_table'
+                                      data:
+                                        start: '{{ repeat.item == 0 }}'
+                                        keys: '{{ sub_icon_table["keys"][repeat.item:repeat.item + 50] }}'
+                                        glyphs: '{{ sub_icon_table["glyphs"][repeat.item:repeat.item + 50] }}'
+                                      continue_on_error: true
+                                    - *delay_default
+
                               - repeat:
                                   for_each: '{{ api_subscriptions }}'
                                   sequence:
@@ -7721,63 +7760,36 @@ actions:
                                             repeat.item.icon_color_rgb is list and
                                             repeat.item.icon_color_rgb | count == 3
                                           }}
-                                        overlap:
-                                          icon: >
-                                            {{
-                                              repeat.item.icon
-                                              if
-                                                repeat.item.icon is defined and
-                                                repeat.item.icon is string and
-                                                repeat.item.icon | length > 0 and
-                                                repeat.item.icon is match "mdi:" and
-                                                ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
-                                              else
-                                                None
-                                            }}
-                                          icon_color: '{{ repeat.item.icon_color_rgb if icon_color_rgb_valid else None }}'
-
-                                    # Domains whose appearance varies across the visible
-                                    # state set are resolved on-device, so send no icon
-                                    # unless the user set an explicit override.
-                                    - variables:
-                                        resolved_on_device: >
-                                          {{
-                                            entity_id.split(".")[0] in
-                                            ["alarm_control_panel", "climate", "cover", "lock", "water_heater"]
-                                          }}
-
-                                    # A chip is only ever visible in one state, so its
-                                    # icon must be resolved for that state rather than
-                                    # for whatever the entity happens to be doing now.
-                                    # Resolve both, and let the panel pick.
-                                    - variables:
-                                        forced_icon_state: 'on'
-                                    - *variable_entity
-                                    - variables:
-                                        sub_device_class: '{{ entity_device_class | default("", true) }}'
-                                        sub_icon_on: '{{ "" if resolved_on_device and not overlap_icon_valid else entity_icon }}'
-
-                                    - variables:
-                                        forced_icon_state: 'off'
-                                    - *variable_entity
-                                    # Seeds the panel's icon cache with the icon the binding uses by name (override, else the
-                                    # entity's own `icon` attribute), so a later change back to it needs no request
-                                    - variables:
-                                        sub_icon_cache: >-
+                                        sub_device_class: '{{ state_attr(entity_id, "device_class") | default("", true) }}'
+                                        # Icon sent with the binding: the override, else the entity's own `icon` attribute (except
+                                        # for the domains whose icon follows the state); otherwise none, and the panel resolves it
+                                        # from the domain, device class and state with the icon table. The name and codepoint also
+                                        # seed the panel's icon cache, so a later change back to that icon needs no request.
+                                        sub_icon: >-
+                                          {%- macro glyph_of(icon_name) -%}
+                                            {%- if icon_name in special_icons -%}
+                                              {{ special_icons[icon_name] }}
+                                            {%- else -%}
+                                              {%- set position = all_icon_names.find("," ~ icon_name ~ ",") -%}
+                                              {{ ("%c" | format(57344 + all_icon_names[:position].count(","))) if position >= 0 else "" }}
+                                            {%- endif -%}
+                                          {%- endmacro -%}
+                                          {%- set override = repeat.item.icon
+                                                if repeat.item.icon is defined and repeat.item.icon is string and repeat.item.icon is match "mdi:"
+                                                else "" -%}
                                           {%- set icon_attr = state_attr(entity_id, "icon") -%}
-                                          {%- set name =
-                                                repeat.item.icon if overlap_icon_valid
-                                                else (icon_attr if icon_attr is string and icon_attr is match "mdi:" else "") -%}
-                                          {%- set icon_name = name.split(":")[1] if name else "" -%}
-                                          {%- if icon_name in special_icons -%}
-                                            {%- set glyph = special_icons[icon_name] -%}
+                                          {%- set attribute = icon_attr if icon_attr is string and icon_attr is match "mdi:" else "" -%}
+                                          {%- set override_glyph = glyph_of(override.split(":")[1]) | string if override else "" -%}
+                                          {%- set attribute_glyph = glyph_of(attribute.split(":")[1]) | string if attribute else "" -%}
+                                          {%- set state_icon_domain =
+                                                entity_id.split(".")[0] in ["alarm_control_panel", "climate", "cover", "lock", "water_heater"] -%}
+                                          {%- if override_glyph -%}
+                                            {{ {"name": override, "glyph": override_glyph, "icon": override_glyph} }}
+                                          {%- elif attribute_glyph -%}
+                                            {{ {"name": attribute, "glyph": attribute_glyph, "icon": "" if state_icon_domain else attribute_glyph} }}
                                           {%- else -%}
-                                            {%- set position = all_icon_names.find("," ~ icon_name ~ ",") if icon_name else -1 -%}
-                                            {%- set glyph = ("%c" | format(57344 + all_icon_names[:position].count(","))) if position >= 0 else "" -%}
+                                            {{ {"name": "", "glyph": "", "icon": ""} }}
                                           {%- endif -%}
-                                          {{ {"name": name if glyph else "", "glyph": glyph} }}
-                                    - variables:
-                                        sub_icon_off: '{{ "" if resolved_on_device and not overlap_icon_valid else entity_icon }}'
 
                                     - action: 'esphome.{{ action_prefix }}_api_subscribe'
                                       data:
@@ -7787,13 +7799,13 @@ actions:
                                         entity: '{{ entity_id }}'
                                         device_class: '{{ sub_device_class }}'
                                         attribute: '{{ repeat.item.attribute | default("", true) }}'
-                                        icon_on: '{{ sub_icon_on }}'
-                                        icon_off: '{{ sub_icon_off }}'
+                                        icon_on: '{{ sub_icon.icon }}'
+                                        icon_off: '{{ sub_icon.icon }}'
                                         color_on: '{{ repeat.item.icon_color_rgb if icon_color_rgb_valid else nextion.color.on }}'
                                         color_off: '{{ repeat.item.icon_color_rgb if icon_color_rgb_valid else nextion.color.off }}'
                                         inverted: '{{ repeat.item.inverted | default(false) }}'
-                                        icon_name: '{{ sub_icon_cache.name }}'
-                                        icon_name_glyph: '{{ sub_icon_cache.glyph }}'
+                                        icon_name: '{{ sub_icon.name }}'
+                                        icon_name_glyph: '{{ sub_icon.glyph }}'
                                       continue_on_error: true
                                     - *delay_default
 

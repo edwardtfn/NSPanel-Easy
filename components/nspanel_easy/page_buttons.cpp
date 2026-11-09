@@ -493,8 +493,7 @@ static void button_draw_slot(uint8_t page_idx, uint8_t button_idx, ButtonSlot &s
     if (binding.domain == SUB_DOMAIN_CLIMATE && rt.action[0] != '\0' && !sub_state_in(rt.action, SUB_UNUSABLE_STATES)) {
       effective = rt.action;
     }
-    const SubAppearance look = resolve_sub_appearance(static_cast<SubDomain>(binding.domain), binding.device_class,
-                                                      effective, rt.color_on, rt.color_off);
+    const SubAppearance look = resolve_binding_appearance(binding, effective, rt.color_on, rt.color_off);
     if (look.icon != nullptr) {
       icon = look.icon;
       color = look.color;

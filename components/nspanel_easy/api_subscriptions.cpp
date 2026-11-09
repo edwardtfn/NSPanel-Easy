@@ -539,6 +539,111 @@ static SubIconCacheEntry *sub_icon_cache = nullptr;
 /// @brief Next entry to fill: the cache is filled in order, then the oldest entry is replaced.
 static uint8_t sub_icon_cache_next = 0;
 
+/// @brief One icon table entry: a rule key and its codepoint.
+struct SubIconTableEntry {
+  char key[SUB_ICON_KEY_LEN];  ///< Rule key, e.g. "binary_sensor.door-on"
+  char glyph[4];               ///< UTF-8 codepoint, null-terminated
+};
+
+/// @brief Icon table, allocated on first use (PSRAM when available). Never persisted.
+static SubIconTableEntry *sub_icon_table = nullptr;
+
+/// @brief Entries in sub_icon_table.
+static uint16_t sub_icon_table_count = 0;
+
+void sub_icon_table_add(bool start, const std::vector<std::string> &keys, const std::vector<std::string> &glyphs) {
+  if (sub_icon_table == nullptr) {
+    sub_icon_table = static_cast<SubIconTableEntry *>(sub_alloc(sizeof(SubIconTableEntry) * SUB_ICON_TABLE_SIZE));
+    if (sub_icon_table == nullptr) {
+      ESP_LOGW(TAG, "Out of memory for the icon table");
+      return;
+    }
+  }  // if (sub_icon_table == nullptr)
+  if (start) {
+    sub_icon_table_count = 0;
+  }
+  if (keys.size() != glyphs.size()) {
+    ESP_LOGW(TAG, "Icon table: %zu keys but %zu glyphs; chunk ignored", keys.size(), glyphs.size());
+    return;
+  }
+  uint16_t skipped = 0;
+  for (size_t idx = 0; idx < keys.size(); ++idx) {
+    if (sub_icon_table_count >= SUB_ICON_TABLE_SIZE) {
+      skipped += static_cast<uint16_t>(keys.size() - idx);
+      break;
+    }
+    SubIconTableEntry &entry = sub_icon_table[sub_icon_table_count];
+    if (!sub_copy(entry.key, sizeof(entry.key), keys[idx].c_str()) ||
+        !sub_copy(entry.glyph, sizeof(entry.glyph), glyphs[idx].c_str()) || entry.glyph[0] == '\0') {
+      ++skipped;  // Would not fit whole, or no codepoint
+      continue;
+    }
+    ++sub_icon_table_count;
+  }  // for each key
+  if (skipped > 0) {
+    ESP_LOGW(TAG, "Icon table: %" PRIu16 " entr%s skipped", skipped, skipped == 1 ? "y" : "ies");
+  }
+  ESP_LOGD(TAG, "Icon table: %" PRIu16 " entries", sub_icon_table_count);
+}
+
+/**
+ * @brief Look up a rule key in the icon table.
+ *
+ * @param key Rule key.
+ * @return The codepoint, or nullptr when the key is not in the table.
+ */
+static const char *sub_icon_table_find(const char *key) {
+  for (uint16_t idx = 0; idx < sub_icon_table_count; ++idx) {
+    if (strcmp(sub_icon_table[idx].key, key) == 0) {
+      return sub_icon_table[idx].glyph;
+    }
+  }  // for each entry
+  return nullptr;
+}
+
+SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *state, uint16_t color_on,
+                                         uint16_t color_off) {
+  const SubDomain domain = static_cast<SubDomain>(binding.domain);
+  SubAppearance look = resolve_sub_appearance(domain, binding.device_class, state, color_on, color_off);
+  if (look.icon != nullptr || sub_icon_table == nullptr) {
+    return look;  // A multi-state domain, or no table yet
+  }
+  const bool active = (evaluate_sub_state(domain, state) == SUB_STATE_ON);
+  look.color = active ? color_on : color_off;
+
+  // Domain of the entity: everything before the dot
+  const char *dot = strchr(binding.entity, '.');
+  if (dot == nullptr || static_cast<size_t>(dot - binding.entity) >= SUB_ICON_KEY_LEN) {
+    return look;
+  }
+  char entity_domain[SUB_ICON_KEY_LEN];
+  memcpy(entity_domain, binding.entity, dot - binding.entity);
+  entity_domain[dot - binding.entity] = '\0';
+
+  char key[SUB_ICON_KEY_LEN];
+  if (binding.device_class[0] != '\0') {
+    // As the Blueprint keys them: no state for button, event and sensor; otherwise the
+    // exact state first, then "on"/"off" by how the state classifies
+    const bool stateless = strcmp(entity_domain, "button") == 0 || strcmp(entity_domain, "event") == 0 ||
+                           strcmp(entity_domain, "sensor") == 0;
+    if (stateless) {
+      snprintf(key, sizeof(key), "%s.%s", entity_domain, binding.device_class);
+      look.icon = sub_icon_table_find(key);
+    } else {
+      snprintf(key, sizeof(key), "%s.%s-%s", entity_domain, binding.device_class, state);
+      look.icon = sub_icon_table_find(key);
+      if (look.icon == nullptr) {
+        snprintf(key, sizeof(key), "%s.%s-%s", entity_domain, binding.device_class, active ? "on" : "off");
+        look.icon = sub_icon_table_find(key);
+      }
+    }  // if (stateless)
+  }  // if (device_class)
+  if (look.icon == nullptr) {
+    look.icon = sub_icon_table_find(entity_domain);  // Domain default
+  }
+  return look;
+}
+
 bool sub_icon_lookup(const char *name, char *glyph, size_t size) {
   if (sub_icon_cache == nullptr || name == nullptr || name[0] == '\0') {
     return false;
