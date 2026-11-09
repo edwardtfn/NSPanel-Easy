@@ -6509,7 +6509,7 @@ actions:
       #   attribute:    attribute to look up instead of the state (state when the attribute is missing)
       #   default_icon: present when the domain overrides the entity's own icon; used for states without
       #                 an icon, null for the domain's default icon
-      # A state without `color` uses the entity's default color (entity_icon_color_tmp).
+      # A state without `color` uses the entity's default color (see entity_icon_color).
       entity_state_styles:
         alarm_control_panel:
           default_icon: "\uEECC"                                 # mdi:shield-alert-outline
@@ -7667,59 +7667,9 @@ actions:
               overlap.icon is match "mdi:" and
               ((overlap.icon.split(":")[1]) in special_icons or ("," ~ (overlap.icon.split(":")[1]) ~ ",") in all_icon_names)
             }}
-          overlap_icon_color_valid: '{{ overlap is defined and overlap.icon_color is defined and overlap.icon_color is list and overlap.icon_color | count == 3 }}'
-          overlap_name_valid: '{{ overlap is defined and overlap.name is defined and overlap.name is string and overlap.name | length > 0 }}'
           entity_state: '{{ states(entity_id) | default("unknown") if entity_id_valid }}'
           entity_has_value: '{{ has_value(entity_id) if entity_id_valid }}'
           entity_domain: '{{ states[entity_id].domain if entity_id_valid }}'
-          entity_icon: '{{ state_attr(entity_id, "icon") | default("") if entity_id_valid }}'
-          icon_state: '{{ forced_icon_state | default(entity_state, true) }}'
-          entity_icon_valid: >
-            {{
-              entity_icon is defined and
-              entity_icon is string and
-              entity_icon | length > 0 and
-              entity_icon is match "mdi:" and
-              ((entity_icon.split(":")[1]) in special_icons or ("," ~ (entity_icon.split(":")[1]) ~ ",") in all_icon_names)
-            }}
-          entity_state_is_on: >
-            {{
-              (
-                entity_state in enum.states.on or
-                (entity_domain in ["input_number", "number", "sensor"] and entity_has_value and entity_state not in ["off", "false", "False"]) or
-                (entity_domain in enum.states and entity_state in enum.states[entity_domain].on)
-              ) if entity_id_valid
-            }}
-          entity_state_is_off: >
-            {{
-              (not entity_state_is_on) and
-              (
-                entity_state in enum.states.off or
-                (
-                  entity_domain in enum.states and
-                  entity_state in enum.states[entity_domain].off
-                )
-              )
-              if entity_id_valid
-            }}
-          entity_state_is_unknown: '{{ ((not entity_state_is_on) and (not entity_state_is_off)) if entity_id_valid }}'
-          entity_icon_color_tmp: >
-            {%- if entity_id_valid -%}
-              {%- set entity_color_attr = state_attr(entity_id, "color") | default("") -%}
-              {%- if entity_color_attr is string and entity_color_attr is match "#[0-9a-fA-F]{6}$" -%}
-                {%- set own_color = [entity_color_attr[1:3] | int(base=16), entity_color_attr[3:5] | int(base=16), entity_color_attr[5:7] | int(base=16)] -%}
-              {%- elif entity_color_attr is list and entity_color_attr | count == 3 -%}
-                {%- set own_color = entity_color_attr -%}
-              {%- else -%}
-                {%- set own_color = none -%}
-              {%- endif -%}
-              {%- set default_color = own_color if own_color is not none else (overlap.icon_color if overlap_icon_color_valid else nextion.color.on) -%}
-              {%- set has_explicit_color = own_color is not none or overlap_icon_color_valid -%}
-              {{ default_color if (entity_state_is_on or (has_explicit_color and not entity_state_is_off and entity_state not in enum.states.unknown)) else nextion.color.off }}
-            {%- else -%}
-              {{ overlap.icon_color if overlap_icon_color_valid else [0, 0, 0] }}
-            {%- endif -%}
-          entity_friendly_name: '{{ states[entity_id].name if entity_id_valid }}'
           entity_device_class: '{{ state_attr(entity_id, "device_class") | default("") if entity_id_valid else "" }}'
           # Icon and color for the state, from entity_state_styles: { color, icon } or {} (see Global variables)
           entity_state_style: >
@@ -7734,93 +7684,109 @@ actions:
             {%- else -%}
               {{ {} }}
             {%- endif -%}
+          # Icon color as [r, g, b]: per-domain rules (light, humidifier), then entity_state_styles, then the entity's default color
           entity_icon_color: >
-              {%- if entity_id_valid -%}
-                {%- if entity_domain == "light" -%}
-                  {%- if entity_state != "on" -%}
-                    {{ nextion.color.off }}
-                  {%- else -%}
-                    {%- set entity_rgb_color_attr = state_attr(entity_id, "rgb_color") | default("") -%}
-                    {%- if entity_rgb_color_attr is list and entity_rgb_color_attr | count == 3 -%}
-                      {{ entity_rgb_color_attr }}
-                    {%- else -%}
-                      {{ entity_icon_color_tmp }}
-                    {%- endif -%}
-                  {%- endif -%}
-                {%- elif entity_domain == "humidifier" -%}
-                  {#- `action` tells whether it is actually running, not only switched on -#}
-                  {%- set humidifier_action = state_attr(entity_id, "action") -%}
-                  {%- if entity_state == "off" or humidifier_action == "off" -%}
-                    {{ nextion.color.off }}
-                  {%- elif humidifier_action == "humidifying" -%}
-                    {{ nextion.color.blue }}
-                  {%- elif humidifier_action == "drying" -%}
-                    {{ nextion.color.orange }}
-                  {%- else -%}
-                    {{ entity_icon_color_tmp }}
-                  {%- endif -%}
-                {%- elif entity_state_style.color is defined -%}
-                  {{ nextion.color[entity_state_style.color] }}
+            {%- if entity_id_valid -%}
+              {#- Default color: the entity's own `color` attribute, then the overlap color, then the `on` color; the `off` color when off -#}
+              {%- set entity_state_is_on =
+                    entity_state in enum.states.on or
+                    (entity_domain in ["input_number", "number", "sensor"] and entity_has_value and entity_state not in ["off", "false", "False"]) or
+                    (entity_domain in enum.states and entity_state in enum.states[entity_domain].on) -%}
+              {%- set entity_state_is_off =
+                    (not entity_state_is_on) and
+                    (entity_state in enum.states.off or (entity_domain in enum.states and entity_state in enum.states[entity_domain].off)) -%}
+              {%- set overlap_icon_color_valid = overlap is defined and overlap.icon_color is defined and overlap.icon_color is list and overlap.icon_color | count == 3 -%}
+              {%- set entity_color_attr = state_attr(entity_id, "color") | default("") -%}
+              {%- if entity_color_attr is string and entity_color_attr is match "#[0-9a-fA-F]{6}$" -%}
+                {%- set own_color = [entity_color_attr[1:3] | int(base=16), entity_color_attr[3:5] | int(base=16), entity_color_attr[5:7] | int(base=16)] -%}
+              {%- elif entity_color_attr is list and entity_color_attr | count == 3 -%}
+                {%- set own_color = entity_color_attr -%}
+              {%- else -%}
+                {%- set own_color = none -%}
+              {%- endif -%}
+              {%- set on_color = own_color if own_color is not none else (overlap.icon_color if overlap_icon_color_valid else nextion.color.on) -%}
+              {%- set has_explicit_color = own_color is not none or overlap_icon_color_valid -%}
+              {%- set default_color = on_color if (entity_state_is_on or (has_explicit_color and not entity_state_is_off and entity_state not in enum.states.unknown)) else nextion.color.off -%}
+              {#- Color by domain and state -#}
+              {%- if entity_domain == "light" -%}
+                {%- if entity_state != "on" -%}
+                  {{ nextion.color.off }}
                 {%- else -%}
-                  {{ entity_icon_color_tmp }}
+                  {%- set entity_rgb_color_attr = state_attr(entity_id, "rgb_color") | default("") -%}
+                  {%- if entity_rgb_color_attr is list and entity_rgb_color_attr | count == 3 -%}
+                    {{ entity_rgb_color_attr }}
+                  {%- else -%}
+                    {{ default_color }}
+                  {%- endif -%}
                 {%- endif -%}
+              {%- elif entity_domain == "humidifier" -%}
+                {#- `action` tells whether it is actually running, not only switched on -#}
+                {%- set humidifier_action = state_attr(entity_id, "action") -%}
+                {%- if entity_state == "off" or humidifier_action == "off" -%}
+                  {{ nextion.color.off }}
+                {%- elif humidifier_action == "humidifying" -%}
+                  {{ nextion.color.blue }}
+                {%- elif humidifier_action == "drying" -%}
+                  {{ nextion.color.orange }}
+                {%- else -%}
+                  {{ default_color }}
+                {%- endif -%}
+              {%- elif entity_state_style.color is defined -%}
+                {{ nextion.color[entity_state_style.color] }}
+              {%- else -%}
+                {{ default_color }}
               {%- endif -%}
-
-          entity:
-            name: >
-              {%- if entity_id_valid -%}
-                {{ overlap.name if overlap_name_valid else entity_friendly_name }}
+            {%- endif -%}
+          # Name: the overlap name, else the entity's friendly name
+          entity_name: >
+            {%- if entity_id_valid -%}
+              {%- set overlap_name_valid = overlap is defined and overlap.name is defined and overlap.name is string and overlap.name | length > 0 -%}
+              {{ overlap.name if overlap_name_valid else states[entity_id].name }}
+            {%- endif -%}
+          # Icon glyph, by priority: overlap icon, domain icon from entity_state_styles, the entity's `icon` attribute,
+          # device class icon, domain default. Each icon name is searched in all_icon_names only once (mdi_glyph).
+          entity_icon: >
+            {%- macro mdi_glyph(icon_name) -%}
+              {#- Glyph of an MDI icon name (without `mdi:`), or "" when the name is unknown -#}
+              {%- if icon_name in special_icons -%}
+                {{ special_icons[icon_name] }}
+              {%- else -%}
+                {%- set position = all_icon_names.find("," ~ icon_name ~ ",") -%}
+                {{ ("%c" | format(57344 + all_icon_names[:position].count(","))) if position >= 0 else "" }}
               {%- endif -%}
-
-            icon: >
-              {%- if entity_id_valid -%}
-                {%- set icon_domain = nextion.icon.domain[entity_domain] | default("\uE027") if entity_domain else "\uE027" -%}{#- mdi:alert-circle -#}
-                {#- Priority 1: Overlap icon -#}
-                {%- if overlap_icon_valid -%}
-                  {{ (special_icons[(overlap.icon.split(":")[1])] if (overlap.icon.split(":")[1]) in special_icons
-                    else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (overlap.icon.split(":")[1]) ~ ",")].count(",")))
-                    if ("," ~ (overlap.icon.split(":")[1]) ~ ",") in all_icon_names
-                    else "") }}
-                {#- Priority 2: Domain-specific icon, from entity_state_styles -#}
-                {%- elif entity_domain in entity_state_styles and "default_icon" in entity_state_styles[entity_domain] -%}
-                  {{ entity_state_style.icon | default(entity_state_styles[entity_domain].default_icon or icon_domain) }}
-                {#- Priority 3: Entity's custom icon from state attribute -#}
-                {%- elif entity_icon_valid -%}
-                  {{ (special_icons[(entity_icon.split(":")[1])] if (entity_icon.split(":")[1]) in special_icons
-                    else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (entity_icon.split(":")[1]) ~ ",")].count(",")))
-                    if ("," ~ (entity_icon.split(":")[1]) ~ ",") in all_icon_names
-                    else "") }}
+            {%- endmacro -%}
+            {%- if entity_id_valid -%}
+              {%- set icon_domain = nextion.icon.domain[entity_domain] | default("\uE027") if entity_domain else "\uE027" -%}{#- mdi:alert-circle -#}
+              {#- Priority 1: Overlap icon -#}
+              {%- if overlap_icon_valid -%}
+                {{ mdi_glyph(overlap.icon.split(":")[1]) }}
+              {#- Priority 2: Domain-specific icon, from entity_state_styles -#}
+              {%- elif entity_domain in entity_state_styles and "default_icon" in entity_state_styles[entity_domain] -%}
+                {{ entity_state_style.icon | default(entity_state_styles[entity_domain].default_icon or icon_domain) }}
+              {%- else -%}
+                {#- Priority 3: Entity's custom icon from state attribute, when it is a known icon -#}
+                {%- set icon_attr = state_attr(entity_id, "icon") -%}
+                {%- set icon_attr_glyph = mdi_glyph(icon_attr.split(":")[1]) if icon_attr is string and icon_attr is match "mdi:" else "" -%}
+                {%- if icon_attr_glyph | length > 0 -%}
+                  {{ icon_attr_glyph }}
                 {#- Priority 4: Device class icon -#}
                 {%- elif entity_device_class is string and
                     entity_device_class | length > 0 and
                     entity_domain in device_class_icons -%}
+                  {%- set icon_state = forced_icon_state | default(entity_state, true) -%}
                   {%- set state_suffix = "" if entity_domain in ["button", "event", "sensor"] else ("-" + icon_state) -%}
                   {%- set device_class_key = entity_device_class + state_suffix -%}
                   {%- if device_class_key in device_class_icons[entity_domain] -%}
-                    {{ (special_icons[(device_class_icons[entity_domain][device_class_key])] if (device_class_icons[entity_domain][device_class_key]) in special_icons
-                      else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (device_class_icons[entity_domain][device_class_key]) ~ ",")].count(",")))
-                      if ("," ~ (device_class_icons[entity_domain][device_class_key]) ~ ",") in all_icon_names
-                      else "") }}
+                    {{ mdi_glyph(device_class_icons[entity_domain][device_class_key]) }}
                   {%- else -%}
                     {{ icon_domain }}
                   {%- endif -%}
                 {#- Priority 5: Domain default -#}
                 {%- else -%}
                   {{ icon_domain }}
-                {%- endif -%}
-              {%- endif -%}
-
-            icon_color: '{{ entity_icon_color }}'
-            icon_color_rgb565: >-
-              {{
-                int(
-                      ((entity_icon_color[0] //(2**3)) *(2**11)) +
-                      ((entity_icon_color[1] //(2**2)) *(2**5)) +
-                      ((entity_icon_color[2] //(2**3)))
-                    )
-                if entity_icon_color is list and entity_icon_color | count == 3
-                else 0
-              }}
+                {%- endif -%}  {#- if icon_attr_glyph -#}
+              {%- endif -%}  {#- if overlap_icon_valid -#}
+            {%- endif -%}  {#- if entity_id_valid -#}
 
   - alias: Main choices
     choose:
@@ -8097,13 +8063,13 @@ actions:
                                     - *variable_entity
                                     - variables:
                                         sub_device_class: '{{ entity_device_class | default("", true) }}'
-                                        sub_icon_on: '{{ "" if resolved_on_device and not overlap_icon_valid else entity.icon }}'
+                                        sub_icon_on: '{{ "" if resolved_on_device and not overlap_icon_valid else entity_icon }}'
 
                                     - variables:
                                         forced_icon_state: 'off'
                                     - *variable_entity
                                     - variables:
-                                        sub_icon_off: '{{ "" if resolved_on_device and not overlap_icon_valid else entity.icon }}'
+                                        sub_icon_off: '{{ "" if resolved_on_device and not overlap_icon_valid else entity_icon }}'
 
                                     - action: 'esphome.{{ action_prefix }}_api_subscribe'
                                       data:
@@ -8571,7 +8537,7 @@ actions:
                                       if ("," ~ (overlap.icon.split(":")[1]) ~ ",") in all_icon_names
                                       else "") }}
                                   {%- elif entity_id_valid -%}
-                                    {{ entity.icon }}
+                                    {{ entity_icon }}
                                   {%- else -%}
                                     {{ "\uE027" }}{# mdi:alert-circle #}
                                   {%- endif -%}
@@ -8604,7 +8570,7 @@ actions:
                                       if ("," ~ (overlap.icon.split(":")[1]) ~ ",") in all_icon_names
                                       else "") }}
                                   {%- elif entity_id_valid -%}
-                                    {{ entity.icon }}
+                                    {{ entity_icon }}
                                   {%- else -%}
                                     {{ "\uE027" }}{# mdi:alert-circle #}
                                   {%- endif -%}
@@ -9381,11 +9347,11 @@ actions:
                                 data:
                                   page: chips
                                   id: chip_climate
-                                  icon: '{{ entity.icon if entity.icon is defined else "" }}'
+                                  icon: '{{ entity_icon if entity_icon is defined else "" }}'
                                   icon_color: >
                                     {{
-                                      entity.icon_color
-                                      if climate_chip_visible and entity.icon_color is defined
+                                      entity_icon_color
+                                      if climate_chip_visible and entity_icon_color is defined
                                       else [0, 0, 0]
                                     }}
                                   visible: true
@@ -9511,18 +9477,18 @@ actions:
                                           {% endif %}
                                         btn_icon: >
                                           {{
-                                            entity.icon
-                                            if entity.icon is defined
-                                                and entity.icon is string
-                                                and entity.icon | length > 0
+                                            entity_icon
+                                            if entity_icon is defined
+                                                and entity_icon is string
+                                                and entity_icon | length > 0
                                             else "\uE027"
                                           }}{# mdi:alert-circle #}
                                         btn_label: >
                                           {{
-                                            entity.name
-                                            if entity.name is defined
-                                                and entity.name is string
-                                                and entity.name | length > 0
+                                            entity_name
+                                            if entity_name is defined
+                                                and entity_name is string
+                                                and entity_name | length > 0
                                             else entity_id
                                           }}
                                         btn_icon_font: '{{ button_pages_icon_size if is_number(button_pages_icon_size) else 8 }}'
@@ -9535,10 +9501,10 @@ actions:
                                         icon: '{{ btn_icon }}'
                                         icon_color: >
                                           {{
-                                            entity.icon_color
-                                            if entity.icon_color is defined
-                                                and entity.icon_color is list
-                                                and entity.icon_color | count == 3
+                                            entity_icon_color
+                                            if entity_icon_color is defined
+                                                and entity_icon_color is list
+                                                and entity_icon_color | count == 3
                                             else [200, 200, 200]
                                           }}
                                         icon_font: '{{ btn_icon_font }}'
@@ -9662,11 +9628,11 @@ actions:
                                         txt_list:
                                           - >-
                                             {% if entitypages_show_entities_icons %}
-                                              {{ repeat.item.component }}_icon.txt="{{ entity.icon }}"
+                                              {{ repeat.item.component }}_icon.txt="{{ entity_icon }}"
                                             {% else %}
                                               {{ repeat.item.component }}_icon.txt=""
                                             {% endif %}
-                                          - '{{ repeat.item.component }}_label.txt="{{ entity.name }}"'
+                                          - '{{ repeat.item.component }}_label.txt="{{ entity_name }}"'
                                       continue_on_error: true
                                     - *delay_default
                                 - alias: Entities pages - Values (with icons)
@@ -10403,8 +10369,8 @@ actions:
                               page: mem
                               id: graph_config
                               txt_list:
-                                - '{{ entity.name }}'
-                                - '{{ entity.icon }}'
+                                - '{{ entity_name }}'
+                                - '{{ entity_icon }}'
                                 - '{{ unit_of_measurement }}'
                                 - '{{ graph_min }}'
                                 - '{{ graph_max }}'
@@ -10542,11 +10508,11 @@ actions:
                                     - variables:
                                         txt_list: >
                                           {%- set ns = namespace(items=[]) -%}
-                                          {%- if entity.name is defined and entity.name is string and entity.name | length > 0 -%}
-                                            {%- set ns.items = ns.items + ['page_label.txt="' + entity.name + '"'] -%}
+                                          {%- if entity_name is defined and entity_name is string and entity_name | length > 0 -%}
+                                            {%- set ns.items = ns.items + ['page_label.txt="' + entity_name + '"'] -%}
                                           {%- endif -%}
-                                          {%- if entity.icon is defined and entity.icon is string and entity.icon | length > 0 -%}
-                                            {%- set ns.items = ns.items + ['icon_state.txt="' + entity.icon + '"'] -%}
+                                          {%- if entity_icon is defined and entity_icon is string and entity_icon | length > 0 -%}
+                                            {%- set ns.items = ns.items + ['icon_state.txt="' + entity_icon + '"'] -%}
                                           {%- endif -%}
                                           {{ ns.items }}
                                     - if: '{{ txt_list | length > 0 }}'
@@ -11874,13 +11840,13 @@ actions:
                                               page: '{{ pages.climate }}'
                                               id: '{{ repeat.item.component }}'
                                               state: false
-                                              icon: '{{ entity.icon }}'
+                                              icon: '{{ entity_icon }}'
                                               icon_color: >
                                                 {{
-                                                  entity.icon_color
-                                                  if entity.icon_color is defined
-                                                      and entity.icon_color is list
-                                                      and entity.icon_color | count == 3
+                                                  entity_icon_color
+                                                  if entity_icon_color is defined
+                                                      and entity_icon_color is list
+                                                      and entity_icon_color | count == 3
                                                   else [200, 200, 200]
                                                 }}
                                               icon_font: 0     # Unused while `icon_only` is set: the font is fixed on the TFT
@@ -11905,14 +11871,14 @@ actions:
                                 - *variable_entity
                                 - condition: '{{ entity is defined }}'
                                 - *entity_details_title_with_icon
-                                - if: '{{ entity.icon is defined and entity.icon is string and entity.icon | length > 0 }}'
+                                - if: '{{ entity_icon is defined and entity_icon is string and entity_icon | length > 0 }}'
                                   then:
                                     - action: 'esphome.{{ action_prefix }}_component_text_list'
                                       data:
                                         page: ""
                                         id: icon
                                         txt_list:
-                                          - '{{ entity.icon }}'
+                                          - '{{ entity_icon }}'
                                       continue_on_error: true
                                     - *delay_default
                                 - action: 'esphome.{{ action_prefix }}_component_val'
@@ -12729,14 +12695,14 @@ actions:
                                                   visible: false
                                                 continue_on_error: true
                                             else:
-                                              - if: '{{ entity.icon | length > 0 }}'
+                                              - if: '{{ entity_icon | length > 0 }}'
                                                 then:
                                                   - action: 'esphome.{{ action_prefix }}_component_text_list'
                                                     data:
                                                       page: '{{ repeat.item.page }}'
                                                       id: '{{ repeat.item.component }}_icon'
                                                       txt_list:
-                                                        - '{{ entity.icon }}'
+                                                        - '{{ entity_icon }}'
                                                     continue_on_error: true
                                                   - *delay_default
                                               - alias: value_with_unit_and_translations
@@ -12994,15 +12960,15 @@ actions:
                                                   back_page: '{{ back_page }}'
                                                 continue_on_error: true
                                               - condition: '{{ entity is defined }}'
-                                              - condition: '{{ entity.name is defined }}'
-                                              - condition: '{{ entity.name is string }}'
-                                              - condition: '{{ entity.name | length > 0 }}'
+                                              - condition: '{{ entity_name is defined }}'
+                                              - condition: '{{ entity_name is string }}'
+                                              - condition: '{{ entity_name | length > 0 }}'
                                               - action: 'esphome.{{ action_prefix }}_component_text_list'
                                                 data:
                                                   page: ""
                                                   id: page_label
                                                   txt_list:
-                                                    - '{{ entity.name }}'
+                                                    - '{{ entity_name }}'
                                                 continue_on_error: true
                                       - alias: Custom hold action - Left
                                         conditions: '{{ last_click_button.hold_select == "Custom Action" and nspanel_event.component == "hw_bt_left" }}'
