@@ -7709,33 +7709,36 @@ actions:
                               # too large for the recorder to store with the action call.
                               - variables:
                                   push_id: '{{ utcnow().strftime("%Y%m%dT%H%M%S%f") }}'
-                              # Icon table: the device class icons and the domain defaults, so the panel resolves the icon of
-                              # an entity from its domain, device class and state. Not persisted, so sent every session.
+                              # Icon names, in codepoint order, so the panel resolves any icon name itself. Only the names travel:
+                              # each chunk carries the position of its first name. Not persisted, so sent every session.
+                              # (Split per chunk rather than kept as one list variable, which would render a single ~150 KB result.)
+                              - alias: Icon names
+                                repeat:
+                                  for_each: '{{ range(0, all_icon_names.count(",") - 1, 400) | list }}'
+                                  sequence:
+                                    - action: 'esphome.{{ action_prefix }}_api_subscribe_icon_names'
+                                      data:
+                                        start: '{{ repeat.item }}'
+                                        names: '{{ all_icon_names[1:-1].split(",")[repeat.item:repeat.item + 400] | join(",") }}'
+                                      continue_on_error: true
+                                    - *delay_default
+
+                              # Icon table: the device class icons (by name) and the domain defaults, so the panel resolves the
+                              # icon of an entity from its domain, device class and state. Not persisted, so sent every session.
                               - variables:
                                   sub_icon_table: >-
-                                    {%- macro glyph_of(icon_name) -%}
-                                      {%- if icon_name in special_icons -%}
-                                        {{ special_icons[icon_name] }}
-                                      {%- else -%}
-                                        {%- set position = all_icon_names.find("," ~ icon_name ~ ",") -%}
-                                        {{ ("%c" | format(57344 + all_icon_names[:position].count(","))) if position >= 0 else "" }}
-                                      {%- endif -%}
-                                    {%- endmacro -%}
-                                    {%- set ns = namespace(keys=[], glyphs=[]) -%}
+                                    {%- set ns = namespace(keys=[], icons=[]) -%}
                                     {%- for domain, rules in device_class_icons.items() -%}
                                       {%- for key, icon_name in rules.items() -%}
-                                        {%- set glyph = glyph_of(icon_name) | string -%}
-                                        {%- if glyph | length > 0 -%}
-                                          {%- set ns.keys = ns.keys + [domain ~ "." ~ key] -%}
-                                          {%- set ns.glyphs = ns.glyphs + [glyph] -%}
-                                        {%- endif -%}
+                                        {%- set ns.keys = ns.keys + [domain ~ "." ~ key] -%}
+                                        {%- set ns.icons = ns.icons + [icon_name] -%}
                                       {%- endfor -%}
                                     {%- endfor -%}
                                     {%- for domain, glyph in nextion.icon.domain.items() -%}
                                       {%- set ns.keys = ns.keys + [domain] -%}
-                                      {%- set ns.glyphs = ns.glyphs + [glyph] -%}
+                                      {%- set ns.icons = ns.icons + [glyph] -%}
                                     {%- endfor -%}
-                                    {{ {"keys": ns.keys, "glyphs": ns.glyphs} }}
+                                    {{ {"keys": ns.keys, "icons": ns.icons} }}
                               - alias: Icon table
                                 repeat:
                                   for_each: '{{ range(0, sub_icon_table["keys"] | count, 50) | list }}'
@@ -7744,7 +7747,7 @@ actions:
                                       data:
                                         start: '{{ repeat.item == 0 }}'
                                         keys: '{{ sub_icon_table["keys"][repeat.item:repeat.item + 50] }}'
-                                        glyphs: '{{ sub_icon_table["glyphs"][repeat.item:repeat.item + 50] }}'
+                                        glyphs: '{{ sub_icon_table["icons"][repeat.item:repeat.item + 50] }}'
                                       continue_on_error: true
                                     - *delay_default
 
@@ -7761,35 +7764,21 @@ actions:
                                             repeat.item.icon_color_rgb | count == 3
                                           }}
                                         sub_device_class: '{{ state_attr(entity_id, "device_class") | default("", true) }}'
-                                        # Icon sent with the binding: the override, else the entity's own `icon` attribute (except
-                                        # for the domains whose icon follows the state); otherwise none, and the panel resolves it
-                                        # from the domain, device class and state with the icon table. The name and codepoint also
-                                        # seed the panel's icon cache, so a later change back to that icon needs no request.
-                                        sub_icon: >-
-                                          {%- macro glyph_of(icon_name) -%}
-                                            {%- if icon_name in special_icons -%}
-                                              {{ special_icons[icon_name] }}
-                                            {%- else -%}
-                                              {%- set position = all_icon_names.find("," ~ icon_name ~ ",") -%}
-                                              {{ ("%c" | format(57344 + all_icon_names[:position].count(","))) if position >= 0 else "" }}
-                                            {%- endif -%}
-                                          {%- endmacro -%}
+                                        # Icon sent by name with the binding: the override, else the entity's own `icon` attribute
+                                        # (except for the domains whose icon follows the state); otherwise none, and the panel
+                                        # resolves it from the domain, device class and state with the icon table.
+                                        sub_icon_name: >-
                                           {%- set override = repeat.item.icon
                                                 if repeat.item.icon is defined and repeat.item.icon is string and repeat.item.icon is match "mdi:"
                                                 else "" -%}
                                           {%- set icon_attr = state_attr(entity_id, "icon") -%}
-                                          {%- set attribute = icon_attr if icon_attr is string and icon_attr is match "mdi:" else "" -%}
-                                          {%- set override_glyph = glyph_of(override.split(":")[1]) | string if override else "" -%}
-                                          {%- set attribute_glyph = glyph_of(attribute.split(":")[1]) | string if attribute else "" -%}
-                                          {%- set state_icon_domain =
-                                                entity_id.split(".")[0] in ["alarm_control_panel", "climate", "cover", "lock", "water_heater"] -%}
-                                          {%- if override_glyph -%}
-                                            {{ {"name": override, "glyph": override_glyph, "icon": override_glyph} }}
-                                          {%- elif attribute_glyph -%}
-                                            {{ {"name": attribute, "glyph": attribute_glyph, "icon": "" if state_icon_domain else attribute_glyph} }}
-                                          {%- else -%}
-                                            {{ {"name": "", "glyph": "", "icon": ""} }}
-                                          {%- endif -%}
+                                          {%- set attribute = icon_attr
+                                                if icon_attr is string and icon_attr is match "mdi:" and
+                                                  entity_id.split(".")[0] not in ["alarm_control_panel", "climate", "cover", "lock", "water_heater"]
+                                                else "" -%}
+                                          {%- set override_known = override and
+                                                (override[4:] in special_icons or ("," ~ override[4:] ~ ",") in all_icon_names) -%}
+                                          {{ override if override_known else attribute }}
 
                                     - action: 'esphome.{{ action_prefix }}_api_subscribe'
                                       data:
@@ -7799,13 +7788,12 @@ actions:
                                         entity: '{{ entity_id }}'
                                         device_class: '{{ sub_device_class }}'
                                         attribute: '{{ repeat.item.attribute | default("", true) }}'
-                                        icon_on: '{{ sub_icon.icon }}'
-                                        icon_off: '{{ sub_icon.icon }}'
+                                        icon_on: ''
+                                        icon_off: ''
                                         color_on: '{{ repeat.item.icon_color_rgb if icon_color_rgb_valid else nextion.color.on }}'
                                         color_off: '{{ repeat.item.icon_color_rgb if icon_color_rgb_valid else nextion.color.off }}'
                                         inverted: '{{ repeat.item.inverted | default(false) }}'
-                                        icon_name: '{{ sub_icon.name }}'
-                                        icon_name_glyph: '{{ sub_icon.glyph }}'
+                                        icon_name: '{{ sub_icon_name }}'
                                       continue_on_error: true
                                     - *delay_default
 
@@ -13237,32 +13225,6 @@ actions:
                                     }}
                                 sequence:
                                   - *short_press_action_call
-
-              # A bound entity's own `icon` attribute changed to a name the panel has not resolved yet. The panel
-              # holds no table of MDI names, so the name is resolved here and the icon is sent back with its
-              # name, which the panel caches (no restart).
-              - alias: Icon request
-                conditions:
-                  - '{{ nspanel_event.type == "icon_request" }}'
-                  - '{{ nspanel_event.icon is defined and nspanel_event.icon is string and nspanel_event.icon is match "mdi:" }}'
-                sequence:
-                  - variables:
-                      icon_glyph: >-
-                        {%- set icon_name = nspanel_event.icon.split(":")[1] -%}
-                        {%- if icon_name in special_icons -%}
-                          {{ special_icons[icon_name] }}
-                        {%- else -%}
-                          {%- set position = all_icon_names.find("," ~ icon_name ~ ",") -%}
-                          {{ ("%c" | format(57344 + all_icon_names[:position].count(","))) if position >= 0 else "" }}
-                        {%- endif -%}
-                  - condition: '{{ icon_glyph | length > 0 }}'
-                  - action: 'esphome.{{ action_prefix }}_api_subscribe_icon'
-                    data:
-                      page: '{{ nspanel_event.page }}'
-                      component: '{{ nspanel_event.component }}'
-                      icon: '{{ icon_glyph }}'
-                      name: '{{ nspanel_event.icon }}'
-                    continue_on_error: true
 
               - alias: Versions mismatch
                 conditions:

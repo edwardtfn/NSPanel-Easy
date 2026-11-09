@@ -631,14 +631,12 @@ void sub_subscribe_all();
  * @param color_on RGB565 colour for the active state.
  * @param color_off RGB565 colour for the inactive state.
  * @param inverted Show while the entity is inactive.
- * @param icon_name MDI name of an icon the binding uses, e.g. "mdi:lamp", to seed the icon cache; empty for
- *                  none. The icon may be needed again later, when the entity's own `icon` attribute changes.
- * @param icon_name_glyph Codepoint of icon_name.
+ * @param icon_name Icon by name, e.g. "mdi:lamp", resolved with the icon names when icon_on is empty; empty for
+ *                  none.
  */
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
-                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name,
-                      const char *icon_name_glyph);
+                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name);
 
 /// @brief Most entries of the icon table (device class rules and domain defaults).
 static constexpr uint16_t SUB_ICON_TABLE_SIZE = 384;
@@ -659,7 +657,8 @@ static constexpr uint8_t SUB_ICON_KEY_LEN = 48;
  *
  * @param start First chunk: clear the table first.
  * @param keys Keys, as above.
- * @param glyphs Codepoints, one per key.
+ * @param glyphs Icons, one per key: a codepoint, or an icon name resolved with the icon names (which the
+ *               Blueprint sends first).
  */
 void sub_icon_table_add(bool start, const std::vector<std::string> &keys, const std::vector<std::string> &glyphs);
 
@@ -681,38 +680,47 @@ void sub_icon_table_add(bool start, const std::vector<std::string> &keys, const 
 SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *state, uint16_t color_on,
                                          uint16_t color_off);
 
-/// @brief Icon names kept by the icon cache; the oldest entry is replaced when full.
-static constexpr uint8_t SUB_ICON_CACHE_SIZE = 128;
+/// @brief Bytes reserved for the icon names (all_icon_names is about 121 KB).
+static constexpr uint32_t SUB_ICON_NAMES_CAPACITY = 160 * 1024;
 
 /**
- * @brief Look up the codepoint of an MDI icon name in the icon cache.
+ * @brief Add a run of MDI icon names, sent by the Blueprint in chunks once per session.
  *
- * The firmware holds no table of MDI names. The cache keeps, in PSRAM, every
- * name the Blueprint resolved in this session, so a name seen once is resolved
- * locally from then on. It is the single place to plug in a full name table,
- * should the firmware get one.
+ * The names are the Blueprint's all_icon_names, in codepoint order: the name at
+ * position i (0-based) is U+E000 + i, so only the names travel and every
+ * codepoint is worked out on the panel. Kept in PSRAM, never persisted.
  *
- * @param name Icon name, e.g. "mdi:lightbulb".
- * @param glyph Receives the codepoint (null-terminated, at most 3 bytes).
- * @param size Size of glyph.
- * @return true when the name is known.
+ * @param start Position of the first name of the chunk; 0 starts a new list. A chunk that does not
+ *              continue the list is ignored.
+ * @param names Comma-separated names, without "mdi:".
+ */
+void sub_icon_names_add(uint16_t start, const std::string &names);
+
+/**
+ * @brief Codepoint of an MDI icon name.
+ *
+ * Resolved with the icon names the Blueprint sent in this session, plus the
+ * names the Blueprint maps outside the font order (blank, void, unknown,
+ * unavailable).
+ *
+ * @param name Icon name, with or without "mdi:", e.g. "mdi:lightbulb".
+ * @param glyph Receives the codepoint (null-terminated, 3 bytes).
+ * @param size Size of glyph; at least 4.
+ * @return false when the name is unknown, or the names have not arrived yet.
  */
 bool sub_icon_lookup(const char *name, char *glyph, size_t size);
 
 /**
  * @brief Replace the icon of a live binding, for both states.
  *
- * Answers an `icon_request` event, sent when a bound entity's own `icon`
- * attribute changes to a name the icon cache does not hold, and is also used
- * for the names the cache resolves locally. Appearance is not persisted, so
- * this never schedules a restart.
+ * Used when a bound entity's own `icon` attribute changes. Appearance is not
+ * persisted, so this never schedules a restart.
  *
  * @param page Target page.
  * @param component Target component.
  * @param icon Icon codepoint.
- * @param name Icon name the codepoint belongs to, stored in the icon cache; empty to skip caching.
  */
-void sub_push_icon(const char *page, const char *component, const char *icon, const char *name);
+void sub_set_icon(const char *page, const char *component, const char *icon);
 
 /**
  * @brief Close the blueprint's push.
