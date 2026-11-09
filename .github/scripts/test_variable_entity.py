@@ -4,8 +4,14 @@ Equivalence test for the Blueprint's "Variable Entity" anchor (&variable_entity)
 
 Renders the anchor of two versions of the Blueprint with mocked Home Assistant
 state, for many entities, states and attributes, and compares every variable
-the reference version defines. Meant for refactorings that must not change
+the tested version defines. Meant for refactorings that must not change
 what the panel shows (issue #657): run it against the version before the change.
+
+Variables only the reference defines are internal steps the tested version
+dropped; their effect is still checked through the variables both define.
+The `entity` dictionary of earlier versions (`entity.name`, `entity.icon`,
+`entity.icon_color`) is compared as `entity_name`, `entity_icon` and
+`entity_icon_color`.
 
 The mock covers what the anchor uses (states, state_attr, has_value and the
 `list`/`match`/`search` tests) and approximates how Home Assistant parses a
@@ -167,13 +173,23 @@ def render(hass, node, context):
     return node
 
 
+# Variables of the `entity` dictionary of earlier versions, and the variable each one became
+LEGACY_ENTITY_KEYS = {"name": "entity_name", "icon": "entity_icon", "icon_color": "entity_icon_color"}
+
+
 def run_anchor(hass, variables, globals_, db, inputs):
-    """Render the anchor's variables in order, each seeing the ones before it."""
+    """Render the anchor's variables in order, each seeing the ones before it; return the anchor's variables."""
     hass.db = db
     context = dict(globals_, **inputs)
     for name, value in variables.items():
         context[name] = render(hass, value, context)
-    return context
+    result = {name: context[name] for name in variables}
+    legacy_entity = result.pop("entity", None)
+    if isinstance(legacy_entity, dict):
+        for key, name in LEGACY_ENTITY_KEYS.items():
+            if key in legacy_entity:
+                result[name] = legacy_entity[key]
+    return result
 
 
 def entity_cases():
@@ -234,8 +250,8 @@ def compare(reference, candidate):
         total += 1
         expected = run_anchor(hass, ref_vars, ref_globals, db, inputs)
         actual = run_anchor(hass, new_vars, new_globals, db, inputs)
-        for name in ref_vars:
-            if expected.get(name) != actual.get(name):
+        for name in actual:
+            if name not in expected or expected[name] != actual[name]:
                 differences += 1
                 if differences <= MAX_REPORTED_DIFFERENCES:
                     print(f"DIFF {label}: {name}\n"
@@ -259,7 +275,7 @@ def main():
     reference = load_anchor(sys.argv[1])
     candidate = load_anchor(sys.argv[2] if len(sys.argv) == 3 else "nspanel_easy_blueprint.yaml")
     total, differences = compare(reference, candidate)
-    print(f"{total:,} cases, {len(reference[0])} variables each, {differences:,} differences")
+    print(f"{total:,} cases, {len(candidate[0])} variables each, {differences:,} differences")
     return 1 if differences else 0
 
 
