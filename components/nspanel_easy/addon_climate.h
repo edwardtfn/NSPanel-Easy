@@ -127,7 +127,7 @@ constexpr const char *climate_preset_icons[CLIMATE_PRESET_NAMES_COUNT] = {
 // =============================================================================
 
 /**
- * @brief Lookup table for CLIMATE_ACTION_OFF with different modes.
+ * @brief Lookup table for the inactive states (off and idle) with different modes.
  *
  * Array indices correspond to ClimateMode enum values (0-6):
  * - [0] CLIMATE_MODE_OFF
@@ -138,8 +138,8 @@ constexpr const char *climate_preset_icons[CLIMATE_PRESET_NAMES_COUNT] = {
  * - [5] CLIMATE_MODE_DRY
  * - [6] CLIMATE_MODE_AUTO
  *
- * When the climate device is OFF, the icon reflects the selected mode
- * but uses grey color to indicate inactive state.
+ * When the climate device is off or idle, the icon reflects the selected mode
+ * but uses grey color to indicate inactive state. CLIMATE_MODE_OFF has no icon.
  */
 constexpr IconData climate_off_mode_icons[] = {
     {Icons::MDI_NONE, Colors::RGB565_BLACK},          // CLIMATE_MODE_OFF (0)
@@ -158,7 +158,7 @@ constexpr IconData climate_off_mode_icons[] = {
  * - [0-1] Unused (reserved)
  * - [2] CLIMATE_ACTION_COOLING
  * - [3] CLIMATE_ACTION_HEATING
- * - [4] CLIMATE_ACTION_IDLE
+ * - [4] CLIMATE_ACTION_IDLE (unused: idle shows the mode from climate_off_mode_icons)
  * - [5] CLIMATE_ACTION_DRYING
  * - [6] CLIMATE_ACTION_FAN
  *
@@ -166,14 +166,14 @@ constexpr IconData climate_off_mode_icons[] = {
  * reflect the current action being performed.
  *
  * @note Indices 0-1 are unused to maintain alignment with the
- *       ClimateAction enum values.
+ *       ClimateAction enum values. Index 4 (idle) is kept for the same reason.
  */
 constexpr IconData climate_action_icons[] = {
     {Icons::MDI_NONE, Colors::RGB565_BLACK},            // Unused index 0
     {Icons::MDI_NONE, Colors::RGB565_BLACK},            // Unused index 1
     {Icons::MDI_SNOWFLAKE, Colors::RGB565_BLUE},        // CLIMATE_ACTION_COOLING (2)
     {Icons::MDI_FIRE, Colors::RGB565_DEEP_ORANGE},      // CLIMATE_ACTION_HEATING (3)
-    {Icons::MDI_THERMOMETER, Colors::RGB565_GRAY},      // CLIMATE_ACTION_IDLE (4)
+    {Icons::MDI_THERMOMETER, Colors::RGB565_GRAY},      // CLIMATE_ACTION_IDLE (4), unused
     {Icons::MDI_WATER_PERCENT, Colors::RGB565_ORANGE},  // CLIMATE_ACTION_DRYING (5)
     {Icons::MDI_FAN, Colors::RGB565_CYAN}               // CLIMATE_ACTION_FAN (6)
 };

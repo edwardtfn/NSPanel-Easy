@@ -216,9 +216,7 @@ script:
           if (room_on && id(pid_boost_active)) {  // Boost: the valve is open regardless of the controller
             action = cooling ? nspanel_easy::CLIMATE_ACTION_COOLING : nspanel_easy::CLIMATE_ACTION_HEATING;
           }
-          ESP_LOGV("${TAG_ADDON_CLIMATE_PID}", "Climate chip: mode=%u action=%u",
-                   static_cast<unsigned>(mode), static_cast<unsigned>(action));
-          render_climate_chip->execute(action, mode);
+          render_climate_chip->execute(action, mode);  // Logs action and mode
 
   # Refreshes the climate chip when the embedded thermostat is the panel's main climate entity
   - id: pid_refresh_chip

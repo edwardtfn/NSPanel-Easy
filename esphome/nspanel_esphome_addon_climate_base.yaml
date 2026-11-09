@@ -503,8 +503,10 @@ script:
             visible = false;                                             // Never show
           } else if (visibility == nspanel_easy::CLIMATE_CHIP_ALWAYS) {
             visible = true;                                              // Always show
-          } else {
+          } else if (visibility == nspanel_easy::CLIMATE_CHIP_ACTIVE_ONLY) {
             visible = is_active;                                         // Active only (default)
+          } else {
+            visible = false;                                             // Unknown value: hidden
           }
 
           ESP_LOGV("${TAG_ADDON_CLIMATE}", "  visible: %s", YESNO(visible));
