@@ -268,6 +268,12 @@ script:
           }  // if (api_stale)
           home_values_paint();
 
+  - id: !extend boot_early_routines
+    then:
+      - lambda: |-
+          // The Blueprint sends the home page visibility only at boot, so keep the last one for a boot without it (#735)
+          home_vis_restore();
+
   - id: !extend page_change
     then:
       - lambda: |-

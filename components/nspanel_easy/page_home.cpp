@@ -8,7 +8,9 @@
 #include <cinttypes>
 
 #include "esphome/components/nextion/nextion.h"
+#include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
+#include "esphome/core/preferences.h"
 
 #include "base.h"
 #include "nextion_components.h"
@@ -16,8 +18,6 @@
 #ifdef NSPANEL_EASY_SUBSCRIBE
 
 #include <cstdio>
-
-#include "esphome/core/helpers.h"
 
 #include "text.h"
 
@@ -49,6 +49,15 @@ uint32_t home_vis_mask = 0;
 /// @brief Bits changed while home was not the current page, re-applied live on entry.
 static uint32_t home_vis_pending = 0;
 
+/**
+ * @brief Preference handle for the persisted vis_home mask.
+ *
+ * @return Preference object for the mask.
+ */
+static ESPPreferenceObject home_vis_pref() {
+  return global_preferences->make_preference<uint32_t>(fnv1_hash("nspanel_easy_home_vis_mask"));
+}
+
 bool home_vis_set(const char *component, bool visible) {
   if (nextion_display == nullptr) {
     return false;  // Boot has not handed the display over yet
@@ -65,6 +74,10 @@ bool home_vis_set(const char *component, bool visible) {
       return false;  // Nothing changed; avoid a redundant Nextion write
     }
     home_vis_mask = updated;
+    // Only the cache is written here; flash is written on the preferences flush, and only on change
+    if (!home_vis_pref().save(&home_vis_mask)) {
+      ESP_LOGW(TAG, "Home visibility not stored");
+    }
     nextion_display->send_command_printf("vis_home=%" PRIu32, home_vis_mask);
     if (!is_home_page()) {
       // The page may already be loading, with Preinitialize applying the previous mask
@@ -75,6 +88,16 @@ bool home_vis_set(const char *component, bool visible) {
 
   ESP_LOGW(TAG, "'%s' has no visibility bit", component);
   return false;
+}
+
+void home_vis_restore() {
+  uint32_t stored = 0;
+  if (!home_vis_pref().load(&stored)) {
+    ESP_LOGD(TAG, "No stored home visibility");
+    return;
+  }
+  home_vis_mask = stored;
+  ESP_LOGD(TAG, "Home visibility restored: 0x%05" PRIX32, home_vis_mask);
 }
 
 void home_vis_resend() {
