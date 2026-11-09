@@ -135,6 +135,8 @@ By default, the thermostat uses the panel's own temperature sensor, including th
 That sensor reads high because the panel heats itself up.
 Select a [calibration reference](blueprint.md#nspanel-temperature-sensor---calibration-reference-optional) in the Blueprint to correct it automatically.
 The thermostat keeps regulating on the panel's own sensor, so it keeps working fully on its own while Home Assistant is unavailable.
+The climate page stays reachable by tapping the indoor temperature on the home page, also after a reboot without Home Assistant,
+as the panel keeps the home page layout last sent by the Blueprint ([#735](https://github.com/edwardtfn/NSPanel-Easy/issues/735)).
 
 If the reference is placed elsewhere in the room and you want the thermostat to follow it,
 enable **Climate entity** > **Embedded Thermostat - Regulate on the Calibration Reference** in the Blueprint.
