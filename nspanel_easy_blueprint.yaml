@@ -10503,7 +10503,7 @@ actions:
                                 - *variable_entity
                                 - &entity_details_title_with_icon
                                   alias: Fill title of entity details page
-                                  if: '{{ entity is defined }}'
+                                  if: '{{ entity_name is defined }}'
                                   then:
                                     - variables:
                                         txt_list: >
@@ -11869,7 +11869,7 @@ actions:
                                     - '{{ entity_id.split(".") | count == 2 }}'
                                     - '{{ entity_id.split(".")[0] in ["button", "input_button"] }}'
                                 - *variable_entity
-                                - condition: '{{ entity is defined }}'
+                                - condition: '{{ entity_name is defined }}'
                                 - *entity_details_title_with_icon
                                 - if: '{{ entity_icon is defined and entity_icon is string and entity_icon | length > 0 }}'
                                   then:
@@ -11907,7 +11907,7 @@ actions:
                                     - '{{ entity_id.split(".") | count == 2 }}'
                                     - '{{ entity_id.split(".")[0] in ["switch", "input_boolean"] }}'
                                 - *variable_entity
-                                - condition: '{{ entity is defined }}'
+                                - condition: '{{ entity_name is defined }}'
                                 - *entity_details_title_with_icon
                                 - *delay_default
                                 - action: 'esphome.{{ action_prefix }}_component_val'
@@ -12272,7 +12272,7 @@ actions:
                                     - '{{ entity_id.split(".") | count == 2 }}'
                                     - '{{ entity_id.split(".")[0] == "timer" }}'
                                 - *variable_entity
-                                - condition: '{{ entity is defined }}'
+                                - condition: '{{ entity_name is defined }}'
                                 - *entity_details_title_with_icon
                                 - variables:
                                     timer_state_raw: '{{ states(entity_id) }}'
@@ -12959,7 +12959,7 @@ actions:
                                                   entity: '{{ "embedded_climate" if entity_id == thermostat_embedded else entity_id }}'
                                                   back_page: '{{ back_page }}'
                                                 continue_on_error: true
-                                              - condition: '{{ entity is defined }}'
+                                              - condition: '{{ entity_name is defined }}'
                                               - condition: '{{ entity_name is defined }}'
                                               - condition: '{{ entity_name is string }}'
                                               - condition: '{{ entity_name | length > 0 }}'
