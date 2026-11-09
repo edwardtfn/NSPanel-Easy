@@ -1,8 +1,10 @@
 *.tft binary
 *.HMI binary
+*.hmi binary
+*.zi binary
 *.sh text eol=lf
 *.yaml text eol=lf
-hmi/dev/nxwright/**/*.nx text eol=lf
-hmi/dev/nxwright/**/*.toml text eol=lf
-hmi/dev/nxwright/**/*.sha256 text eol=lf
-hmi/dev/nxwright/**/*.png binary
+hmi/src/**/*.nx text eol=lf
+hmi/src/**/*.toml text eol=lf
+hmi/src/**/*.sha256 text eol=lf
+hmi/src/**/*.png binary

@@ -1,0 +1,287 @@
+---
+name: Build HMI
+
+# The source in hmi/src is the source of truth for the display files.
+#
+# - Pull requests: an HMI file changed in the Nextion Editor is imported into
+#   the source, which is committed to the pull request in place of the HMI
+#   file. The HMI and TFT files are built from the source to check it, and
+#   attached to the run for testing, but not committed.
+# - dev: after a merge that changes the source, the HMI and TFT files are built
+#   and committed, so dev always carries the files its source builds.
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+    paths:
+      - 'hmi/*.hmi'
+      - 'hmi/src/**'
+      - 'hmi/dev/firmware/**'
+      - 'hmi/dev/fonts/*.zi'
+      - 'hmi/dev/scripts/**'
+      - '.github/workflows/hmi_build.yml'
+  push:
+    branches:
+      - dev
+    paths:
+      - 'hmi/src/**'
+      - 'hmi/dev/firmware/**'
+      - 'hmi/dev/fonts/*.zi'
+      - 'hmi/dev/scripts/hmi_build.sh'
+      - 'hmi/dev/scripts/nxwright_env.sh'
+      - 'hmi/dev/scripts/tft_firmware_check.py'
+      - '.github/workflows/hmi_build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # A newer push builds a newer source, so an older run is not needed anymore
+  cancel-in-progress: true
+
+jobs:
+  # ===========================================================================
+  # Build — executes pull request code, so it stays read-only
+  # ===========================================================================
+  build:
+    name: Build HMI and TFT from source
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      source_changed: ${{ steps.drift.outputs.source_changed }}
+      files_changed: ${{ steps.drift.outputs.files_changed }}
+    steps:
+      # Full history without file contents: hmi_sync.sh compares the pull
+      # request with its base to see which side of each project it changed.
+      - name: Check out the code to build
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: '0'
+          filter: 'blob:none'
+          persist-credentials: false
+          repository: >-
+            ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      # A fork may not have the base commit yet.
+      - name: Fetch the pull request base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REPO: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git fetch --no-tags --filter=blob:none "https://github.com/${BASE_REPO}" "${BASE_SHA}"
+
+      # Invoked through bash: the exec bit does not survive every Windows clone.
+      - name: Import Nextion Editor changes and build
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: bash hmi/dev/scripts/hmi_sync.sh "${BASE_SHA}"
+
+      - name: Build from source
+        if: github.event_name != 'pull_request'
+        run: bash hmi/dev/scripts/hmi_build.sh
+
+      # status, not diff: a new project, page or font is untracked and invisible to diff.
+      - name: Detect changes
+        id: drift
+        run: |
+          if [ -z "$(git status --porcelain -- hmi/src hmi/dev/fonts)" ]; then
+            echo "source_changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "source_changed=true" >> "$GITHUB_OUTPUT"
+            echo "Source imported from an HMI file:"
+            git --no-pager status --short -- hmi/src hmi/dev/fonts
+          fi  # source drift
+          if [ -z "$(git status --porcelain -- 'hmi/*.hmi' 'hmi/*.tft')" ]; then
+            echo "files_changed=false" >> "$GITHUB_OUTPUT"
+            echo "The committed HMI and TFT files match the source."
+          else
+            echo "files_changed=true" >> "$GITHUB_OUTPUT"
+            git --no-pager status --short -- 'hmi/*.hmi' 'hmi/*.tft'
+          fi  # build drift
+
+      # What changed in each TFT's user code, for review in the job summary.
+      - name: Summarize TFT changes
+        if: steps.drift.outputs.files_changed == 'true'
+        shell: bash
+        run: |
+          # shellcheck source=/dev/null
+          source hmi/dev/scripts/nxwright_env.sh
+          {
+            echo "## TFT changes"
+            echo
+            echo "Compared with the TFT files committed to this branch."
+            for tft in hmi/*.tft; do
+              if git diff --quiet -- "${tft}"; then
+                continue
+              fi  # unchanged
+              echo "### ${tft}"
+              if git cat-file -e "HEAD:${tft}" 2>/dev/null; then
+                git show "HEAD:${tft}" > /tmp/previous.tft
+                "${NXWRIGHT}" tft-listing /tmp/previous.tft > /tmp/previous.lst 2>&1 || true
+                "${NXWRIGHT}" tft-listing "${tft}" > /tmp/current.lst 2>&1 || true
+                if diff -q /tmp/previous.lst /tmp/current.lst >/dev/null; then
+                  echo "Same listing; only the picture padding differs."
+                else
+                  echo '```diff'
+                  diff -u /tmp/previous.lst /tmp/current.lst | tail -n +3 | head -n 200 || true
+                  echo '```'
+                fi  # listing changed
+              else
+                echo "New file."
+              fi  # previous file
+            done  # for tft
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the display files
+        uses: actions/upload-artifact@v7
+        with:
+          name: display-files
+          path: |
+            hmi/*.hmi
+            hmi/*.tft
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload the imported source
+        if: steps.drift.outputs.source_changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: hmi-source
+          path: |
+            hmi/src
+            hmi/dev/fonts/*.zi
+          retention-days: 1
+
+  # ===========================================================================
+  # Pull requests: commit the source imported from an HMI file. Never executes
+  # pull request code, so it may hold write access. The built HMI and TFT
+  # files are not committed here, so test builds do not stay in the history.
+  # ===========================================================================
+  commit-source:
+    name: Commit imported source
+    needs: build
+    if: >-
+      needs.build.outputs.source_changed == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      # Full history without file contents, to find the display files the pull request changed.
+      - name: Check out pull request branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: '0'
+          filter: 'blob:none'
+          ref: ${{ github.head_ref }}
+
+      # Wipe first so pages and pictures removed in the Editor disappear from the source.
+      - name: Drop the previous source
+        run: rm -rf hmi/src
+
+      - name: Download the imported source
+        uses: actions/download-artifact@v8
+        with:
+          name: hmi-source
+          path: hmi
+
+      # The HMI file was only the input of the import. Returning the display files to the
+      # base keeps the pull request to the source change (dev gets the files built from it
+      # after the merge), and keeps the next run from seeing both the HMI and its source changed.
+      - name: Return the display files to the base
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git diff --name-only "${BASE_SHA}...HEAD" -- 'hmi/*.hmi' 'hmi/*.tft' |
+            while read -r file; do
+              if git cat-file -e "${BASE_SHA}:${file}" 2>/dev/null; then
+                git checkout "${BASE_SHA}" -- "${file}"
+              else
+                git rm --quiet -- "${file}"
+              fi  # file in base
+            done  # for file
+
+      - name: Commit imported source
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: Import HMI changes into the source"
+          file_pattern: 'hmi/src hmi/dev/fonts/*.zi hmi/*.hmi hmi/*.tft'
+
+  # ===========================================================================
+  # Fork pull requests get a read-only token, so the import must be committed
+  # by hand
+  # ===========================================================================
+  report:
+    name: Report uncommittable import
+    needs: build
+    if: >-
+      needs.build.outputs.source_changed == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name != github.repository
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report import
+        run: |
+          echo "::error::An HMI file changed in this pull request must be imported into the" \
+               "source. Run hmi/dev/scripts/hmi_import.sh for the HMI files changed in the" \
+               "Nextion Editor, review the source diff and commit it."
+          exit 1
+
+  # ===========================================================================
+  # dev: commit the HMI and TFT files built from the merged source. Never
+  # executes pull request code, so it may hold write access.
+  # ===========================================================================
+  commit-build:
+    name: Commit built files to dev
+    needs: build
+    if: >-
+      needs.build.outputs.files_changed == 'true' &&
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/dev'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out dev
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: '1'
+          ref: dev
+
+      # dev may have moved since the build. When its display source changed,
+      # the run for that push builds it instead, so nothing older is committed.
+      - name: Check that dev still has the built source
+        id: current
+        env:
+          BUILT_SHA: ${{ github.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "${BUILT_SHA}"
+          if git diff --quiet "${BUILT_SHA}" HEAD -- hmi/src hmi/dev/firmware 'hmi/dev/fonts/*.zi'; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::The display source on dev changed after this build; its own run commits the files."
+          fi  # source unchanged
+
+      - name: Download the display files
+        if: steps.current.outputs.current == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: display-files
+          path: hmi
+
+      - name: Commit built files
+        if: steps.current.outputs.current == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: Build HMI and TFT from source"
+          file_pattern: 'hmi/*.hmi hmi/*.tft'
+...

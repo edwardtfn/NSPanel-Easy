@@ -1,0 +1,112 @@
+on settings.load:
+  // Brightness slider
+  dim=brightness
+  brightslider.val=brightness
+  covx brightslider.val,bright_text.txt,0,0
+  bright_text.txt+="%"
+  // Dim slider
+  dimslider.val=brightness_dim
+  covx dimslider.val,dim_text.txt,0,0
+  dim_text.txt+="%"
+  // Light theme: apply background image and foreground colors
+  if(theme==1)
+  {
+    // Page background
+    settings.pic=pic_background_main
+    // Section labels
+    lbl_bright.picc=settings.pic
+    lbl_bright.pco=color_pco_main
+    lbl_dim.picc=settings.pic
+    lbl_dim.pco=color_pco_main
+    // Slider value labels
+    bright_text.picc=settings.pic
+    bright_text.pco=color_pco_main
+    dim_text.picc=settings.pic
+    dim_text.pco=color_pco_main
+    // Sliders
+    brightslider.pic=@pic(picture-0089)
+    brightslider.pic1=@pic(picture-0088)
+    dimslider.pic=@pic(picture-0091)
+    dimslider.pic1=@pic(picture-0090)
+    // Action buttons
+    bt_reboot_pic.pic=@pic(picture-0092)
+    bt_sleep_pic.pic=@pic(picture-0093)
+    bt_theme_pic.pic=@pic(picture-0094)
+    // Back button
+    button_back.pco=color_pco_navigation
+    button_back.picc=settings.pic
+    button_back.picc2=settings.pic
+  }
+  // Back button font (theme-independent)
+  button_back.font=button_back_font
+  sendme
+
+on settings.down:
+  tm_debug.en=1
+
+on settings.up:
+  tm_debug.en=0
+
+on brightslider.up:
+  tm_bright.en=1
+
+on brightslider.slide:
+  covx brightslider.val,bright_text.txt,0,0
+  bright_text.txt+="%"
+  dim=brightslider.val
+
+on dimslider.up:
+  tm_dim.en=1
+
+on dimslider.slide:
+  covx dimslider.val,dim_text.txt,0,0
+  dim_text.txt+="%"
+
+on button_back.down:
+  page home_page_id
+
+on tm_bright.timer:
+  covx brightslider.val,bright_text.txt,0,0
+  csv.txt="settings,bright,"+bright_text.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints csv.txt,0
+  printh 00
+  printh FF FF FF
+  bright_text.txt+="%"
+  brightness=brightslider.val
+  tm_bright.en=0
+
+on tm_dim.timer:
+  covx dimslider.val,dim_text.txt,0,0
+  csv.txt="settings,dim,"+dim_text.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints csv.txt,0
+  printh 00
+  printh FF FF FF
+  dim_text.txt+="%"
+  brightness_dim=dimslider.val
+  tm_dim.en=0
+
+on tm_debug.timer:
+  page debug
+
+on bt_sleep_hs.up:
+  page screensaver
+
+on bt_theme_hs.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  if(theme==1)
+  {
+    prints "settings,theme,0",0
+  }else
+  {
+    prints "settings,theme,1",0
+  }
+  printh 00
+  printh FF FF FF
