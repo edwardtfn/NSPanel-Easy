@@ -43,7 +43,7 @@ enum class Visibility : uint8_t {
 };
 
 /// @brief Persisted format version. Bump whenever SubBinding's layout changes.
-static constexpr uint8_t SUB_FORMAT_VERSION = 4;  // 4: SubHeader gained entity_len
+static constexpr uint8_t SUB_FORMAT_VERSION = 5;  // 5: SUB_PAGE_LEN fits the button pages
 
 /// @brief Upper bound on bindings; storage is allocated to the configured count, not this.
 #ifndef NSPANEL_EASY_SUB_MAX
@@ -86,8 +86,8 @@ static constexpr uint8_t SUB_ATTR_LEN = 24;                             ///< Lon
 static constexpr uint8_t SUB_COMPONENT_LEN = 16;                        ///< Longest stored component name
 static constexpr uint8_t SUB_DEVICE_CLASS_LEN = 16;                     ///< Longest device_class in use ("garage_door")
 static constexpr uint8_t SUB_ENTITY_LEN = NSPANEL_EASY_SUB_ENTITY_LEN;  ///< entity_id buffer, null included
-static constexpr uint8_t SUB_PAGE_LEN = 12;                             ///< Longest stored page name ("screensaver")
-static constexpr uint8_t SUB_STATE_LEN = 24;                            ///< Longest state ("armed_custom_bypass" is 19)
+static constexpr uint8_t SUB_PAGE_LEN = 13;                             ///< Longest stored page name ("buttonpage01")
+static constexpr uint8_t SUB_STATE_LEN = 64;  ///< Longest state or attribute ("mdi:..." names)
 
 // Held in a uint8_t in SubHeader, so the contract check cannot represent more.
 // The lower bound is the shortest buffer that still fits a realistic entity_id.
@@ -630,10 +630,47 @@ void sub_subscribe_all();
  * @param color_on RGB565 colour for the active state.
  * @param color_off RGB565 colour for the inactive state.
  * @param inverted Show while the entity is inactive.
+ * @param icon_name MDI name of an icon the binding uses, e.g. "mdi:lamp", to seed the icon cache; empty for
+ *                  none. The icon may be needed again later, when the entity's own `icon` attribute changes.
+ * @param icon_name_glyph Codepoint of icon_name.
  */
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
-                      uint16_t color_on, uint16_t color_off, bool inverted);
+                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name,
+                      const char *icon_name_glyph);
+
+/// @brief Icon names kept by the icon cache; the oldest entry is replaced when full.
+static constexpr uint8_t SUB_ICON_CACHE_SIZE = 128;
+
+/**
+ * @brief Look up the codepoint of an MDI icon name in the icon cache.
+ *
+ * The firmware holds no table of MDI names. The cache keeps, in PSRAM, every
+ * name the Blueprint resolved in this session, so a name seen once is resolved
+ * locally from then on. It is the single place to plug in a full name table,
+ * should the firmware get one.
+ *
+ * @param name Icon name, e.g. "mdi:lightbulb".
+ * @param glyph Receives the codepoint (null-terminated, at most 3 bytes).
+ * @param size Size of glyph.
+ * @return true when the name is known.
+ */
+bool sub_icon_lookup(const char *name, char *glyph, size_t size);
+
+/**
+ * @brief Replace the icon of a live binding, for both states.
+ *
+ * Answers an `icon_request` event, sent when a bound entity's own `icon`
+ * attribute changes to a name the icon cache does not hold, and is also used
+ * for the names the cache resolves locally. Appearance is not persisted, so
+ * this never schedules a restart.
+ *
+ * @param page Target page.
+ * @param component Target component.
+ * @param icon Icon codepoint.
+ * @param name Icon name the codepoint belongs to, stored in the icon cache; empty to skip caching.
+ */
+void sub_push_icon(const char *page, const char *component, const char *icon, const char *name);
 
 /**
  * @brief Close the blueprint's push.

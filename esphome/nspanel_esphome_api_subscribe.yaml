@@ -46,6 +46,8 @@ api:
         color_on: int[]       # RGB array for the active state
         color_off: int[]      # RGB array for the inactive state
         inverted: bool        # Render as visible while the entity is inactive
+        icon_name: string     # MDI name of an icon the binding uses (e.g. "mdi:lamp"), to seed the icon cache; empty for none
+        icon_name_glyph: string  # Codepoint of icon_name
       then:
         - lambda: |-
             blueprint_setting_received();
@@ -59,10 +61,25 @@ api:
               icon_on.c_str(),
               icon_off.c_str(),
               color_on.size() == 3 ? rgbTo565(color_on) : 0,
-              color_off.size() == 3 ? rgbTo565(color_off) : 0, inverted
+              color_off.size() == 3 ? rgbTo565(color_off) : 0, inverted,
+              icon_name.c_str(), icon_name_glyph.c_str()
             );
             api_subscribe_debounce->execute();
             api_subscribe_watchdog->execute();
+
+    ##### Icon of a bound component, sent in answer to an `icon_request` event. #####
+    # The firmware holds no table of MDI names, so a change of an entity's own `icon` attribute to a
+    # name it has not seen yet is resolved by the Blueprint. The answer is kept in the icon cache, so
+    # each name is requested once per boot. Appearance is not persisted, so no restart follows.
+    - action: api_subscribe_icon
+      variables:
+        page: string       # Target page, e.g. "buttonpage01"
+        component: string  # Target component, e.g. "button03"
+        icon: string       # Icon codepoint
+        name: string       # Icon name the codepoint belongs to, e.g. "mdi:lightbulb"
+      then:
+        - lambda: |-
+            sub_push_icon(page.c_str(), component.c_str(), icon.c_str(), name.c_str());
 
     ##### End marker. Sent after every binding, carrying how many were sent. #####
     - action: api_subscribe_end

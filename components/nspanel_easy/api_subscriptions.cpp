@@ -29,6 +29,9 @@
 #ifdef NSPANEL_EASY_HW_TEMPERATURE
 #include "hw_temperature.h"
 #endif  // NSPANEL_EASY_HW_TEMPERATURE
+#ifdef NSPANEL_EASY_PAGE_BUTTONS
+#include "page_buttons.h"
+#endif  // NSPANEL_EASY_PAGE_BUTTONS
 
 namespace esphome::nspanel_easy {
 
@@ -59,6 +62,10 @@ static SubBinding *sub_staging = nullptr;
 
 /// @brief Bindings received in the push currently in progress.
 static uint16_t sub_staged = 0;
+
+/// @brief Bindings of the push in progress dropped for exceeding SUB_MAX. Counted
+///        against the end marker, so the bindings that fit are still committed.
+static uint16_t sub_dropped = 0;
 
 /// @brief Whether a push is currently in progress.
 static bool sub_pushing = false;
@@ -101,6 +108,8 @@ static bool sub_push_superseded(const char *push_id) {
 
 /// @brief Consecutive commits that never received an end marker.
 static uint8_t sub_unverified = 0;
+
+static void sub_icon_store(const char *name, const char *glyph);
 
 /**
  * @brief Allocate, preferring PSRAM and falling back to internal DRAM.
@@ -245,6 +254,12 @@ SubRenderFn sub_resolve_renderer(const char *page) {
 #ifdef NSPANEL_EASY_HW_TEMPERATURE
       {"calibration", &temp_reference_render},
 #endif  // NSPANEL_EASY_HW_TEMPERATURE
+#ifdef NSPANEL_EASY_PAGE_BUTTONS
+      {"buttonpage01", &buttons_sub_render},
+      {"buttonpage02", &buttons_sub_render},
+      {"buttonpage03", &buttons_sub_render},
+      {"buttonpage04", &buttons_sub_render},
+#endif  // NSPANEL_EASY_PAGE_BUTTONS
   };
   for (const PageEntry &entry : PAGES) {
     if (strcmp(page, entry.page) == 0) {
@@ -402,7 +417,11 @@ void sub_subscribe_all() {
 
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
-                      uint16_t color_on, uint16_t color_off, bool inverted) {
+                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name,
+                      const char *icon_name_glyph) {
+  // Whatever happens to the binding, the name and its codepoint are valid for the icon cache
+  sub_icon_store(icon_name, icon_name_glyph);
+
   if (!sub_target_allowed(page, component)) {
     ESP_LOGW(TAG, "%s.%s is driven locally and cannot be bound", page, component);
     return;
@@ -421,6 +440,7 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
              sub_staged);
     memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
     sub_staged = 0;
+    sub_dropped = 0;
     sub_copy(sub_push_id, sizeof(sub_push_id), push_id);
   }  // if newer push
 
@@ -435,6 +455,7 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
     }
     memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
     sub_staged = 0;
+    sub_dropped = 0;
     sub_pushing = true;
     sub_copy(sub_push_id, sizeof(sub_push_id), push_id);
     ESP_LOGD(TAG, "Binding push '%s' started", sub_push_id);
@@ -450,10 +471,13 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
              sub_staged);
     memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
     sub_staged = 0;
+    sub_dropped = 0;
   }  // if target already staged
 
   if (sub_staged >= SUB_MAX) {
-    ESP_LOGW(TAG, "More than %" PRIu16 " bindings pushed; '%s' ignored", SUB_MAX, entity);
+    // Counted, so the end marker still matches and the bindings that fit are committed
+    ++sub_dropped;
+    ESP_LOGW(TAG, "More than %" PRIu16 " bindings pushed; %s.%s ('%s') ignored", SUB_MAX, page, component, entity);
     return;
   }
 
@@ -501,6 +525,77 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
     sub_apply(idx);
     break;
   }  // for each live binding
+}
+
+/// @brief One icon cache entry: an MDI name and its codepoint.
+struct SubIconCacheEntry {
+  char name[SUB_STATE_LEN];  ///< Icon name, e.g. "mdi:lightbulb"; empty when unused
+  char glyph[4];             ///< UTF-8 codepoint, null-terminated
+};
+
+/// @brief Icon cache, allocated on first use (PSRAM when available). Never persisted.
+static SubIconCacheEntry *sub_icon_cache = nullptr;
+
+/// @brief Next entry to fill: the cache is filled in order, then the oldest entry is replaced.
+static uint8_t sub_icon_cache_next = 0;
+
+bool sub_icon_lookup(const char *name, char *glyph, size_t size) {
+  if (sub_icon_cache == nullptr || name == nullptr || name[0] == '\0') {
+    return false;
+  }
+  for (uint8_t idx = 0; idx < SUB_ICON_CACHE_SIZE; ++idx) {
+    const SubIconCacheEntry &entry = sub_icon_cache[idx];
+    if (entry.name[0] != '\0' && strcmp(entry.name, name) == 0) {
+      return sub_copy(glyph, size, entry.glyph);
+    }
+  }  // for each entry
+  return false;
+}
+
+/**
+ * @brief Store an MDI name and its codepoint in the icon cache.
+ *
+ * @param name Icon name.
+ * @param glyph Codepoint.
+ */
+static void sub_icon_store(const char *name, const char *glyph) {
+  if (name == nullptr || name[0] == '\0' || glyph == nullptr || glyph[0] == '\0' || strlen(name) >= SUB_STATE_LEN ||
+      strlen(glyph) >= sizeof(SubIconCacheEntry::glyph)) {
+    return;  // Nothing to keep, or it would not fit whole
+  }
+  char known[sizeof(SubIconCacheEntry::glyph)];
+  if (sub_icon_lookup(name, known, sizeof(known))) {
+    return;  // Already cached
+  }
+  if (sub_icon_cache == nullptr) {
+    sub_icon_cache = static_cast<SubIconCacheEntry *>(sub_alloc(sizeof(SubIconCacheEntry) * SUB_ICON_CACHE_SIZE));
+    if (sub_icon_cache == nullptr) {
+      ESP_LOGW(TAG, "Out of memory for the icon cache");
+      return;
+    }
+  }  // if (sub_icon_cache == nullptr)
+  SubIconCacheEntry &entry = sub_icon_cache[sub_icon_cache_next];
+  sub_copy(entry.name, sizeof(entry.name), name);
+  sub_copy(entry.glyph, sizeof(entry.glyph), glyph);
+  sub_icon_cache_next = static_cast<uint8_t>((sub_icon_cache_next + 1) % SUB_ICON_CACHE_SIZE);
+  ESP_LOGV(TAG, "Icon cached: %s", name);
+}
+
+void sub_push_icon(const char *page, const char *component, const char *icon, const char *name) {
+  sub_icon_store(name, icon);
+  const uint16_t idx = sub_find_target(sub_bindings, sub_count, page, component);
+  if (idx >= sub_count) {
+    ESP_LOGD(TAG, "%s.%s is not bound; icon ignored", page, component);
+    return;
+  }
+  SubRuntime &rt = sub_runtime[idx];
+  if (!sub_copy(rt.icon_on, sizeof(rt.icon_on), icon)) {
+    ESP_LOGW(TAG, "%s.%s: icon does not fit; ignored", page, component);
+    sub_copy(rt.icon_on, sizeof(rt.icon_on), rt.icon_off);  // Keep the previous icon
+    return;
+  }
+  sub_copy(rt.icon_off, sizeof(rt.icon_off), icon);
+  sub_apply(idx);
 }
 
 bool sub_persist(bool verified) {
@@ -607,6 +702,7 @@ static void sub_push_release() {
   free(sub_staging);
   sub_staging = nullptr;
   sub_staged = 0;
+  sub_dropped = 0;
   sub_pushing = false;
   sub_copy(sub_last_push_id, sizeof(sub_last_push_id), sub_push_id);
   sub_last_push_end_ms = App.get_loop_component_start_time();
@@ -649,8 +745,9 @@ bool sub_push_end(const char *push_id, uint16_t count) {
     return false;
   }
 
-  if (count != sub_staged) {
-    ESP_LOGE(TAG, "Push incomplete: %" PRIu16 " of %" PRIu16 " binding(s) received, discarding", sub_staged, count);
+  if (count != sub_staged + sub_dropped) {
+    ESP_LOGE(TAG, "Push incomplete: %" PRIu16 " of %" PRIu16 " binding(s) received, discarding",
+             static_cast<uint16_t>(sub_staged + sub_dropped), count);
     sub_push_release();
     return false;
   }
@@ -662,6 +759,10 @@ bool sub_push_end(const char *push_id, uint16_t count) {
     return false;
   }
 
+  if (sub_dropped > 0) {
+    ESP_LOGW(TAG, "%" PRIu16 " binding(s) over the limit of %" PRIu16 " were not bound; raise api_subscribe_max",
+             sub_dropped, SUB_MAX);
+  }
   const bool persisted = sub_persist(true);
   sub_push_release();
   return persisted;
