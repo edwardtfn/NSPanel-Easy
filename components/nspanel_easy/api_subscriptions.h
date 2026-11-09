@@ -691,6 +691,29 @@ void sub_icon_names_add(uint16_t start, const std::string &names);
 bool sub_icon_lookup(const char *name, char *glyph, size_t size);
 
 /**
+ * @brief Icon of an entity, resolved on the panel in the same order as the Blueprint's Variable Entity.
+ *
+ * For the entities the panel has no binding for, e.g. on the entity details pages:
+ *   1. @p icon_override, the icon set on the button that opened the page;
+ *   2. for alarms, climates, locks and water heaters, the icon for the state;
+ *   3. @p icon_attribute, the entity's own icon;
+ *   4. for covers, the icon for the device class and state;
+ *   5. the icon rules (icon_rules.h): device class icon for the state, then the domain default;
+ *   6. mdi:alert-circle.
+ *
+ * Icon names are resolved with sub_icon_lookup(), so they need the icon names of this session.
+ *
+ * @param entity_id Entity id.
+ * @param device_class Device class; empty when unset.
+ * @param state State string.
+ * @param icon_override Icon name ("mdi:<name>"); empty for none.
+ * @param icon_attribute The entity's `icon` attribute ("mdi:<name>"); empty for none.
+ * @return The icon codepoint.
+ */
+std::string resolve_entity_icon(const char *entity_id, const char *device_class, const char *state,
+                                const char *icon_override, const char *icon_attribute);
+
+/**
  * @brief Replace the icon of a live binding, for both states.
  *
  * Used when a bound entity's own `icon` attribute changes. Appearance is not

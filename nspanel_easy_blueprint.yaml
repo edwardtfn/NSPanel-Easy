@@ -11440,38 +11440,43 @@ actions:
                                   }}
                               sequence: &refresh_page_button
                                 - *get_entity_id_from_event_or_trigger
-                                - condition:
-                                    - >-
-                                      {{
-                                        entity_id is string and
-                                        entity_id.split(".") | count == 2 and
-                                        entity_id.split(".")[0] in ["button", "input_button"]
-                                      }}
-                                - *variable_entity
-                                - *entity_details_title_with_icon
-                                - if: '{{ entity_icon is string and entity_icon | length > 0 }}'
-                                  then:
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: ""
-                                        id: icon
-                                        txt_list:
-                                          - '{{ entity_icon }}'
-                                      continue_on_error: true
-                                    - *delay_default
-                                - action: 'esphome.{{ action_prefix }}_component_val'
+                                ##### The panel renders the page from a snapshot of the entity (#636) #####
+                                - variables:
+                                    # Entities shown on the page, by role
+                                    snapshot_roles: '{{ {"main": entity_id} }}'
+                                    # Attributes each domain sends in a snapshot; plain lists, not templates
+                                    snapshot_attributes:
+                                      button: ["icon", "device_class"]
+                                      input_button: ["icon", "device_class"]
+                                - &send_entity_snapshot
+                                  alias: Send entity snapshot
+                                  action: 'esphome.{{ action_prefix }}_entity_snapshot'
                                   data:
-                                    page: ""
-                                    id: state
-                                    val: '{{ -1 if is_state(entity_id, "unavailable") else 0 }}'
-                                  continue_on_error: true
-                                - *delay_default
-                                - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                  data:
-                                    page: mem
-                                    id: command
-                                    txt_list:
-                                      - 'render.en=1'
+                                    # JSON with the state, name and selected attributes of each entity in snapshot_roles.
+                                    # "constructor" is always a JSON boolean, so Home Assistant never reads the text
+                                    # as a Python literal and always passes it on as a string.
+                                    snapshot: >-
+                                      {%- set ns = namespace(entities=[]) -%}
+                                      {%- for role, entity in snapshot_roles.items() -%}
+                                        {%- set valid = entity is string and entity.split(".") | count == 2 and states[entity] is not none -%}
+                                        {%- set ns_attributes = namespace(values={}) -%}
+                                        {%- if valid -%}
+                                          {%- for name in snapshot_attributes.get(entity.split(".")[0], []) -%}
+                                            {%- if state_attr(entity, name) is not none -%}
+                                              {%- set ns_attributes.values = dict(ns_attributes.values, **{name: state_attr(entity, name)}) -%}
+                                            {%- endif -%}
+                                          {%- endfor -%}
+                                        {%- endif -%}
+                                        {%- set ns.entities = ns.entities + [{
+                                              "role": role,
+                                              "entity_id": entity,
+                                              "exists": valid,
+                                              "state": states(entity) if valid else "unknown",
+                                              "name": states[entity].name if valid else "",
+                                              "attributes": ns_attributes.values
+                                            }] -%}
+                                      {%- endfor -%}
+                                      {{ {"page": current_page_from_sensor, "constructor": page_constructor | bool, "entities": ns.entities} | to_json }}
                                   continue_on_error: true
                             - alias: Switch page
                               conditions:
@@ -11482,39 +11487,15 @@ actions:
                                   }}
                               sequence: &refresh_page_switch
                                 - *get_entity_id_from_event_or_trigger
-                                - condition:
-                                    - >-
-                                      {{
-                                        entity_id is string and
-                                        entity_id.split(".") | count == 2 and
-                                        entity_id.split(".")[0] in ["switch", "input_boolean"]
-                                      }}
-                                - *variable_entity
-                                - *entity_details_title_with_icon
-                                - *delay_default
-                                - action: 'esphome.{{ action_prefix }}_component_val'
-                                  data:
-                                    page: ""
-                                    id: state
-                                    val: >
-                                      {{
-                                        1
-                                        if is_state(entity_id, "on")
-                                        else (
-                                          0
-                                          if is_state(entity_id, "off")
-                                          else -1
-                                        )
-                                      }}
-                                  continue_on_error: true
-                                - *delay_default
-                                - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                  data:
-                                    page: mem
-                                    id: command
-                                    txt_list:
-                                      - 'render.en=1'
-                                  continue_on_error: true
+                                ##### The panel renders the page from a snapshot of the entity (#636) #####
+                                - variables:
+                                    # Entities shown on the page, by role
+                                    snapshot_roles: '{{ {"main": entity_id} }}'
+                                    # Attributes each domain sends in a snapshot; plain lists, not templates
+                                    snapshot_attributes:
+                                      switch: ["icon", "device_class"]
+                                      input_boolean: ["icon", "device_class"]
+                                - *send_entity_snapshot
                             - alias: Water Heater page
                               conditions:
                                 - >-
@@ -11805,46 +11786,15 @@ actions:
                                   }}
                               sequence: &refresh_page_select
                                 - *get_entity_id_from_event_or_trigger
-                                - *variable_entity
-                                - *entity_details_title_with_icon
-                                ##### The panel renders the page from a snapshot of the entity (#636) #####
+                                ##### The panel renders the page, title included, from a snapshot of the entity (#636) #####
                                 - variables:
                                     # Entities shown on the page, by role
                                     snapshot_roles: '{{ {"main": entity_id} }}'
                                     # Attributes each domain sends in a snapshot; plain lists, not templates
                                     snapshot_attributes:
-                                      select: ["options"]
-                                      input_select: ["options"]
-                                - &send_entity_snapshot
-                                  alias: Send entity snapshot
-                                  action: 'esphome.{{ action_prefix }}_entity_snapshot'
-                                  data:
-                                    # JSON with the state, name and selected attributes of each entity in snapshot_roles.
-                                    # "constructor" is always a JSON boolean, so Home Assistant never reads the text
-                                    # as a Python literal and always passes it on as a string.
-                                    snapshot: >-
-                                      {%- set ns = namespace(entities=[]) -%}
-                                      {%- for role, entity in snapshot_roles.items() -%}
-                                        {%- set valid = entity is string and entity.split(".") | count == 2 and states[entity] is not none -%}
-                                        {%- set ns_attributes = namespace(values={}) -%}
-                                        {%- if valid -%}
-                                          {%- for name in snapshot_attributes.get(entity.split(".")[0], []) -%}
-                                            {%- if state_attr(entity, name) is not none -%}
-                                              {%- set ns_attributes.values = dict(ns_attributes.values, **{name: state_attr(entity, name)}) -%}
-                                            {%- endif -%}
-                                          {%- endfor -%}
-                                        {%- endif -%}
-                                        {%- set ns.entities = ns.entities + [{
-                                              "role": role,
-                                              "entity_id": entity,
-                                              "exists": valid,
-                                              "state": states(entity) if valid else "unknown",
-                                              "name": states[entity].name if valid else "",
-                                              "attributes": ns_attributes.values
-                                            }] -%}
-                                      {%- endfor -%}
-                                      {{ {"page": current_page_from_sensor, "constructor": page_constructor | bool, "entities": ns.entities} | to_json }}
-                                  continue_on_error: true
+                                      select: ["options", "icon", "device_class"]
+                                      input_select: ["options", "icon", "device_class"]
+                                - *send_entity_snapshot
                             - alias: Timer page
                               conditions:
                                 - >-

@@ -73,6 +73,30 @@ script:
           disp1->set_component_value("color_unavail", ${page_button_color_unavail});
           disp1->set_component_value("color_ring", ${page_button_color_ring});
 
+  # Renders the button page from the Blueprint's entity snapshot (#636): title and icon, then the state,
+  # as the Blueprint wrote them
+  - id: !extend entity_snapshot_received
+    then:
+      - lambda: |-
+          if (entity_snapshot.page != "button") return;
+          const SnapshotEntity *entity = entity_snapshot.find("main");
+          if (entity == nullptr) {
+            ESP_LOGW("${TAG_PAGE_BUTTON}", "Snapshot without a main entity, ignored");
+            return;
+          }  // if (no main entity)
+          const HomeAssistantEntity ha_entity = extractHomeAssistantEntity(entity->entity_id);
+          if (ha_entity.domain != "button" && ha_entity.domain != "input_button") {
+            ESP_LOGW("${TAG_PAGE_BUTTON}", "Unsupported entity for button page: %s", entity->entity_id.c_str());
+            return;
+          }  // if (not a button)
+          blueprint_setting_received();
+          const std::string icon = details_render_title(*entity);
+          if (!icon.empty()) {
+            disp1->set_component_text("icon", icon.c_str());
+          }  // if (icon)
+          disp1->set_component_value("state", entity->state == "unavailable" ? -1 : 0);
+          disp1->send_command("render.en=1");
+
   - id: !extend reset_globals
     then:
       - lambda: |-

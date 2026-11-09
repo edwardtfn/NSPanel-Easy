@@ -3,6 +3,17 @@
 #include "entity_snapshot.h"
 
 #include "esphome/components/json/json_util.h"
+#include "esphome/components/nextion/nextion.h"
+
+#include "nextion_components.h"
+
+#ifdef NSPANEL_EASY_HW_DISPLAY
+#include "hw_display.h"
+#endif  // NSPANEL_EASY_HW_DISPLAY
+
+#ifdef NSPANEL_EASY_SUBSCRIBE
+#include "api_subscriptions.h"
+#endif  // NSPANEL_EASY_SUBSCRIBE
 
 namespace esphome::nspanel_easy {
 
@@ -90,6 +101,34 @@ bool parse_entity_snapshot(const std::string &json, EntitySnapshot &snapshot) {
     return false;
   }  // if (not parsed or no page)
   return true;
+}
+
+std::string details_render_title(const SnapshotEntity &entity) {
+  if (nextion_display == nullptr || !entity.exists) {
+    return "";
+  }
+#ifdef NSPANEL_EASY_HW_DISPLAY
+  // The title and icon of the button that opened the page, while the page shows its entity
+  const bool overlap = (details_overlap.entity == entity.entity_id);
+  const std::string &overlap_title = overlap ? details_overlap.title : std::string();
+  const std::string &overlap_icon = overlap ? details_overlap.icon : std::string();
+#else   // NSPANEL_EASY_HW_DISPLAY
+  const std::string overlap_title;
+  const std::string overlap_icon;
+#endif  // NSPANEL_EASY_HW_DISPLAY
+  const std::string &title = overlap_title.empty() ? entity.name : overlap_title;
+  if (!title.empty()) {
+    nextion_display->set_component_text("page_label", title.c_str());
+  }
+#ifdef NSPANEL_EASY_SUBSCRIBE
+  const std::string icon =
+      resolve_entity_icon(entity.entity_id.c_str(), entity.attribute("device_class").c_str(), entity.state.c_str(),
+                          overlap_icon.c_str(), entity.attribute("icon").c_str());
+  nextion_display->set_component_text("icon_state", icon.c_str());
+  return icon;
+#else   // NSPANEL_EASY_SUBSCRIBE
+  return "";
+#endif  // NSPANEL_EASY_SUBSCRIBE
 }
 
 }  // namespace esphome::nspanel_easy

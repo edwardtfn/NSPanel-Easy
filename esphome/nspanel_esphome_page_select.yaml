@@ -25,8 +25,9 @@ script:
     mode: single
     then:  # There's nothing here so far
 
-  # Renders the select page from the Blueprint's entity snapshot: the same fields, in the same order,
-  # as the Blueprint pushed them before the snapshot (options, context and mode only when the page opens).
+  # Renders the select page from the Blueprint's entity snapshot: the title and icon, then the same fields,
+  # in the same order, as the Blueprint pushed them before the snapshot (options, context and mode only when
+  # the page opens).
   - id: !extend entity_snapshot_received
     then:
       - lambda: |-
@@ -36,6 +37,7 @@ script:
             ESP_LOGW("${TAG_PAGE_SELECT}", "Snapshot without a main entity, ignored");
             return;
           }  // if (no main entity)
+          details_render_title(*entity);  // Title and icon, as the Blueprint wrote them
           const std::string current = select_current_option(entity->state);
           if (entity_snapshot.constructor) {
             const std::vector<std::string> *options = entity->list("options");
