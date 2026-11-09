@@ -232,6 +232,11 @@ api:
             ESP_LOGD("${TAG_API}", "Entity snapshot for page '%s' (%zu entities, constructor: %s)",
                      entity_snapshot.page.c_str(), entity_snapshot.entities.size(),
                      YESNO(entity_snapshot.constructor));
+            // A snapshot sent just before the user left the page would draw over the page now shown
+            if (current_page_id != get_page_id(entity_snapshot.page.c_str())) {
+              ESP_LOGD("${TAG_API}", "Page '%s' is no longer shown; snapshot ignored", entity_snapshot.page.c_str());
+              return;
+            }  // if (page not shown)
             entity_snapshot_received->execute();
 
     - action: icon  # Updates icon, color, and visibility for display components

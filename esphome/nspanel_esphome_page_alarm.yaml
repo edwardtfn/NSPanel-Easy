@@ -192,7 +192,7 @@ script:
             return;
           }  // if (no main entity)
           const HomeAssistantEntity ha_entity = extractHomeAssistantEntity(entity->entity_id);
-          if (ha_entity.domain != "alarm_control_panel") {
+          if (ha_entity.domain != "alarm") {  // extractHomeAssistantEntity() names alarm_control_panel "alarm"
             ESP_LOGW("${TAG_PAGE_ALARM}", "Unsupported entity for alarm page: %s", entity->entity_id.c_str());
             return;
           }  // if (not an alarm)
@@ -203,10 +203,10 @@ script:
           }  // if (no features)
           blueprint_setting_received();
           details_render_title(*entity);
-          // As the Blueprint sent them: no code format is "none"; the code is required to arm unless
-          // the alarm says otherwise
+          // As the Blueprint sent them: no code format is "none"; the code is required to arm only when
+          // the alarm says so (a missing or null code_arm_required is false)
           const std::string code_format = entity->attribute("code_format", "none");
-          const bool code_arm_required = entity->attribute("code_arm_required", "true") != "false";
+          const bool code_arm_required = entity->attribute("code_arm_required", "false") == "true";
           page_alarm_render->execute(entity->state, supported_features, code_format.empty() ? "none" : code_format,
                                      code_arm_required, entity->entity_id);
 
