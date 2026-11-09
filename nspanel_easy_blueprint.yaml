@@ -9392,130 +9392,6 @@ actions:
                                 continue_on_error: true
                               - *delay_default
 
-                          ###### Home page values ######
-                          - repeat:
-                              for_each: >
-                                {{
-                                  home_page.entity_value
-                                  | selectattr("entity", "defined")
-                                  | rejectattr("entity", "eq", "")
-                                  | rejectattr("entity", "eq", [])
-                                  | list
-                                }}
-                              sequence:
-                                - &display_value
-                                  if:
-                                    - '{{ repeat.item.entity is defined }}'
-                                    - '{{ repeat.item.entity is string }}'
-                                    - '{{ repeat.item.entity.split(".") | count == 2 }}'
-                                  then:
-                                    - variables:
-                                        entity_id: '{{ repeat.item.entity }}'
-                                        default_color: *default_home_value_color
-                                        overlap:
-                                          icon: >
-                                            {{
-                                              repeat.item.icon
-                                              if
-                                                repeat.item.icon is defined and
-                                                repeat.item.icon is string and
-                                                repeat.item.icon is match "mdi:" and
-                                                ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
-                                              else
-                                                None
-                                            }}
-                                    - *variable_entity
-                                    - if: '{{ entity_has_value }}'
-                                      then:
-                                        - variables:
-                                            unit_of_measurement_raw: '{{ state_attr(entity_id, "unit_of_measurement") | default("") }}'
-                                            unit_of_measurement: >
-                                              {{
-                                                unit_of_measurement_raw
-                                                if unit_of_measurement_raw and unit_of_measurement_raw is string and unit_of_measurement_raw | length > 0
-                                                else ""
-                                              }}
-                                            value_is_zero: >
-                                              {{
-                                                is_number(states(entity_id)) and
-                                                (states(entity_id, rounded=true) | float == 0)
-                                              }}
-                                        - if: '{{ hide_if_zero is defined and hide_if_zero and value_is_zero }}'
-                                          then:
-                                            # Numeric state rounds to zero: hide both value and icon
-                                            - action: 'esphome.{{ action_prefix }}_components_visibility'
-                                              data:
-                                                page: '{{ repeat.item.page }}'
-                                                ids:
-                                                  - '{{ repeat.item.component }}'
-                                                  - '{{ repeat.item.component }}_icon'
-                                                visible: false
-                                              continue_on_error: true
-                                          else:
-                                            - if: '{{ entity.icon | length > 0 }}'
-                                              then:
-                                                - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                                  data:
-                                                    page: '{{ repeat.item.page }}'
-                                                    id: '{{ repeat.item.component }}_icon'
-                                                    txt_list:
-                                                      - '{{ entity.icon }}'
-                                                  continue_on_error: true
-                                                - *delay_default
-                                            - alias: value_with_unit_and_translations
-                                              action: 'esphome.{{ action_prefix }}_component_text_list'
-                                              data:
-                                                page: '{{ repeat.item.page }}'
-                                                id: '{{ repeat.item.component }}'
-                                                txt_list: &value_with_unit_and_translations
-                                                  - >
-                                                    {{
-                                                      (
-                                                        (
-                                                          states(entity_id, rounded=true) ~ (
-                                                            ("" if compact_unit_display else " ") ~ unit_of_measurement
-                                                            if unit_of_measurement is string and unit_of_measurement | length > 0
-                                                            else ""
-                                                          )
-                                                        )
-                                                        if is_number(entity_state)
-                                                        else state_translated(entity_id)
-                                                      ) | regex_replace('\s+', ' ') | trim
-                                                      if entity_id_valid and entity_has_value
-                                                      else "_{_unavailable_}_"
-                                                    }}
-                                              continue_on_error: true
-                                            - *delay_default
-                                            # Restore visibility after any displayable state (e.g. zero → non-zero transition)
-                                            - action: 'esphome.{{ action_prefix }}_components_visibility'
-                                              data:
-                                                page: '{{ repeat.item.page }}'
-                                                ids:
-                                                  - '{{ repeat.item.component }}'
-                                                  - '{{ repeat.item.component }}_icon'
-                                                visible: true
-                                              continue_on_error: true
-                                      else:
-                                        # No value (unavailable/unknown): show localized marker and keep icon visible
-                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                          data:
-                                            page: '{{ repeat.item.page }}'
-                                            id: '{{ repeat.item.component }}'
-                                            txt_list:
-                                              - "_{_unavailable_}_"
-                                          continue_on_error: true
-                                        - *delay_default
-                                        # Ensure both value and icon are visible (recovery from hide-if-zero)
-                                        - action: 'esphome.{{ action_prefix }}_components_visibility'
-                                          data:
-                                            page: '{{ repeat.item.page }}'
-                                            ids:
-                                              - '{{ repeat.item.component }}'
-                                              - '{{ repeat.item.component }}_icon'
-                                            visible: true
-                                          continue_on_error: true
-                                    - *delay_default
-
                       - alias: Buttons pages
                         conditions: '{{ nspanel_event.page in pages.buttonpages }}'
                         sequence: &refresh_page_buttonpage
@@ -9799,7 +9675,23 @@ actions:
                                       data:
                                         page: '{{ repeat.item.page }}'
                                         id: '{{ repeat.item.component }}'
-                                        txt_list: *value_with_unit_and_translations
+                                        txt_list: &value_with_unit_and_translations
+                                          - >
+                                            {{
+                                              (
+                                                (
+                                                  states(entity_id, rounded=true) ~ (
+                                                    ("" if compact_unit_display else " ") ~ unit_of_measurement
+                                                    if unit_of_measurement is string and unit_of_measurement | length > 0
+                                                    else ""
+                                                  )
+                                                )
+                                                if is_number(entity_state)
+                                                else state_translated(entity_id)
+                                              ) | regex_replace('\s+', ' ') | trim
+                                              if entity_id_valid and entity_has_value
+                                              else "_{_unavailable_}_"
+                                            }}
                                       continue_on_error: true
                                     - *delay_default
 
@@ -11679,68 +11571,6 @@ actions:
                                   continue_on_error: true
                                 - *delay_default
 
-                                ##### Values #####
-                                - &variables-climate_page
-                                  variables:
-                                    climate_page_entities:
-                                      - entity: !input 'climate_value01'
-                                        icon: !input 'climate_value01_icon'
-                                        icon_color_rgb: !input 'climate_value01_icon_color'
-                                        label_color_rgb: !input 'climate_value01_label_color'
-                                        page: climate
-                                        component: value01
-                                      - entity: !input 'climate_value02'
-                                        icon: !input 'climate_value02_icon'
-                                        icon_color_rgb: !input 'climate_value02_icon_color'
-                                        label_color_rgb: !input 'climate_value02_label_color'
-                                        page: climate
-                                        component: value02
-                                      - entity: !input 'climate_value03'
-                                        icon: !input 'climate_value03_icon'
-                                        icon_color_rgb: !input 'climate_value03_icon_color'
-                                        label_color_rgb: !input 'climate_value03_label_color'
-                                        page: climate
-                                        component: value03
-                                      - entity: !input 'climate_value04'
-                                        icon: !input 'climate_value04_icon'
-                                        icon_color_rgb: !input 'climate_value04_icon_color'
-                                        label_color_rgb: !input 'climate_value04_label_color'
-                                        page: climate
-                                        component: value04
-                                - repeat:
-                                    for_each: >
-                                      {{
-                                        climate_page_entities
-                                        | selectattr("entity", "defined")
-                                        | rejectattr("entity", "eq", "")
-                                        | rejectattr("entity", "eq", [])
-                                        | list
-                                      }}
-                                    sequence:
-                                      - *display_value
-                                      - if: '{{ repeat.item.label_color_rgb != [200, 204, 200] }}'
-                                        then:
-                                          - variables:
-                                              label_color_rgb565: >-
-                                                {{
-                                                  int(
-                                                        ((repeat.item.label_color_rgb[0] //(2**3)) *(2**11)) +
-                                                        ((repeat.item.label_color_rgb[1] //(2**2)) *(2**5)) +
-                                                        ((repeat.item.label_color_rgb[2] //(2**3)))
-                                                      )
-                                                  if repeat.item.label_color_rgb is list and repeat.item.label_color_rgb | count == 3
-                                                  else 52857
-                                                }}
-                                          - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                            data:
-                                              page: mem
-                                              id: command
-                                              txt_list:
-                                                - '{{ repeat.item.component }}.pco={{ label_color_rgb565 }}'
-                                                - '{{ repeat.item.component }}_icon.pco={{ label_color_rgb565 }}'
-                                            continue_on_error: true
-                                          - *delay_default
-
                                 ##### Slider & climate values #####
                                 - &climate-update_slider
                                   if: '{{ not (climate_entity == climate and embedded_climate) }}'
@@ -12202,105 +12032,6 @@ actions:
                                       - '{{ friendly_name }}'
                                   continue_on_error: true
                                 - *delay_default
-
-                                ##### Values #####
-                                - &variables_water_heater_page
-                                  variables:
-                                    water_heater_page_entities:
-                                      - entity: !input water_heater_value01
-                                        icon: !input water_heater_value01_icon
-                                        icon_color_rgb: !input water_heater_value01_icon_color
-                                        label_color_rgb: !input water_heater_value01_label_color
-                                        page: water_heater
-                                        component: value01
-                                      - entity: !input water_heater_value02
-                                        icon: !input water_heater_value02_icon
-                                        icon_color_rgb: !input water_heater_value02_icon_color
-                                        label_color_rgb: !input water_heater_value02_label_color
-                                        page: water_heater
-                                        component: value02
-                                      - entity: !input water_heater_value03
-                                        icon: !input water_heater_value03_icon
-                                        icon_color_rgb: !input water_heater_value03_icon_color
-                                        label_color_rgb: !input water_heater_value03_label_color
-                                        page: water_heater
-                                        component: value03
-                                      - entity: !input water_heater_value04
-                                        icon: !input water_heater_value04_icon
-                                        icon_color_rgb: !input water_heater_value04_icon_color
-                                        label_color_rgb: !input water_heater_value04_label_color
-                                        page: water_heater
-                                        component: value04
-                                - &variables_humidifier_page
-                                  variables:
-                                    humidifier_page_entities:
-                                      - entity: !input humidifier_value01
-                                        icon: !input humidifier_value01_icon
-                                        icon_color_rgb: !input humidifier_value01_icon_color
-                                        label_color_rgb: !input humidifier_value01_label_color
-                                        page: water_heater
-                                        component: value01
-                                      - entity: !input humidifier_value02
-                                        icon: !input humidifier_value02_icon
-                                        icon_color_rgb: !input humidifier_value02_icon_color
-                                        label_color_rgb: !input humidifier_value02_label_color
-                                        page: water_heater
-                                        component: value02
-                                      - entity: !input humidifier_value03
-                                        icon: !input humidifier_value03_icon
-                                        icon_color_rgb: !input humidifier_value03_icon_color
-                                        label_color_rgb: !input humidifier_value03_label_color
-                                        page: water_heater
-                                        component: value03
-                                      - entity: !input humidifier_value04
-                                        icon: !input humidifier_value04_icon
-                                        icon_color_rgb: !input humidifier_value04_icon_color
-                                        label_color_rgb: !input humidifier_value04_label_color
-                                        page: water_heater
-                                        component: value04
-                                - repeat:
-                                    for_each: >
-                                      {{
-                                        (humidifier_page_entities if is_humidifier else water_heater_page_entities)
-                                        | selectattr("entity", "defined")
-                                        | rejectattr("entity", "eq", "")
-                                        | rejectattr("entity", "eq", [])
-                                        | list
-                                      }}
-                                    sequence:
-                                      - *display_value
-                                      - variables:
-                                          var_icon: >
-                                            {{
-                                              (special_icons[(repeat.item.icon.split("mdi:") | last)] if (repeat.item.icon.split("mdi:") | last) in special_icons
-                                                else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",")].count(",")))
-                                                if ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names
-                                                else "")
-                                              if
-                                                repeat.item.icon is defined and
-                                                repeat.item.icon is string and
-                                                ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
-                                              else False
-                                            }}
-                                      - if: '{{ var_icon != False }}'
-                                        then:
-                                          - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                            data:
-                                              page: '{{ repeat.item.page }}'
-                                              id: '{{ repeat.item.component }}_icon'
-                                              txt_list:
-                                                - '{{ var_icon }}'
-                                            continue_on_error: true
-                                          - *delay_default
-                                      - if: '{{ repeat.item.label_color_rgb != [200, 204, 200] }}'
-                                        then:
-                                          - action: 'esphome.{{ action_prefix }}_component_color'
-                                            data:
-                                              page: '{{ repeat.item.page }}'
-                                              id: '{{ repeat.item.component }}'
-                                              color: '{{ repeat.item.label_color_rgb }}'
-                                            continue_on_error: true
-                                          - *delay_default
 
                                 ##### Slider & water heater values #####
                                 - &water_heater_update_slider
@@ -12831,6 +12562,278 @@ actions:
                                     visible: '{{ has_battery and battery_level >= 0 }}'
                                   continue_on_error: true
                                 - *delay_default
+
+                        # Values of the home, climate and water heater pages, rendered as the page opens: one copy of
+                        # `display_value` for the three pages, instead of one in each page's rendering (#657). Afterwards,
+                        # "Update page values" keeps each value current from its own entity.
+                        - alias: Page values
+                          sequence:
+                            - &variables-climate_page
+                              variables:
+                                climate_page_entities:
+                                  - entity: !input 'climate_value01'
+                                    icon: !input 'climate_value01_icon'
+                                    icon_color_rgb: !input 'climate_value01_icon_color'
+                                    label_color_rgb: !input 'climate_value01_label_color'
+                                    page: climate
+                                    component: value01
+                                  - entity: !input 'climate_value02'
+                                    icon: !input 'climate_value02_icon'
+                                    icon_color_rgb: !input 'climate_value02_icon_color'
+                                    label_color_rgb: !input 'climate_value02_label_color'
+                                    page: climate
+                                    component: value02
+                                  - entity: !input 'climate_value03'
+                                    icon: !input 'climate_value03_icon'
+                                    icon_color_rgb: !input 'climate_value03_icon_color'
+                                    label_color_rgb: !input 'climate_value03_label_color'
+                                    page: climate
+                                    component: value03
+                                  - entity: !input 'climate_value04'
+                                    icon: !input 'climate_value04_icon'
+                                    icon_color_rgb: !input 'climate_value04_icon_color'
+                                    label_color_rgb: !input 'climate_value04_label_color'
+                                    page: climate
+                                    component: value04
+                            - &variables_water_heater_page
+                              variables:
+                                water_heater_page_entities:
+                                  - entity: !input water_heater_value01
+                                    icon: !input water_heater_value01_icon
+                                    icon_color_rgb: !input water_heater_value01_icon_color
+                                    label_color_rgb: !input water_heater_value01_label_color
+                                    page: water_heater
+                                    component: value01
+                                  - entity: !input water_heater_value02
+                                    icon: !input water_heater_value02_icon
+                                    icon_color_rgb: !input water_heater_value02_icon_color
+                                    label_color_rgb: !input water_heater_value02_label_color
+                                    page: water_heater
+                                    component: value02
+                                  - entity: !input water_heater_value03
+                                    icon: !input water_heater_value03_icon
+                                    icon_color_rgb: !input water_heater_value03_icon_color
+                                    label_color_rgb: !input water_heater_value03_label_color
+                                    page: water_heater
+                                    component: value03
+                                  - entity: !input water_heater_value04
+                                    icon: !input water_heater_value04_icon
+                                    icon_color_rgb: !input water_heater_value04_icon_color
+                                    label_color_rgb: !input water_heater_value04_label_color
+                                    page: water_heater
+                                    component: value04
+                            - &variables_humidifier_page
+                              variables:
+                                humidifier_page_entities:
+                                  - entity: !input humidifier_value01
+                                    icon: !input humidifier_value01_icon
+                                    icon_color_rgb: !input humidifier_value01_icon_color
+                                    label_color_rgb: !input humidifier_value01_label_color
+                                    page: water_heater
+                                    component: value01
+                                  - entity: !input humidifier_value02
+                                    icon: !input humidifier_value02_icon
+                                    icon_color_rgb: !input humidifier_value02_icon_color
+                                    label_color_rgb: !input humidifier_value02_label_color
+                                    page: water_heater
+                                    component: value02
+                                  - entity: !input humidifier_value03
+                                    icon: !input humidifier_value03_icon
+                                    icon_color_rgb: !input humidifier_value03_icon_color
+                                    label_color_rgb: !input humidifier_value03_label_color
+                                    page: water_heater
+                                    component: value03
+                                  - entity: !input humidifier_value04
+                                    icon: !input humidifier_value04_icon
+                                    icon_color_rgb: !input humidifier_value04_icon_color
+                                    label_color_rgb: !input humidifier_value04_label_color
+                                    page: water_heater
+                                    component: value04
+                            - repeat:
+                                for_each: >
+                                  {#- Only as the page opens (first pass); the page conditions are those of each page's rendering -#}
+                                  {%- set entity_domain = original_state.entity_domain -%}
+                                  {%- if repeat.index > 1 -%}
+                                    {%- set page_entities = [] -%}
+                                  {%- elif current_page_from_sensor == pages.home -%}
+                                    {%- set page_entities = home_page.entity_value -%}
+                                  {%- elif
+                                        current_page_from_sensor == pages.climate and
+                                        (
+                                          entity_domain == "climate" or
+                                          (climate is string and climate.split(".") | count == 2 and climate.split(".")[0] == "climate")
+                                        )
+                                  -%}
+                                    {%- set page_entities = climate_page_entities -%}
+                                  {%- elif current_page_from_sensor == pages.water_heater and entity_domain == "water_heater" -%}
+                                    {%- set page_entities = water_heater_page_entities -%}
+                                  {%- elif current_page_from_sensor == pages.water_heater and entity_domain == "humidifier" -%}
+                                    {%- set page_entities = humidifier_page_entities -%}
+                                  {%- else -%}
+                                    {%- set page_entities = [] -%}
+                                  {%- endif -%}
+                                  {{
+                                    page_entities
+                                    | selectattr("entity", "defined")
+                                    | rejectattr("entity", "eq", "")
+                                    | rejectattr("entity", "eq", [])
+                                    | list
+                                  }}
+                                sequence:
+                                  - &display_value
+                                    if:
+                                      - '{{ repeat.item.entity is defined }}'
+                                      - '{{ repeat.item.entity is string }}'
+                                      - '{{ repeat.item.entity.split(".") | count == 2 }}'
+                                    then:
+                                      - variables:
+                                          entity_id: '{{ repeat.item.entity }}'
+                                          default_color: *default_home_value_color
+                                          overlap:
+                                            icon: >
+                                              {{
+                                                repeat.item.icon
+                                                if
+                                                  repeat.item.icon is defined and
+                                                  repeat.item.icon is string and
+                                                  repeat.item.icon is match "mdi:" and
+                                                  ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
+                                                else
+                                                  None
+                                              }}
+                                      - *variable_entity
+                                      - if: '{{ entity_has_value }}'
+                                        then:
+                                          - variables:
+                                              unit_of_measurement_raw: '{{ state_attr(entity_id, "unit_of_measurement") | default("") }}'
+                                              unit_of_measurement: >
+                                                {{
+                                                  unit_of_measurement_raw
+                                                  if unit_of_measurement_raw and unit_of_measurement_raw is string and unit_of_measurement_raw | length > 0
+                                                  else ""
+                                                }}
+                                              value_is_zero: >
+                                                {{
+                                                  is_number(states(entity_id)) and
+                                                  (states(entity_id, rounded=true) | float == 0)
+                                                }}
+                                          - if: '{{ hide_if_zero is defined and hide_if_zero and value_is_zero }}'
+                                            then:
+                                              # Numeric state rounds to zero: hide both value and icon
+                                              - action: 'esphome.{{ action_prefix }}_components_visibility'
+                                                data:
+                                                  page: '{{ repeat.item.page }}'
+                                                  ids:
+                                                    - '{{ repeat.item.component }}'
+                                                    - '{{ repeat.item.component }}_icon'
+                                                  visible: false
+                                                continue_on_error: true
+                                            else:
+                                              - if: '{{ entity.icon | length > 0 }}'
+                                                then:
+                                                  - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                                    data:
+                                                      page: '{{ repeat.item.page }}'
+                                                      id: '{{ repeat.item.component }}_icon'
+                                                      txt_list:
+                                                        - '{{ entity.icon }}'
+                                                    continue_on_error: true
+                                                  - *delay_default
+                                              - alias: value_with_unit_and_translations
+                                                action: 'esphome.{{ action_prefix }}_component_text_list'
+                                                data:
+                                                  page: '{{ repeat.item.page }}'
+                                                  id: '{{ repeat.item.component }}'
+                                                  txt_list: *value_with_unit_and_translations
+                                                continue_on_error: true
+                                              - *delay_default
+                                              # Restore visibility after any displayable state (e.g. zero → non-zero transition)
+                                              - action: 'esphome.{{ action_prefix }}_components_visibility'
+                                                data:
+                                                  page: '{{ repeat.item.page }}'
+                                                  ids:
+                                                    - '{{ repeat.item.component }}'
+                                                    - '{{ repeat.item.component }}_icon'
+                                                  visible: true
+                                                continue_on_error: true
+                                        else:
+                                          # No value (unavailable/unknown): show localized marker and keep icon visible
+                                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                            data:
+                                              page: '{{ repeat.item.page }}'
+                                              id: '{{ repeat.item.component }}'
+                                              txt_list:
+                                                - "_{_unavailable_}_"
+                                            continue_on_error: true
+                                          - *delay_default
+                                          # Ensure both value and icon are visible (recovery from hide-if-zero)
+                                          - action: 'esphome.{{ action_prefix }}_components_visibility'
+                                            data:
+                                              page: '{{ repeat.item.page }}'
+                                              ids:
+                                                - '{{ repeat.item.component }}'
+                                                - '{{ repeat.item.component }}_icon'
+                                              visible: true
+                                            continue_on_error: true
+                                      - *delay_default
+                                  - if: '{{ repeat.item.page == "climate" }}'
+                                    then:
+                                      - if: '{{ repeat.item.label_color_rgb != [200, 204, 200] }}'
+                                        then:
+                                          - variables:
+                                              label_color_rgb565: >-
+                                                {{
+                                                  int(
+                                                        ((repeat.item.label_color_rgb[0] //(2**3)) *(2**11)) +
+                                                        ((repeat.item.label_color_rgb[1] //(2**2)) *(2**5)) +
+                                                        ((repeat.item.label_color_rgb[2] //(2**3)))
+                                                      )
+                                                  if repeat.item.label_color_rgb is list and repeat.item.label_color_rgb | count == 3
+                                                  else 52857
+                                                }}
+                                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                            data:
+                                              page: mem
+                                              id: command
+                                              txt_list:
+                                                - '{{ repeat.item.component }}.pco={{ label_color_rgb565 }}'
+                                                - '{{ repeat.item.component }}_icon.pco={{ label_color_rgb565 }}'
+                                            continue_on_error: true
+                                          - *delay_default
+                                  - if: '{{ repeat.item.page == "water_heater" }}'
+                                    then:
+                                      - variables:
+                                          var_icon: >
+                                            {{
+                                              (special_icons[(repeat.item.icon.split("mdi:") | last)] if (repeat.item.icon.split("mdi:") | last) in special_icons
+                                                else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",")].count(",")))
+                                                if ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names
+                                                else "")
+                                              if
+                                                repeat.item.icon is defined and
+                                                repeat.item.icon is string and
+                                                ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
+                                              else False
+                                            }}
+                                      - if: '{{ var_icon != False }}'
+                                        then:
+                                          - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                            data:
+                                              page: '{{ repeat.item.page }}'
+                                              id: '{{ repeat.item.component }}_icon'
+                                              txt_list:
+                                                - '{{ var_icon }}'
+                                            continue_on_error: true
+                                          - *delay_default
+                                      - if: '{{ repeat.item.label_color_rgb != [200, 204, 200] }}'
+                                        then:
+                                          - action: 'esphome.{{ action_prefix }}_component_color'
+                                            data:
+                                              page: '{{ repeat.item.page }}'
+                                              id: '{{ repeat.item.component }}'
+                                              color: '{{ repeat.item.label_color_rgb }}'
+                                            continue_on_error: true
+                                          - *delay_default
 
                         # Refresh passes: only while the details page stays open on the same entity
                         - condition:
