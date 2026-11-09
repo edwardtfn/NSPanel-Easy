@@ -108,6 +108,25 @@ static bool sub_push_superseded(const char *push_id) {
   return strcmp(push_id, sub_last_push_id) < 0;
 }
 
+/// @brief Updates received from Home Assistant in the current statistics window.
+static uint32_t sub_stats_received = 0;
+
+/// @brief Updates in the current statistics window that changed a value.
+static uint32_t sub_stats_changed = 0;
+
+/**
+ * @brief Count one update received for a binding.
+ *
+ * @param idx Binding index.
+ */
+static void sub_stats_count(uint16_t idx) {
+  ++sub_stats_received;
+  SubRuntime &rt = sub_runtime[idx];
+  if (rt.received < UINT16_MAX) {
+    ++rt.received;
+  }
+}
+
 /// @brief Consecutive commits that never received an end marker.
 static uint8_t sub_unverified = 0;
 
@@ -385,10 +404,12 @@ void sub_subscribe_all() {
     // allocated once here and never resized, and a binding change restarts.
     api::global_api_server->subscribe_home_assistant_state(
         binding.entity, attribute, std::function<void(StringRef)>([idx](StringRef state) {
+          sub_stats_count(idx);
           SubRuntime &rt = sub_runtime[idx];
           if (strncmp(rt.state, state.c_str(), sizeof(rt.state)) == 0) {
             return;  // Unchanged; nothing to recompute
           }
+          ++sub_stats_changed;
           sub_copy(rt.state, sizeof(rt.state), state.c_str());
           sub_apply(idx);
         }));
@@ -398,10 +419,12 @@ void sub_subscribe_all() {
     if (binding.domain == SUB_DOMAIN_CLIMATE && attribute == nullptr) {
       api::global_api_server->subscribe_home_assistant_state(
           binding.entity, SUB_HVAC_ACTION, std::function<void(StringRef)>([idx](StringRef action) {
+            sub_stats_count(idx);
             SubRuntime &rt = sub_runtime[idx];
             if (strncmp(rt.action, action.c_str(), sizeof(rt.action)) == 0) {
               return;  // Unchanged; nothing to recompute
             }
+            ++sub_stats_changed;
             sub_copy(rt.action, sizeof(rt.action), action.c_str());
             sub_apply(idx);
           }));
@@ -924,6 +947,57 @@ bool sub_push_timeout() {
 void sub_render_all() {
   for (uint16_t idx = 0; idx < sub_count; ++idx) {
     sub_apply(idx);
+  }
+}
+
+void sub_log_stats(uint32_t window_s) {
+  if (sub_stats_received == 0) {
+    return;  // Nothing arrived; stay quiet
+  }
+
+  // Busiest bindings first: a partial selection, as only a few are named
+  uint16_t top[SUB_STATS_TOP] = {};
+  uint8_t top_count = 0;
+  for (uint16_t idx = 0; idx < sub_count; ++idx) {
+    const uint16_t received = sub_runtime[idx].received;
+    if (received == 0) {
+      continue;
+    }
+    uint8_t pos = top_count;
+    while (pos > 0 && sub_runtime[top[pos - 1]].received < received) {
+      if (pos < SUB_STATS_TOP) {
+        top[pos] = top[pos - 1];
+      }
+      --pos;
+    }
+    if (pos < SUB_STATS_TOP) {
+      top[pos] = idx;
+      if (top_count < SUB_STATS_TOP) {
+        ++top_count;
+      }
+    }
+  }  // for each binding
+
+  char busiest[256] = {};
+  size_t used = 0;
+  for (uint8_t pos = 0; pos < top_count && used < sizeof(busiest); ++pos) {
+    const SubBinding &binding = sub_bindings[top[pos]];
+    const int written =
+        snprintf(busiest + used, sizeof(busiest) - used, "%s%s%s%s (%" PRIu16 ")", pos > 0 ? ", " : "", binding.entity,
+                 binding.attribute[0] != '\0' ? "." : "", binding.attribute, sub_runtime[top[pos]].received);
+    if (written < 0) {
+      break;
+    }
+    used += static_cast<size_t>(written);
+  }  // for each of the busiest
+
+  ESP_LOGI(TAG, "Updates in the last %" PRIu32 " s: %" PRIu32 " received, %" PRIu32 " changed; busiest: %s", window_s,
+           sub_stats_received, sub_stats_changed, busiest);
+
+  sub_stats_received = 0;
+  sub_stats_changed = 0;
+  for (uint16_t idx = 0; idx < sub_count; ++idx) {
+    sub_runtime[idx].received = 0;
   }
 }
 
