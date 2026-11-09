@@ -72,7 +72,7 @@ jobs:
           fi  # if the report was written
           exit "$status"
 
-      # The PR comment is posted by blueprint_metrics_comment.yml (workflow_run), which has the write permission that
+      # The PR comment is posted by pr_metrics_comment.yml (workflow_run), which has the write permission that
       # this workflow lacks on PRs from forks. Only the PR number, a flag and the report are passed on, as an artifact.
       # It also runs when the Blueprint is unchanged, so that an existing comment is updated when a PR reverts it.
       - name: Prepare metrics for the PR comment

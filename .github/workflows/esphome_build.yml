@@ -79,6 +79,25 @@ jobs:
           SELECT_ALL: ${{ github.event_name != 'pull_request' }}
         run: python3 .github/scripts/select_esphome_tests.py
 
+      # The build sizes are posted to the PR by pr_metrics_comment.yml (workflow_run), which has the write permission
+      # that this workflow lacks on PRs from forks. It reads the sizes from the job logs; only the PR number goes here.
+      - name: Save PR number for the PR comment
+        if: github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/esphome_build_pr"
+          echo "$PR_NUMBER" > "$RUNNER_TEMP/esphome_build_pr/pr_number"
+
+      - name: Upload PR number for the PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: esphome-build-pr
+          path: ${{ runner.temp }}/esphome_build_pr
+          retention-days: 1
+          if-no-files-found: error
+
   # ===========================================================================
   # Code scan
   # ===========================================================================
