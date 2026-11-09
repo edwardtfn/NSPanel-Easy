@@ -601,6 +601,50 @@ static const char *sub_icon_table_find(const char *domain, const char *device_cl
   return sub_icon_table_find(key);
 }
 
+/**
+ * @brief Icon of an entity from the icon rules: the device class icon for the state, then the domain default.
+ *
+ * @param entity_id Entity id, e.g. "binary_sensor.door".
+ * @param device_class Device class; empty when unset.
+ * @param state State string.
+ * @param active Whether the state classifies as active, for the "on"/"off" fallback.
+ * @return The codepoint, or nullptr when no rule matches.
+ */
+static const char *sub_rule_icon(const char *entity_id, const char *device_class, const char *state, bool active) {
+  // Domain of the entity: everything before the dot
+  const char *dot = strchr(entity_id, '.');
+  if (dot == nullptr || static_cast<size_t>(dot - entity_id) >= SUB_ICON_KEY_LEN) {
+    return nullptr;
+  }
+  char entity_domain[SUB_ICON_KEY_LEN];
+  memcpy(entity_domain, entity_id, dot - entity_id);
+  entity_domain[dot - entity_id] = '\0';
+
+  const char *icon = nullptr;
+  if (device_class != nullptr && device_class[0] != '\0') {
+    // As the Blueprint keys them: no state for button, event and sensor; otherwise the
+    // exact state first, then "on"/"off" by how the state classifies
+    const bool stateless = strcmp(entity_domain, "button") == 0 || strcmp(entity_domain, "event") == 0 ||
+                           strcmp(entity_domain, "sensor") == 0;
+    if (stateless) {
+      icon = sub_icon_table_find(entity_domain, device_class, nullptr);
+    } else {
+      icon = sub_icon_table_find(entity_domain, device_class, state);
+      if (icon == nullptr) {
+        icon = sub_icon_table_find(entity_domain, device_class, active ? "on" : "off");
+      }
+    }  // if (stateless)
+  }  // if (device_class)
+  if (icon == nullptr) {
+    // Domain default, for the state first (e.g. "sun-below_horizon")
+    icon = sub_icon_table_find(entity_domain, "", state);
+    if (icon == nullptr) {
+      icon = sub_icon_table_find(entity_domain, nullptr, nullptr);
+    }
+  }
+  return icon;
+}
+
 SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *state, uint16_t color_on,
                                          uint16_t color_off) {
   const SubDomain domain = static_cast<SubDomain>(binding.domain);
@@ -610,38 +654,40 @@ SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *
   }
   const bool active = (evaluate_sub_state(domain, state) == SUB_STATE_ON);
   look.color = active ? color_on : color_off;
-
-  // Domain of the entity: everything before the dot
-  const char *dot = strchr(binding.entity, '.');
-  if (dot == nullptr || static_cast<size_t>(dot - binding.entity) >= SUB_ICON_KEY_LEN) {
-    return look;
-  }
-  char entity_domain[SUB_ICON_KEY_LEN];
-  memcpy(entity_domain, binding.entity, dot - binding.entity);
-  entity_domain[dot - binding.entity] = '\0';
-
-  if (binding.device_class[0] != '\0') {
-    // As the Blueprint keys them: no state for button, event and sensor; otherwise the
-    // exact state first, then "on"/"off" by how the state classifies
-    const bool stateless = strcmp(entity_domain, "button") == 0 || strcmp(entity_domain, "event") == 0 ||
-                           strcmp(entity_domain, "sensor") == 0;
-    if (stateless) {
-      look.icon = sub_icon_table_find(entity_domain, binding.device_class, nullptr);
-    } else {
-      look.icon = sub_icon_table_find(entity_domain, binding.device_class, state);
-      if (look.icon == nullptr) {
-        look.icon = sub_icon_table_find(entity_domain, binding.device_class, active ? "on" : "off");
-      }
-    }  // if (stateless)
-  }  // if (device_class)
-  if (look.icon == nullptr) {
-    // Domain default, for the state first (e.g. "sun-below_horizon")
-    look.icon = sub_icon_table_find(entity_domain, "", state);
-    if (look.icon == nullptr) {
-      look.icon = sub_icon_table_find(entity_domain, nullptr, nullptr);
-    }
-  }
+  look.icon = sub_rule_icon(binding.entity, binding.device_class, state, active);
   return look;
+}
+
+std::string resolve_entity_icon(const char *entity_id, const char *device_class, const char *state,
+                                const char *icon_override, const char *icon_attribute) {
+  char glyph[4] = {};
+  // 1. The icon set on the button that opened the page
+  if (sub_icon_lookup(icon_override, glyph, sizeof(glyph))) {
+    return glyph;
+  }
+  // 2. The domains whose icon follows the state, except covers (the entity's own icon wins over theirs)
+  const SubDomain domain = parse_sub_domain(entity_id);
+  const bool state_icon_first = domain == SUB_DOMAIN_ALARM || domain == SUB_DOMAIN_CLIMATE ||
+                                domain == SUB_DOMAIN_LOCK || domain == SUB_DOMAIN_WATER_HEATER;
+  if (state_icon_first) {
+    const SubAppearance look = resolve_sub_appearance(domain, device_class, state, 0, 0);
+    if (look.icon != nullptr) {
+      return look.icon;
+    }
+  }  // if (state_icon_first)
+  // 3. The entity's own icon
+  if (sub_icon_lookup(icon_attribute, glyph, sizeof(glyph))) {
+    return glyph;
+  }
+  // 4. Covers by device class and state, then the icon rules
+  if (domain == SUB_DOMAIN_COVER) {
+    const SubAppearance look = resolve_sub_appearance(domain, device_class, state, 0, 0);
+    if (look.icon != nullptr) {
+      return look.icon;
+    }
+  }  // if (cover)
+  const char *icon = sub_rule_icon(entity_id, device_class, state, evaluate_sub_state(domain, state) == SUB_STATE_ON);
+  return icon != nullptr ? icon : Icons::MDI_ALERT_CIRCLE;
 }
 
 /// @brief MDI names in codepoint order, as the Blueprint's all_icon_names: ",name0,name1,...,". The name at
