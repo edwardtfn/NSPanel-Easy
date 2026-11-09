@@ -63,6 +63,10 @@ static SubBinding *sub_staging = nullptr;
 /// @brief Bindings received in the push currently in progress.
 static uint16_t sub_staged = 0;
 
+/// @brief Bindings of the push in progress dropped for exceeding SUB_MAX. Counted
+///        against the end marker, so the bindings that fit are still committed.
+static uint16_t sub_dropped = 0;
+
 /// @brief Whether a push is currently in progress.
 static bool sub_pushing = false;
 
@@ -430,6 +434,7 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
              sub_staged);
     memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
     sub_staged = 0;
+    sub_dropped = 0;
     sub_copy(sub_push_id, sizeof(sub_push_id), push_id);
   }  // if newer push
 
@@ -444,6 +449,7 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
     }
     memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
     sub_staged = 0;
+    sub_dropped = 0;
     sub_pushing = true;
     sub_copy(sub_push_id, sizeof(sub_push_id), push_id);
     ESP_LOGD(TAG, "Binding push '%s' started", sub_push_id);
@@ -459,10 +465,13 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
              sub_staged);
     memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
     sub_staged = 0;
+    sub_dropped = 0;
   }  // if target already staged
 
   if (sub_staged >= SUB_MAX) {
-    ESP_LOGW(TAG, "More than %" PRIu16 " bindings pushed; '%s' ignored", SUB_MAX, entity);
+    // Counted, so the end marker still matches and the bindings that fit are committed
+    ++sub_dropped;
+    ESP_LOGW(TAG, "More than %" PRIu16 " bindings pushed; %s.%s ('%s') ignored", SUB_MAX, page, component, entity);
     return;
   }
 
@@ -632,6 +641,7 @@ static void sub_push_release() {
   free(sub_staging);
   sub_staging = nullptr;
   sub_staged = 0;
+  sub_dropped = 0;
   sub_pushing = false;
   sub_copy(sub_last_push_id, sizeof(sub_last_push_id), sub_push_id);
   sub_last_push_end_ms = App.get_loop_component_start_time();
@@ -674,8 +684,9 @@ bool sub_push_end(const char *push_id, uint16_t count) {
     return false;
   }
 
-  if (count != sub_staged) {
-    ESP_LOGE(TAG, "Push incomplete: %" PRIu16 " of %" PRIu16 " binding(s) received, discarding", sub_staged, count);
+  if (count != sub_staged + sub_dropped) {
+    ESP_LOGE(TAG, "Push incomplete: %" PRIu16 " of %" PRIu16 " binding(s) received, discarding",
+             static_cast<uint16_t>(sub_staged + sub_dropped), count);
     sub_push_release();
     return false;
   }
@@ -687,6 +698,10 @@ bool sub_push_end(const char *push_id, uint16_t count) {
     return false;
   }
 
+  if (sub_dropped > 0) {
+    ESP_LOGW(TAG, "%" PRIu16 " binding(s) over the limit of %" PRIu16 " were not bound; raise api_subscribe_max",
+             sub_dropped, SUB_MAX);
+  }
   const bool persisted = sub_persist(true);
   sub_push_release();
   return persisted;

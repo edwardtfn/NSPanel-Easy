@@ -603,9 +603,11 @@ void buttons_loop() {
   if (page.dirty) {
     page.dirty = false;
     if (page.configured) {
-      nextion_display->set_component_text("page_label", page.label.c_str());
+      if (!page.label.empty()) {
+        nextion_display->set_component_text("page_label", page.label.c_str());  // Otherwise the page's default stays
+      }
       nextion_display->set_component_value("confirm", page.confirm);
-    }
+    }  // if (page.configured)
   }  // if (page.dirty)
 
   for (uint8_t idx = 0; idx < BUTTONS_PER_PAGE; ++idx) {
