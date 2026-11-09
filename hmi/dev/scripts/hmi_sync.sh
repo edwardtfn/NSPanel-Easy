@@ -13,9 +13,12 @@
 #
 #   - Only the HMI file changed: import the HMI into the source.
 #   - Only the source changed, or neither: build from the source.
-#   - Both changed: refused, since either side would silently overwrite the
-#     other. Keep only one of the two changes, or run hmi_import.sh locally
-#     and review the source diff.
+#   - Both changed: built from the source, and accepted only when the build
+#     gives the HMI and TFT files of the pull request, i.e. they were built
+#     from its source (as on dev, merged into main by a release pull request).
+#     Otherwise refused, since either side would silently overwrite the other.
+#     Keep only one of the two changes, or run hmi_import.sh locally and review
+#     the source diff.
 #
 # A project with an HMI file but no source yet is imported.
 #
@@ -54,7 +57,7 @@ changed() {
 mapfile -t NAMES < <(git ls-files -- ":(glob)*.hmi" | sed -e "s/\.hmi$//" | LC_ALL=C sort -u)
 
 imports=()
-failed=0
+verify=()
 for name in "${NAMES[@]}"; do
     if [[ ! -d "src/${name}" ]]; then
         echo "${name}: no source yet, importing the HMI file"
@@ -72,12 +75,8 @@ for name in "${NAMES[@]}"; do
     fi  # source changed
 
     if [[ "${hmi_changed}" == true && "${src_changed}" == true ]]; then
-        echo "ERROR: ${name}: this pull request changes both the HMI file and its source," \
-             "so importing the HMI file would undo the source changes, and building would" \
-             "undo the HMI changes. Keep only one of the two changes, or run" \
-             "hmi_import.sh ${name} locally, review the source diff, and commit it" \
-             "without the HMI file." >&2
-        failed=1
+        echo "${name}: HMI file and source changed, checking that the HMI file is built from the source"
+        verify+=("${name}")
     elif [[ "${hmi_changed}" == true ]]; then
         echo "${name}: HMI file changed, importing it into the source"
         imports+=("${name}")
@@ -86,12 +85,28 @@ for name in "${NAMES[@]}"; do
     fi  # which side changed
 done  # for name
 
-if [[ ${failed} -ne 0 ]]; then
-    exit 1
-fi  # refused projects
-
 if [[ ${#imports[@]} -gt 0 ]]; then
     bash "${SCRIPT_DIR}/hmi_import.sh" "${imports[@]}"
 fi  # imports
 
 bash "${SCRIPT_DIR}/hmi_build.sh"
+
+# The build is reproducible, so the HMI and TFT files of the pull request are
+# unchanged by it only when they were built from its source.
+failed=0
+for name in "${verify[@]}"; do
+    if git diff --quiet HEAD -- "${name}.hmi" "${name}.tft"; then
+        echo "${name}: HMI and TFT files match the build of the source"
+    else
+        echo "ERROR: ${name}: this pull request changes both the HMI file and its source," \
+             "and the HMI file is not the build of the source, so importing the HMI file" \
+             "would undo the source changes, and building would undo the HMI changes." \
+             "Keep only one of the two changes, or run hmi_import.sh ${name} locally," \
+             "review the source diff, and commit it without the HMI file." >&2
+        failed=1
+    fi  # built files match
+done  # for name
+
+if [[ ${failed} -ne 0 ]]; then
+    exit 1
+fi  # refused projects
