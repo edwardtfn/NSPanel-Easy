@@ -33,6 +33,8 @@ jobs:
             .github/scripts/test_*.py
             .github/workflows/validate_blueprint.yml
             .github/requirements.txt
+            components/nspanel_easy/icon_rules.h
+            components/nspanel_easy/all_icons.h
 
       - name: Set up Python
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'

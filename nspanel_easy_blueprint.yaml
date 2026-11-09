@@ -7723,34 +7723,6 @@ actions:
                                       continue_on_error: true
                                     - *delay_default
 
-                              # Icon table: the device class icons (by name) and the domain defaults, so the panel resolves the
-                              # icon of an entity from its domain, device class and state. Not persisted, so sent every session.
-                              - variables:
-                                  sub_icon_table: >-
-                                    {%- set ns = namespace(keys=[], icons=[]) -%}
-                                    {%- for domain, rules in device_class_icons.items() -%}
-                                      {%- for key, icon_name in rules.items() -%}
-                                        {%- set ns.keys = ns.keys + [domain ~ "." ~ key] -%}
-                                        {%- set ns.icons = ns.icons + [icon_name] -%}
-                                      {%- endfor -%}
-                                    {%- endfor -%}
-                                    {%- for domain, glyph in nextion.icon.domain.items() -%}
-                                      {%- set ns.keys = ns.keys + [domain] -%}
-                                      {%- set ns.icons = ns.icons + [glyph] -%}
-                                    {%- endfor -%}
-                                    {{ {"keys": ns.keys, "icons": ns.icons} }}
-                              - alias: Icon table
-                                repeat:
-                                  for_each: '{{ range(0, sub_icon_table["keys"] | count, 50) | list }}'
-                                  sequence:
-                                    - action: 'esphome.{{ action_prefix }}_api_subscribe_icon_table'
-                                      data:
-                                        start: '{{ repeat.item == 0 }}'
-                                        keys: '{{ sub_icon_table["keys"][repeat.item:repeat.item + 50] }}'
-                                        glyphs: '{{ sub_icon_table["icons"][repeat.item:repeat.item + 50] }}'
-                                      continue_on_error: true
-                                    - *delay_default
-
                               - repeat:
                                   for_each: '{{ api_subscriptions }}'
                                   sequence:

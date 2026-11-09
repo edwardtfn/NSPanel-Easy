@@ -4,6 +4,7 @@
 
 #include "api_subscriptions.h"
 #include "base.h"
+#include "icon_rules.h"
 #include "nextion_components.h"
 
 #include <algorithm>
@@ -533,80 +534,29 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
   }  // for each live binding
 }
 
-/// @brief One icon table entry: a rule key and its codepoint.
-struct SubIconTableEntry {
-  char key[SUB_ICON_KEY_LEN];  ///< Rule key, e.g. "binary_sensor.door-on"
-  char glyph[4];               ///< UTF-8 codepoint, null-terminated
-};
-
-/// @brief Icon table, allocated on first use (PSRAM when available). Never persisted.
-static SubIconTableEntry *sub_icon_table = nullptr;
-
-/// @brief Entries in sub_icon_table.
-static uint16_t sub_icon_table_count = 0;
-
-void sub_icon_table_add(bool start, const std::vector<std::string> &keys, const std::vector<std::string> &glyphs) {
-  if (sub_icon_table == nullptr) {
-    sub_icon_table = static_cast<SubIconTableEntry *>(sub_alloc(sizeof(SubIconTableEntry) * SUB_ICON_TABLE_SIZE));
-    if (sub_icon_table == nullptr) {
-      ESP_LOGW(TAG, "Out of memory for the icon table");
-      return;
-    }
-  }  // if (sub_icon_table == nullptr)
-  if (start) {
-    sub_icon_table_count = 0;
-  }
-  if (keys.size() != glyphs.size()) {
-    ESP_LOGW(TAG, "Icon table: %zu keys but %zu glyphs; chunk ignored", keys.size(), glyphs.size());
-    return;
-  }
-  uint16_t skipped = 0;
-  for (size_t idx = 0; idx < keys.size(); ++idx) {
-    if (sub_icon_table_count >= SUB_ICON_TABLE_SIZE) {
-      skipped += static_cast<uint16_t>(keys.size() - idx);
-      break;
-    }
-    SubIconTableEntry &entry = sub_icon_table[sub_icon_table_count];
-    // A value is a codepoint (non-ASCII), or an icon name resolved with the icon names
-    const std::string &value = glyphs[idx];
-    const bool resolved = (!value.empty() && static_cast<unsigned char>(value[0]) >= 0x80)
-                              ? sub_copy(entry.glyph, sizeof(entry.glyph), value.c_str())
-                              : sub_icon_lookup(value.c_str(), entry.glyph, sizeof(entry.glyph));
-    if (!sub_copy(entry.key, sizeof(entry.key), keys[idx].c_str()) || !resolved || entry.glyph[0] == '\0') {
-      ++skipped;  // Would not fit whole, or no codepoint
-      continue;
-    }
-    ++sub_icon_table_count;
-  }  // for each key
-  if (skipped > 0) {
-    ESP_LOGW(TAG, "Icon table: %" PRIu16 " entr%s skipped", skipped, skipped == 1 ? "y" : "ies");
-  }
-  ESP_LOGD(TAG, "Icon table: %" PRIu16 " entries", sub_icon_table_count);
-}
-
 /**
- * @brief Look up a rule key in the icon table.
+ * @brief Look up an icon rule key.
  *
  * @param key Rule key.
- * @return The codepoint, or nullptr when the key is not in the table.
+ * @return The codepoint, or nullptr when there is no rule for the key.
  */
 static const char *sub_icon_table_find(const char *key) {
-  for (uint16_t idx = 0; idx < sub_icon_table_count; ++idx) {
-    if (strcmp(sub_icon_table[idx].key, key) == 0) {
-      return sub_icon_table[idx].glyph;
+  for (const IconRule &rule : ICON_RULES) {
+    if (strcmp(rule.key, key) == 0) {
+      return rule.icon;
     }
-  }  // for each entry
+  }  // for each rule
   return nullptr;
 }
 
 /**
- * @brief Look up an icon table key built from parts.
+ * @brief Look up an icon rule key built from parts.
  *
- * A key that does not fit SUB_ICON_KEY_LEN cannot be in the table, so it is
- * not looked up rather than looked up truncated.
+ * A key that does not fit SUB_ICON_KEY_LEN cannot be a rule, so it is not
+ * looked up rather than looked up truncated.
  *
  * @param domain Entity domain.
- * @param device_class Device class, or nullptr for the domain default.
+ * @param device_class Device class; empty for a domain default by state; nullptr for the domain default.
  * @param state State suffix, or nullptr for none.
  * @return The codepoint, or nullptr when the key is not in the table.
  */
@@ -617,11 +567,13 @@ static const char *sub_icon_table_find(const char *domain, const char *device_cl
     len = snprintf(key, sizeof(key), "%s", domain);
   } else if (state == nullptr) {
     len = snprintf(key, sizeof(key), "%s.%s", domain, device_class);
+  } else if (device_class[0] == '\0') {
+    len = snprintf(key, sizeof(key), "%s-%s", domain, state);
   } else {
     len = snprintf(key, sizeof(key), "%s.%s-%s", domain, device_class, state);
   }
   if (len < 0 || static_cast<size_t>(len) >= sizeof(key)) {
-    return nullptr;  // Longer than any key in the table
+    return nullptr;  // Longer than any rule key
   }
   return sub_icon_table_find(key);
 }
@@ -630,8 +582,8 @@ SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *
                                          uint16_t color_off) {
   const SubDomain domain = static_cast<SubDomain>(binding.domain);
   SubAppearance look = resolve_sub_appearance(domain, binding.device_class, state, color_on, color_off);
-  if (look.icon != nullptr || sub_icon_table == nullptr) {
-    return look;  // A multi-state domain, or no table yet
+  if (look.icon != nullptr) {
+    return look;  // A multi-state domain
   }
   const bool active = (evaluate_sub_state(domain, state) == SUB_STATE_ON);
   look.color = active ? color_on : color_off;
@@ -660,7 +612,11 @@ SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *
     }  // if (stateless)
   }  // if (device_class)
   if (look.icon == nullptr) {
-    look.icon = sub_icon_table_find(entity_domain, nullptr, nullptr);  // Domain default
+    // Domain default, for the state first (e.g. "sun-below_horizon")
+    look.icon = sub_icon_table_find(entity_domain, "", state);
+    if (look.icon == nullptr) {
+      look.icon = sub_icon_table_find(entity_domain, nullptr, nullptr);
+    }
   }
   return look;
 }
