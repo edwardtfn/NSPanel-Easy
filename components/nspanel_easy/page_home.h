@@ -79,8 +79,9 @@ void home_vis_resend();
  * The Blueprint sends the home page visibility only at boot, so a panel
  * booting while Home Assistant is unreachable would show an empty home page,
  * without the indoor temperature that opens the embedded thermostat (#735).
- * Called once, early in the boot; the display gets the mask from
- * home_vis_resend() on the resync after its setup.
+ * Without a stored mask, only the indoor temperature is shown until the
+ * Blueprint sends the configured one. Called once, early in the boot; the
+ * display gets the mask from home_vis_resend() on the resync after its setup.
  */
 void home_vis_restore();
 

@@ -49,6 +49,9 @@ uint32_t home_vis_mask = 0;
 /// @brief Bits changed while home was not the current page, re-applied live on entry.
 static uint32_t home_vis_pending = 0;
 
+/// @brief Mask used when none is stored: the indoor temperature only (bit 0, see HOME_VIS_BITS).
+static constexpr uint32_t HOME_VIS_DEFAULT = 1U << 0;
+
 /**
  * @brief Preference handle for the persisted vis_home mask.
  *
@@ -93,7 +96,10 @@ bool home_vis_set(const char *component, bool visible) {
 void home_vis_restore() {
   uint32_t stored = 0;
   if (!home_vis_pref().load(&stored)) {
-    ESP_LOGD(TAG, "No stored home visibility");
+    // Nothing stored yet, e.g. the first boot after an update: show the indoor temperature, which the panel
+    // fills from its own sensor and which opens the climate page, until the Blueprint sends the configured mask
+    home_vis_mask = HOME_VIS_DEFAULT;
+    ESP_LOGD(TAG, "No stored home visibility, using the default: 0x%05" PRIX32, home_vis_mask);
     return;
   }
   home_vis_mask = stored;
