@@ -7572,8 +7572,7 @@ actions:
         # Runs only on automation reload or HA start, and only when the firmware version is known.
         # It is placed before the stop so it also runs when the gate blocks the Blueprint.
         if:
-          - '{{ trigger.id in ["automation_reloaded", "ha_started"] }}'
-          - '{{ esphome_version_parts | count == 3 }}'
+          - '{{ trigger.id in ["automation_reloaded", "ha_started"] and esphome_version_parts | count == 3 }}'
         then:
           - sequence: !input versioning_esphome_outdated_action
       - if: '{{ not esphome_version_check_bypass }}'
@@ -7791,8 +7790,7 @@ actions:
         conditions:
           - condition: trigger
             id: nspanel_event
-          - '{{ trigger.event is defined }}'
-          - '{{ trigger.event.data is defined }}'
+          - '{{ trigger.event is defined and trigger.event.data is defined }}'
         sequence:  # nspanel_event
           - &variable_nspanel_event
             variables:
@@ -7808,8 +7806,11 @@ actions:
           - choose:
               - alias: Boot init
                 conditions:
-                  - '{{ nspanel_event.type == "boot"}}'
-                  - '{{ nspanel_event.step is defined and nspanel_event.step in ["display_ack", "setup", "start", "timeout", "reload"] }}'
+                  - >-
+                    {{
+                      nspanel_event.type == "boot" and
+                      nspanel_event.step is defined and nspanel_event.step in ["display_ack", "setup", "start", "timeout", "reload"]
+                    }}
                 sequence:
                   - &global_settings
                     sequence:
@@ -8428,17 +8429,23 @@ actions:
                           for_each: '{{ home_page.entity_value | list }}'
                           sequence:
                             - condition:
-                                - '{{ repeat.item.entity is defined }}'
-                                - '{{ repeat.item.entity is string }}'
-                                - '{{ repeat.item.entity.split(".") | count == 2 }}'
+                                - >-
+                                  {{
+                                    repeat.item.entity is defined and
+                                    repeat.item.entity is string and
+                                    repeat.item.entity.split(".") | count == 2
+                                  }}
                             - variables:
                                 default_color: *default_home_value_color
                             - alias: Text color
                               if:
-                                - '{{ repeat.item.label_color_rgb is defined }}'
-                                - '{{ repeat.item.label_color_rgb is list }}'
-                                - '{{ repeat.item.label_color_rgb | count == 3 }}'
-                                - '{{ repeat.item.label_color_rgb != default_color }}'
+                                - >-
+                                  {{
+                                    repeat.item.label_color_rgb is defined and
+                                    repeat.item.label_color_rgb is list and
+                                    repeat.item.label_color_rgb | count == 3 and
+                                    repeat.item.label_color_rgb != default_color
+                                  }}
                               then:
                                 - action: 'esphome.{{ action_prefix }}_component_color'
                                   data:
@@ -8450,10 +8457,13 @@ actions:
 
                             - alias: Icon color
                               if:
-                                - '{{ repeat.item.icon_color_rgb is defined }}'
-                                - '{{ repeat.item.icon_color_rgb is list }}'
-                                - '{{ repeat.item.icon_color_rgb | count == 3 }}'
-                                - '{{ repeat.item.icon_color_rgb != default_color }}'
+                                - >-
+                                  {{
+                                    repeat.item.icon_color_rgb is defined and
+                                    repeat.item.icon_color_rgb is list and
+                                    repeat.item.icon_color_rgb | count == 3 and
+                                    repeat.item.icon_color_rgb != default_color
+                                  }}
                               then:
                                 - action: 'esphome.{{ action_prefix }}_component_color'
                                   data:
@@ -8465,10 +8475,13 @@ actions:
 
                             - alias: Icon
                               if:
-                                - '{{ repeat.item.icon is defined }}'
-                                - '{{ repeat.item.icon is string }}'
-                                - '{{ repeat.item.icon is match "mdi:" }}'
-                                - '{{ ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names) }}'
+                                - >-
+                                  {{
+                                    repeat.item.icon is defined and
+                                    repeat.item.icon is string and
+                                    repeat.item.icon is match "mdi:" and
+                                    ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
+                                  }}
                               then:
                                 - action: 'esphome.{{ action_prefix }}_component_text_list'
                                   data:
@@ -8769,9 +8782,12 @@ actions:
 
                           - alias: Climate friendly name
                             if:
-                              - '{{ climate == thermostat_embedded }}'
-                              - '{{ climate_entity_id_valid }}'
-                              - '{{ state_attr(climate, "friendly_name") | string | length > 0 }}'
+                              - >-
+                                {{
+                                  climate == thermostat_embedded and
+                                  climate_entity_id_valid and
+                                  state_attr(climate, "friendly_name") | string | length > 0
+                                }}
                             then:
                               - action: 'esphome.{{ action_prefix }}_component_text_list'
                                 data:
@@ -9039,9 +9055,12 @@ actions:
 
               - alias: Lawn mower start/pause toggle
                 conditions:
-                  - '{{ nspanel_event.type == "action_call" }}'
-                  - '{{ nspanel_event.action == "_lawn_mower_start_pause_toggle_" }}'
-                  - '{{ nspanel_event.entity is defined }}'
+                  - >-
+                    {{
+                      nspanel_event.type == "action_call" and
+                      nspanel_event.action == "_lawn_mower_start_pause_toggle_" and
+                      nspanel_event.entity is defined
+                    }}
                 sequence:
                   - action: >-
                       {{ "lawn_mower.pause"
@@ -9053,9 +9072,12 @@ actions:
 
               - alias: Vacuum start/pause toggle
                 conditions:
-                  - '{{ nspanel_event.type == "action_call" }}'
-                  - '{{ nspanel_event.action == "_vacuum_start_pause_toggle_" }}'
-                  - '{{ nspanel_event.entity is defined }}'
+                  - >-
+                    {{
+                      nspanel_event.type == "action_call" and
+                      nspanel_event.action == "_vacuum_start_pause_toggle_" and
+                      nspanel_event.entity is defined
+                    }}
                 sequence:
                   - action: >-
                       {{ "vacuum.pause"
@@ -9067,8 +9089,11 @@ actions:
 
               - alias: NSPanel action call
                 conditions:
-                  - '{{ nspanel_event.type == "action_call" }}'
-                  - '{{ nspanel_event.action is defined and nspanel_event.action is string and nspanel_event.action | length > 0 }}'
+                  - >-
+                    {{
+                      nspanel_event.type == "action_call" and
+                      nspanel_event.action is defined and nspanel_event.action is string and nspanel_event.action | length > 0
+                    }}
                   - '{{ nspanel_event.action.split(".") | count == 2 }}'  # prevents call to null action
                   - '{{ nspanel_event.action.split(".")[0] | length > 0 and nspanel_event.action.split(".")[0] not in ["null", None] }}'  # prevents call to null service
                   - '{{ nspanel_event.action.split(".")[1] | length > 0 and nspanel_event.action.split(".")[1] not in ["null", None] }}'  # prevents call to null service
@@ -9083,9 +9108,12 @@ actions:
                           # water heater actions. Translate them here when the entity on the page is a humidifier.
                           - alias: "water_heater.set_temperature (humidifier)"
                             conditions:
-                              - '{{ nspanel_event.action == "water_heater.set_temperature" }}'
-                              - '{{ nspanel_event.entity.split(".")[0] == "humidifier" }}'
-                              - '{{ is_number(nspanel_event.value) }}'
+                              - >-
+                                {{
+                                  nspanel_event.action == "water_heater.set_temperature" and
+                                  nspanel_event.entity.split(".")[0] == "humidifier" and
+                                  is_number(nspanel_event.value)
+                                }}
                             sequence:
                               - variables:
                                   set_humidity_srv: "humidifier.set_humidity"  # Templated to avoid unknown action warnings when humidifier isn't loaded
@@ -9097,8 +9125,11 @@ actions:
                                 continue_on_error: true
                           - alias: "water_heater.set_operation_mode (humidifier)"
                             conditions:
-                              - '{{ nspanel_event.action == "water_heater.set_operation_mode" }}'
-                              - '{{ nspanel_event.entity.split(".")[0] == "humidifier" }}'
+                              - >-
+                                {{
+                                  nspanel_event.action == "water_heater.set_operation_mode" and
+                                  nspanel_event.entity.split(".")[0] == "humidifier"
+                                }}
                             sequence:
                               - variables:
                                   # The page reports the water heater mode bound to the pressed button, so map it back
@@ -9142,8 +9173,11 @@ actions:
                                         continue_on_error: true
                           - alias: "climate.set_temperature"
                             conditions:
-                              - '{{ nspanel_event.action == "climate.set_temperature" }}'
-                              - '{{ nspanel_event.key in ["target_temp_high", "target_temp_low"] }}'
+                              - >-
+                                {{
+                                  nspanel_event.action == "climate.set_temperature" and
+                                  nspanel_event.key in ["target_temp_high", "target_temp_low"]
+                                }}
                             sequence:
                               - variables:
                                   target_temp_low: >
@@ -9159,8 +9193,11 @@ actions:
                                       else state_attr(nspanel_event.entity, "target_temp_high") | int(-999)
                                     }}
                               - condition:
-                                  - '{{ is_number(target_temp_low) and target_temp_low > -999 }}'
-                                  - '{{ is_number(target_temp_high) and target_temp_high > -999 }}'
+                                  - >-
+                                    {{
+                                      is_number(target_temp_low) and target_temp_low > -999 and
+                                      is_number(target_temp_high) and target_temp_high > -999
+                                    }}
                               - action: '{{ nspanel_event.action }}'
                                 data:
                                   target_temp_low: '{{ target_temp_low }}'
@@ -9170,8 +9207,7 @@ actions:
                                 continue_on_error: true
                           - alias: "fan.oscillate"
                             conditions:
-                              - '{{ nspanel_event.action == "fan.oscillate" }}'
-                              - '{{ nspanel_event.key == "oscillating" }}'
+                              - '{{ nspanel_event.action == "fan.oscillate" and nspanel_event.key == "oscillating" }}'
                             sequence:
                               - variables:
                                   oscillating: '{{ state_attr(nspanel_event.entity, "oscillating") | default(true) }}'
@@ -9183,9 +9219,12 @@ actions:
                                 continue_on_error: true
                           - alias: "fan.turn_on"
                             conditions:
-                              - '{{ nspanel_event.action == "fan.turn_on" }}'
-                              - '{{ nspanel_event.key == "percentage" }}'
-                              - '{{ nspanel_event.value is defined }}'
+                              - >-
+                                {{
+                                  nspanel_event.action == "fan.turn_on" and
+                                  nspanel_event.key == "percentage" and
+                                  nspanel_event.value is defined
+                                }}
                             sequence:
                               - action: '{{ nspanel_event.action }}'
                                 data: {}
@@ -9204,9 +9243,12 @@ actions:
                                 continue_on_error: true
                           - alias: "light.turn_on (rgb_color)"
                             conditions:
-                              - '{{ nspanel_event.action == "light.turn_on" }}'
-                              - '{{ nspanel_event.key == "rgb_color" }}'
-                              - '{{ nspanel_event.red is defined and nspanel_event.green is defined and nspanel_event.blue is defined }}'
+                              - >-
+                                {{
+                                  nspanel_event.action == "light.turn_on" and
+                                  nspanel_event.key == "rgb_color" and
+                                  nspanel_event.red is defined and nspanel_event.green is defined and nspanel_event.blue is defined
+                                }}
                             sequence:
                               - action: '{{ nspanel_event.action }}'
                                 data:
@@ -9216,10 +9258,13 @@ actions:
                                 continue_on_error: true
                         default:
                           - condition:
-                              - '{{ nspanel_event.action is defined }}'
-                              - '{{ nspanel_event.key is defined }}'
-                              - '{{ nspanel_event.value is defined }}'
-                              - '{{ nspanel_event.entity is defined }}'
+                              - >-
+                                {{
+                                  nspanel_event.action is defined and
+                                  nspanel_event.key is defined and
+                                  nspanel_event.value is defined and
+                                  nspanel_event.entity is defined
+                                }}
                           # Build dict in Jinja to preserve typed values (e.g., string "None" vs null)
                           - variables:
                               call_data: '{{ {nspanel_event.key: nspanel_event.value} }}'
@@ -9230,9 +9275,12 @@ actions:
                             continue_on_error: true
                     else:
                       - condition:
-                          - '{{ nspanel_event.action is defined }}'
-                          - '{{ nspanel_event.entity is defined }}'
-                          - '{{ "." in nspanel_event.action }}'
+                          - >-
+                            {{
+                              nspanel_event.action is defined and
+                              nspanel_event.entity is defined and
+                              "." in nspanel_event.action
+                            }}
                       - action: '{{ nspanel_event.action }}'
                         target:
                           entity_id: '{{ nspanel_event.entity }}'
@@ -9248,8 +9296,7 @@ actions:
 
               - alias: Page changed
                 conditions:
-                  - '{{ nspanel_event.type == "page_changed"}}'
-                  - '{{ nspanel_event.page is defined }}'
+                  - '{{ nspanel_event.type == "page_changed" and nspanel_event.page is defined }}'
                 sequence:
                   - variables:
                       page_constructor: true
@@ -9505,12 +9552,15 @@ actions:
                                         available: '{{ current_entity_state_available }}'
                                       continue_on_error: true
                                     - if:
-                                        - '{{ btn_state }}'
-                                        - '{{ entity_domain in ["automation", "button", "input_button", "remote", "scene", "script"] }}'
-                                        - '{{ not page_constructor }}'
-                                        - '{{ momentary_activated }}'
-                                        - '{{ trigger.entity_id in [repeat.item.entity, state_entity_id] }}'
-                                        - '{{ state_entity_id == entity_id }}'
+                                        - >-
+                                          {{
+                                            btn_state and
+                                            entity_domain in ["automation", "button", "input_button", "remote", "scene", "script"] and
+                                            not page_constructor and
+                                            momentary_activated and
+                                            trigger.entity_id in [repeat.item.entity, state_entity_id] and
+                                            state_entity_id == entity_id
+                                          }}
                                       then:
                                         - delay:
                                             milliseconds: '{{ momentary_duration_ms }}'
@@ -10276,9 +10326,12 @@ actions:
                                             - *delay_default
                                 - alias: Utilities - Line
                                   if:
-                                    - '{{ icon_enabled or value1_enabled or value2_enabled or label_enabled }}'
-                                    - '{{ repeat.item.name not in ["grid"] }}'
-                                    - '{{ utilities_constructor }}'
+                                    - >-
+                                      {{
+                                        (icon_enabled or value1_enabled or value2_enabled or label_enabled) and
+                                        repeat.item.name not in ["grid"] and
+                                        utilities_constructor
+                                      }}
                                   then:
                                     - action: 'esphome.{{ action_prefix }}_component_text_list'
                                       data:
@@ -10475,8 +10528,11 @@ actions:
                         - choose:
                             - alias: Light settings page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.light }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.light and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_light
                                 - &get_entity_id_from_event_or_trigger
                                   variables:
@@ -10761,8 +10817,11 @@ actions:
                                     - *delay_default
                             - alias: Cover settings page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.cover }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.cover and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_cover
                                 - *get_entity_id_from_event_or_trigger
                                 - *variable_entity
@@ -10936,8 +10995,11 @@ actions:
                                     - *delay_default
                             - alias: Fan settings page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.fan }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.fan and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_fan
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -11279,8 +11341,11 @@ actions:
                                         - *delay_default
                             - alias: Media player settings page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.media_player }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.media_player and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_media_player
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -11298,10 +11363,13 @@ actions:
                                   repeat:
                                     sequence:
                                       - condition:
-                                          - '{{ nspanel_event.entity is defined }}'
-                                          - '{{ nspanel_event.entity is string }}'
-                                          - '{{ nspanel_event.entity | length > 0 }}'
-                                          - '{{ nspanel_event.entity is match "media_player." }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.entity is defined and
+                                              nspanel_event.entity is string and
+                                              nspanel_event.entity | length > 0 and
+                                              nspanel_event.entity is match "media_player."
+                                            }}
                                       - action: homeassistant.update_entity
                                         data:
                                           entity_id: '{{ nspanel_event.entity }}'
@@ -11410,8 +11478,11 @@ actions:
                                           - '{{ nspanel_event.type != "page_changed" }}'
                             - alias: Alarm settings page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.alarm }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.alarm and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_alarm
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -11448,8 +11519,11 @@ actions:
                                       continue_on_error: true
                             - alias: Climate page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.climate }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.climate and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_climate
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -11488,10 +11562,13 @@ actions:
                                         {{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}
                                       {%- endif -%}
                                 - if:
-                                    - '{{ page_constructor }}'
-                                    - '{{ not embedded_climate }}'
-                                    - '{{ nspanel_event.page is defined }}'
-                                    - '{{ nspanel_event.page == pages.climate }}'
+                                    - >-
+                                      {{
+                                        page_constructor and
+                                        not embedded_climate and
+                                        nspanel_event.page is defined and
+                                        nspanel_event.page == pages.climate
+                                      }}
                                   then:
                                     # The page is always reached through `entity_details_show`, which has already
                                     # set `back_page_id` to the calling page. An empty `back_page` keeps it, so
@@ -11833,14 +11910,20 @@ actions:
                                           - *delay_default
                             - alias: Button page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.button }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.button and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_button
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
-                                    - '{{ entity_id is string }}'
-                                    - '{{ entity_id.split(".") | count == 2 }}'
-                                    - '{{ entity_id.split(".")[0] in ["button", "input_button"] }}'
+                                    - >-
+                                      {{
+                                        entity_id is string and
+                                        entity_id.split(".") | count == 2 and
+                                        entity_id.split(".")[0] in ["button", "input_button"]
+                                      }}
                                 - *variable_entity
                                 - *entity_details_title_with_icon
                                 - if: '{{ entity_icon is string and entity_icon | length > 0 }}'
@@ -11869,14 +11952,20 @@ actions:
                                   continue_on_error: true
                             - alias: Switch page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.switch }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.switch and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_switch
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
-                                    - '{{ entity_id is string }}'
-                                    - '{{ entity_id.split(".") | count == 2 }}'
-                                    - '{{ entity_id.split(".")[0] in ["switch", "input_boolean"] }}'
+                                    - >-
+                                      {{
+                                        entity_id is string and
+                                        entity_id.split(".") | count == 2 and
+                                        entity_id.split(".")[0] in ["switch", "input_boolean"]
+                                      }}
                                 - *variable_entity
                                 - *entity_details_title_with_icon
                                 - *delay_default
@@ -11905,8 +11994,11 @@ actions:
                                   continue_on_error: true
                             - alias: Water Heater page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.water_heater }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.water_heater and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_water_heater
                                 - &variables_water_heater_entity
                                   variables:
@@ -12183,8 +12275,11 @@ actions:
                                           - *delay_default
                             - alias: Select page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.select }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.select and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_select
                                 - *get_entity_id_from_event_or_trigger
                                 - *variable_entity
@@ -12229,14 +12324,20 @@ actions:
                                   continue_on_error: true
                             - alias: Timer page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.timer }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.timer and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_timer
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
-                                    - '{{ entity_id is string }}'
-                                    - '{{ entity_id.split(".") | count == 2 }}'
-                                    - '{{ entity_id.split(".")[0] == "timer" }}'
+                                    - >-
+                                      {{
+                                        entity_id is string and
+                                        entity_id.split(".") | count == 2 and
+                                        entity_id.split(".")[0] == "timer"
+                                      }}
                                 - *variable_entity
                                 - *entity_details_title_with_icon
                                 - variables:
@@ -12317,8 +12418,11 @@ actions:
                                   continue_on_error: true
                             - alias: Vacuum / lawn mower page
                               conditions:
-                                - '{{ current_page_from_sensor == pages.vacuum }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
+                                - >-
+                                  {{
+                                    current_page_from_sensor == pages.vacuum and
+                                    (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
+                                  }}
                               sequence: &refresh_page_vacuum
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -12613,9 +12717,12 @@ actions:
                                 sequence:
                                   - &display_value
                                     if:
-                                      - '{{ repeat.item.entity is defined }}'
-                                      - '{{ repeat.item.entity is string }}'
-                                      - '{{ repeat.item.entity.split(".") | count == 2 }}'
+                                      - >-
+                                        {{
+                                          repeat.item.entity is defined and
+                                          repeat.item.entity is string and
+                                          repeat.item.entity.split(".") | count == 2
+                                        }}
                                     then:
                                       - variables:
                                           entity_id: '{{ repeat.item.entity }}'
@@ -12768,9 +12875,12 @@ actions:
 
                         # Refresh passes: only while the details page stays open on the same entity
                         - condition:
-                            - '{{ detailed_entity | length > 0 }}'
-                            - '{{ original_state.entity_id_valid }}'
-                            - '{{ nspanel_event.page in pages.detailed_entity }}'
+                            - >-
+                              {{
+                                detailed_entity | length > 0 and
+                                original_state.entity_id_valid and
+                                nspanel_event.page in pages.detailed_entity
+                              }}
                         - alias: Wait for the panel state sensors to catch up  # Once, after the first render
                           wait_template: &condition_details_page_sensors_ready >
                             {{
@@ -12849,8 +12959,11 @@ actions:
                   - choose:
                       - alias: Hardware buttons
                         conditions:
-                          - '{{ nspanel_event.component is defined }}'
-                          - '{{ nspanel_event.component in ["hw_bt_left", "hw_bt_right"] }}'
+                          - >-
+                            {{
+                              nspanel_event.component is defined and
+                              nspanel_event.component in ["hw_bt_left", "hw_bt_right"]
+                            }}
                         sequence:
                           - *variables_hardware
                           - variables:
@@ -12878,10 +12991,13 @@ actions:
                                   - choose:
                                       - alias: Default
                                         conditions:
-                                          - '{{ last_click_button.hold_select == "Default" }}'
-                                          - '{{ entity_domain in domains_functionality.detailed }}'
-                                          - '{{ entity_domain != "light" or light_has_details }}'
-                                          - '{{ entity_domain != "fan" or supported_features | bitwise_and(11) > 0 }}'
+                                          - >-
+                                            {{
+                                              last_click_button.hold_select == "Default" and
+                                              entity_domain in domains_functionality.detailed and
+                                              (entity_domain != "light" or light_has_details) and
+                                              (entity_domain != "fan" or supported_features | bitwise_and(11) > 0)
+                                            }}
                                         sequence:
                                           - *variable_entity
                                           - variables:
@@ -12940,8 +13056,11 @@ actions:
                                         sequence: !input right_button_hold_custom_action
                               - alias: Short click
                                 conditions:
-                                  - '{{ nspanel_event.command == "short_click" }}'
-                                  - '{{ entity_domain not in domains_functionality.detailed_only }}'
+                                  - >-
+                                    {{
+                                      nspanel_event.command == "short_click" and
+                                      entity_domain not in domains_functionality.detailed_only
+                                    }}
                                 sequence:
                                   - alias: Custom click action - Left
                                     if: '{{ nspanel_event.component == "hw_bt_left" }}'
@@ -13030,10 +13149,13 @@ actions:
                                           entity_id: '{{ last_click_button.entity }}'
                                         continue_on_error: true
                           - if:
-                              - '{{ entity_domain in ["media_player"] }}'
-                              - '{{ last_click_button.entity is defined }}'
-                              - '{{ last_click_button.entity is string }}'
-                              - '{{ last_click_button.entity | length > 2 }}'
+                              - >-
+                                {{
+                                  entity_domain in ["media_player"] and
+                                  last_click_button.entity is defined and
+                                  last_click_button.entity is string and
+                                  last_click_button.entity | length > 2
+                                }}
                             then:
                               - delay:
                                   milliseconds: '{{ media_player_update_delay }}'
@@ -13093,9 +13215,12 @@ actions:
                           - choose:
                               - alias: Long click
                                 conditions:
-                                  - '{{ nspanel_event.command == "long_click" or click_opens_details }}'
-                                  - '{{ entity_domain in domains_functionality.detailed }}'
-                                  - '{{ entity_domain != "light" or light_has_details }}'
+                                  - >-
+                                    {{
+                                      (nspanel_event.command == "long_click" or click_opens_details) and
+                                      entity_domain in domains_functionality.detailed and
+                                      (entity_domain != "light" or light_has_details)
+                                    }}
                                   - >-
                                     {{
                                       entity_domain != "fan" or
@@ -13107,170 +13232,269 @@ actions:
                                   - *entity_details_show
                               - alias: Short click
                                 conditions:
-                                  - '{{ nspanel_event.command == "short_click" }}'
-                                  - '{{ entity_domain not in domains_functionality.detailed_only }}'
+                                  - >-
+                                    {{
+                                      nspanel_event.command == "short_click" and
+                                      entity_domain not in domains_functionality.detailed_only
+                                    }}
                                 sequence:
                                   - alias: Custom click action
                                     choose:
                                       - alias: Custom action - Button 01
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage01" }}'
-                                          - '{{ nspanel_event.component == "button01" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage01" and
+                                              nspanel_event.component == "button01"
+                                            }}
                                         sequence: !input entity01_custom_action
                                       - alias: Custom action - Button 02
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage01" }}'
-                                          - '{{ nspanel_event.component == "button02" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage01" and
+                                              nspanel_event.component == "button02"
+                                            }}
                                         sequence: !input entity02_custom_action
                                       - alias: Custom action - Button 03
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage01" }}'
-                                          - '{{ nspanel_event.component == "button03" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage01" and
+                                              nspanel_event.component == "button03"
+                                            }}
                                         sequence: !input entity03_custom_action
                                       - alias: Custom action - Button 04
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage01" }}'
-                                          - '{{ nspanel_event.component == "button04" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage01" and
+                                              nspanel_event.component == "button04"
+                                            }}
                                         sequence: !input entity04_custom_action
                                       - alias: Custom action - Button 05
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage01" }}'
-                                          - '{{ nspanel_event.component == "button05" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage01" and
+                                              nspanel_event.component == "button05"
+                                            }}
                                         sequence: !input entity05_custom_action
                                       - alias: Custom action - Button 06
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage01" }}'
-                                          - '{{ nspanel_event.component == "button06" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage01" and
+                                              nspanel_event.component == "button06"
+                                            }}
                                         sequence: !input entity06_custom_action
                                       - alias: Custom action - Button 07
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage01" }}'
-                                          - '{{ nspanel_event.component == "button07" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage01" and
+                                              nspanel_event.component == "button07"
+                                            }}
                                         sequence: !input entity07_custom_action
                                       - alias: Custom action - Button 08
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage01" }}'
-                                          - '{{ nspanel_event.component == "button08" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage01" and
+                                              nspanel_event.component == "button08"
+                                            }}
                                         sequence: !input entity08_custom_action
                                       - alias: Custom action - Button 09
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage02" }}'
-                                          - '{{ nspanel_event.component == "button01" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage02" and
+                                              nspanel_event.component == "button01"
+                                            }}
                                         sequence: !input entity09_custom_action
                                       - alias: Custom action - Button 10
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage02" }}'
-                                          - '{{ nspanel_event.component == "button02" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage02" and
+                                              nspanel_event.component == "button02"
+                                            }}
                                         sequence: !input entity10_custom_action
                                       - alias: Custom action - Button 11
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage02" }}'
-                                          - '{{ nspanel_event.component == "button03" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage02" and
+                                              nspanel_event.component == "button03"
+                                            }}
                                         sequence: !input entity11_custom_action
                                       - alias: Custom action - Button 12
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage02" }}'
-                                          - '{{ nspanel_event.component == "button04" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage02" and
+                                              nspanel_event.component == "button04"
+                                            }}
                                         sequence: !input entity12_custom_action
                                       - alias: Custom action - Button 13
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage02" }}'
-                                          - '{{ nspanel_event.component == "button05" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage02" and
+                                              nspanel_event.component == "button05"
+                                            }}
                                         sequence: !input entity13_custom_action
                                       - alias: Custom action - Button 14
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage02" }}'
-                                          - '{{ nspanel_event.component == "button06" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage02" and
+                                              nspanel_event.component == "button06"
+                                            }}
                                         sequence: !input entity14_custom_action
                                       - alias: Custom action - Button 15
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage02" }}'
-                                          - '{{ nspanel_event.component == "button07" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage02" and
+                                              nspanel_event.component == "button07"
+                                            }}
                                         sequence: !input entity15_custom_action
                                       - alias: Custom action - Button 16
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage02" }}'
-                                          - '{{ nspanel_event.component == "button08" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage02" and
+                                              nspanel_event.component == "button08"
+                                            }}
                                         sequence: !input entity16_custom_action
                                       - alias: Custom action - Button 17
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage03" }}'
-                                          - '{{ nspanel_event.component == "button01" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage03" and
+                                              nspanel_event.component == "button01"
+                                            }}
                                         sequence: !input entity17_custom_action
                                       - alias: Custom action - Button 18
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage03" }}'
-                                          - '{{ nspanel_event.component == "button02" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage03" and
+                                              nspanel_event.component == "button02"
+                                            }}
                                         sequence: !input entity18_custom_action
                                       - alias: Custom action - Button 19
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage03" }}'
-                                          - '{{ nspanel_event.component == "button03" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage03" and
+                                              nspanel_event.component == "button03"
+                                            }}
                                         sequence: !input entity19_custom_action
                                       - alias: Custom action - Button 20
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage03" }}'
-                                          - '{{ nspanel_event.component == "button04" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage03" and
+                                              nspanel_event.component == "button04"
+                                            }}
                                         sequence: !input entity20_custom_action
                                       - alias: Custom action - Button 21
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage03" }}'
-                                          - '{{ nspanel_event.component == "button05" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage03" and
+                                              nspanel_event.component == "button05"
+                                            }}
                                         sequence: !input entity21_custom_action
                                       - alias: Custom action - Button 22
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage03" }}'
-                                          - '{{ nspanel_event.component == "button06" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage03" and
+                                              nspanel_event.component == "button06"
+                                            }}
                                         sequence: !input entity22_custom_action
                                       - alias: Custom action - Button 23
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage03" }}'
-                                          - '{{ nspanel_event.component == "button07" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage03" and
+                                              nspanel_event.component == "button07"
+                                            }}
                                         sequence: !input entity23_custom_action
                                       - alias: Custom action - Button 24
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage03" }}'
-                                          - '{{ nspanel_event.component == "button08" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage03" and
+                                              nspanel_event.component == "button08"
+                                            }}
                                         sequence: !input entity24_custom_action
                                       - alias: Custom action - Button 25
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage04" }}'
-                                          - '{{ nspanel_event.component == "button01" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage04" and
+                                              nspanel_event.component == "button01"
+                                            }}
                                         sequence: !input entity25_custom_action
                                       - alias: Custom action - Button 26
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage04" }}'
-                                          - '{{ nspanel_event.component == "button02" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage04" and
+                                              nspanel_event.component == "button02"
+                                            }}
                                         sequence: !input entity26_custom_action
                                       - alias: Custom action - Button 27
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage04" }}'
-                                          - '{{ nspanel_event.component == "button03" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage04" and
+                                              nspanel_event.component == "button03"
+                                            }}
                                         sequence: !input entity27_custom_action
                                       - alias: Custom action - Button 28
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage04" }}'
-                                          - '{{ nspanel_event.component == "button04" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage04" and
+                                              nspanel_event.component == "button04"
+                                            }}
                                         sequence: !input entity28_custom_action
                                       - alias: Custom action - Button 29
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage04" }}'
-                                          - '{{ nspanel_event.component == "button05" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage04" and
+                                              nspanel_event.component == "button05"
+                                            }}
                                         sequence: !input entity29_custom_action
                                       - alias: Custom action - Button 30
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage04" }}'
-                                          - '{{ nspanel_event.component == "button06" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage04" and
+                                              nspanel_event.component == "button06"
+                                            }}
                                         sequence: !input entity30_custom_action
                                       - alias: Custom action - Button 31
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage04" }}'
-                                          - '{{ nspanel_event.component == "button07" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage04" and
+                                              nspanel_event.component == "button07"
+                                            }}
                                         sequence: !input entity31_custom_action
                                       - alias: Custom action - Button 32
                                         conditions:
-                                          - '{{ nspanel_event.page == "buttonpage04" }}'
-                                          - '{{ nspanel_event.component == "button08" }}'
+                                          - >-
+                                            {{
+                                              nspanel_event.page == "buttonpage04" and
+                                              nspanel_event.component == "button08"
+                                            }}
                                         sequence: !input entity32_custom_action
                                   - *short_press_action_call
                                   - alias: Re-render current page buttons after click
@@ -13333,8 +13557,7 @@ actions:
 
                       - alias: Climate page
                         conditions:
-                          - '{{ nspanel_event.page is defined }}'
-                          - '{{ nspanel_event.page == pages.climate }}'
+                          - '{{ nspanel_event.page is defined and nspanel_event.page == pages.climate }}'
                         sequence:
                           - *climate_custom_buttons_variables
                           - variables:
@@ -13367,8 +13590,11 @@ actions:
                                         sequence: !input climate_button09_hold_custom_action
                               - alias: Short click
                                 conditions:
-                                  - '{{ nspanel_event.command == "short_click" }}'
-                                  - '{{ entity_domain not in domains_functionality.detailed_only }}'
+                                  - >-
+                                    {{
+                                      nspanel_event.command == "short_click" and
+                                      entity_domain not in domains_functionality.detailed_only
+                                    }}
                                 sequence:
                                   - *short_press_action_call
 
@@ -13378,10 +13604,13 @@ actions:
                         # (highest speed on top, off at the bottom) for up to 3 speeds, otherwise
                         # preset modes when there is no speed control at all.
                         conditions:
-                          - '{{ nspanel_event.page is defined and nspanel_event.page == pages.fan }}'
-                          - '{{ nspanel_event.component is defined and nspanel_event.component is match "mode_bt[1-5]$" }}'
-                          - '{{ nspanel_event.entity is defined and nspanel_event.entity is string and nspanel_event.entity is match "fan\\." }}'
-                          - '{{ states[nspanel_event.entity] is not none }}'
+                          - >-
+                            {{
+                              nspanel_event.page is defined and nspanel_event.page == pages.fan and
+                              nspanel_event.component is defined and nspanel_event.component is match "mode_bt[1-5]$" and
+                              nspanel_event.entity is defined and nspanel_event.entity is string and nspanel_event.entity is match "fan\\." and
+                              states[nspanel_event.entity] is not none
+                            }}
                         sequence:
                           - variables:
                               # Action names are templated, as a literal fan.* action fails validation
@@ -13416,8 +13645,7 @@ actions:
                           - choose:
                               - alias: Speed button
                                 conditions:
-                                  - '{{ fan_speed_buttons }}'
-                                  - '{{ fan_slot >= 1 and fan_slot <= fan_speed_steps + 1 }}'
+                                  - '{{ fan_speed_buttons and fan_slot >= 1 and fan_slot <= fan_speed_steps + 1 }}'
                                 sequence:
                                   - variables:
                                       fan_speed_index: '{{ fan_speed_steps + 1 - fan_slot }}'  # 0 = off
@@ -13437,9 +13665,12 @@ actions:
                                         continue_on_error: true
                               - alias: Preset mode button
                                 conditions:
-                                  - '{{ not fan_speed_available }}'
-                                  - '{{ fan_supported_features | bitwise_and(8) > 0 }}'
-                                  - '{{ fan_slot >= 1 and fan_slot <= fan_preset_modes | count }}'
+                                  - >-
+                                    {{
+                                      not fan_speed_available and
+                                      fan_supported_features | bitwise_and(8) > 0 and
+                                      fan_slot >= 1 and fan_slot <= fan_preset_modes | count
+                                    }}
                                 sequence:
                                   - action: '{{ fan_actions.set_preset_mode }}'
                                     data:
@@ -13480,10 +13711,13 @@ actions:
                           - choose:
                               - alias: Long click
                                 conditions:
-                                  - '{{ nspanel_event.command == "long_click" or click_opens_details or entity_domain == "timer" }}'
-                                  - '{{ entity_domain in domains_functionality.detailed }}'
-                                  - '{{ entity_domain != "light" or light_has_details }}'
-                                  - '{{ entity_domain != "fan" or supported_features | bitwise_and(11) > 0 }}'
+                                  - >-
+                                    {{
+                                      (nspanel_event.command == "long_click" or click_opens_details or entity_domain == "timer") and
+                                      entity_domain in domains_functionality.detailed and
+                                      (entity_domain != "light" or light_has_details) and
+                                      (entity_domain != "fan" or supported_features | bitwise_and(11) > 0)
+                                    }}
                                 sequence:
                                   - variables:
                                       back_page: '{{ pages.home }}'
@@ -13491,8 +13725,11 @@ actions:
                                   - *entity_details_show
                               - alias: Short click
                                 conditions:
-                                  - '{{ nspanel_event.command == "short_click" }}'
-                                  - '{{ entity_domain not in domains_functionality.detailed_only }}'
+                                  - >-
+                                    {{
+                                      nspanel_event.command == "short_click" and
+                                      entity_domain not in domains_functionality.detailed_only
+                                    }}
                                 sequence:
                                   - *short_press_action_call
 
@@ -13582,8 +13819,7 @@ actions:
                           # with the minimum version required by the firmware
                           - '{{ blueprint_compatible }}'
                           # TFT version is valid and compatible
-                          - '{{ versions.tft > 0 and versions.tft_min > 0 }}'
-                          - '{{ versions.tft >= versions.tft_min }}'
+                          - '{{ versions.tft > 0 and versions.tft_min > 0 and versions.tft >= versions.tft_min }}'
                         sequence:
                           - action: persistent_notification.dismiss
                             data:
@@ -13669,15 +13905,16 @@ actions:
 
                       - alias: TFT is older than expected
                         conditions:
-                          - '{{ versions.tft > 0 }}'
-                          - '{{ versions.tft_min > 0 }}'
-                          - '{{ versions.tft_min > versions.tft }}'
+                          - '{{ versions.tft > 0 and versions.tft_min > 0 and versions.tft_min > versions.tft }}'
                         sequence:
                           - choose:
                               - alias: TFT Upload add-on missing
                                 conditions:
-                                  - '{{ nspanel_event.upload_tft_installed is defined }}'
-                                  - '{{ not (nspanel_event.upload_tft_installed | bool) }}'
+                                  - >-
+                                    {{
+                                      nspanel_event.upload_tft_installed is defined and
+                                      not (nspanel_event.upload_tft_installed | bool)
+                                    }}
                                 sequence:
                                   - action: persistent_notification.create
                                     data:
@@ -13698,10 +13935,13 @@ actions:
                                     continue_on_error: true
                               - alias: TFT Upload auto-upload enabled
                                 conditions:
-                                  - '{{ nspanel_event.upload_tft_installed is defined }}'
-                                  - '{{ nspanel_event.upload_tft_installed | bool }}'
-                                  - '{{ nspanel_event.upload_tft_auto is defined }}'
-                                  - '{{ nspanel_event.upload_tft_auto | bool }}'
+                                  - >-
+                                    {{
+                                      nspanel_event.upload_tft_installed is defined and
+                                      nspanel_event.upload_tft_installed | bool and
+                                      nspanel_event.upload_tft_auto is defined and
+                                      nspanel_event.upload_tft_auto | bool
+                                    }}
                                 sequence:
                                   - action: persistent_notification.create
                                     data:
@@ -13768,9 +14008,12 @@ actions:
                   - choose:
                       - alias: light settings  # rgb_color, brightness, color_temp_kelvin - This was kept until we find a solution to call with rgb_color directly from ESPHome
                         conditions:
-                          - '{{ nspanel_event.page == pages.light }}'
-                          - '{{ nspanel_event.component in ["rgb_color", "brightness_pct", "color_temp_kelvin"] }}'
-                          - '{{ nspanel_event.entity is defined and nspanel_event.entity is string and nspanel_event.entity | length > 0 }}'
+                          - >-
+                            {{
+                              nspanel_event.page == pages.light and
+                              nspanel_event.component in ["rgb_color", "brightness_pct", "color_temp_kelvin"] and
+                              nspanel_event.entity is defined and nspanel_event.entity is string and nspanel_event.entity | length > 0
+                            }}
                         sequence:
                           - action: light.turn_on
                             data:
@@ -13780,10 +14023,13 @@ actions:
 
                       - alias: Jump to climate page
                         conditions:
-                          - '{{ nspanel_event.page == pages.home }} '
-                          - '{{ nspanel_event.component == "climate" }}'
-                          - '{{ nspanel_event.value == "release" }}'
-                          - '{{ climate | length > 0 }} '
+                          - >-
+                            {{
+                              nspanel_event.page == pages.home and
+                              nspanel_event.component == "climate" and
+                              nspanel_event.value == "release" and
+                              climate | length > 0
+                            }}
                         sequence:
                           - variables:
                               entity_id: '{{ climate }}'
@@ -13793,9 +14039,12 @@ actions:
 
                       - alias: Graph page - Newest values
                         conditions:
-                          - '{{ nspanel_event.page == pages.graph }}'
-                          - '{{ nspanel_event.component == "graph" }}'
-                          - '{{ nspanel_event.event == "refresh" }}'
+                          - >-
+                            {{
+                              nspanel_event.page == pages.graph and
+                              nspanel_event.component == "graph" and
+                              nspanel_event.event == "refresh"
+                            }}
                         sequence:
                           - variables:
                               entity_id: '{{ nspanel_event.entity | default("", true) }}'
@@ -13955,9 +14204,12 @@ actions:
           - '{{ trigger.to_state.state not in enum.states.unknown or "unavailable" in [trigger.from_state.state, trigger.to_state.state] }}'
           - condition: or
             conditions:
-              - '{{ pages.current in pages.buttonpages }}'
-              - '{{ pages.current in pages.detailed_entity }}'
-              - '{{ detailed_entity | length > 0 and trigger.entity_id == states(detailed_entity) }}'
+              - >-
+                {{
+                  pages.current in pages.buttonpages and
+                  pages.current in pages.detailed_entity and
+                  detailed_entity | length > 0 and trigger.entity_id == states(detailed_entity)
+                }}
         sequence:
           - variables:
               detailed_entity_state: '{{ states(detailed_entity) if detailed_entity | length > 0 else "" }}'
@@ -14017,10 +14269,13 @@ actions:
         sequence:
           - *update_home_page_climate_chip
           - if:
-              - '{{ trigger.event.data.new_state.state not in enum.states.unknown }}'
-              - '{{ pages.current == pages.climate }}'
-              - '{{ detailed_entity | length > 0 }}'
-              - '{{ trigger.event.data.entity_id == states(detailed_entity) }}'
+              - >-
+                {{
+                  trigger.event.data.new_state.state not in enum.states.unknown and
+                  pages.current == pages.climate and
+                  detailed_entity | length > 0 and
+                  trigger.event.data.entity_id == states(detailed_entity)
+                }}
             then:
               - variables:
                   climate_entity: '{{ trigger.event.data.entity_id }}'
@@ -14161,9 +14416,12 @@ actions:
                 - *display_value
           - alias: Graph page - Current value
             if:
-              - '{{ trigger.id == "home_values_state" }}'
-              - '{{ pages.current == pages.graph }}'
-              - '{{ states(detailed_entity) == trigger.entity_id }}'
+              - >-
+                {{
+                  trigger.id == "home_values_state" and
+                  pages.current == pages.graph and
+                  states(detailed_entity) == trigger.entity_id
+                }}
             then:
               - variables:
                   entity_id: '{{ trigger.entity_id }}'
