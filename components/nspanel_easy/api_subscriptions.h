@@ -635,19 +635,38 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
                       uint16_t color_on, uint16_t color_off, bool inverted);
 
+/// @brief Icon names kept by the icon cache; the oldest entry is replaced when full.
+static constexpr uint8_t SUB_ICON_CACHE_SIZE = 64;
+
+/**
+ * @brief Look up the codepoint of an MDI icon name in the icon cache.
+ *
+ * The firmware holds no table of MDI names. The cache keeps, in PSRAM, every
+ * name the Blueprint resolved in this session, so a name seen once is resolved
+ * locally from then on. It is the single place to plug in a full name table,
+ * should the firmware get one.
+ *
+ * @param name Icon name, e.g. "mdi:lightbulb".
+ * @param glyph Receives the codepoint (null-terminated, at most 3 bytes).
+ * @param size Size of glyph.
+ * @return true when the name is known.
+ */
+bool sub_icon_lookup(const char *name, char *glyph, size_t size);
+
 /**
  * @brief Replace the icon of a live binding, for both states.
  *
  * Answers an `icon_request` event, sent when a bound entity's own `icon`
- * attribute changes: the firmware holds no table of MDI names, so the
- * Blueprint resolves the name. Appearance is not persisted, so this never
- * schedules a restart.
+ * attribute changes to a name the icon cache does not hold, and is also used
+ * for the names the cache resolves locally. Appearance is not persisted, so
+ * this never schedules a restart.
  *
  * @param page Target page.
  * @param component Target component.
  * @param icon Icon codepoint.
+ * @param name Icon name the codepoint belongs to, stored in the icon cache; empty to skip caching.
  */
-void sub_push_icon(const char *page, const char *component, const char *icon);
+void sub_push_icon(const char *page, const char *component, const char *icon, const char *name);
 
 /**
  * @brief Close the blueprint's push.

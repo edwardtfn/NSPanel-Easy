@@ -65,16 +65,18 @@ api:
             api_subscribe_watchdog->execute();
 
     ##### Icon of a bound component, sent in answer to an `icon_request` event. #####
-    # The firmware holds no table of MDI names, so a change of an entity's own `icon` attribute is
-    # resolved by the Blueprint. Appearance is not persisted, so no restart follows.
+    # The firmware holds no table of MDI names, so a change of an entity's own `icon` attribute to a
+    # name it has not seen yet is resolved by the Blueprint. The answer is kept in the icon cache, so
+    # each name is requested once per boot. Appearance is not persisted, so no restart follows.
     - action: api_subscribe_icon
       variables:
         page: string       # Target page, e.g. "buttonpage01"
         component: string  # Target component, e.g. "button03"
         icon: string       # Icon codepoint
+        name: string       # Icon name the codepoint belongs to, e.g. "mdi:lightbulb"
       then:
         - lambda: |-
-            sub_push_icon(page.c_str(), component.c_str(), icon.c_str());
+            sub_push_icon(page.c_str(), component.c_str(), icon.c_str(), name.c_str());
 
     ##### End marker. Sent after every binding, carrying how many were sent. #####
     - action: api_subscribe_end

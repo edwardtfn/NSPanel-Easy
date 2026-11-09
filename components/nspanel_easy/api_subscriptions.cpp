@@ -521,7 +521,62 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
   }  // for each live binding
 }
 
-void sub_push_icon(const char *page, const char *component, const char *icon) {
+/// @brief One icon cache entry: an MDI name and its codepoint.
+struct SubIconCacheEntry {
+  char name[SUB_STATE_LEN];  ///< Icon name, e.g. "mdi:lightbulb"; empty when unused
+  char glyph[4];             ///< UTF-8 codepoint, null-terminated
+};
+
+/// @brief Icon cache, allocated on first use (PSRAM when available). Never persisted.
+static SubIconCacheEntry *sub_icon_cache = nullptr;
+
+/// @brief Next entry to fill: the cache is filled in order, then the oldest entry is replaced.
+static uint8_t sub_icon_cache_next = 0;
+
+bool sub_icon_lookup(const char *name, char *glyph, size_t size) {
+  if (sub_icon_cache == nullptr || name == nullptr || name[0] == '\0') {
+    return false;
+  }
+  for (uint8_t idx = 0; idx < SUB_ICON_CACHE_SIZE; ++idx) {
+    const SubIconCacheEntry &entry = sub_icon_cache[idx];
+    if (entry.name[0] != '\0' && strcmp(entry.name, name) == 0) {
+      return sub_copy(glyph, size, entry.glyph);
+    }
+  }  // for each entry
+  return false;
+}
+
+/**
+ * @brief Store an MDI name and its codepoint in the icon cache.
+ *
+ * @param name Icon name.
+ * @param glyph Codepoint.
+ */
+static void sub_icon_store(const char *name, const char *glyph) {
+  if (name == nullptr || name[0] == '\0' || glyph == nullptr || glyph[0] == '\0' || strlen(name) >= SUB_STATE_LEN ||
+      strlen(glyph) >= sizeof(SubIconCacheEntry::glyph)) {
+    return;  // Nothing to keep, or it would not fit whole
+  }
+  char known[sizeof(SubIconCacheEntry::glyph)];
+  if (sub_icon_lookup(name, known, sizeof(known))) {
+    return;  // Already cached
+  }
+  if (sub_icon_cache == nullptr) {
+    sub_icon_cache = static_cast<SubIconCacheEntry *>(sub_alloc(sizeof(SubIconCacheEntry) * SUB_ICON_CACHE_SIZE));
+    if (sub_icon_cache == nullptr) {
+      ESP_LOGW(TAG, "Out of memory for the icon cache");
+      return;
+    }
+  }  // if (sub_icon_cache == nullptr)
+  SubIconCacheEntry &entry = sub_icon_cache[sub_icon_cache_next];
+  sub_copy(entry.name, sizeof(entry.name), name);
+  sub_copy(entry.glyph, sizeof(entry.glyph), glyph);
+  sub_icon_cache_next = static_cast<uint8_t>((sub_icon_cache_next + 1) % SUB_ICON_CACHE_SIZE);
+  ESP_LOGV(TAG, "Icon cached: %s", name);
+}
+
+void sub_push_icon(const char *page, const char *component, const char *icon, const char *name) {
+  sub_icon_store(name, icon);
   const uint16_t idx = sub_find_target(sub_bindings, sub_count, page, component);
   if (idx >= sub_count) {
     ESP_LOGD(TAG, "%s.%s is not bound; icon ignored", page, component);

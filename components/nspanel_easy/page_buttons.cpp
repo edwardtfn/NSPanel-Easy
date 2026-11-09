@@ -684,10 +684,16 @@ void buttons_sub_render(const SubBinding &binding, const SubRuntime &rt, const c
       if (report) {
         char component[9];
         snprintf(component, sizeof(component), "button%02u", static_cast<unsigned>(button_idx + 1));
-        ESP_LOGD(TAG, "%s.%s: icon changed to '%s'", binding.page, component, rt.state);
-        fire_ha_event("icon_request", {{"page", binding.page}, {"component", component}, {"icon", rt.state}});
-      }
-      return;  // Nothing to draw until the Blueprint answers
+        char glyph[4];
+        if (sub_icon_lookup(rt.state, glyph, sizeof(glyph))) {
+          ESP_LOGV(TAG, "%s.%s: icon changed to '%s' (cached)", binding.page, component, rt.state);
+          sub_push_icon(binding.page, component, glyph, "");  // Already cached; draws the button
+        } else {
+          ESP_LOGD(TAG, "%s.%s: icon changed to '%s'; requesting it", binding.page, component, rt.state);
+          fire_ha_event("icon_request", {{"page", binding.page}, {"component", component}, {"icon", rt.state}});
+        }
+      }  // if (report)
+      return;  // The main binding draws the button once its icon is set
     }  // case icon
 
     default:

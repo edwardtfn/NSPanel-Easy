@@ -13208,8 +13208,9 @@ actions:
                                 sequence:
                                   - *short_press_action_call
 
-              # A bound entity's own `icon` attribute changed. The panel holds no table of MDI names,
-              # so the name is resolved here and only the new icon is sent back (no restart).
+              # A bound entity's own `icon` attribute changed to a name the panel has not resolved yet. The panel
+              # holds no table of MDI names, so the name is resolved here and the icon is sent back with its
+              # name, which the panel caches (no restart).
               - alias: Icon request
                 conditions:
                   - '{{ nspanel_event.type == "icon_request" }}'
@@ -13230,6 +13231,7 @@ actions:
                       page: '{{ nspanel_event.page }}'
                       component: '{{ nspanel_event.component }}'
                       icon: '{{ icon_glyph }}'
+                      name: '{{ nspanel_event.icon }}'
                     continue_on_error: true
 
               - alias: Versions mismatch
