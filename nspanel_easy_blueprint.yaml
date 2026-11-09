@@ -6416,7 +6416,6 @@ actions:
         {%- if device_name_override is string and device_name_override | length > 0 -%}
           override
         {%- elif
-              trigger is defined and
               trigger.event is defined and
               trigger.event.data is defined and
               trigger.event.data.device_name is defined and
@@ -7487,7 +7486,6 @@ actions:
       # yamllint enable rule:truthy rule:line-length
       # yamllint enable rule:comments-indentation
 
-  - condition: '{{ nspanel_name is defined }}'
   - condition: '{{ nspanel_name is string }}'
   - condition: '{{ nspanel_name | length > 0 }}'
 
@@ -7652,7 +7650,6 @@ actions:
         variables:
           entity_id_valid: &variable_entity_id_valid >
             {{
-              entity_id is defined and
               entity_id is string and
               entity_id | length > 2 and
               entity_id.split(".") | count == 2 and
@@ -7794,7 +7791,6 @@ actions:
         conditions:
           - condition: trigger
             id: nspanel_event
-          - '{{ trigger is defined }}'
           - '{{ trigger.event is defined }}'
           - '{{ trigger.event.data is defined }}'
         sequence:  # nspanel_event
@@ -7804,7 +7800,6 @@ actions:
                 {{
                   trigger.event.data
                   if
-                    trigger is defined and
                     trigger.event is defined and
                     trigger.event.data is defined
                   else none
@@ -7822,7 +7817,6 @@ actions:
                           global_settings_setup: >-
                             {{
                               not (
-                                nspanel_event is defined and
                                 nspanel_event.step is defined and
                                 nspanel_event.step == "start"
                               )
@@ -8103,10 +8097,10 @@ actions:
                             buttons:
                               left:
                                 entity: '{{ hw_button_left_entity }}'
-                                entity_is_valid: '{{ hw_button_left_entity is defined and hw_button_left_entity is string and hw_button_left_entity.split(".") | count == 2 }}'
+                                entity_is_valid: '{{ hw_button_left_entity is string and hw_button_left_entity.split(".") | count == 2 }}'
                                 state_entity: '{{ hw_button_left_state_entity }}'
                                 state_entity_is_valid: >
-                                  {{ hw_button_left_state_entity is defined and hw_button_left_state_entity is string and hw_button_left_state_entity.split(".") | count == 2 }}
+                                  {{ hw_button_left_state_entity is string and hw_button_left_state_entity.split(".") | count == 2 }}
                                 label_type: !input 'left_button_label_type'
                                 name: !input 'left_button_name'
                                 icon: !input 'left_button_icon'
@@ -8114,10 +8108,10 @@ actions:
                                 bar_always_visible: !input hw_button_bar_left_always_show
                               right:
                                 entity: '{{ hw_button_right_entity }}'
-                                entity_is_valid: '{{ hw_button_right_entity is defined and hw_button_right_entity is string and hw_button_right_entity.split(".") | count == 2 }}'
+                                entity_is_valid: '{{ hw_button_right_entity is string and hw_button_right_entity.split(".") | count == 2 }}'
                                 state_entity: '{{ hw_button_right_state_entity }}'
                                 state_entity_is_valid: >
-                                  {{ hw_button_right_state_entity is defined and hw_button_right_state_entity is string and hw_button_right_state_entity.split(".") | count == 2 }}
+                                  {{ hw_button_right_state_entity is string and hw_button_right_state_entity.split(".") | count == 2 }}
                                 label_type: !input 'right_button_label_type'
                                 name: !input 'right_button_name'
                                 icon: !input 'right_button_icon'
@@ -8669,14 +8663,13 @@ actions:
                                     {{
                                       states(qrcode_entity, rounded=True, with_unit=True)
                                       if
-                                        qrcode_entity is defined and
                                         qrcode_entity is string and
                                         has_value(qrcode_entity)
                                       else
                                         qrcode_fallback_value
                                     }}
                               - alias: Call QR code action
-                                if: '{{ qrcode_value is defined and qrcode_value is string and qrcode_value | length > 0 }}'
+                                if: '{{ qrcode_value is string and qrcode_value | length > 0 }}'
                                 then:
                                   - action: 'esphome.{{ action_prefix }}_qrcode'
                                     data:
@@ -9263,13 +9256,13 @@ actions:
                       entity_id: &variable_entity_id_from_trigger >
                         {{
                           nspanel_event.entity
-                          if nspanel_event is defined and nspanel_event.entity is defined and nspanel_event.entity is string and nspanel_event.entity | length > 1
+                          if nspanel_event.entity is defined and nspanel_event.entity is string and nspanel_event.entity | length > 1
                           else (
                             trigger.entity_id
                             if trigger.entity_id is defined
                             else (
                               trigger.event.data.entity_id
-                              if trigger is defined and trigger.event is defined and trigger.event.data is defined and trigger.event.data.entity_id is defined
+                              if trigger.event is defined and trigger.event.data is defined and trigger.event.data.entity_id is defined
                               else ""
                             )
                           )
@@ -9347,11 +9340,11 @@ actions:
                                 data:
                                   page: chips
                                   id: chip_climate
-                                  icon: '{{ entity_icon if entity_icon is defined else "" }}'
+                                  icon: '{{ entity_icon }}'
                                   icon_color: >
                                     {{
                                       entity_icon_color
-                                      if climate_chip_visible and entity_icon_color is defined
+                                      if climate_chip_visible
                                       else [0, 0, 0]
                                     }}
                                   visible: true
@@ -9478,16 +9471,14 @@ actions:
                                         btn_icon: >
                                           {{
                                             entity_icon
-                                            if entity_icon is defined
-                                                and entity_icon is string
+                                            if entity_icon is string
                                                 and entity_icon | length > 0
                                             else "\uE027"
                                           }}{# mdi:alert-circle #}
                                         btn_label: >
                                           {{
                                             entity_name
-                                            if entity_name is defined
-                                                and entity_name is string
+                                            if entity_name is string
                                                 and entity_name | length > 0
                                             else entity_id
                                           }}
@@ -9502,8 +9493,7 @@ actions:
                                         icon_color: >
                                           {{
                                             entity_icon_color
-                                            if entity_icon_color is defined
-                                                and entity_icon_color is list
+                                            if entity_icon_color is list
                                                 and entity_icon_color | count == 3
                                             else [200, 200, 200]
                                           }}
@@ -10494,24 +10484,18 @@ actions:
                                     entity_id_valid: '{{ original_state.entity_id_valid }}'
                                     # Set on every refresh, so the configured title and icon are not lost when
                                     # another step of this run reassigns `overlap`.
-                                    overlap: >-
-                                      {{
-                                        details_overlap
-                                        if details_overlap is defined
-                                        else {"icon": None, "icon_color": None, "name": None}
-                                      }}
+                                    overlap: '{{ details_overlap }}'
                                 - *variable_entity
                                 - &entity_details_title_with_icon
                                   alias: Fill title of entity details page
-                                  if: '{{ entity_name is defined }}'
-                                  then:
+                                  sequence:
                                     - variables:
                                         txt_list: >
                                           {%- set ns = namespace(items=[]) -%}
-                                          {%- if entity_name is defined and entity_name is string and entity_name | length > 0 -%}
+                                          {%- if entity_name is string and entity_name | length > 0 -%}
                                             {%- set ns.items = ns.items + ['page_label.txt="' + entity_name + '"'] -%}
                                           {%- endif -%}
-                                          {%- if entity_icon is defined and entity_icon is string and entity_icon | length > 0 -%}
+                                          {%- if entity_icon is string and entity_icon | length > 0 -%}
                                             {%- set ns.items = ns.items + ['icon_state.txt="' + entity_icon + '"'] -%}
                                           {%- endif -%}
                                           {{ ns.items }}
@@ -10527,7 +10511,7 @@ actions:
                                 - &variables_light_modes
                                   alias: variables_light_modes
                                   variables:
-                                    entity_id_valid: '{{ entity_id is defined and entity_id is string and entity_id.split(".") | count == 2 }}'
+                                    entity_id_valid: '{{ entity_id is string and entity_id.split(".") | count == 2 }}'
                                     # "embedded_climate" is not a real entity_id and cannot be split, but it
                                     # must still resolve to the climate domain so its detail page can open.
                                     entity_domain: >-
@@ -10688,7 +10672,7 @@ actions:
                                         current_effect: >-
                                           {{
                                             current_effect_raw | trim
-                                            if current_effect_raw is defined and current_effect_raw is string and current_effect_raw | length > 0
+                                            if current_effect_raw is string and current_effect_raw | length > 0
                                             else ""
                                           }}
                                     ##### Always (construction and updates): push current effect #####
@@ -10709,7 +10693,6 @@ actions:
                                               {{
                                                 effect_list_raw_attr | list
                                                 if
-                                                  effect_list_raw_attr is defined and
                                                   effect_list_raw_attr is iterable and
                                                   effect_list_raw_attr is not string
                                                 else []
@@ -10834,7 +10817,6 @@ actions:
                                       {{
                                         entity_device_class_raw
                                         if
-                                          entity_device_class_raw is defined and
                                           entity_device_class_raw is string and
                                           entity_device_class_raw | length > 0
                                         else "window"
@@ -11154,7 +11136,7 @@ actions:
                                         current_preset_mode: >-
                                           {{
                                             current_preset_mode_raw | trim
-                                            if current_preset_mode_raw is defined and current_preset_mode_raw is string and current_preset_mode_raw | length > 0
+                                            if current_preset_mode_raw is string and current_preset_mode_raw | length > 0
                                             else ""
                                           }}
                                         preset_modes_raw_attr: '{{ state_attr(entity_id, "preset_modes") }}'
@@ -11163,7 +11145,6 @@ actions:
                                           {{
                                             preset_modes_raw_attr
                                             if
-                                              preset_modes_raw_attr is defined and
                                               preset_modes_raw_attr is iterable and
                                               preset_modes_raw_attr is not string
                                             else []
@@ -11317,7 +11298,6 @@ actions:
                                   repeat:
                                     sequence:
                                       - condition:
-                                          - '{{ nspanel_event is defined }}'
                                           - '{{ nspanel_event.entity is defined }}'
                                           - '{{ nspanel_event.entity is string }}'
                                           - '{{ nspanel_event.entity | length > 0 }}'
@@ -11487,7 +11467,6 @@ actions:
                                       {{
                                         climate_entity.split(".")[0]
                                         if
-                                          climate_entity is defined and
                                           climate_entity is string and
                                           (climate_entity == "embedded_climate" or climate_entity.split(".") | count == 2)
                                         else "unknown"
@@ -11496,7 +11475,6 @@ actions:
                                     friendly_name_raw: '{{ state_attr(climate_entity, "friendly_name") }}'
                                     friendly_name: >-
                                       {%- if
-                                            details_overlap is defined and
                                             details_overlap.name is string and
                                             details_overlap.name | length > 0 and
                                             (
@@ -11512,10 +11490,8 @@ actions:
                                 - if:
                                     - '{{ page_constructor }}'
                                     - '{{ not embedded_climate }}'
-                                    - '{{ nspanel_event is defined }}'
                                     - '{{ nspanel_event.page is defined }}'
                                     - '{{ nspanel_event.page == pages.climate }}'
-                                    - '{{ climate_entity is defined }}'
                                   then:
                                     # The page is always reached through `entity_details_show`, which has already
                                     # set `back_page_id` to the calling page. An empty `back_page` keeps it, so
@@ -11656,7 +11632,6 @@ actions:
                                             preset_modes_attr
                                             if
                                               state_attr(climate_entity, "supported_features") | int(0) | bitwise_and(16) > 0 and
-                                              preset_modes_attr is defined and
                                               preset_modes_attr is iterable and
                                               preset_modes_attr is not string
                                             else []
@@ -11664,7 +11639,7 @@ actions:
                                         current_preset_mode: >-
                                           {{
                                             current_preset_mode_raw | trim
-                                            if current_preset_mode_raw is defined and current_preset_mode_raw is string and current_preset_mode_raw | length > 0
+                                            if current_preset_mode_raw is string and current_preset_mode_raw | length > 0
                                             else ""
                                           }}
                                         # Options and button visibility are pushed on construction, and on updates only when the
@@ -11677,7 +11652,7 @@ actions:
                                             {#- Only state_changed events carry old_state; the details refresh loop runs from the panel event #}
                                             {%- set old_state = (
                                               trigger.event.data.old_state
-                                              if trigger is defined and trigger.event is defined and trigger.event.data is defined and trigger.event.data.old_state is defined
+                                              if trigger.event is defined and trigger.event.data is defined and trigger.event.data.old_state is defined
                                               else none
                                             ) -%}
                                             {#- No previous state to compare against: push the options again #}
@@ -11844,8 +11819,7 @@ actions:
                                               icon_color: >
                                                 {{
                                                   entity_icon_color
-                                                  if entity_icon_color is defined
-                                                      and entity_icon_color is list
+                                                  if entity_icon_color is list
                                                       and entity_icon_color | count == 3
                                                   else [200, 200, 200]
                                                 }}
@@ -11864,14 +11838,12 @@ actions:
                               sequence: &refresh_page_button
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
-                                    - '{{ entity_id is defined }}'
                                     - '{{ entity_id is string }}'
                                     - '{{ entity_id.split(".") | count == 2 }}'
                                     - '{{ entity_id.split(".")[0] in ["button", "input_button"] }}'
                                 - *variable_entity
-                                - condition: '{{ entity_name is defined }}'
                                 - *entity_details_title_with_icon
-                                - if: '{{ entity_icon is defined and entity_icon is string and entity_icon | length > 0 }}'
+                                - if: '{{ entity_icon is string and entity_icon | length > 0 }}'
                                   then:
                                     - action: 'esphome.{{ action_prefix }}_component_text_list'
                                       data:
@@ -11902,12 +11874,10 @@ actions:
                               sequence: &refresh_page_switch
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
-                                    - '{{ entity_id is defined }}'
                                     - '{{ entity_id is string }}'
                                     - '{{ entity_id.split(".") | count == 2 }}'
                                     - '{{ entity_id.split(".")[0] in ["switch", "input_boolean"] }}'
                                 - *variable_entity
-                                - condition: '{{ entity_name is defined }}'
                                 - *entity_details_title_with_icon
                                 - *delay_default
                                 - action: 'esphome.{{ action_prefix }}_component_val'
@@ -11944,7 +11914,6 @@ actions:
                                       {{
                                         nspanel_event.entity
                                         if
-                                          nspanel_event is defined and
                                           nspanel_event.entity is defined and
                                           nspanel_event.entity is string and
                                           nspanel_event.entity | length > 1
@@ -11963,7 +11932,6 @@ actions:
                                       {{
                                         water_heater_entity.split(".")[0]
                                         if
-                                          water_heater_entity is defined and
                                           water_heater_entity is string and
                                           water_heater_entity.split(".") | count == 2
                                         else "unknown"
@@ -11979,7 +11947,6 @@ actions:
                                     friendly_name_raw: '{{ state_attr(water_heater_entity, "friendly_name") }}'
                                     friendly_name: >-
                                       {%- if
-                                            details_overlap is defined and
                                             details_overlap.name is string and
                                             details_overlap.name | length > 0 and
                                             water_heater_entity == original_state.entity_id
@@ -12267,12 +12234,10 @@ actions:
                               sequence: &refresh_page_timer
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
-                                    - '{{ entity_id is defined }}'
                                     - '{{ entity_id is string }}'
                                     - '{{ entity_id.split(".") | count == 2 }}'
                                     - '{{ entity_id.split(".")[0] == "timer" }}'
                                 - *variable_entity
-                                - condition: '{{ entity_name is defined }}'
                                 - *entity_details_title_with_icon
                                 - variables:
                                     timer_state_raw: '{{ states(entity_id) }}'
@@ -12683,7 +12648,7 @@ actions:
                                                   is_number(states(entity_id)) and
                                                   (states(entity_id, rounded=true) | float == 0)
                                                 }}
-                                          - if: '{{ hide_if_zero is defined and hide_if_zero and value_is_zero }}'
+                                          - if: '{{ hide_if_zero and value_is_zero }}'
                                             then:
                                               # Numeric state rounds to zero: hide both value and icon
                                               - action: 'esphome.{{ action_prefix }}_components_visibility'
@@ -12884,7 +12849,6 @@ actions:
                   - choose:
                       - alias: Hardware buttons
                         conditions:
-                          - '{{ nspanel_event is defined }}'
                           - '{{ nspanel_event.component is defined }}'
                           - '{{ nspanel_event.component in ["hw_bt_left", "hw_bt_right"] }}'
                         sequence:
@@ -12899,7 +12863,7 @@ actions:
                               entity_id: >
                                 {{
                                   last_click_button.entity
-                                  if last_click_button is defined and last_click_button.entity is defined
+                                  if last_click_button.entity is defined
                                   else None
                                 }}
                           - *variables_light_modes
@@ -12959,8 +12923,6 @@ actions:
                                                   entity: '{{ "embedded_climate" if entity_id == thermostat_embedded else entity_id }}'
                                                   back_page: '{{ back_page }}'
                                                 continue_on_error: true
-                                              - condition: '{{ entity_name is defined }}'
-                                              - condition: '{{ entity_name is defined }}'
                                               - condition: '{{ entity_name is string }}'
                                               - condition: '{{ entity_name | length > 0 }}'
                                               - action: 'esphome.{{ action_prefix }}_component_text_list'
@@ -12989,7 +12951,6 @@ actions:
                                     if: '{{ nspanel_event.component == "hw_bt_right" }}'
                                     then:
                                       - sequence: !input right_button_click_custom_action
-                                  - condition: '{{ last_click_button is defined }}'
                                   - condition: '{{ last_click_button.entity is defined }}'
                                   - condition: '{{ last_click_button.entity is string }}'
                                   - condition: '{{ last_click_button.entity | length > 2 }}'
@@ -13070,7 +13031,6 @@ actions:
                                         continue_on_error: true
                           - if:
                               - '{{ entity_domain in ["media_player"] }}'
-                              - '{{ last_click_button is defined }}'
                               - '{{ last_click_button.entity is defined }}'
                               - '{{ last_click_button.entity is string }}'
                               - '{{ last_click_button.entity | length > 2 }}'
@@ -13102,14 +13062,12 @@ actions:
                           - condition: '{{ last_click_button | count > 0 }}'
                           - variables:
                               last_click_button: '{{ last_click_button | first }}'
-                          - condition: '{{ last_click_button is defined }}'
                           - condition: '{{ last_click_button.entity is defined }}'
                           - variables:
                               entity_id: >
                                 {{
                                   last_click_button.entity
                                   if
-                                    last_click_button is defined and
                                     last_click_button.entity is defined and
                                     last_click_button.entity is string and
                                     last_click_button.entity | length >= 3
@@ -13375,7 +13333,6 @@ actions:
 
                       - alias: Climate page
                         conditions:
-                          - '{{ nspanel_event is defined }}'
                           - '{{ nspanel_event.page is defined }}'
                           - '{{ nspanel_event.page == pages.climate }}'
                         sequence:
@@ -13389,7 +13346,6 @@ actions:
                                 {{
                                   last_click_button.entity.split(".")[0] | default("unknown")
                                   if
-                                    last_click_button is defined and
                                     last_click_button.entity is defined and
                                     last_click_button.entity is string and
                                     last_click_button.entity | length > 0 and
@@ -13498,11 +13454,9 @@ actions:
                         sequence:
                           - variables:
                               last_click_button: '{{ home_page.custom_buttons | selectattr("component", "defined") | selectattr("component", "eq", nspanel_event.component) | list }}'
-                          - condition: '{{ last_click_button is defined }}'
                           - condition: '{{ last_click_button | count > 0 }}'
                           - variables:
                               last_click_button: '{{ last_click_button | first }}'
-                          - condition: '{{ last_click_button is defined }}'
                           - condition: '{{ last_click_button.entity is defined }}'
                           - alias: variable_entity_input
                             variables:
@@ -13915,7 +13869,7 @@ actions:
           # Automations receive `this` as the state dict, where last_changed is an ISO string; attribute access
           # and as_timestamp() also accept a state object with a datetime, so either form is read.
           - condition: >-
-              {%- set replaced = as_timestamp(this.last_changed, 0) if this is defined and this else 0 -%}
+              {%- set replaced = as_timestamp(this.last_changed, 0) if this else 0 -%}
               {{ trigger.id != "automation_reloaded" or replaced == 0 or (as_timestamp(now()) - replaced) < 60 }}
 
           # The panel's actions are named after its device name. Without the "Device name" sensor (panel not
