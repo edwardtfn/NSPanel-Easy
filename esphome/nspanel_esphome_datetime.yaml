@@ -18,6 +18,7 @@ substitutions:
   TAG_DATETIME: nspanel.datetime
   DATE_FORMAT_DEFAULT: "%A, %d.%m"
   TIME_FORMAT_DEFAULT: "%H:%M"
+  TIME_PLACEHOLDER: "--:--"  # Shown instead of the time while the clock is not set
   _pkg_time_sntp:
     time:
       # Second time source: SNTP only needs Wi-Fi, so the clock becomes valid before the API connects
@@ -57,9 +58,18 @@ script:
           // Time
           ESPTime now = id(time_provider).now();
           if (!now.is_valid()) {
+            // No clock yet, e.g. after a power loss without Home Assistant or SNTP: show a placeholder
+            // instead of leaving the time blank, so the panel doesn't look broken (#735)
             ESP_LOGW("${TAG_DATETIME}", "refresh_datetime: time provider not yet synchronized");
+            if (id(screensaver_display_time) && current_page_id == get_page_id("screensaver")) {
+              disp1->set_component_text("text", "${TIME_PLACEHOLDER}");
+              disp1->show_component("text");
+            }  // if screensaver showing the time
+            disp1->set_component_text("home.meridiem", " ");
+            disp1->set_component_text("home.time", "${TIME_PLACEHOLDER}");
+            disp1->set_component_text("home.date", " ");
             return;
-          }
+          }  // if (!now.is_valid())
 
           std::string time_format_str = id(mui_time_format);
 
