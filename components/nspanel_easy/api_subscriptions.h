@@ -43,7 +43,7 @@ enum class Visibility : uint8_t {
 };
 
 /// @brief Persisted format version. Bump whenever SubBinding's layout changes.
-static constexpr uint8_t SUB_FORMAT_VERSION = 4;  // 4: SubHeader gained entity_len
+static constexpr uint8_t SUB_FORMAT_VERSION = 5;  // 5: SUB_PAGE_LEN fits the button pages
 
 /// @brief Upper bound on bindings; storage is allocated to the configured count, not this.
 #ifndef NSPANEL_EASY_SUB_MAX
@@ -86,8 +86,8 @@ static constexpr uint8_t SUB_ATTR_LEN = 24;                             ///< Lon
 static constexpr uint8_t SUB_COMPONENT_LEN = 16;                        ///< Longest stored component name
 static constexpr uint8_t SUB_DEVICE_CLASS_LEN = 16;                     ///< Longest device_class in use ("garage_door")
 static constexpr uint8_t SUB_ENTITY_LEN = NSPANEL_EASY_SUB_ENTITY_LEN;  ///< entity_id buffer, null included
-static constexpr uint8_t SUB_PAGE_LEN = 12;                             ///< Longest stored page name ("screensaver")
-static constexpr uint8_t SUB_STATE_LEN = 24;                            ///< Longest state ("armed_custom_bypass" is 19)
+static constexpr uint8_t SUB_PAGE_LEN = 13;                             ///< Longest stored page name ("buttonpage01")
+static constexpr uint8_t SUB_STATE_LEN = 64;  ///< Longest state or attribute ("mdi:..." names)
 
 // Held in a uint8_t in SubHeader, so the contract check cannot represent more.
 // The lower bound is the shortest buffer that still fits a realistic entity_id.
@@ -634,6 +634,20 @@ void sub_subscribe_all();
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
                       uint16_t color_on, uint16_t color_off, bool inverted);
+
+/**
+ * @brief Replace the icon of a live binding, for both states.
+ *
+ * Answers an `icon_request` event, sent when a bound entity's own `icon`
+ * attribute changes: the firmware holds no table of MDI names, so the
+ * Blueprint resolves the name. Appearance is not persisted, so this never
+ * schedules a restart.
+ *
+ * @param page Target page.
+ * @param component Target component.
+ * @param icon Icon codepoint.
+ */
+void sub_push_icon(const char *page, const char *component, const char *icon);
 
 /**
  * @brief Close the blueprint's push.

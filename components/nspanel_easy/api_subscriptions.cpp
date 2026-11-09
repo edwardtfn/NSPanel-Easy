@@ -29,6 +29,9 @@
 #ifdef NSPANEL_EASY_HW_TEMPERATURE
 #include "hw_temperature.h"
 #endif  // NSPANEL_EASY_HW_TEMPERATURE
+#ifdef NSPANEL_EASY_PAGE_BUTTONS
+#include "page_buttons.h"
+#endif  // NSPANEL_EASY_PAGE_BUTTONS
 
 namespace esphome::nspanel_easy {
 
@@ -245,6 +248,12 @@ SubRenderFn sub_resolve_renderer(const char *page) {
 #ifdef NSPANEL_EASY_HW_TEMPERATURE
       {"calibration", &temp_reference_render},
 #endif  // NSPANEL_EASY_HW_TEMPERATURE
+#ifdef NSPANEL_EASY_PAGE_BUTTONS
+      {"buttonpage01", &buttons_sub_render},
+      {"buttonpage02", &buttons_sub_render},
+      {"buttonpage03", &buttons_sub_render},
+      {"buttonpage04", &buttons_sub_render},
+#endif  // NSPANEL_EASY_PAGE_BUTTONS
   };
   for (const PageEntry &entry : PAGES) {
     if (strcmp(page, entry.page) == 0) {
@@ -501,6 +510,22 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
     sub_apply(idx);
     break;
   }  // for each live binding
+}
+
+void sub_push_icon(const char *page, const char *component, const char *icon) {
+  const uint16_t idx = sub_find_target(sub_bindings, sub_count, page, component);
+  if (idx >= sub_count) {
+    ESP_LOGD(TAG, "%s.%s is not bound; icon ignored", page, component);
+    return;
+  }
+  SubRuntime &rt = sub_runtime[idx];
+  if (!sub_copy(rt.icon_on, sizeof(rt.icon_on), icon)) {
+    ESP_LOGW(TAG, "%s.%s: icon does not fit; ignored", page, component);
+    sub_copy(rt.icon_on, sizeof(rt.icon_on), rt.icon_off);  // Keep the previous icon
+    return;
+  }
+  sub_copy(rt.icon_off, sizeof(rt.icon_off), icon);
+  sub_apply(idx);
 }
 
 bool sub_persist(bool verified) {
