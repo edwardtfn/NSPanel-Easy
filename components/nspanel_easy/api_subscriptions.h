@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "all_icons.h"
 #include "nextion_constants.h"
@@ -43,7 +44,7 @@ enum class Visibility : uint8_t {
 };
 
 /// @brief Persisted format version. Bump whenever SubBinding's layout changes.
-static constexpr uint8_t SUB_FORMAT_VERSION = 5;  // 5: SUB_PAGE_LEN fits the button pages
+static constexpr uint8_t SUB_FORMAT_VERSION = 6;  // 6: SUB_DEVICE_CLASS_LEN fits every device class
 
 /// @brief Upper bound on bindings; storage is allocated to the configured count, not this.
 #ifndef NSPANEL_EASY_SUB_MAX
@@ -84,7 +85,7 @@ static constexpr uint16_t SUB_CHUNK_COUNT = (SUB_MAX + SUB_CHUNK_SIZE - 1) / SUB
 
 static constexpr uint8_t SUB_ATTR_LEN = 24;                             ///< Longest stored attribute name
 static constexpr uint8_t SUB_COMPONENT_LEN = 16;                        ///< Longest stored component name
-static constexpr uint8_t SUB_DEVICE_CLASS_LEN = 16;                     ///< Longest device_class in use ("garage_door")
+static constexpr uint8_t SUB_DEVICE_CLASS_LEN = 40;                     ///< Longest device_class, null included
 static constexpr uint8_t SUB_ENTITY_LEN = NSPANEL_EASY_SUB_ENTITY_LEN;  ///< entity_id buffer, null included
 static constexpr uint8_t SUB_PAGE_LEN = 13;                             ///< Longest stored page name ("buttonpage01")
 static constexpr uint8_t SUB_STATE_LEN = 64;  ///< Longest state or attribute ("mdi:..." names)
@@ -166,7 +167,7 @@ struct SubBinding {
   char entity[SUB_ENTITY_LEN];              ///< entity_id; empty means the slot is unused
   char page[SUB_PAGE_LEN];                  ///< Target page, e.g. "chips"
   char component[SUB_COMPONENT_LEN];        ///< Target component, e.g. "chip01"
-  char device_class[SUB_DEVICE_CLASS_LEN];  ///< HA device_class; cover only, empty when unset
+  char device_class[SUB_DEVICE_CLASS_LEN];  ///< HA device_class, empty when unset
   char attribute[SUB_ATTR_LEN];             ///< Attribute to read instead of the state; empty to use the state
   uint8_t domain;                           ///< SubDomain, derived from entity at bind time
   bool inverted;                            ///< Show while the entity is inactive
@@ -630,47 +631,96 @@ void sub_subscribe_all();
  * @param color_on RGB565 colour for the active state.
  * @param color_off RGB565 colour for the inactive state.
  * @param inverted Show while the entity is inactive.
- * @param icon_name MDI name of an icon the binding uses, e.g. "mdi:lamp", to seed the icon cache; empty for
- *                  none. The icon may be needed again later, when the entity's own `icon` attribute changes.
- * @param icon_name_glyph Codepoint of icon_name.
+ * @param icon_name Icon by name, e.g. "mdi:lamp", resolved with the icon names when icon_on is empty; empty for
+ *                  none.
  */
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
-                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name,
-                      const char *icon_name_glyph);
+                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name);
 
-/// @brief Icon names kept by the icon cache; the oldest entry is replaced when full.
-static constexpr uint8_t SUB_ICON_CACHE_SIZE = 128;
+/// @brief Most entries of the icon table (device class rules and domain defaults).
+static constexpr uint16_t SUB_ICON_TABLE_SIZE = 384;
+
+/// @brief Longest icon table key, null included ("sensor.volatile_organic_compounds_parts" is 40).
+static constexpr uint8_t SUB_ICON_KEY_LEN = 48;
 
 /**
- * @brief Look up the codepoint of an MDI icon name in the icon cache.
+ * @brief Add entries to the icon table, sent by the Blueprint once per session.
  *
- * The firmware holds no table of MDI names. The cache keeps, in PSRAM, every
- * name the Blueprint resolved in this session, so a name seen once is resolved
- * locally from then on. It is the single place to plug in a full name table,
- * should the firmware get one.
+ * The table holds the Blueprint's icon rules, keyed as the Blueprint keys them:
+ *   - "<domain>.<device_class>-<state>" (e.g. "binary_sensor.door-on");
+ *   - "<domain>.<device_class>" for the domains whose device class icon does
+ *     not depend on the state (button, event, sensor);
+ *   - "<domain>" for the domain default (e.g. "light").
+ * It is kept in PSRAM, never evicted and never persisted. Sent in chunks; the
+ * first chunk of a session clears the previous table.
  *
- * @param name Icon name, e.g. "mdi:lightbulb".
- * @param glyph Receives the codepoint (null-terminated, at most 3 bytes).
- * @param size Size of glyph.
- * @return true when the name is known.
+ * @param start First chunk: clear the table first.
+ * @param keys Keys, as above.
+ * @param glyphs Icons, one per key: a codepoint, or an icon name resolved with the icon names (which the
+ *               Blueprint sends first).
+ */
+void sub_icon_table_add(bool start, const std::vector<std::string> &keys, const std::vector<std::string> &glyphs);
+
+/**
+ * @brief Resolve the icon and colour of a binding in its current state.
+ *
+ * The multi-state domains are resolved by resolve_sub_appearance(). The others
+ * use the icon table: the device class icon for the state (the exact state
+ * first, then "on"/"off" by how the state classifies), then the domain
+ * default. Used when the Blueprint pushed no icon (no override, no `icon`
+ * attribute).
+ *
+ * @param binding The binding.
+ * @param state Effective state string; hvac_action for climate when usable.
+ * @param color_on Colour for active states.
+ * @param color_off Colour for inactive states.
+ * @return Icon codepoint and RGB565 colour; a null icon when nothing matches.
+ */
+SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *state, uint16_t color_on,
+                                         uint16_t color_off);
+
+/// @brief Bytes reserved for the icon names (all_icon_names is about 121 KB).
+static constexpr uint32_t SUB_ICON_NAMES_CAPACITY = 160 * 1024;
+
+/**
+ * @brief Add a run of MDI icon names, sent by the Blueprint in chunks once per session.
+ *
+ * The names are the Blueprint's all_icon_names, in codepoint order: the name at
+ * position i (0-based) is U+E000 + i, so only the names travel and every
+ * codepoint is worked out on the panel. Kept in PSRAM, never persisted.
+ *
+ * @param start Position of the first name of the chunk; 0 starts a new list. A chunk that does not
+ *              continue the list is ignored.
+ * @param names Comma-separated names, without "mdi:".
+ */
+void sub_icon_names_add(uint16_t start, const std::string &names);
+
+/**
+ * @brief Codepoint of an MDI icon name.
+ *
+ * Resolved with the icon names the Blueprint sent in this session, plus the
+ * names the Blueprint maps outside the font order (blank, void, unknown,
+ * unavailable).
+ *
+ * @param name Icon name, with or without "mdi:", e.g. "mdi:lightbulb".
+ * @param glyph Receives the codepoint (null-terminated, 3 bytes).
+ * @param size Size of glyph; at least 4.
+ * @return false when the name is unknown, or the names have not arrived yet.
  */
 bool sub_icon_lookup(const char *name, char *glyph, size_t size);
 
 /**
  * @brief Replace the icon of a live binding, for both states.
  *
- * Answers an `icon_request` event, sent when a bound entity's own `icon`
- * attribute changes to a name the icon cache does not hold, and is also used
- * for the names the cache resolves locally. Appearance is not persisted, so
- * this never schedules a restart.
+ * Used when a bound entity's own `icon` attribute changes. Appearance is not
+ * persisted, so this never schedules a restart.
  *
  * @param page Target page.
  * @param component Target component.
  * @param icon Icon codepoint.
- * @param name Icon name the codepoint belongs to, stored in the icon cache; empty to skip caching.
  */
-void sub_push_icon(const char *page, const char *component, const char *icon, const char *name);
+void sub_set_icon(const char *page, const char *component, const char *icon);
 
 /**
  * @brief Close the blueprint's push.

@@ -6,6 +6,7 @@
 #include "base.h"
 #include "nextion_components.h"
 
+#include <algorithm>
 #include <cinttypes>
 
 #include <esp_heap_caps.h>
@@ -108,8 +109,6 @@ static bool sub_push_superseded(const char *push_id) {
 
 /// @brief Consecutive commits that never received an end marker.
 static uint8_t sub_unverified = 0;
-
-static void sub_icon_store(const char *name, const char *glyph);
 
 /**
  * @brief Allocate, preferring PSRAM and falling back to internal DRAM.
@@ -417,10 +416,17 @@ void sub_subscribe_all() {
 
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
-                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name,
-                      const char *icon_name_glyph) {
-  // Whatever happens to the binding, the name and its codepoint are valid for the icon cache
-  sub_icon_store(icon_name, icon_name_glyph);
+                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name) {
+  // An icon sent by name is resolved here, once, into the codepoint the renderers use
+  char named_icon[4] = "";
+  if ((icon_on == nullptr || icon_on[0] == '\0') && icon_name != nullptr && icon_name[0] != '\0') {
+    if (sub_icon_lookup(icon_name, named_icon, sizeof(named_icon))) {
+      icon_on = named_icon;
+      icon_off = named_icon;
+    } else {
+      ESP_LOGW(TAG, "%s.%s: icon '%s' is not known", page, component, icon_name);
+    }
+  }  // if (icon by name)
 
   if (!sub_target_allowed(page, component)) {
     ESP_LOGW(TAG, "%s.%s is driven locally and cannot be bound", page, component);
@@ -527,62 +533,225 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
   }  // for each live binding
 }
 
-/// @brief One icon cache entry: an MDI name and its codepoint.
-struct SubIconCacheEntry {
-  char name[SUB_STATE_LEN];  ///< Icon name, e.g. "mdi:lightbulb"; empty when unused
-  char glyph[4];             ///< UTF-8 codepoint, null-terminated
+/// @brief One icon table entry: a rule key and its codepoint.
+struct SubIconTableEntry {
+  char key[SUB_ICON_KEY_LEN];  ///< Rule key, e.g. "binary_sensor.door-on"
+  char glyph[4];               ///< UTF-8 codepoint, null-terminated
 };
 
-/// @brief Icon cache, allocated on first use (PSRAM when available). Never persisted.
-static SubIconCacheEntry *sub_icon_cache = nullptr;
+/// @brief Icon table, allocated on first use (PSRAM when available). Never persisted.
+static SubIconTableEntry *sub_icon_table = nullptr;
 
-/// @brief Next entry to fill: the cache is filled in order, then the oldest entry is replaced.
-static uint8_t sub_icon_cache_next = 0;
+/// @brief Entries in sub_icon_table.
+static uint16_t sub_icon_table_count = 0;
 
-bool sub_icon_lookup(const char *name, char *glyph, size_t size) {
-  if (sub_icon_cache == nullptr || name == nullptr || name[0] == '\0') {
-    return false;
-  }
-  for (uint8_t idx = 0; idx < SUB_ICON_CACHE_SIZE; ++idx) {
-    const SubIconCacheEntry &entry = sub_icon_cache[idx];
-    if (entry.name[0] != '\0' && strcmp(entry.name, name) == 0) {
-      return sub_copy(glyph, size, entry.glyph);
+void sub_icon_table_add(bool start, const std::vector<std::string> &keys, const std::vector<std::string> &glyphs) {
+  if (sub_icon_table == nullptr) {
+    sub_icon_table = static_cast<SubIconTableEntry *>(sub_alloc(sizeof(SubIconTableEntry) * SUB_ICON_TABLE_SIZE));
+    if (sub_icon_table == nullptr) {
+      ESP_LOGW(TAG, "Out of memory for the icon table");
+      return;
     }
-  }  // for each entry
-  return false;
+  }  // if (sub_icon_table == nullptr)
+  if (start) {
+    sub_icon_table_count = 0;
+  }
+  if (keys.size() != glyphs.size()) {
+    ESP_LOGW(TAG, "Icon table: %zu keys but %zu glyphs; chunk ignored", keys.size(), glyphs.size());
+    return;
+  }
+  uint16_t skipped = 0;
+  for (size_t idx = 0; idx < keys.size(); ++idx) {
+    if (sub_icon_table_count >= SUB_ICON_TABLE_SIZE) {
+      skipped += static_cast<uint16_t>(keys.size() - idx);
+      break;
+    }
+    SubIconTableEntry &entry = sub_icon_table[sub_icon_table_count];
+    // A value is a codepoint (non-ASCII), or an icon name resolved with the icon names
+    const std::string &value = glyphs[idx];
+    const bool resolved = (!value.empty() && static_cast<unsigned char>(value[0]) >= 0x80)
+                              ? sub_copy(entry.glyph, sizeof(entry.glyph), value.c_str())
+                              : sub_icon_lookup(value.c_str(), entry.glyph, sizeof(entry.glyph));
+    if (!sub_copy(entry.key, sizeof(entry.key), keys[idx].c_str()) || !resolved || entry.glyph[0] == '\0') {
+      ++skipped;  // Would not fit whole, or no codepoint
+      continue;
+    }
+    ++sub_icon_table_count;
+  }  // for each key
+  if (skipped > 0) {
+    ESP_LOGW(TAG, "Icon table: %" PRIu16 " entr%s skipped", skipped, skipped == 1 ? "y" : "ies");
+  }
+  ESP_LOGD(TAG, "Icon table: %" PRIu16 " entries", sub_icon_table_count);
 }
 
 /**
- * @brief Store an MDI name and its codepoint in the icon cache.
+ * @brief Look up a rule key in the icon table.
  *
- * @param name Icon name.
- * @param glyph Codepoint.
+ * @param key Rule key.
+ * @return The codepoint, or nullptr when the key is not in the table.
  */
-static void sub_icon_store(const char *name, const char *glyph) {
-  if (name == nullptr || name[0] == '\0' || glyph == nullptr || glyph[0] == '\0' || strlen(name) >= SUB_STATE_LEN ||
-      strlen(glyph) >= sizeof(SubIconCacheEntry::glyph)) {
-    return;  // Nothing to keep, or it would not fit whole
-  }
-  char known[sizeof(SubIconCacheEntry::glyph)];
-  if (sub_icon_lookup(name, known, sizeof(known))) {
-    return;  // Already cached
-  }
-  if (sub_icon_cache == nullptr) {
-    sub_icon_cache = static_cast<SubIconCacheEntry *>(sub_alloc(sizeof(SubIconCacheEntry) * SUB_ICON_CACHE_SIZE));
-    if (sub_icon_cache == nullptr) {
-      ESP_LOGW(TAG, "Out of memory for the icon cache");
-      return;
+static const char *sub_icon_table_find(const char *key) {
+  for (uint16_t idx = 0; idx < sub_icon_table_count; ++idx) {
+    if (strcmp(sub_icon_table[idx].key, key) == 0) {
+      return sub_icon_table[idx].glyph;
     }
-  }  // if (sub_icon_cache == nullptr)
-  SubIconCacheEntry &entry = sub_icon_cache[sub_icon_cache_next];
-  sub_copy(entry.name, sizeof(entry.name), name);
-  sub_copy(entry.glyph, sizeof(entry.glyph), glyph);
-  sub_icon_cache_next = static_cast<uint8_t>((sub_icon_cache_next + 1) % SUB_ICON_CACHE_SIZE);
-  ESP_LOGV(TAG, "Icon cached: %s", name);
+  }  // for each entry
+  return nullptr;
 }
 
-void sub_push_icon(const char *page, const char *component, const char *icon, const char *name) {
-  sub_icon_store(name, icon);
+/**
+ * @brief Look up an icon table key built from parts.
+ *
+ * A key that does not fit SUB_ICON_KEY_LEN cannot be in the table, so it is
+ * not looked up rather than looked up truncated.
+ *
+ * @param domain Entity domain.
+ * @param device_class Device class, or nullptr for the domain default.
+ * @param state State suffix, or nullptr for none.
+ * @return The codepoint, or nullptr when the key is not in the table.
+ */
+static const char *sub_icon_table_find(const char *domain, const char *device_class, const char *state) {
+  char key[SUB_ICON_KEY_LEN];
+  int len = 0;
+  if (device_class == nullptr) {
+    len = snprintf(key, sizeof(key), "%s", domain);
+  } else if (state == nullptr) {
+    len = snprintf(key, sizeof(key), "%s.%s", domain, device_class);
+  } else {
+    len = snprintf(key, sizeof(key), "%s.%s-%s", domain, device_class, state);
+  }
+  if (len < 0 || static_cast<size_t>(len) >= sizeof(key)) {
+    return nullptr;  // Longer than any key in the table
+  }
+  return sub_icon_table_find(key);
+}
+
+SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *state, uint16_t color_on,
+                                         uint16_t color_off) {
+  const SubDomain domain = static_cast<SubDomain>(binding.domain);
+  SubAppearance look = resolve_sub_appearance(domain, binding.device_class, state, color_on, color_off);
+  if (look.icon != nullptr || sub_icon_table == nullptr) {
+    return look;  // A multi-state domain, or no table yet
+  }
+  const bool active = (evaluate_sub_state(domain, state) == SUB_STATE_ON);
+  look.color = active ? color_on : color_off;
+
+  // Domain of the entity: everything before the dot
+  const char *dot = strchr(binding.entity, '.');
+  if (dot == nullptr || static_cast<size_t>(dot - binding.entity) >= SUB_ICON_KEY_LEN) {
+    return look;
+  }
+  char entity_domain[SUB_ICON_KEY_LEN];
+  memcpy(entity_domain, binding.entity, dot - binding.entity);
+  entity_domain[dot - binding.entity] = '\0';
+
+  if (binding.device_class[0] != '\0') {
+    // As the Blueprint keys them: no state for button, event and sensor; otherwise the
+    // exact state first, then "on"/"off" by how the state classifies
+    const bool stateless = strcmp(entity_domain, "button") == 0 || strcmp(entity_domain, "event") == 0 ||
+                           strcmp(entity_domain, "sensor") == 0;
+    if (stateless) {
+      look.icon = sub_icon_table_find(entity_domain, binding.device_class, nullptr);
+    } else {
+      look.icon = sub_icon_table_find(entity_domain, binding.device_class, state);
+      if (look.icon == nullptr) {
+        look.icon = sub_icon_table_find(entity_domain, binding.device_class, active ? "on" : "off");
+      }
+    }  // if (stateless)
+  }  // if (device_class)
+  if (look.icon == nullptr) {
+    look.icon = sub_icon_table_find(entity_domain, nullptr, nullptr);  // Domain default
+  }
+  return look;
+}
+
+/// @brief MDI names in codepoint order, as the Blueprint's all_icon_names: ",name0,name1,...,". The name at
+///        position i (0-based) is U+E000 + i. Allocated on first use (PSRAM when available). Never persisted.
+static char *sub_icon_names = nullptr;
+
+/// @brief Characters used in sub_icon_names, null excluded.
+static size_t sub_icon_names_len = 0;
+
+/// @brief Names received in this session, so a chunk can be checked against its start index.
+static uint16_t sub_icon_names_count = 0;
+
+void sub_icon_names_add(uint16_t start, const std::string &names) {
+  if (sub_icon_names == nullptr) {
+    sub_icon_names = static_cast<char *>(sub_alloc(SUB_ICON_NAMES_CAPACITY));
+    if (sub_icon_names == nullptr) {
+      ESP_LOGW(TAG, "Out of memory for the icon names");
+      return;
+    }
+  }  // if (sub_icon_names == nullptr)
+  if (start == 0) {
+    sub_icon_names[0] = ',';
+    sub_icon_names[1] = '\0';
+    sub_icon_names_len = 1;
+    sub_icon_names_count = 0;
+  } else if (start != sub_icon_names_count) {
+    ESP_LOGW(TAG, "Icon names: chunk at %" PRIu16 " but %" PRIu16 " received; ignored", start, sub_icon_names_count);
+    return;
+  }
+  if (names.empty()) {
+    return;
+  }
+  if (sub_icon_names_len + names.size() + 2 > SUB_ICON_NAMES_CAPACITY) {
+    ESP_LOGW(TAG, "Icon names: more than %" PRIu32 " bytes; the rest is not resolved", SUB_ICON_NAMES_CAPACITY);
+    sub_icon_names_count = UINT16_MAX;  // Refuse the following chunks too
+    return;
+  }
+  memcpy(sub_icon_names + sub_icon_names_len, names.data(), names.size());
+  sub_icon_names_len += names.size();
+  sub_icon_names[sub_icon_names_len++] = ',';
+  sub_icon_names[sub_icon_names_len] = '\0';
+  sub_icon_names_count = static_cast<uint16_t>(sub_icon_names_count + 1 + std::count(names.begin(), names.end(), ','));
+  ESP_LOGV(TAG, "Icon names: %" PRIu16 " received", sub_icon_names_count);
+}
+
+bool sub_icon_lookup(const char *name, char *glyph, size_t size) {
+  if (name == nullptr || glyph == nullptr || size < 4) {
+    return false;
+  }
+  if (strncmp(name, "mdi:", 4) == 0) {
+    name += 4;
+  }
+  const size_t name_len = strlen(name);
+  if (name_len == 0 || name_len > 64) {
+    return false;
+  }
+
+  // Names the Blueprint maps outside the font order (its special_icons)
+  if (strcmp(name, "blank") == 0 || strcmp(name, "void") == 0) {
+    return sub_copy(glyph, size, "\uFFFF");
+  }
+  if (strcmp(name, "unknown") == 0 || strcmp(name, "unavailable") == 0) {
+    return sub_copy(glyph, size, Icons::MDI_ALERT_CIRCLE);
+  }
+  if (sub_icon_names == nullptr || sub_icon_names_len < 2) {
+    return false;  // The list has not arrived yet
+  }
+
+  // ",name," marks the whole name; its position is the number of names before it
+  char needle[68];
+  snprintf(needle, sizeof(needle), ",%s,", name);
+  const char *found = strstr(sub_icon_names, needle);
+  if (found == nullptr) {
+    return false;
+  }
+  const uint32_t index = static_cast<uint32_t>(std::count(static_cast<const char *>(sub_icon_names), found, ','));
+  const uint32_t codepoint = 0xE000 + index;
+  if (codepoint > 0xFFFF) {
+    return false;
+  }
+  // UTF-8, always three bytes in this range
+  glyph[0] = static_cast<char>(0xE0 | (codepoint >> 12));
+  glyph[1] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+  glyph[2] = static_cast<char>(0x80 | (codepoint & 0x3F));
+  glyph[3] = '\0';
+  return true;
+}
+
+void sub_set_icon(const char *page, const char *component, const char *icon) {
   const uint16_t idx = sub_find_target(sub_bindings, sub_count, page, component);
   if (idx >= sub_count) {
     ESP_LOGD(TAG, "%s.%s is not bound; icon ignored", page, component);
