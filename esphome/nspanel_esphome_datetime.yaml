@@ -55,6 +55,15 @@ script:
       - lambda: |-
           if (system_flags.tft_upload_active) return;  // Do not refresh if uploading TFT
 
+          // Screensaver time with font 12 on the US model is stacked, one line per part
+          const auto screensaver_layout = [](std::string &text) {
+            if (id(screensaver_display_time_font) == 12 &&
+                display_model->current_option() == "${DISPLAY_MODES.US.TEXT}") {
+              nspanel_easy::replace_all(text, ":", "\\r");
+              nspanel_easy::replace_all(text, " ", "\\r");
+            }  // if stacked layout
+          };
+
           // Time
           ESPTime now = id(time_provider).now();
           if (!now.is_valid()) {
@@ -62,7 +71,9 @@ script:
             // instead of leaving the time blank, so the panel doesn't look broken (#735)
             ESP_LOGW("${TAG_DATETIME}", "refresh_datetime: time provider not yet synchronized");
             if (id(screensaver_display_time) && current_page_id == get_page_id("screensaver")) {
-              disp1->set_component_text("text", "${TIME_PLACEHOLDER}");
+              std::string placeholder = "${TIME_PLACEHOLDER}";
+              screensaver_layout(placeholder);
+              disp1->set_component_text("text", placeholder.c_str());
               disp1->show_component("text");
             }  // if screensaver showing the time
             disp1->set_component_text("home.meridiem", " ");
@@ -87,11 +98,7 @@ script:
           if (id(screensaver_display_time) && current_page_id == get_page_id("screensaver")) {
             std::string time_format_str_sleep = time_format_str;
             nspanel_easy::replace_all(time_format_str_sleep, "%p", meridiem_text);
-            if (id(screensaver_display_time_font) == 12 &&
-                display_model->current_option() == "${DISPLAY_MODES.US.TEXT}") {
-              nspanel_easy::replace_all(time_format_str_sleep, ":", "\\r");
-              nspanel_easy::replace_all(time_format_str_sleep, " ", "\\r");
-            }
+            screensaver_layout(time_format_str_sleep);
             disp1->set_component_text("text", now.strftime(time_format_str_sleep).c_str());
             disp1->show_component("text");
           }
