@@ -599,6 +599,33 @@ static const char *sub_icon_table_find(const char *key) {
   return nullptr;
 }
 
+/**
+ * @brief Look up an icon table key built from parts.
+ *
+ * A key that does not fit SUB_ICON_KEY_LEN cannot be in the table, so it is
+ * not looked up rather than looked up truncated.
+ *
+ * @param domain Entity domain.
+ * @param device_class Device class, or nullptr for the domain default.
+ * @param state State suffix, or nullptr for none.
+ * @return The codepoint, or nullptr when the key is not in the table.
+ */
+static const char *sub_icon_table_find(const char *domain, const char *device_class, const char *state) {
+  char key[SUB_ICON_KEY_LEN];
+  int len = 0;
+  if (device_class == nullptr) {
+    len = snprintf(key, sizeof(key), "%s", domain);
+  } else if (state == nullptr) {
+    len = snprintf(key, sizeof(key), "%s.%s", domain, device_class);
+  } else {
+    len = snprintf(key, sizeof(key), "%s.%s-%s", domain, device_class, state);
+  }
+  if (len < 0 || static_cast<size_t>(len) >= sizeof(key)) {
+    return nullptr;  // Longer than any key in the table
+  }
+  return sub_icon_table_find(key);
+}
+
 SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *state, uint16_t color_on,
                                          uint16_t color_off) {
   const SubDomain domain = static_cast<SubDomain>(binding.domain);
@@ -618,26 +645,22 @@ SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *
   memcpy(entity_domain, binding.entity, dot - binding.entity);
   entity_domain[dot - binding.entity] = '\0';
 
-  char key[SUB_ICON_KEY_LEN];
   if (binding.device_class[0] != '\0') {
     // As the Blueprint keys them: no state for button, event and sensor; otherwise the
     // exact state first, then "on"/"off" by how the state classifies
     const bool stateless = strcmp(entity_domain, "button") == 0 || strcmp(entity_domain, "event") == 0 ||
                            strcmp(entity_domain, "sensor") == 0;
     if (stateless) {
-      snprintf(key, sizeof(key), "%s.%s", entity_domain, binding.device_class);
-      look.icon = sub_icon_table_find(key);
+      look.icon = sub_icon_table_find(entity_domain, binding.device_class, nullptr);
     } else {
-      snprintf(key, sizeof(key), "%s.%s-%s", entity_domain, binding.device_class, state);
-      look.icon = sub_icon_table_find(key);
+      look.icon = sub_icon_table_find(entity_domain, binding.device_class, state);
       if (look.icon == nullptr) {
-        snprintf(key, sizeof(key), "%s.%s-%s", entity_domain, binding.device_class, active ? "on" : "off");
-        look.icon = sub_icon_table_find(key);
+        look.icon = sub_icon_table_find(entity_domain, binding.device_class, active ? "on" : "off");
       }
     }  // if (stateless)
   }  // if (device_class)
   if (look.icon == nullptr) {
-    look.icon = sub_icon_table_find(entity_domain);  // Domain default
+    look.icon = sub_icon_table_find(entity_domain, nullptr, nullptr);  // Domain default
   }
   return look;
 }
@@ -673,7 +696,7 @@ void sub_icon_names_add(uint16_t start, const std::string &names) {
     return;
   }
   if (sub_icon_names_len + names.size() + 2 > SUB_ICON_NAMES_CAPACITY) {
-    ESP_LOGW(TAG, "Icon names: more than %u bytes; the rest is not resolved", SUB_ICON_NAMES_CAPACITY);
+    ESP_LOGW(TAG, "Icon names: more than %" PRIu32 " bytes; the rest is not resolved", SUB_ICON_NAMES_CAPACITY);
     sub_icon_names_count = UINT16_MAX;  // Refuse the following chunks too
     return;
   }
