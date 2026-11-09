@@ -151,4 +151,13 @@ script:
     then:
       - lambda: |-
           sub_dump_config();
+
+interval:
+  # Traffic of the subscriptions: updates received from Home Assistant, logged once a minute (nothing when
+  # none arrived), to see whether any bound entity is chatty enough to matter
+  - id: api_subscribe_stats
+    interval: 60s
+    then:
+      - lambda: |-
+          sub_log_stats(60);
 ...

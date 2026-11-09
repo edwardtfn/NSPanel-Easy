@@ -193,6 +193,7 @@ struct SubRuntime {
   uint16_t color_off;          ///< Blueprint-supplied colour for the inactive state
   SubEntityState last_state;   ///< Classification of the effective state
   bool has_appearance;         ///< Blueprint has pushed appearance in this session
+  uint16_t received;           ///< Updates received in the current statistics window (see sub_log_stats())
 };
 
 /**
@@ -778,6 +779,20 @@ bool sub_persist(bool verified);
 
 /// @brief Re-render every binding from its last known state.
 void sub_render_all();
+
+/// @brief Bindings named in the statistics log line, by updates received.
+static constexpr uint8_t SUB_STATS_TOP = 5;
+
+/**
+ * @brief Log the subscription updates received since the previous call, then reset the counters.
+ *
+ * Called periodically, to show how much traffic the subscriptions cost: how
+ * many updates Home Assistant sent, how many changed a value, and which
+ * bindings received the most. Logs nothing when no update arrived.
+ *
+ * @param window_s Length of the window, in seconds, for the log line.
+ */
+void sub_log_stats(uint32_t window_s);
 
 /// @brief Log the loaded bindings during dump_config.
 void sub_dump_config();
