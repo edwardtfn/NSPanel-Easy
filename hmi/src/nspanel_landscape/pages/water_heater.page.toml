@@ -1,0 +1,445 @@
+[page]
+name = "water_heater"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 2
+pic = "picture-0037"
+
+[[component]]
+name = "swipe"
+type = "touch-capture"
+
+[[component]]
+name = "swipestore"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "current_temp"
+type = "text"
+sendkey = 3
+x = 84
+y = 47
+w = 314
+h = 55
+sta = 0
+font = "font-05"
+bco = "#000000"
+picc = "picture-0037"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 25
+isbr = 1
+
+[[component]]
+name = "decrease_temp"
+type = "hotspot"
+sendkey = 3
+x = 34
+y = 190
+w = 55
+h = 55
+
+[[component]]
+name = "increase_temp"
+type = "hotspot"
+sendkey = 3
+x = 360
+y = 190
+w = 55
+h = 55
+
+[[component]]
+name = "page_label"
+type = "text"
+sendkey = 3
+x = 48
+y = 8
+w = 300
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0037"
+pco = "#c6c3c6"
+xcen = 0
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "target_icon"
+type = "text"
+sendkey = 3
+x = 12
+y = 8
+w = 35
+h = 35
+sta = 0
+font = "SarasaGothicSC-Regular"
+picc = "picture-0037"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "value01_icon"
+type = "text"
+sendkey = 3
+x = 29
+y = 111
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "value01"
+type = "text"
+sendkey = 3
+x = 60
+y = 111
+w = 70
+h = 30
+sta = 0
+font = "font-02"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 6
+
+[[component]]
+name = "value02_icon"
+type = "text"
+sendkey = 3
+x = 135
+y = 111
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "value02"
+type = "text"
+sendkey = 3
+x = 166
+y = 111
+w = 70
+h = 30
+sta = 0
+font = "font-02"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 6
+
+[[component]]
+name = "value03_icon"
+type = "text"
+sendkey = 3
+x = 241
+y = 111
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "value03"
+type = "text"
+sendkey = 3
+x = 272
+y = 111
+w = 70
+h = 30
+sta = 0
+font = "font-02"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 6
+
+[[component]]
+name = "value04_icon"
+type = "text"
+sendkey = 3
+x = 348
+y = 111
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+
+[[component]]
+name = "value04"
+type = "text"
+sendkey = 3
+x = 378
+y = 111
+w = 70
+h = 30
+sta = 0
+font = "font-02"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 6
+
+[[component]]
+name = "button01"
+type = "text"
+sendkey = 3
+x = 6
+y = 264
+w = 45
+h = 45
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button02"
+type = "text"
+sendkey = 3
+x = 63
+y = 264
+w = 45
+h = 45
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button03"
+type = "text"
+sendkey = 3
+x = 120
+y = 264
+w = 45
+h = 45
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button04"
+type = "text"
+sendkey = 3
+x = 177
+y = 264
+w = 45
+h = 45
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button05"
+type = "text"
+sendkey = 3
+x = 234
+y = 264
+w = 45
+h = 45
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = "既"
+txt_maxl = 3
+
+[[component]]
+name = "button06"
+type = "text"
+sendkey = 3
+x = 291
+y = 264
+w = 45
+h = 45
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = "梅"
+txt_maxl = 3
+
+[[component]]
+name = "button07"
+type = "text"
+sendkey = 3
+x = 348
+y = 264
+w = 45
+h = 45
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button08"
+type = "text"
+sendkey = 3
+x = 405
+y = 264
+w = 45
+h = 45
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#181818"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "temp_number0"
+type = "variable"
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 385
+y = 0
+w = 95
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0037"
+bco = "#000000"
+picc2 = "picture-0037"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "slider"
+type = "slider"
+sendkey = 3
+x = 97
+y = 205
+w = 261
+h = 25
+sta = 0
+psta = 1
+picc = "picture-0037"
+picc1 = "picture-0037"
+pic2 = "picture-0038"
+val = 200
+maxval = 400
+
+[[component]]
+name = "temp_number1"
+type = "variable"
+
+[[component]]
+name = "temp_number2"
+type = "variable"
+
+[[component]]
+name = "temp_unit"
+type = "variable"
+sta = 1
+txt = "°"
+
+[[component]]
+name = "temp_gap"
+type = "variable"
+
+[[component]]
+name = "button_font"
+type = "variable"
+vscope = 1
+val = 8
+
+[[component]]
+name = "target"
+type = "text"
+sendkey = 3
+x = 303
+y = 163
+w = 125
+h = 40
+sta = 0
+font = "font-04"
+bco = "#000000"
+picc = "picture-0037"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = ""
+
+[[component]]
+name = "climatesetting"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 50
+
+[[component]]
+name = "lastclick"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 255
+
+[[component]]
+name = "timer0"
+type = "timer"
+tim = 1000
+en = 0
+
+[[component]]
+name = "temp_offset"
+type = "variable"
+
+[[component]]
+name = "temp_step"
+type = "variable"
+val = 1
+
+[[component]]
+name = "va1"
+type = "variable"
+sta = 1
+txt = ""

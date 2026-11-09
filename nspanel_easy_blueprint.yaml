@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.11.15)
+  name: NSPanel Easy Configuration (v9999.99.9)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -819,10 +819,14 @@ blueprint:
         home_page_background_update:
           name: Home page - Update in the background
           description: >
-            When enabled, the Home page will be updated even when not visible or while the panel is sleeping, enhancing the user's experience when navigating between the pages.
+            Applies only to the Home page entity states (*Entity State 01* to *04*).
 
-            Disabling this may save some network and database consumption, with the cost of some slowness when constructing the Home page.
-          default: true
+            When enabled, these values are updated even when the Home page is not visible or while the panel is sleeping, so they are already current when the page opens.
+
+            When disabled (default), their changes are ignored while the Home page is not visible, and the values are updated right after the page opens, so an outdated value may show for a moment.
+
+            Everything else on the Home page (chips, custom buttons, weather, temperatures and climate) is always kept up to date, regardless of this setting.
+          default: false
           selector:
             boolean:
     chips:
@@ -5226,20 +5230,20 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.11.15
+  blueprint_version: 9999.99.9
 
   # Minimum ESPHome firmware version required by this Blueprint (the Blueprint -> ESPHome contract).
   # Set it to 'next' when a change makes the Blueprint depend on a newer firmware, e.g. a new API
   # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
   # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
   # While it is 'next' (development builds), the minimum firmware check is skipped.
-  min_esphome_version: 2026.11.9
+  min_esphome_version: next
 
   # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
   # and MAJOR when it follows a firmware change that removed an action or changed its parameters.
   # Kept as a list: Home Assistant would convert "1.10" to the number 1.1.
-  api_version: [2, 0]
+  api_version: [2, 1]
 
   # Firmware version as reported by the ESPHome integration in the device registry.
   # Format: "<project_version> (ESPHome <compiler_version>)", e.g. "2026.8.5 (ESPHome 2026.6.0)".
@@ -5429,6 +5433,16 @@ triggers:
         id: nspanel_event
         trigger: event
         event_type: nspanel_easy_settings_request
+        event_data:
+          device_id: !input nspanel_name
+
+      # Fired by this automation itself to render the current page again (e.g. after a reload). The same id
+      # as the panel's events, so it is handled by "Page changed", where each page's rendering lives once
+      # in the automation (#657).
+      - alias: Page refresh request
+        id: nspanel_event
+        trigger: event
+        event_type: nspanel_easy_page_refresh_request
         event_data:
           device_id: !input nspanel_name
 
@@ -6152,7 +6166,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.main %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         for:
           seconds: 1
@@ -6202,7 +6216,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group01 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6225,7 +6239,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group02 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6248,7 +6262,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group03 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6271,7 +6285,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group04 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6294,7 +6308,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group05 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6317,7 +6331,7 @@ triggers:
         trigger: template
         value_template: >
           {% set line_ref_id = utilities_line_reference.page01.group06 %}
-          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") == 2 else 0 %}
+          {% set line_ref_state = (states(line_ref_id) | float(0)) if line_ref_id is string and line_ref_id.split(".") | count == 2 else 0 %}
           {{ ((line_ref_state > 0) - (line_ref_state < 0)) }}
         id: utilities_page
         for:
@@ -6395,26 +6409,34 @@ actions:
   - alias: Global variables
     variables:
       ##### GENERAL #####
-      action_prefix: >
+      # Where the device name for the panel's action names comes from, decided once per run:
+      # "override" (input), "event" (the panel's own event), "sensor" ("Device name" sensor), or "entity_ids",
+      # a guess from the entity ids that no longer matches after a rename. Steps that must not guess check it.
+      action_prefix_source: >-
         {%- if device_name_override is string and device_name_override | length > 0 -%}
-          {{ device_name_override | regex_replace("[^a-zA-Z0-9]", "_") | regex_replace("_+", "_") | lower }}
-        {%- else -%}
-          {{
-            trigger.event.data.device_name
-            if
+          override
+        {%- elif
               trigger is defined and
               trigger.event is defined and
               trigger.event.data is defined and
               trigger.event.data.device_name is defined and
-              trigger.event.data.device_name is string and trigger.event.data.device_name | length > 0
-            else
-              (
-                states(device_name_sensor)
-                if has_value(device_name_sensor)
-                else entity_prefix
-              )
-          }}
-        {%- endif %}
+              trigger.event.data.device_name is string and trigger.event.data.device_name | length > 0 -%}
+          event
+        {%- elif has_value(device_name_sensor) -%}
+          sensor
+        {%- else -%}
+          entity_ids
+        {%- endif -%}
+      action_prefix: >-
+        {%- if action_prefix_source == "override" -%}
+          {{ device_name_override | regex_replace("[^a-zA-Z0-9]", "_") | regex_replace("_+", "_") | lower }}
+        {%- elif action_prefix_source == "event" -%}
+          {{ trigger.event.data.device_name }}
+        {%- elif action_prefix_source == "sensor" -%}
+          {{ states(device_name_sensor) }}
+        {%- else -%}
+          {{ entity_prefix }}
+        {%- endif -%}
 
       nspanel_name: '{{ action_prefix }}'
       # Device name with the action prefix appended when they differ,
@@ -10074,197 +10096,82 @@ actions:
                                         {%- else -%}
                                           false
                                         {%- endif -%}
-                                      precipitation: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("precipitation", "defined")
-                                          | selectattr("precipitation", "is_number")
-                                          | map(attribute="precipitation")
-                                          | map("float") | list | sum | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("precipitation", "defined")
-                                            | selectattr("precipitation", "is_number")
-                                            | map(attribute="precipitation")
-                                            | map("float") | list | count > 0
-                                          else None
-                                        }}
-                                      precipitation_probability: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("precipitation_probability", "defined")
-                                          | selectattr("precipitation_probability", "is_number")
-                                          | map(attribute="precipitation_probability")
-                                          | map("float") | list | max | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("precipitation_probability", "defined")
-                                            | selectattr("precipitation_probability", "is_number")
-                                            | map(attribute="precipitation_probability")
-                                            | map("float") | list | count > 0
-                                          else None
-                                        }}
-                                      pressure: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("pressure", "defined")
-                                          | selectattr("pressure", "is_number")
-                                          | map(attribute="pressure")
-                                          | map("float") | list | max | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("pressure", "defined")
-                                            | selectattr("pressure", "is_number")
-                                            | map(attribute="pressure")
-                                            | map("float") | list | count > 0
-                                          else None
-                                        }}
-                                      wind_speed: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("wind_speed", "defined")
-                                          | selectattr("wind_speed", "is_number")
-                                          | map(attribute="wind_speed")
-                                          | map("float") | list | max | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("wind_speed", "defined")
-                                            | selectattr("wind_speed", "is_number")
-                                            | map(attribute="wind_speed")
-                                            | map("float") | list | count > 0
-                                          else None
-                                        }}
-                                      hours_of_sun: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("hours_of_sun", "defined")
-                                          | selectattr("hours_of_sun", "is_number")
-                                          | map(attribute="hours_of_sun")
-                                          | map("float")
-                                          | list
-                                          | sum
-                                          | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("hours_of_sun", "defined")
-                                            | selectattr("hours_of_sun", "is_number")
-                                            | map(attribute="hours_of_sun")
-                                            | map("float")
-                                            | list
-                                            | count > 0
-                                          else None
-                                        }}
-                                      uv_index: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("uv_index", "defined")
-                                          | selectattr("uv_index", "is_number")
-                                          | map(attribute="uv_index")
-                                          | map("float")
-                                          | list
-                                          | max
-                                          | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("uv_index", "defined")
-                                            | selectattr("uv_index", "is_number")
-                                            | map(attribute="uv_index")
-                                            | map("float")
-                                            | list
-                                            | count > 0
-                                          else None
-                                        }}
-                                      thunderstorm_probability: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("thunderstorm_probability", "defined")
-                                          | selectattr("thunderstorm_probability", "is_number")
-                                          | map(attribute="thunderstorm_probability") | map("float")
-                                          | list
-                                          | max
-                                          | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("thunderstorm_probability", "defined")
-                                            | selectattr("thunderstorm_probability", "is_number")
-                                            | map(attribute="thunderstorm_probability")
-                                            | map("float")
-                                            | list
-                                            | count > 0
-                                          else None
-                                        }}
-                                      humidity: >
-                                        {{
-                                          forecast_day
-                                          | selectattr("humidity", "defined")
-                                          | selectattr("humidity", "is_number")
-                                          | map(attribute="humidity")
-                                          | map("float")
-                                          | list
-                                          | max
-                                          | round(0)
-                                          if
-                                            forecast_day
-                                            | selectattr("humidity", "defined")
-                                            | selectattr("humidity", "is_number")
-                                            | map(attribute="humidity")
-                                            | map("float")
-                                            | list
-                                            | count > 0
-                                          else None
-                                        }}
+                                      # Values of the day from the forecast slots, as [field, how the slots combine]. One template computes
+                                      # them all, so the Blueprint has fewer distinct templates (#636). A value is none when no slot has a number.
+                                      forecast_values: >-
+                                        {%- set ns = namespace(values={}) -%}
+                                        {%- for field, operation in [
+                                             ["precipitation", "sum"],
+                                             ["precipitation_probability", "max"],
+                                             ["pressure", "max"],
+                                             ["wind_speed", "max"],
+                                             ["hours_of_sun", "sum"],
+                                             ["uv_index", "max"],
+                                             ["thunderstorm_probability", "max"],
+                                             ["humidity", "max"]
+                                           ] -%}
+                                          {%- set numbers = forecast_day
+                                               | selectattr(field, "defined")
+                                               | selectattr(field, "is_number")
+                                               | map(attribute=field)
+                                               | map("float")
+                                               | list -%}
+                                          {%- set value = ((numbers | sum if operation == "sum" else numbers | max) | round(0)) if numbers | count > 0 else none -%}
+                                          {%- set ns.values = dict(ns.values, **{field: value}) -%}
+                                        {%- endfor -%}
+                                        {{ ns.values }}
                                       # Values shown in fields 1 to 5, in display order (only the visible ones are used)
                                       parameters: >-
                                         {%- macro with_unit(value, unit) -%}
                                           {{- (value ~ ("" if compact_unit_display else " ") ~ unit) if is_number(value) -}}
                                         {%- endmacro -%}
                                         {%- set precipitation_value = [
-                                              with_unit(precipitation, weather_units.precipitation),
-                                              with_unit(precipitation_probability, weather_units.precipitation_probability)
+                                              with_unit(forecast_values.precipitation, weather_units.precipitation),
+                                              with_unit(forecast_values.precipitation_probability, weather_units.precipitation_probability)
                                             ] | reject("eq", "") | join(" - ") -%}
                                         {#- Humidity icon "\uE58D" is mdi:water-percent -#}
                                         {{
                                           [
                                             {
                                               "name": "hours_of_sun",
-                                              "visibility": is_number(hours_of_sun),
-                                              "value": with_unit(hours_of_sun, weather_units.hours_of_sun) | trim,
+                                              "visibility": is_number(forecast_values.hours_of_sun),
+                                              "value": with_unit(forecast_values.hours_of_sun, weather_units.hours_of_sun) | trim,
                                               "icon": nextion.icon.weather.sun
                                             },
                                             {
                                               "name": "thunderstorm_probability",
-                                              "visibility": is_number(thunderstorm_probability),
-                                              "value": with_unit(thunderstorm_probability, weather_units.thunderstorm_probability) | trim,
+                                              "visibility": is_number(forecast_values.thunderstorm_probability),
+                                              "value": with_unit(forecast_values.thunderstorm_probability, weather_units.thunderstorm_probability) | trim,
                                               "icon": nextion.icon.weather.lightning
                                             },
                                             {
                                               "name": "precipitation",
-                                              "visibility": is_number(precipitation) or is_number(precipitation_probability),
+                                              "visibility": is_number(forecast_values.precipitation) or is_number(forecast_values.precipitation_probability),
                                               "value": precipitation_value | trim,
                                               "icon": nextion.icon.weather.rain
                                             },
                                             {
                                               "name": "uv_index",
-                                              "visibility": is_number(uv_index),
-                                              "value": with_unit(uv_index, weather_units.uv_index) | trim,
+                                              "visibility": is_number(forecast_values.uv_index),
+                                              "value": with_unit(forecast_values.uv_index, weather_units.uv_index) | trim,
                                               "icon": nextion.icon.weather.protect
                                             },
                                             {
                                               "name": "wind_speed",
-                                              "visibility": is_number(wind_speed),
-                                              "value": with_unit(wind_speed, weather_units.wind_speed) | trim,
+                                              "visibility": is_number(forecast_values.wind_speed),
+                                              "value": with_unit(forecast_values.wind_speed, weather_units.wind_speed) | trim,
                                               "icon": nextion.icon.weather.wind
                                             },
                                             {
                                               "name": "humidity",
-                                              "visibility": is_number(humidity),
-                                              "value": with_unit(humidity, weather_units.humidity) | trim,
+                                              "visibility": is_number(forecast_values.humidity),
+                                              "value": with_unit(forecast_values.humidity, weather_units.humidity) | trim,
                                               "icon": "\uE58D"
                                             },
                                             {
                                               "name": "pressure",
-                                              "visibility": is_number(pressure),
-                                              "value": with_unit(pressure, weather_units.pressure) | trim,
+                                              "visibility": is_number(forecast_values.pressure),
+                                              "value": with_unit(forecast_values.pressure, weather_units.pressure) | trim,
                                               "icon": nextion.icon.weather.gauge
                                             }
                                           ]
@@ -10679,6 +10586,29 @@ actions:
                       entity_details_pages_debounce_ms: !input entity_details_pages_debounce
                       entity_details_pages_update_interval_s: !input entity_details_pages_update_interval
                       current_page_from_sensor: '{{ nspanel_event.page }}'
+                      # Pages that keep this page's refreshes going: the select page opens the picker on top of
+                      # itself, which shows the same entity, so changes from Home Assistant still reach it
+                      entity_details_pages_open: >-
+                        {{
+                          [original_state.page, pages.popup_select]
+                          if original_state.page == pages.select
+                          else [original_state.page]
+                        }}
+                      # Domains whose entity changes refresh each entity details page after it opens. One shared
+                      # condition reads it, instead of a separate template per page (#636: fewer distinct templates).
+                      page_entity_domains:
+                        light: ["light"]
+                        cover: ["cover"]
+                        fan: ["fan"]
+                        media_player: ["media_player"]
+                        alarm: ["alarm_control_panel"]
+                        climate: ["climate"]
+                        button: ["button", "input_button"]
+                        switch: ["switch", "input_boolean"]
+                        water_heater: ["humidifier", "water_heater"]
+                        select: ["select", "input_select"]
+                        timer: ["timer"]
+                        vacuum: ["lawn_mower", "vacuum"]
                       # Cross-iteration state: the last redraw was driven by an entity change on a
                       # page that keeps pending presses (fan), so the next wait is a short settle
                       # pass that redraws once the entity has been quiet for the debounce time.
@@ -10698,7 +10628,7 @@ actions:
                             - alias: Light settings page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.light }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["light"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_light
                                 - &get_entity_id_from_event_or_trigger
                                   variables:
@@ -10991,7 +10921,7 @@ actions:
                             - alias: Cover settings page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.cover }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["cover"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_cover
                                 - *get_entity_id_from_event_or_trigger
                                 - *variable_entity
@@ -11167,7 +11097,7 @@ actions:
                             - alias: Fan settings page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.fan }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["fan"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_fan
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -11287,7 +11217,7 @@ actions:
                                     ##### Construction-only: icons, pictures, payloads and visibility #####
                                     - if: '{{ page_constructor }}'
                                       then:
-                                        - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
                                           data:
                                             page: mem
                                             id: command
@@ -11316,7 +11246,7 @@ actions:
                                               {{ ns.items }}
                                           continue_on_error: true
                                         - *delay_default
-                                        - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                        - action: 'esphome.{{ action_prefix }}_components_visibility'
                                           data:
                                             page: fan
                                             ids: >-
@@ -11324,7 +11254,7 @@ actions:
                                             visible: true
                                           continue_on_error: true
                                         - *delay_default
-                                        - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                        - action: 'esphome.{{ action_prefix }}_components_visibility'
                                           data:
                                             page: fan
                                             ids: >-
@@ -11339,7 +11269,7 @@ actions:
                                     # page constructor and any redraw after the entity went quiet (settle
                                     # pass or fallback refresh) clear every slot, covering requests that
                                     # never make the pressed slot the active one.
-                                    - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
                                       data:
                                         page: mem
                                         id: command
@@ -11399,7 +11329,7 @@ actions:
                                               {%- else -%}
                                                 {{ [current_preset_mode] + (preset_modes_raw[:31] | reject("equalto", current_preset_mode) | list) }}
                                               {%- endif -%}
-                                        - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
                                           data:
                                             page: mem
                                             id: popup_select_context
@@ -11407,21 +11337,21 @@ actions:
                                               - 'fan_preset_mode'
                                           continue_on_error: true
                                         - *delay_default
-                                        - action: 'esphome.{{ nspanel_name }}_component_val'
+                                        - action: 'esphome.{{ action_prefix }}_component_val'
                                           data:
                                             page: mem
                                             id: popup_select_mode
                                             val: 0
                                           continue_on_error: true
                                         - *delay_default
-                                        - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
                                           data:
                                             page: mem
                                             id: popup_select_options
                                             txt_list: '{{ preset_modes_truncated }}'
                                           continue_on_error: true
                                         - *delay_default
-                                        - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                        - action: 'esphome.{{ action_prefix }}_components_visibility'
                                           data:
                                             page: fan
                                             ids:
@@ -11433,7 +11363,7 @@ actions:
                                         ##### Modes as buttons, for fans without speed control #####
                                         - if: '{{ preset_buttons }}'
                                           then:
-                                            - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                            - action: 'esphome.{{ action_prefix }}_component_text_list'
                                               data:
                                                 page: mem
                                                 id: command
@@ -11451,7 +11381,7 @@ actions:
                                                   {{ ns.items }}
                                               continue_on_error: true
                                             - *delay_default
-                                            - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                            - action: 'esphome.{{ action_prefix }}_components_visibility'
                                               data:
                                                 page: fan
                                                 ids: >-
@@ -11461,7 +11391,7 @@ actions:
                                             - *delay_default
                                             - if: '{{ preset_modes_raw | length < 5 }}'
                                               then:
-                                                - action: 'esphome.{{ nspanel_name }}_components_visibility'
+                                                - action: 'esphome.{{ action_prefix }}_components_visibility'
                                                   data:
                                                     page: fan
                                                     ids: >-
@@ -11471,7 +11401,7 @@ actions:
                                                 - *delay_default
 
                                     ##### Always (construction and updates): push current preset_mode #####
-                                    - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
                                       data:
                                         page: mem
                                         id: popup_select_current
@@ -11489,7 +11419,7 @@ actions:
                                         # constructor and any redraw after the entity went quiet (settle
                                         # pass or fallback refresh), so intermediate states reported
                                         # during a transition keep the press pending.
-                                        - action: 'esphome.{{ nspanel_name }}_component_text_list'
+                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
                                           data:
                                             page: mem
                                             id: command
@@ -11511,7 +11441,7 @@ actions:
                             - alias: Media player settings page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.media_player }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["media_player"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_media_player
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -11643,7 +11573,7 @@ actions:
                             - alias: Alarm settings page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.alarm }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["alarm_control_panel"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_alarm
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -11681,7 +11611,7 @@ actions:
                             - alias: Climate page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.climate }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["climate"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_climate
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -12134,7 +12064,7 @@ actions:
                             - alias: Button page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.button }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["button", "input_button"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_button
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
@@ -12172,7 +12102,7 @@ actions:
                             - alias: Switch page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.switch }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["switch", "input_boolean"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_switch
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
@@ -12210,7 +12140,7 @@ actions:
                             - alias: Water Heater page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.water_heater }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["humidifier", "water_heater"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_water_heater
                                 - &variables_water_heater_entity
                                   variables:
@@ -12590,106 +12520,53 @@ actions:
                             - alias: Select page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.select }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["select", "input_select"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_select
                                 - *get_entity_id_from_event_or_trigger
                                 - *variable_entity
                                 - *entity_details_title_with_icon
+                                ##### The panel renders the page from a snapshot of the entity (#636) #####
                                 - variables:
-                                    entity_id_valid: '{{ entity_id is defined and entity_id is string and entity_id.split(".") | count == 2 }}'
-                                    entity_domain: '{{ entity_id.split(".")[0] if entity_id_valid }}'
-                                    current_option_raw: '{{ states(entity_id) }}'
-                                    current_option: >-
-                                      {{
-                                        current_option_raw | trim
-                                        if
-                                          current_option_raw is defined and
-                                          current_option_raw is string and
-                                          current_option_raw | length > 0 and
-                                          current_option_raw not in ["unknown", "unavailable"]
-                                        else ""
-                                      }}
-                                    picker_title_raw: '{{ entity.name if entity is defined and entity.name is defined else None }}'
-                                    picker_title: >-
-                                      {{
-                                        picker_title_raw
-                                        if
-                                          picker_title_raw is defined and
-                                          picker_title_raw is string and
-                                          picker_title_raw | length > 0
-                                        else entity_id
-                                      }}
-
-                                ##### Construction-only: push options + context + mode + title #####
-                                - if: '{{ page_constructor }}'
-                                  then:
-                                    - variables:
-                                        options_raw_attr: '{{ state_attr(entity_id, "options") }}'
-                                        options_raw: >
-                                          {{
-                                            options_raw_attr
-                                            if
-                                              options_raw_attr is defined and
-                                              options_raw_attr is iterable and
-                                              options_raw_attr is not string
-                                            else []
-                                          }}
-                                    - variables:
-                                        # The picker pages through up to 32 options; current is always included
-                                        options_truncated: >
-                                          {%- if options_raw | length <= 32 -%}
-                                            {{ options_raw }}
-                                          {%- elif current_option | length == 0 or current_option in options_raw[:32] -%}
-                                            {{ options_raw[:32] }}
-                                          {%- else -%}
-                                            {{ [current_option] + (options_raw[:31] | reject("equalto", current_option) | list) }}
-                                          {%- endif -%}
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: mem
-                                        id: popup_select_context
-                                        txt_list:
-                                          - 'select_option'
-                                      continue_on_error: true
-                                    - *delay_default
-                                    - action: 'esphome.{{ action_prefix }}_component_val'
-                                      data:
-                                        page: mem
-                                        id: popup_select_mode
-                                        val: 0
-                                      continue_on_error: true
-                                    - *delay_default
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: mem
-                                        id: popup_select_options
-                                        txt_list: '{{ options_truncated }}'
-                                      continue_on_error: true
-                                    - *delay_default
-
-                                    ##### Replace placeholder title with entity friendly name #####
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: popup_select
-                                        id: lbl_title
-                                        txt_list:
-                                          - '{{ picker_title }}'
-                                      continue_on_error: true
-                                    - *delay_default
-
-                                ##### Always (construction and updates): push current option #####
-                                - action: 'esphome.{{ action_prefix }}_component_text_list'
+                                    # Entities shown on the page, by role
+                                    snapshot_roles: '{{ {"main": entity_id} }}'
+                                    # Attributes each domain sends in a snapshot; plain lists, not templates
+                                    snapshot_attributes:
+                                      select: ["options"]
+                                      input_select: ["options"]
+                                - &send_entity_snapshot
+                                  alias: Send entity snapshot
+                                  action: 'esphome.{{ action_prefix }}_entity_snapshot'
                                   data:
-                                    page: mem
-                                    id: popup_select_current
-                                    txt_list:
-                                      - '{{ current_option }}'
+                                    # JSON with the state, name and selected attributes of each entity in snapshot_roles.
+                                    # "constructor" is always a JSON boolean, so Home Assistant never reads the text
+                                    # as a Python literal and always passes it on as a string.
+                                    snapshot: >-
+                                      {%- set ns = namespace(entities=[]) -%}
+                                      {%- for role, entity in snapshot_roles.items() -%}
+                                        {%- set valid = entity is string and entity.split(".") | count == 2 and states[entity] is not none -%}
+                                        {%- set ns_attributes = namespace(values={}) -%}
+                                        {%- if valid -%}
+                                          {%- for name in snapshot_attributes.get(entity.split(".")[0], []) -%}
+                                            {%- if state_attr(entity, name) is not none -%}
+                                              {%- set ns_attributes.values = dict(ns_attributes.values, **{name: state_attr(entity, name)}) -%}
+                                            {%- endif -%}
+                                          {%- endfor -%}
+                                        {%- endif -%}
+                                        {%- set ns.entities = ns.entities + [{
+                                              "role": role,
+                                              "entity_id": entity,
+                                              "exists": valid,
+                                              "state": states(entity) if valid else "unknown",
+                                              "name": states[entity].name if valid else "",
+                                              "attributes": ns_attributes.values
+                                            }] -%}
+                                      {%- endfor -%}
+                                      {{ {"page": current_page_from_sensor, "constructor": page_constructor | bool, "entities": ns.entities} | to_json }}
                                   continue_on_error: true
-                                - *delay_default
                             - alias: Timer page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.timer }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["timer"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_timer
                                 - *get_entity_id_from_event_or_trigger
                                 - condition:
@@ -12779,7 +12656,7 @@ actions:
                             - alias: Vacuum / lawn mower page
                               conditions:
                                 - '{{ current_page_from_sensor == pages.vacuum }}'
-                                - '{{ repeat.index == 1 or original_state.entity_domain in ["lawn_mower", "vacuum"] }}'
+                                - '{{ repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []) }}'
                               sequence: &refresh_page_vacuum
                                 - *get_entity_id_from_event_or_trigger
                                 - variables:
@@ -12964,7 +12841,7 @@ actions:
                           wait_template: &condition_details_page_sensors_ready >
                             {{
                               repeat.index > 1 or (
-                                states(currentpage) == original_state.page and
+                                states(currentpage) in entity_details_pages_open and
                                 states(detailed_entity) == original_state.entity_id
                               )
                             }}
@@ -12978,7 +12855,7 @@ actions:
                               original_state.entity_id_valid and
                               original_state.entity_id == (states(detailed_entity) if detailed_entity | length > 0 else '') and
                               original_state.page in pages.detailed_entity and
-                              original_state.page == states(currentpage)
+                              states(currentpage) in entity_details_pages_open
                             }}
                         - variables:
                             page_constructor: false
@@ -12996,7 +12873,7 @@ actions:
                             milliseconds: !input entity_details_pages_debounce
                         - wait_template: >
                             {{
-                              original_state.page != states(currentpage) or
+                              states(currentpage) not in entity_details_pages_open or
                               states(detailed_entity) != original_state.entity_id or
                               (
                                 states[original_state.entity_id].last_updated | string
@@ -13014,7 +12891,8 @@ actions:
                           continue_on_timeout: true
                         - condition: *conditions_entity_details_pages_loop
                         - variables:
-                            current_page_from_sensor: '{{ states(currentpage) }}'
+                            # Still the page this loop renders, also while the select page's picker is shown
+                            current_page_from_sensor: '{{ original_state.page }}'
                             # No entity change before the timeout: settle pass or fallback refresh
                             refresh_settled: '{{ not wait.completed }}'
                         - variables:
@@ -14071,6 +13949,13 @@ actions:
               {%- set replaced = as_timestamp(this.last_changed, 0) if this is defined and this else 0 -%}
               {{ trigger.id != "automation_reloaded" or replaced == 0 or (as_timestamp(now()) - replaced) < 60 }}
 
+          # The panel's actions are named after its device name. Without the "Device name" sensor (panel not
+          # connected yet, restarting, or the sensor disabled) and without an override, the name can only be
+          # guessed from the entity ids, which no longer match after a rename and lead to calls of actions that
+          # don't exist. The panel requests its settings itself once it connects, so nothing is lost by stopping.
+          # Checked against the source action_prefix was built from, so both always agree.
+          - condition: '{{ action_prefix_source != "entity_ids" }}'
+
           - delay: >  # Prevents all panels updating simultaneously in large systems
               {% set ns = namespace(panels=[]) %}
               {% for s in states.sensor | selectattr("entity_id", "search", "_device_name$") %}
@@ -14125,18 +14010,20 @@ actions:
                   continue_on_error: true
                 - *delay_default
 
-          - choose:
-              ## PAGE HOME ##
-              - conditions: '{{ pages.current == pages.home }}'
-                sequence: *refresh_page_home
-
-              ## PAGE BUTTON PAGES 01 - 04 ##
-              - conditions: '{{ pages.current in pages.buttonpages }}'
-                sequence: *refresh_page_buttonpage
-
-              ## ENTITY PAGES ##
-              - conditions: '{{ pages.current in pages.entitypages }}'
-                sequence: *refresh_entity_pages
+          ##### Render the current page again (as user may have changed something) #####
+          # Rendered by "Page changed" in a run of its own, instead of a copy of each page's rendering here,
+          # which Home Assistant would expand into the automation again (#657). As for a page change, the
+          # labels and icons are sent too, so changes to them show without leaving the page.
+          # Limited to the pages refreshed here before: an entity details page already has a run refreshing it.
+          - alias: Request current page refresh
+            if: '{{ pages.current == pages.home or pages.current in pages.buttonpages or pages.current in pages.entitypages }}'
+            then:
+              - event: nspanel_easy_page_refresh_request
+                event_data:
+                  device_id: '{{ nspanel_deviceid }}'
+                  device_name: '{{ action_prefix }}'  # Read by `action_prefix` in the run handling the request
+                  type: page_changed
+                  page: '{{ pages.current }}'
 
       - alias: Update button's entities
         conditions:
@@ -14229,24 +14116,6 @@ actions:
         sequence:
           - *climate_custom_buttons
 
-      - alias: Update climate page values
-        conditions:
-          - condition: trigger
-            id: trigger_climatepage_value_state
-          - '{{ pages.current == pages.climate }}'
-        sequence:
-          - *variables-climate_page
-          - repeat:
-              for_each: >
-                {{
-                  climate_page_entities
-                  | selectattr("entity", "defined")
-                  | selectattr("entity", "eq", trigger.entity_id)
-                  | list
-                }}
-              sequence:
-                - *display_value
-
       - alias: Update entities pages
         conditions:
           - condition: trigger
@@ -14322,15 +14191,45 @@ actions:
                   val: '{{ 1 if button_state_new else 0 }}'
                 continue_on_error: true
 
-      - alias: Update home page - Entities
+      - alias: Update page values
+        # Home, climate, water heater and humidifier page values share one copy of `display_value`,
+        # instead of one per page (issue #657)
         conditions:
           - condition: trigger
-            id: home_values_state
+            id:
+              - home_values_state
+              - trigger_climatepage_value_state
+              - trigger_water_heater_page_value_state
+              - trigger_humidifier_page_value_state
         sequence:
+          - *variables-climate_page
+          - *variables_water_heater_page
+          - *variables_humidifier_page
           - repeat:
               for_each: >
+                {%- set detailed_entity_domain = states(detailed_entity).split(".")[0] -%}
+                {%- if trigger.id == "home_values_state" -%}
+                  {%- set page_entities = home_page.entity_value -%}
+                {%- elif trigger.id == "trigger_climatepage_value_state" and pages.current == pages.climate -%}
+                  {%- set page_entities = climate_page_entities -%}
+                {#- The water heater page also shows humidifiers, so the page's entity selects the values -#}
+                {%- elif
+                      trigger.id == "trigger_water_heater_page_value_state" and
+                      pages.current == pages.water_heater and
+                      detailed_entity_domain == "water_heater"
+                -%}
+                  {%- set page_entities = water_heater_page_entities -%}
+                {%- elif
+                      trigger.id == "trigger_humidifier_page_value_state" and
+                      pages.current == pages.water_heater and
+                      detailed_entity_domain == "humidifier"
+                -%}
+                  {%- set page_entities = humidifier_page_entities -%}
+                {%- else -%}
+                  {%- set page_entities = [] -%}
+                {%- endif -%}
                 {{
-                  home_page.entity_value
+                  page_entities
                   | selectattr("entity", "defined")
                   | selectattr("entity", "eq", trigger.entity_id)
                   | list
@@ -14339,6 +14238,7 @@ actions:
                 - *display_value
           - alias: Graph page - Current value
             if:
+              - '{{ trigger.id == "home_values_state" }}'
               - '{{ pages.current == pages.graph }}'
               - '{{ states(detailed_entity) == trigger.entity_id }}'
             then:
@@ -14377,42 +14277,4 @@ actions:
           - repeat:
               for_each: '{{ pages_utilities.groups | selectattr("name", "in", groups) | list }}'
               sequence: *refresh_page_utilities_group
-
-      - alias: Update water heater page values
-        conditions:
-          - condition: trigger
-            id: trigger_water_heater_page_value_state
-          - '{{ pages.current == pages.water_heater }}'
-          - '{{ states(detailed_entity).split(".")[0] == "water_heater" }}'  # The page may be showing a humidifier
-        sequence:
-          - *variables_water_heater_page
-          - repeat:
-              for_each: >
-                {{
-                  water_heater_page_entities
-                  | selectattr("entity", "defined")
-                  | selectattr("entity", "eq", trigger.entity_id)
-                  | list
-                }}
-              sequence:
-                - *display_value
-
-      - alias: Update humidifier page values
-        conditions:
-          - condition: trigger
-            id: trigger_humidifier_page_value_state
-          - '{{ pages.current == pages.water_heater }}'  # Humidifiers are shown on the water heater page
-          - '{{ states(detailed_entity).split(".")[0] == "humidifier" }}'
-        sequence:
-          - *variables_humidifier_page
-          - repeat:
-              for_each: >
-                {{
-                  humidifier_page_entities
-                  | selectattr("entity", "defined")
-                  | selectattr("entity", "eq", trigger.entity_id)
-                  | list
-                }}
-              sequence:
-                - *display_value
 ...

@@ -305,6 +305,9 @@ How it works:
 > When cooling through the floor, surfaces below the dew point collect condensation, which can damage the floor and building.
 > The PID packages do not monitor the dew point: the controllers, and the boost of the single package, open the valve regardless of humidity.
 > Cooling requires dew-point protection on the heating system side, e.g. in the heat pump or at the manifold.
+> Do not cool through the floor in humid rooms, e.g. bathrooms or kitchens: that protection measures humidity at one point only,
+> and rooms more humid than that point can still collect condensation.
+> In humid climates, the risk of condensation is higher and the protection limits the cooling capacity, so floor cooling is not recommended there.
 
 ### PID configuration
 

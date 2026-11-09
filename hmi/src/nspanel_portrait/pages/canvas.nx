@@ -1,0 +1,17 @@
+on canvas.load:
+  if(api==0)
+  {
+    page home_page_id
+  }
+  // set background image and fg color to all components
+  canvas.pic=pic_background_main
+  icon_state.picc=pic_background_main
+  page_label.picc=pic_background_main
+  button_back.font=button_back_font
+  button_back.pco=color_pco_navigation
+  button_back.picc2=pic_background_main
+  dim=brightness
+  sendme
+
+on button_back.down:
+  page back_page_id

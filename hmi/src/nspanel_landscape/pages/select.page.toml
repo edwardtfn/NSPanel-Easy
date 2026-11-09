@@ -1,0 +1,10 @@
+[page]
+name = "select"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 2
+pic = "picture-0000"

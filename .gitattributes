@@ -1,5 +1,10 @@
 *.tft binary
 *.HMI binary
+*.hmi binary
+*.zi binary
 *.sh text eol=lf
 *.yaml text eol=lf
-hmi/dev/nextion2text/**/*.txt text eol=lf
+hmi/src/**/*.nx text eol=lf
+hmi/src/**/*.toml text eol=lf
+hmi/src/**/*.sha256 text eol=lf
+hmi/src/**/*.png binary

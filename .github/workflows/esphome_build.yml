@@ -28,14 +28,17 @@ concurrency:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Detect whether any files relevant to this workflow have changed.
-  # On schedule and workflow_dispatch, always proceed.
+  # Detect whether any files relevant to this workflow have changed, and
+  # select the build tests affected by them (see select_esphome_tests.py).
+  # On schedule and workflow_dispatch, always proceed with every test.
   # ---------------------------------------------------------------------------
   changes:
     name: Detect relevant changes
     runs-on: ubuntu-latest
     outputs:
       any_changed: ${{ steps.changed.outputs.any_changed || steps.fallback.outputs.any_changed }}
+      matrix: ${{ steps.select.outputs.matrix }}
+      prebuilt_matrix: ${{ steps.select.outputs.prebuilt_matrix }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -65,6 +68,16 @@ jobs:
         id: fallback
         if: github.event_name != 'pull_request'
         run: echo "any_changed=true" >> "$GITHUB_OUTPUT"
+
+      # Deleted files are included, so a test that still includes a removed
+      # file is selected (and fails as expected).
+      - name: Select tests
+        id: select
+        if: steps.changed.outputs.any_changed == 'true' || github.event_name != 'pull_request'
+        env:
+          CHANGED_FILES: ${{ steps.changed.outputs.all_changed_and_modified_files }}
+          SELECT_ALL: ${{ github.event_name != 'pull_request' }}
+        run: python3 .github/scripts/select_esphome_tests.py
 
   # ===========================================================================
   # Code scan
@@ -96,44 +109,13 @@ jobs:
     name: ${{ matrix.firmware.name }} (latest)
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.any_changed == 'true' || github.event_name != 'pull_request'
+    # Skipped when no test is selected (an empty matrix is an error).
+    if: needs.changes.outputs.matrix != '' && needs.changes.outputs.matrix != '[]'
     strategy:
       fail-fast: false
       max-parallel: 8
       matrix:
-        firmware:
-          - name: Customizations
-            yaml-file: .test/esphome_idf_climate_heat_customizations.yaml
-          - name: Climate Cool + Bluetooth Proxy
-            yaml-file: .test/esphome_idf_climate_cool_bluetooth_proxy.yaml
-          - name: Bluetooth Proxy
-            yaml-file: .test/esphome_idf_bluetooth_proxy.yaml
-          - name: ESPectre
-            yaml-file: .test/esphome_idf_espectre.yaml
-          - name: BLE Tracker
-            yaml-file: .test/esphome_idf_ble_tracker.yaml
-          - name: Basic (Arduino)
-            yaml-file: .test/esphome_ard_basic.yaml
-          - name: Display as a Light
-            yaml-file: .test/esphome_idf_display_as_light.yaml
-          - name: Basic (IDF)
-            yaml-file: .test/esphome_idf_basic.yaml
-          - name: Climate Cool
-            yaml-file: .test/esphome_idf_climate_cool.yaml
-          - name: Climate Heat
-            yaml-file: .test/esphome_idf_climate_heat.yaml
-          - name: Climate Dual
-            yaml-file: .test/esphome_idf_climate_dual.yaml
-          - name: Climate PID Single
-            yaml-file: .test/esphome_idf_climate_pid_single.yaml
-          - name: Climate PID Dual
-            yaml-file: .test/esphome_idf_climate_pid_dual.yaml
-          - name: Cover
-            yaml-file: .test/esphome_idf_cover.yaml
-          - name: Core
-            yaml-file: .test/esphome_idf_core.yaml
-          - name: Standard
-            yaml-file: .test/esphome_idf_standard.yaml
+        firmware: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -152,44 +134,13 @@ jobs:
     name: ${{ matrix.firmware.name }} (dev)
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.any_changed == 'true' || github.event_name != 'pull_request'
+    # Skipped when no test is selected (an empty matrix is an error).
+    if: needs.changes.outputs.matrix != '' && needs.changes.outputs.matrix != '[]'
     strategy:
       fail-fast: false
       max-parallel: 8
       matrix:
-        firmware:
-          - name: Customizations
-            yaml-file: .test/esphome_idf_climate_heat_customizations.yaml
-          - name: Climate Cool + Bluetooth Proxy
-            yaml-file: .test/esphome_idf_climate_cool_bluetooth_proxy.yaml
-          - name: Bluetooth Proxy
-            yaml-file: .test/esphome_idf_bluetooth_proxy.yaml
-          - name: ESPectre
-            yaml-file: .test/esphome_idf_espectre.yaml
-          - name: BLE Tracker
-            yaml-file: .test/esphome_idf_ble_tracker.yaml
-          - name: Basic (Arduino)
-            yaml-file: .test/esphome_ard_basic.yaml
-          - name: Display as a Light
-            yaml-file: .test/esphome_idf_display_as_light.yaml
-          - name: Basic (IDF)
-            yaml-file: .test/esphome_idf_basic.yaml
-          - name: Climate Cool
-            yaml-file: .test/esphome_idf_climate_cool.yaml
-          - name: Climate Heat
-            yaml-file: .test/esphome_idf_climate_heat.yaml
-          - name: Climate Dual
-            yaml-file: .test/esphome_idf_climate_dual.yaml
-          - name: Climate PID Single
-            yaml-file: .test/esphome_idf_climate_pid_single.yaml
-          - name: Climate PID Dual
-            yaml-file: .test/esphome_idf_climate_pid_dual.yaml
-          - name: Cover
-            yaml-file: .test/esphome_idf_cover.yaml
-          - name: Core
-            yaml-file: .test/esphome_idf_core.yaml
-          - name: Standard
-            yaml-file: .test/esphome_idf_standard.yaml
+        firmware: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -209,15 +160,12 @@ jobs:
     name: ${{ matrix.firmware.name }} - Pre-built (latest)
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.any_changed == 'true' || github.event_name != 'pull_request'
+    # Skipped when no test is selected (an empty matrix is an error).
+    if: needs.changes.outputs.prebuilt_matrix != '' && needs.changes.outputs.prebuilt_matrix != '[]'
     strategy:
       fail-fast: false
       matrix:
-        firmware:
-          - name: NSPanel Easy
-            yaml-file: prebuilt/nspanel_esphome_prebuilt.yaml
-          - name: Wall Display
-            yaml-file: prebuilt/wall_display.yaml
+        firmware: ${{ fromJSON(needs.changes.outputs.prebuilt_matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -256,15 +204,12 @@ jobs:
     name: ${{ matrix.firmware.name }} - Pre-built (dev)
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.any_changed == 'true' || github.event_name != 'pull_request'
+    # Skipped when no test is selected (an empty matrix is an error).
+    if: needs.changes.outputs.prebuilt_matrix != '' && needs.changes.outputs.prebuilt_matrix != '[]'
     strategy:
       fail-fast: false
       matrix:
-        firmware:
-          - name: NSPanel Easy
-            yaml-file: prebuilt/nspanel_esphome_prebuilt.yaml
-          - name: Wall Display
-            yaml-file: prebuilt/wall_display.yaml
+        firmware: ${{ fromJSON(needs.changes.outputs.prebuilt_matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

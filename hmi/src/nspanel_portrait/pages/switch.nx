@@ -1,0 +1,81 @@
+on switch.load:
+  if(api==0)
+  {
+    page home_page_id
+  }
+  // set background image and fg color to all components
+  switch.pic=pic_background_main
+  icon_state.picc=pic_background_main
+  page_label.picc=pic_background_main
+  button_back.font=button_back_font
+  button_back.pco=color_pco_navigation
+  button_back.picc2=pic_background_main
+  dim=brightness
+  sendme
+
+on button_back.down:
+  page back_page_id
+
+on touch_area.down:
+  // Ignore if transition is already in progress
+  if(state.val!=-1)
+  {
+    if(state.val==1)
+    {
+      printh 92
+      prints "localevent",0
+      printh 00
+      prints "switch,turn_off",0
+      printh 00
+      printh FF FF FF
+    }else
+    {
+      printh 92
+      prints "localevent",0
+      printh 00
+      prints "switch,turn_on",0
+      printh 00
+      printh FF FF FF
+    }
+    state.val=-1
+    render.en=1
+  }
+
+on render.timer:
+  // Self-disable first
+  render.en=0
+  // Derive center from touch_area position
+  sys0=touch_area.w/2
+  sys1=touch_area.h/2
+  cx.val=touch_area.x+sys0
+  cy.val=touch_area.y+sys1
+  // Pre-compute all coordinates
+  pill_r.val=sys1
+  fill_x.val=cx.val-sys0+pill_r.val
+  right_x.val=cx.val+sys0-pill_r.val
+  fill_y.val=cy.val-pill_r.val
+  fill_w.val=right_x.val-fill_x.val
+  fill_h.val=touch_area.h+1
+  thumb_r.val=pill_r.val-4
+  // Resolve track color and thumb position
+  if(state.val==1)
+  {
+    sys0=color_on.val
+    sys1=right_x.val
+  }else if(state.val==0)
+  {
+    sys0=color_off.val
+    sys1=fill_x.val
+  }else
+  {
+    sys0=color_pending.val
+    sys1=cx.val
+  }
+  // Draw track
+  cirs fill_x.val,cy.val,pill_r.val,sys0
+  fill fill_x.val,fill_y.val,fill_w.val,fill_h.val,sys0
+  cirs right_x.val,cy.val,pill_r.val,sys0
+  // Draw thumb
+  cirs sys1,cy.val,thumb_r.val,color_thumb.val
+  // Ensure touch_area in the front
+  ref touch_area

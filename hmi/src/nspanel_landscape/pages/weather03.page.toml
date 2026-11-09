@@ -1,0 +1,271 @@
+[page]
+name = "weather03"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 2
+pic = "picture-0000"
+
+[[component]]
+name = "swipe"
+type = "touch-capture"
+
+[[component]]
+name = "swipestore"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "weather_icon"
+type = "picture"
+sendkey = 3
+x = 20
+y = 45
+w = 100
+h = 100
+pic = "picture-0001"
+
+[[component]]
+name = "day"
+type = "text"
+sendkey = 3
+x = 218
+y = 55
+w = 200
+h = 40
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "date"
+type = "text"
+sendkey = 3
+x = 188
+y = 97
+w = 230
+h = 30
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = ""
+txt_maxl = 25
+
+[[component]]
+name = "temperature"
+type = "text"
+sendkey = 3
+x = 0
+y = 148
+w = 140
+h = 23
+sta = 0
+font = "font-03"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 15
+
+[[component]]
+name = "value01"
+type = "text"
+sendkey = 3
+x = 170
+y = 150
+w = 220
+h = 30
+sta = 0
+font = "font-03"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 2
+txt = ""
+txt_maxl = 15
+
+[[component]]
+name = "value05"
+type = "text"
+sendkey = 3
+x = 170
+y = 270
+w = 220
+h = 30
+sta = 0
+font = "font-03"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 2
+txt = ""
+txt_maxl = 15
+
+[[component]]
+name = "value04"
+type = "text"
+sendkey = 3
+x = 170
+y = 240
+w = 220
+h = 30
+sta = 0
+font = "font-03"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 2
+txt = ""
+txt_maxl = 15
+
+[[component]]
+name = "value02"
+type = "text"
+sendkey = 3
+x = 170
+y = 180
+w = 220
+h = 30
+sta = 0
+font = "font-03"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 2
+txt = ""
+txt_maxl = 15
+
+[[component]]
+name = "value03"
+type = "text"
+sendkey = 3
+x = 170
+y = 210
+w = 220
+h = 30
+sta = 0
+font = "font-03"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 2
+txt = ""
+txt_maxl = 15
+
+[[component]]
+name = "value01_icon"
+type = "text"
+sendkey = 3
+x = 400
+y = 150
+w = 25
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+
+[[component]]
+name = "value02_icon"
+type = "text"
+sendkey = 3
+x = 400
+y = 180
+w = 25
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+
+[[component]]
+name = "value03_icon"
+type = "text"
+sendkey = 3
+x = 400
+y = 210
+w = 25
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+
+[[component]]
+name = "value04_icon"
+type = "text"
+sendkey = 3
+x = 400
+y = 240
+w = 25
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+
+[[component]]
+name = "value05_icon"
+type = "text"
+sendkey = 3
+x = 400
+y = 270
+w = 25
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+
+[[component]]
+name = "page_index"
+type = "text"
+sendkey = 3
+x = 190
+y = 300
+w = 100
+h = 20
+sta = 0
+font = "font-09"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#848284"
+txt = "○○●○○"
+txt_maxl = 15
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 385
+y = 0
+w = 95
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3

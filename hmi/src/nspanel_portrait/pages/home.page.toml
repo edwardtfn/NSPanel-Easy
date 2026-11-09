@@ -1,0 +1,773 @@
+[page]
+name = "home"
+type = "page"
+vscope = 1
+sendkey = 3
+x = 0
+y = 0
+w = 320
+h = 480
+sta = 2
+bco = "#000000"
+pic = "picture-0000"
+
+[[component]]
+name = "swipe"
+type = "touch-capture"
+
+[[component]]
+name = "swipestore"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "time"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 100
+y = 50
+w = 171
+h = 62
+sta = 0
+font = "font-06"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+txt_maxl = 5
+
+[[component]]
+name = "indr_temp"
+type = "text"
+vscope = 1
+sendkey = 1
+x = 191
+y = 157
+w = 117
+h = 40
+sta = 0
+font = "font-04"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = ""
+txt_maxl = 8
+
+[[component]]
+name = "outdoor_temp"
+type = "text"
+vscope = 1
+sendkey = 1
+x = 15
+y = 256
+w = 145
+h = 65
+sta = 0
+font = "font-04"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+ycen = 0
+txt = ""
+txt_maxl = 8
+
+[[component]]
+name = "date"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 0
+y = 117
+w = 271
+h = 30
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = ""
+txt_maxl = 25
+
+[[component]]
+name = "weather"
+type = "picture"
+vscope = 1
+sendkey = 1
+x = 20
+y = 154
+w = 100
+h = 100
+pic = "picture-0001"
+
+[[component]]
+name = "value01"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 188
+y = 201
+w = 131
+h = 25
+sta = 0
+font = "font-03"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+ycen = 0
+txt = ""
+txt_maxl = 30
+
+[[component]]
+name = "left_bt_text"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 16
+y = 448
+w = 120
+h = 20
+sta = 0
+font = "font-01"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "right_bt_text"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 184
+y = 448
+w = 120
+h = 20
+sta = 0
+font = "font-01"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "chip_relay1"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 15
+y = 2
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip_relay2"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 44
+y = 2
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip_climate"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 73
+y = 2
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip01"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 102
+y = 2
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip02"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 131
+y = 2
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip03"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 160
+y = 2
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip04"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 189
+y = 2
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip05"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 218
+y = 2
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip06"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 247
+y = 2
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "chip07"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 276
+y = 2
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "value01_icon"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 161
+y = 201
+w = 25
+h = 25
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 2
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "value03"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 188
+y = 252
+w = 131
+h = 25
+sta = 0
+font = "font-03"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 30
+
+[[component]]
+name = "value03_icon"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 161
+y = 252
+w = 25
+h = 25
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 2
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "value02_icon"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 161
+y = 226
+w = 25
+h = 25
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 2
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "value02"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 188
+y = 226
+w = 131
+h = 25
+sta = 0
+font = "font-03"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+ycen = 0
+txt = ""
+txt_maxl = 30
+
+[[component]]
+name = "wifi_icon"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 282
+y = 66
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#848284"
+txt = ""
+txt_maxl = 5
+
+[[component]]
+name = "indr_temp_icon"
+type = "text"
+vscope = 1
+sendkey = 1
+x = 156
+y = 157
+w = 35
+h = 40
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_notific"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 264
+y = 280
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_qrcode"
+type = "text"
+vscope = 1
+sendkey = 1
+x = 164
+y = 328
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_entities"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 214
+y = 328
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button07"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 264
+y = 328
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "meridiem"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 274
+y = 96
+w = 40
+h = 20
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+ycen = 2
+txt = ""
+txt_maxl = 6
+
+[[component]]
+name = "lastclick"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "settings_timer"
+type = "timer"
+tim = 1000
+en = 0
+
+[[component]]
+name = "button01"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 14
+y = 376
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button02"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 63
+y = 376
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button03"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 114
+y = 376
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "click_comp"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 14
+
+[[component]]
+name = "click_timer"
+type = "timer"
+tim = 800
+en = 0
+
+[[component]]
+name = "button04"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 164
+y = 376
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button05"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 214
+y = 376
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "button06"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 264
+y = 376
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_utilities"
+type = "text"
+vscope = 1
+sendkey = 1
+x = 214
+y = 280
+w = 42
+h = 42
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "value04_icon"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 15
+y = 323
+w = 25
+h = 25
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 2
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "value04"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 42
+y = 323
+w = 120
+h = 25
+sta = 0
+font = "font-03"
+picc = "picture-0000"
+pco = "#cecfce"
+xcen = 0
+txt = ""
+txt_maxl = 30
+
+[[component]]
+name = "bt_icon"
+type = "text"
+vscope = 1
+sendkey = 3
+x = 282
+y = 33
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#009ee7"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "short_click_tm"
+type = "timer"
+tim = 100
+en = 0
+
+[[component]]
+name = "units_sep"
+type = "variable"
+vscope = 1
+sta = 1
+txt = " "
+txt_maxl = 5
+
+[[component]]
+name = "dec_sep"
+type = "variable"
+vscope = 1
+sta = 1
+txt = "."
+txt_maxl = 1
+
+[[component]]
+name = "tenths_txt"
+type = "variable"
+vscope = 1
+sta = 1
+txt = ""
+
+[[component]]
+name = "tenths_tmp"
+type = "variable"
+vscope = 1
+sta = 1
+txt = ""
+txt_maxl = 6

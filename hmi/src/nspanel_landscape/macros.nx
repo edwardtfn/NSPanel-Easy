@@ -1,0 +1,119 @@
+macro report_api_unavailable:
+  // Report to ESPHome that Home Assistant is needed
+  printh 93
+  prints "api_unavailable",0
+  printh 00 01 FF FF FF
+
+macro theme_apply:
+  if(theme==1)
+  {
+    // LIGHT theme
+    // global background
+    pic_background_main=48
+    // home page - weather pic
+    if(home.weather.pic<48)
+    {
+      home.weather.pic+=48
+    }
+    // buttons pages
+    pic_button_off=79 // Background picture for non-pressed buttons on buttonpageXX
+    // climate page
+    climate.b[0].pic=@pic(picture-0064)
+    // cover page
+    cover.coverslider2.pic=@pic(picture-0112)
+    cover.coverslider2.pic1=@pic(picture-0113)
+    cover.coverslider.pic=@pic(picture-0105)
+    cover.coverslider.pic1=@pic(picture-0107)
+    cover.tiltslider.pic=@pic(picture-0109)
+    cover.tiltslider.pic1=@pic(picture-0111)
+    // fan page
+    fan.fanslider.pic=@pic(picture-0072)
+    fan.fanslider.pic1=@pic(picture-0073)
+  }else
+  {
+    // DARK theme
+    // global background
+    pic_background_main=0
+    // home page - weather pic
+    if(home.weather.pic>48)
+    {
+      home.weather.pic-=48
+    }
+    // buttons pages
+    pic_button_off=46 // Background picture for non-pressed buttons on buttonpageXX
+    // climate page
+    climate.b[0].pic=@pic(picture-0037)
+    // cover page
+    cover.coverslider2.pic=@pic(picture-0020)
+    cover.coverslider2.pic1=@pic(picture-0019)
+    cover.coverslider.pic=@pic(picture-0104)
+    cover.coverslider.pic1=@pic(picture-0106)
+    cover.tiltslider.pic=@pic(picture-0108)
+    cover.tiltslider.pic1=@pic(picture-0110)
+    // fan page
+    fan.fanslider.pic=@pic(picture-0039)
+    fan.fanslider.pic1=@pic(picture-0040)
+  }
+  // set home page
+  home.b[0].pic=pic_background_main
+  // home time, date and temperatures
+  for(sys0=3;sys0<=6;sys0++)
+  {
+    home.b[sys0].picc=pic_background_main
+    home.b[sys0].pco=color_pco_main
+  }
+  home.indr_temp_icon.picc=pic_background_main
+  home.indr_temp_icon.pco=color_pco_main
+  home.meridiem.picc=pic_background_main
+  home.meridiem.pco=color_pco_main
+  // home hw button's labels
+  home.right_bt_text.picc=pic_background_main
+  home.left_bt_text.picc=pic_background_main
+  home.wifi_icon.picc=pic_background_main
+  home.bt_icon.picc=pic_background_main
+  // home values 01-04
+  home.value01.picc=pic_background_main
+  home.value01_icon.picc=pic_background_main
+  home.value02.picc=pic_background_main
+  home.value02_icon.picc=pic_background_main
+  home.value03.picc=pic_background_main
+  home.value03_icon.picc=pic_background_main
+  home.value04.picc=pic_background_main
+  home.value04_icon.picc=pic_background_main
+  // home buttons
+  for(sys0=28;sys0<=31;sys0++)
+  {
+    home.b[sys0].picc=pic_background_main
+  }
+  for(sys0=35;sys0<=37;sys0++)
+  {
+    home.b[sys0].picc=pic_background_main
+  }
+  for(sys0=40;sys0<=43;sys0++)
+  {
+    home.b[sys0].picc=pic_background_main
+  }
+
+macro format_tenths:
+  // Formats a value in tenths as text, with one decimal only when the step is not a whole number
+  // In:      sys0 = value in tenths, sys1 = step in tenths
+  // Out:     home.tenths_txt.txt
+  // Changes: sys0, sys2, home.tenths_tmp.txt
+  if(sys0<0)
+  {
+    home.tenths_txt.txt="-"
+    sys0=0-sys0
+  }else
+  {
+    home.tenths_txt.txt=""
+  }
+  sys2=sys0/10
+  covx sys2,home.tenths_tmp.txt,0,0
+  home.tenths_txt.txt+=home.tenths_tmp.txt
+  sys2=sys1%10
+  if(sys2!=0)
+  {
+    sys2=sys0%10
+    covx sys2,home.tenths_tmp.txt,0,0
+    home.tenths_txt.txt+=home.dec_sep.txt+home.tenths_tmp.txt
+  }
