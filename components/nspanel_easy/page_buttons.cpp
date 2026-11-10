@@ -27,6 +27,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <map>
+#include <new>
 
 #include <esp_heap_caps.h>
 
@@ -171,7 +172,9 @@ struct ButtonPage {
 /// @brief Button slots, BUTTON_PAGES x BUTTONS_PER_PAGE, allocated on first use (PSRAM when available).
 static ButtonSlot *button_slots = nullptr;
 
-static ButtonPage button_pages[BUTTON_PAGES];
+/// @brief Settings of the button pages, BUTTON_PAGES of them, allocated on first use (PSRAM when available)
+///        so they take no DRAM, which is short when the Bluetooth proxy is used.
+static ButtonPage *button_pages = nullptr;
 static uint8_t button_icon_font = 8;
 static std::string button_temperature_unit;
 static uint8_t button_bytes_per_char = 1;
@@ -203,6 +206,29 @@ static ButtonSlot *button_slots_get() {
     }
   }  // if (button_slots == nullptr)
   return button_slots;
+}
+
+/**
+ * @brief Allocate the page settings on first use.
+ *
+ * @return The page settings array, or nullptr when out of memory.
+ */
+static ButtonPage *button_pages_get() {
+  if (button_pages == nullptr) {
+    void *memory = heap_caps_calloc(BUTTON_PAGES, sizeof(ButtonPage), MALLOC_CAP_SPIRAM);
+    if (memory == nullptr) {
+      memory = heap_caps_calloc(BUTTON_PAGES, sizeof(ButtonPage), MALLOC_CAP_INTERNAL);
+    }
+    if (memory == nullptr) {
+      ESP_LOGE(TAG, "Out of memory for the button pages settings");
+      return nullptr;
+    }
+    button_pages = static_cast<ButtonPage *>(memory);
+    for (uint8_t idx = 0; idx < BUTTON_PAGES; ++idx) {
+      new (&button_pages[idx]) ButtonPage();  // Constructs the strings; never destroyed, as the pages never go away
+    }
+  }  // if (button_pages == nullptr)
+  return button_pages;
 }
 
 /**
@@ -445,16 +471,17 @@ static bool button_attribute_color(const char *entity_id, const char *state, con
  * @param page_render Full page render (labels included).
  */
 static void button_draw_slot(uint8_t page_idx, uint8_t button_idx, ButtonSlot &slot, bool page_render) {
-  char page_name[13];
+  char page_name[16];  // Room for any uint8_t, so the compiler can prove no truncation
   snprintf(page_name, sizeof(page_name), "buttonpage%02u", static_cast<unsigned>(page_idx + 1));
-  char button_id[9];
+  char button_id[12];
   snprintf(button_id, sizeof(button_id), "button%02u", static_cast<unsigned>(button_idx + 1));
   const uint8_t page_id = get_page_id(page_name);
-  const ButtonPage &page = button_pages[page_idx];
+  const ButtonPage *pages = button_pages_get();
 
-  if (slot.main == 0) {
+  if (slot.main == 0 || pages == nullptr) {
     return;  // Unbound: the button keeps the page's defaults
   }
+  const ButtonPage &page = pages[page_idx];
   const uint16_t idx = slot.main - 1;
   const SubBinding &binding = sub_bindings[idx];
   const SubRuntime &rt = sub_runtime[idx];
@@ -524,7 +551,11 @@ void buttons_setup(const std::string &page, const std::string &page_label, const
     ESP_LOGW(TAG, "'%s' is not a button page", page.c_str());
     return;
   }
-  ButtonPage &settings = button_pages[page_idx];
+  ButtonPage *pages = button_pages_get();
+  if (pages == nullptr) {
+    return;
+  }
+  ButtonPage &settings = pages[page_idx];
   settings.label = page_label;
   for (uint8_t idx = 0; idx < BUTTONS_PER_PAGE; ++idx) {
     settings.labels[idx] = (idx < labels.size()) ? labels[idx] : "";
@@ -548,10 +579,11 @@ void buttons_page_open(uint8_t page_id) {
     return;
   }
   ButtonSlot *slots = button_slots_get();
-  if (slots == nullptr) {
+  ButtonPage *pages = button_pages_get();
+  if (slots == nullptr || pages == nullptr) {
     return;
   }
-  button_pages[page_idx].dirty = true;
+  pages[page_idx].dirty = true;
   for (uint8_t idx = 0; idx < BUTTONS_PER_PAGE; ++idx) {
     ButtonSlot &slot = slots[(page_idx * BUTTONS_PER_PAGE) + idx];
     slot.page_render = true;
@@ -598,7 +630,11 @@ void buttons_loop() {
   }
   button_pending_since = 0;
 
-  ButtonPage &page = button_pages[page_idx];
+  ButtonPage *pages = button_pages_get();
+  if (pages == nullptr) {
+    return;
+  }
+  ButtonPage &page = pages[page_idx];
   if (page.dirty) {
     page.dirty = false;
     if (page.configured) {

@@ -15,16 +15,6 @@ esphome:
     - -D NSPANEL_EASY_PAGE_SELECT
 
 script:
-  - id: !extend page_change
-    then:
-      - lambda: |-
-          if (new_page_id != get_page_id("select")) return;
-          page_select->execute();
-
-  - id: page_select
-    mode: single
-    then:  # There's nothing here so far
-
   # Renders the select page from the Blueprint's entity snapshot: the title and icon, then the same fields,
   # in the same order, as the Blueprint pushed them before the snapshot (options, context and mode only when
   # the page opens).
@@ -83,8 +73,4 @@ script:
           if (new_page_id == get_page_id("select")) {
             display_entity_keep = true;
           }
-
-  - id: !extend stop_page_constructors
-    then:
-      - lambda: page_select->stop();
 ...

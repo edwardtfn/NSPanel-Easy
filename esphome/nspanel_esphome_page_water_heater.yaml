@@ -49,24 +49,10 @@ script:
             return;
           }  // endif temperature
 
-  - id: !extend page_change
-    then:
-      - lambda: |-
-          if (new_page_id == get_page_id("water_heater"))
-            page_water_heater->execute();
-
-  - id: page_water_heater
-    mode: single
-    then:  # Page rendering handled entirely by blueprint
-
   - id: !extend reset_globals
     then:
       - lambda: |-
           if (new_page_id == get_page_id("water_heater")) {
             display_entity_keep = true;
           }
-
-  - id: !extend stop_page_constructors
-    then:
-      - lambda: page_water_heater->stop();
 ...

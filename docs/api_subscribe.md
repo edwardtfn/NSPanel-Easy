@@ -46,7 +46,7 @@ A **binding** connects one Home Assistant entity to one panel component. It cons
 | `component` | Which component on that page, e.g. `chip01` |
 | `entity` | The Home Assistant `entity_id` to follow |
 | `attribute` | Read this attribute instead of the entity's state; empty to use the state |
-| `device_class` | Used only for the `cover` domain, to pick the right icon set |
+| `device_class` | Picks the icon by domain, device class and state (see [Appearance resolution](#appearance-resolution)) |
 | `inverted` | Render the component as visible while the entity is inactive |
 
 Bindings are stored in the panel's NVS partition. Appearance — icons and colours — is **not**
@@ -141,16 +141,17 @@ Registers one binding. Called once per subscribable component.
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `push_id` | string | Identifier of the push, the same for every call of one push, up to 23 characters. See [Push identifier](#push-identifier). |
-| `page` | string | Target page. `chips`, `home`, `wakeup` and `calibration` have renderers. |
+| `page` | string | Target page. `chips`, `home`, `wakeup`, `calibration` and `buttonpage01` to `buttonpage04` have renderers. |
 | `component` | string | Target component, e.g. `chip01`. |
 | `entity` | string | Home Assistant `entity_id`. |
 | `attribute` | string | Attribute to follow instead of the state. Send an empty string to follow the state. |
-| `device_class` | string | HA `device_class`. Only read for the `cover` domain; send an empty string otherwise. |
+| `device_class` | string | HA `device_class`, for the icon by domain, device class and state. Send an empty string when the entity has none. |
 | `icon_on` | string | Icon codepoint for the active state. Empty resolves on-device. |
 | `icon_off` | string | Icon codepoint for the inactive state. Empty resolves on-device. |
 | `color_on` | int[] | RGB array for the active state, e.g. `[200, 204, 200]`. |
 | `color_off` | int[] | RGB array for the inactive state. |
 | `inverted` | bool | Render the component as visible while the entity is inactive. |
+| `icon_name` | string | Icon by name, e.g. `mdi:lamp`, used when `icon_on` is empty: the panel works out the codepoint from the icon names (see [`api_subscribe_icon_names`](#api_subscribe_icon_names)). Send an empty string for none. |
 
 ```yaml
 action: esphome.my_panel_api_subscribe
@@ -166,6 +167,7 @@ data:
   color_on: [255, 193, 7]
   color_off: [92, 92, 92]
   inverted: false
+  icon_name: ""
 ```
 
 > [!IMPORTANT]
@@ -190,6 +192,24 @@ data:
 
 If the count does not match what the panel received, the push is discarded and the previously
 persisted bindings stay in effect. This prevents a truncated push from silently wiping bindings.
+
+Bindings beyond `api_subscribe_max` are counted but not kept: the push still matches its end marker,
+the bindings that fit are committed, and the log names the ones left out.
+
+### `api_subscribe_icon_names`
+
+Sends the MDI icon names, so the panel can turn an icon name (`icon_name`, or an entity's own `icon`
+attribute on the button pages) into its codepoint. The names are listed in codepoint order: the name at
+position *n* is the icon at `U+E000 + n`, so only the names travel. Sent in chunks once per session;
+kept in PSRAM and never persisted, so it causes no restart.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `start` | int | Position of the first name of the chunk. `0` starts a new list. |
+| `names` | string | Comma-separated names of the chunk, without `mdi:`. |
+
+The Blueprint sends its own `all_icon_names` list. Without it, icons given by name cannot be resolved,
+and the panel falls back to the icon by domain, device class and state.
 
 ### Push identifier
 
@@ -234,6 +254,7 @@ sequence:
       color_on: [255, 0, 0]
       color_off: [92, 92, 92]
       inverted: false
+      icon_name: ""
   - action: esphome.my_panel_api_subscribe
     data:
       push_id: "{{ push_id }}"
@@ -247,6 +268,7 @@ sequence:
       color_on: [200, 204, 200]
       color_off: [92, 92, 92]
       inverted: false
+      icon_name: ""
   - action: esphome.my_panel_api_subscribe
     data:
       push_id: "{{ push_id }}"
@@ -260,6 +282,7 @@ sequence:
       color_on: [200, 204, 200]
       color_off: [92, 92, 92]
       inverted: false
+      icon_name: ""
   - action: esphome.my_panel_api_subscribe_end
     data:
       push_id: "{{ push_id }}"
@@ -288,6 +311,37 @@ empty and the panel resolves them from the domain and state. See
 
 The weather picture and both temperature components ignore the icon and colour fields entirely: the
 picture comes from a built-in condition table, and the temperatures are rendered as text.
+
+## Button pages
+
+With the Blueprint, the button pages (`buttonpage01` to `buttonpage04`) are drawn by the panel from
+bindings, without an automation run per state change. Each button has one binding for its entity on
+component `buttonNN`, and optional bindings on the same component with a role suffix, so every target
+stays unique:
+
+| Component | Binds | Used for |
+| --- | --- | --- |
+| `buttonNN` | The entity's state | Pressed background, icon and colour, availability, momentary flash |
+| `buttonNN:v` | A value attribute (below), or `last_triggered` for automations and scripts | The value next to the icon, or the momentary flash of a run |
+| `buttonNN:c` | `rgb_color` (lights) or `action` (humidifiers) | The icon colour |
+| `buttonNN:s` | The State Indicator Entity's state | The pressed background, instead of the entity's own state |
+| `buttonNN:i` | The entity's own `icon` attribute | Follows an icon that changes at runtime, resolved with the icon names |
+
+The value attribute is `brightness` for lights, `percentage` for fans, `current_position` for covers,
+`current_temperature` for climates and `current_humidity` for humidifiers.
+
+The settings that are not bindings arrive once per session with `buttons_setup`, one call per page.
+They are kept in PSRAM and never persisted, so they cause no restart:
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `page` | string | Button page, e.g. `buttonpage01`. |
+| `page_label` | string | Page title; empty keeps the page's default. |
+| `labels` | string[] | Button labels, in button order. |
+| `state_values` | string[] | State Values, in button order; an empty string uses the default on/off logic. |
+| `confirm` | int | Bit mask of the buttons asking for a confirmation (bit 0 = `button01`). |
+| `icon_font` | int | Nextion font of the button icons. |
+| `temperature_unit` | string | Unit shown after a climate's current temperature. |
 
 ## State classification
 
@@ -342,7 +396,14 @@ them locally. Send empty icon fields to use this.
 | `water_heater` | Operation mode |
 
 Sending a non-empty `icon_on` or `icon_off` overrides resolution for that state, which is how a user
-icon override reaches the panel.
+icon override reaches the panel. An `icon_name` is used next, resolved with the icon names sent by
+[`api_subscribe_icon_names`](#api_subscribe_icon_names).
+
+Every other domain resolves its icon from built-in rules, a copy of the Blueprint's device class icons
+and domain defaults: the icon of the device class for the actual state (for example a door open or
+closed, a valve opening), then the domain default (for a `sun` entity, by day or by night). The rules
+are part of the firmware, so they work before Home Assistant connects. The colour is `color_on` or
+`color_off`, by how the state classifies.
 
 Covers with no `device_class`, or with one the panel does not recognise, fall back to a generic
 blinds icon in all four states.
@@ -368,7 +429,7 @@ Celsius and is converted when the panel is compiled for Fahrenheit.
 
 ## Limits and behaviour
 
-- **`chips`, `home`, `wakeup` and `calibration` have renderers.** `wakeup` and `calibration` draw
+- **`chips`, `home`, `wakeup`, `calibration` and the button pages have renderers.** `wakeup` and `calibration` draw
   nothing: they feed the wake-up sensors and the temperature reference. A `calibration` binding
   targets component `temperature` for auto-calibration only, or `thermostat` to also make it the
   Climate add-on's thermostat temperature. Bindings for other pages are accepted, persisted and
@@ -382,6 +443,8 @@ Celsius and is converted when the panel is compiled for Fahrenheit.
   appearance and render as soon as a value arrives.
 - **A binding change costs one restart.** Appearance changes, inversion changes and repeated
   identical pushes do not.
+- **Bindings over `api_subscribe_max` are left out, not the whole push.** The log names them; raise
+  the limit if they matter.
 - **The panel refuses to commit unverified pushes indefinitely.** After three consecutive pushes
   with no end marker, the panel keeps its last good set and logs an error rather than restarting in
   a loop.
@@ -442,6 +505,18 @@ entity in one push and not another. Both count as a change.
 The end marker's count did not match how many bindings arrived. The push was discarded and the
 previous bindings are still in effect. Check whether any `api_subscribe` call is failing validation
 — an entity_id longer than 63 characters is rejected.
+
+### `binding(s) over the limit` in the log
+
+The push held more bindings than `api_subscribe_max`. The ones that fit were committed; the log line
+before it names each one left out. Raise `api_subscribe_max`, or bind fewer components.
+
+### Checking the subscription traffic
+
+Once a minute, while updates arrive, the panel logs how many Home Assistant sent, how many changed a
+value, and the five busiest bindings, e.g.
+`Updates in the last 60 s: 42 received, 30 changed; busiest: sensor.power (20), ...`. An entity that
+updates very often costs traffic even while its page is hidden; bind a less chatty one if needed.
 
 ### `refusing to commit` in the log
 
