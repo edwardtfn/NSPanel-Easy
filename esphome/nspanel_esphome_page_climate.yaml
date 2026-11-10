@@ -115,7 +115,7 @@ script:
             fire_ha_event("action_call", {
               {"action", "climate.set_temperature"},
               {"key", key.c_str()},
-              {"value", to_string(atof(value.c_str()) / 10)},
+              {"value", to_string(atof(value.c_str()) / 10).c_str()},
               {"entity", detailed_entity->state.c_str()}
             });
             return;
