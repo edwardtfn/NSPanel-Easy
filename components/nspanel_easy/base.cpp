@@ -58,4 +58,14 @@ void fire_ha_event(const std::string &type, std::map<std::string, std::string> d
   ESP_LOGV(TAG_COMPONENT_BASE, "HA event 'esphome.nspanel_easy' sent successfully");
 }
 
+void fire_ha_event(const char *type, std::initializer_list<HaEventField> data) {
+  std::map<std::string, std::string> fields;
+  for (const HaEventField &field : data) {
+    if (field.key != nullptr && field.value != nullptr) {
+      fields.emplace(field.key, field.value);
+    }
+  }  // for each field
+  fire_ha_event(std::string(type != nullptr ? type : ""), std::move(fields));
+}
+
 }  // namespace esphome::nspanel_easy

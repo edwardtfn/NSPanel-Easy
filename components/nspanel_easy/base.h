@@ -6,6 +6,7 @@
 #include "esphome/core/hal.h"                          // For delay()
 #include "esphome/core/log.h"
 #include <cstdint>
+#include <initializer_list>
 #include <map>
 #include <string>
 
@@ -268,6 +269,32 @@ inline void blueprint_setting_received() { blueprint_last_setting_ms = App.get_l
  * });
  * @endcode
  */
-void fire_ha_event(const std::string &type, std::map<std::string, std::string> data = {});
+void fire_ha_event(const std::string &type, std::map<std::string, std::string> data);
+
+/// @brief One field of a Home Assistant event: key and value as C strings, valid for the call.
+struct HaEventField {
+  const char *key;    ///< Field name
+  const char *value;  ///< Field value; a null value leaves the field out
+};
+
+/**
+ * @brief Fire a Home Assistant event from a braced list of C strings.
+ *
+ * The form every call site uses: a braced list of {key, value} C strings is a
+ * small constant array, so each call site only passes pointers, and the map the
+ * event needs is built once, here, instead of inline at every call site. Values
+ * must outlive the call, which temporaries in the call expression do.
+ *
+ * @param type Event type (e.g., "button_click", "page_changed", "boot")
+ * @param data Additional event data (device_name, type and api_version added automatically)
+ *
+ * @code
+ * fire_ha_event("button_click", {
+ *   {"page", "home"},
+ *   {"component", "bt_left"}
+ * });
+ * @endcode
+ */
+void fire_ha_event(const char *type, std::initializer_list<HaEventField> data = {});
 
 }  // namespace esphome::nspanel_easy

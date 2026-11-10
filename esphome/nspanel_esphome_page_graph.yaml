@@ -221,8 +221,8 @@ script:
                   {"page", "graph"},
                   {"component", "graph"},
                   {"event", "refresh"},
-                  {"value", std::to_string(graph_last_slot)},
-                  {"entity", detailed_entity->state}
+                  {"value", std::to_string(graph_last_slot).c_str()},
+                  {"entity", detailed_entity->state.c_str()}
                 });
 
   - id: !extend stop_page_constructors
