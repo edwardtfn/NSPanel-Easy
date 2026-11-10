@@ -11008,38 +11008,45 @@ actions:
                                   }}
                               sequence: &refresh_page_alarm
                                 - *get_entity_id_from_event_or_trigger
+                                ##### The panel renders the page from a snapshot of the entity (#636) #####
+                                # https://github.com/home-assistant/core/blob/dev/homeassistant/components/alarm_control_panel/const.py
                                 - variables:
-                                    alarm_entity: >
-                                      {{
-                                        entity_id
-                                        if (
-                                          entity_id is string
-                                          and entity_id.split(".") | count == 2
-                                          and entity_id.split(".")[0] == "alarm_control_panel"
-                                        )
-                                        else None
-                                      }}
-                                - alias: Alarm settings page - update
-                                  if: '{{ alarm_entity is string and alarm_entity is match "alarm_control_panel." }}'
-                                  then:
-                                    - variables:
-                                        entity_id: '{{ alarm_entity }}'
-                                        supported_features: '{{ state_attr(entity_id, "supported_features") | default(0) }}'
-                                    - condition: '{{ supported_features > 0 }}'
-                                    - *variable_entity
-                                    - *entity_details_title_with_icon
-                                    - variables:  # https://github.com/home-assistant/core/blob/dev/homeassistant/components/alarm_control_panel/const.py
-                                        alarm:
-                                          code_format: '{{ state_attr(entity_id, "code_format") }}'
-                                          code_arm_required: '{{ state_attr(entity_id, "code_arm_required") | default(true) }}'
-                                    - action: 'esphome.{{ action_prefix }}_page_alarm'
-                                      data:
-                                        state: '{{ entity_state }}'
-                                        supported_features: '{{ supported_features }}'
-                                        code_format: '{{ alarm.code_format if alarm.code_format else "none" }}'
-                                        code_arm_required: '{{ alarm.code_arm_required if alarm.code_arm_required else false }}'
-                                        entity: '{{ entity_id }}'
-                                      continue_on_error: true
+                                    # Entities shown on the page, by role
+                                    snapshot_roles: '{{ {"main": entity_id} }}'
+                                    # Attributes each domain sends in a snapshot; plain lists, not templates
+                                    snapshot_attributes:
+                                      alarm_control_panel:
+                                        ["supported_features", "code_format", "code_arm_required", "icon", "device_class"]
+                                - &send_entity_snapshot
+                                  alias: Send entity snapshot
+                                  action: 'esphome.{{ action_prefix }}_entity_snapshot'
+                                  data:
+                                    # JSON with the state, name and selected attributes of each entity in snapshot_roles.
+                                    # "constructor" is always a JSON boolean, so Home Assistant never reads the text
+                                    # as a Python literal and always passes it on as a string.
+                                    snapshot: >-
+                                      {%- set ns = namespace(entities=[]) -%}
+                                      {%- for role, entity in snapshot_roles.items() -%}
+                                        {%- set valid = entity is string and entity.split(".") | count == 2 and states[entity] is not none -%}
+                                        {%- set ns_attributes = namespace(values={}) -%}
+                                        {%- if valid -%}
+                                          {%- for name in snapshot_attributes.get(entity.split(".")[0], []) -%}
+                                            {%- if state_attr(entity, name) is not none -%}
+                                              {%- set ns_attributes.values = dict(ns_attributes.values, **{name: state_attr(entity, name)}) -%}
+                                            {%- endif -%}
+                                          {%- endfor -%}
+                                        {%- endif -%}
+                                        {%- set ns.entities = ns.entities + [{
+                                              "role": role,
+                                              "entity_id": entity,
+                                              "exists": valid,
+                                              "state": states(entity) if valid else "unknown",
+                                              "name": states[entity].name if valid else "",
+                                              "attributes": ns_attributes.values
+                                            }] -%}
+                                      {%- endfor -%}
+                                      {{ {"page": current_page_from_sensor, "constructor": page_constructor | bool, "entities": ns.entities} | to_json }}
+                                  continue_on_error: true
                             - alias: Climate page
                               conditions:
                                 - >-
@@ -11448,36 +11455,7 @@ actions:
                                     snapshot_attributes:
                                       button: ["icon", "device_class"]
                                       input_button: ["icon", "device_class"]
-                                - &send_entity_snapshot
-                                  alias: Send entity snapshot
-                                  action: 'esphome.{{ action_prefix }}_entity_snapshot'
-                                  data:
-                                    # JSON with the state, name and selected attributes of each entity in snapshot_roles.
-                                    # "constructor" is always a JSON boolean, so Home Assistant never reads the text
-                                    # as a Python literal and always passes it on as a string.
-                                    snapshot: >-
-                                      {%- set ns = namespace(entities=[]) -%}
-                                      {%- for role, entity in snapshot_roles.items() -%}
-                                        {%- set valid = entity is string and entity.split(".") | count == 2 and states[entity] is not none -%}
-                                        {%- set ns_attributes = namespace(values={}) -%}
-                                        {%- if valid -%}
-                                          {%- for name in snapshot_attributes.get(entity.split(".")[0], []) -%}
-                                            {%- if state_attr(entity, name) is not none -%}
-                                              {%- set ns_attributes.values = dict(ns_attributes.values, **{name: state_attr(entity, name)}) -%}
-                                            {%- endif -%}
-                                          {%- endfor -%}
-                                        {%- endif -%}
-                                        {%- set ns.entities = ns.entities + [{
-                                              "role": role,
-                                              "entity_id": entity,
-                                              "exists": valid,
-                                              "state": states(entity) if valid else "unknown",
-                                              "name": states[entity].name if valid else "",
-                                              "attributes": ns_attributes.values
-                                            }] -%}
-                                      {%- endfor -%}
-                                      {{ {"page": current_page_from_sensor, "constructor": page_constructor | bool, "entities": ns.entities} | to_json }}
-                                  continue_on_error: true
+                                - *send_entity_snapshot
                             - alias: Switch page
                               conditions:
                                 - >-

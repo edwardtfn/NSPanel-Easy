@@ -12,114 +12,18 @@ substitutions:
 
 api:
   actions:
-    # Updates the alarm settings page with current state and configuration, integrating with the panel's interface.
+    # Updates the alarm settings page with current state and configuration. The Blueprint renders the page
+    # through the entity snapshot instead; kept for the users calling it directly.
     - action: page_alarm
       variables:
         state: string            # Current state of the alarm system (e.g., "armed_home", "disarmed").
-        supported_features: int  # Bitmask representing the alarm system's supported features, determining available controls on the page.
-        code_format: string      # Format required for the alarm code (numeric, alphanumeric).
-        code_arm_required: bool  # Indicates if a code is needed to arm the system.
-        entity: string           # Entity ID for the alarm system, enabling state updates and control.
+        supported_features: int  # Bitmask of the features the alarm supports, deciding which controls are shown.
+        code_format: string      # Format required for the alarm code (number, text), or "none".
+        code_arm_required: bool  # Whether a code is needed to arm the system.
+        entity: string           # Entity ID of the alarm system, for state updates and control.
       then:
-        # To do: This page constructor should be moved to Blueprint
         - lambda: |-
-            if (current_page_id != get_page_id("alarm")) return;
-
-            // Helper function to update alarm button state and visibility
-            // Handles feature checking, logging, and UI updates for all buttons including disarm
-            auto update_alarm_button = [&](
-                const char* button_name,  // Button prefix (e.g., "bt_home", "bt_disarm")
-                const char* armed_state,  // State string (e.g., "armed_home", "disarmed")
-                bool is_armed,
-                bool is_triggered,
-                AlarmFeature feature_bit  // Supported feature bit (ALWAYS_SHOW = always show)
-            ) {
-              // Check if button should be processed
-              if (feature_bit != AlarmFeature::ALWAYS_SHOW &&
-                  !((supported_features & static_cast<uint8_t>(feature_bit)) || (state == armed_state))) {
-                return;
-              }
-
-              ESP_LOGV("${TAG_PAGE_ALARM}", "Button - %s (state: %s)", button_name, armed_state);
-
-              const bool is_this_state = (state == armed_state);
-
-              // Update button appearance based on state
-              disp1->set_component_pic(
-                  (std::string(button_name) + "_pic").c_str(),
-                  is_this_state ? 43 : 42
-              );
-
-              const uint32_t bg_color = is_this_state ? Colors::RGB565_GREEN : Colors::RGB565_GRAY_LIGHT;
-              const uint32_t font_color = is_this_state ? Colors::RGB565_WHITE : Colors::RGB565_BLACK;
-
-              disp1->set_component_background_color((std::string(button_name) + "_text").c_str(), bg_color);
-              disp1->set_component_background_color((std::string(button_name) + "_icon").c_str(), bg_color);
-              disp1->set_component_font_color((std::string(button_name) + "_text").c_str(), font_color);
-              disp1->set_component_font_color((std::string(button_name) + "_icon").c_str(), font_color);
-
-              // Handle visibility based on button type and configuration
-              bool should_hide;
-              if (feature_bit == AlarmFeature::ALWAYS_SHOW) {
-                // Disarm button: hide when already disarmed
-                should_hide = is_this_state;
-              } else {
-                // Armed mode buttons: hide based on configuration
-                #ifdef USE_REQUIRE_DISARM_BEFORE_REARM
-                should_hide = is_this_state || is_triggered || is_armed;
-                #else  // USE_REQUIRE_DISARM_BEFORE_REARM
-                should_hide = is_this_state || is_triggered;
-                #endif  // USE_REQUIRE_DISARM_BEFORE_REARM
-              }
-
-              #if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)  // ESPHome v2025.11.0+
-              disp1->set_component_visibility(button_name, !should_hide);
-              #else  // ESPHome < v2025.11.0
-              disp1->send_command_printf("vis %s,%i", button_name, should_hide ? 0 : 1);
-              #endif  // ESPHOME_VERSION_CODE
-            };
-
-            // Set detailed entity sensor
-            ESP_LOGV("${TAG_PAGE_ALARM}", "Set detailed entity sensor");
-            detailed_entity->publish_state(entity.c_str());
-
-            // Determine alarm states
-            const bool is_armed = (state.find("armed_") == 0) || (state == "arming") || (state == "pending");
-            const bool is_triggered = (state == "triggered");
-            #ifdef USE_REQUIRE_DISARM_BEFORE_REARM
-            ESP_LOGV("${TAG_PAGE_ALARM}", "Alarm is armed: %s", YESNO(is_armed));
-            #endif  // USE_REQUIRE_DISARM_BEFORE_REARM
-            ESP_LOGV("${TAG_PAGE_ALARM}", "Alarm is triggered: %s", YESNO(is_triggered));
-
-            // Update all alarm mode buttons
-            update_alarm_button("bt_home", "armed_home", is_armed, is_triggered, AlarmFeature::ARM_HOME);
-            update_alarm_button("bt_away", "armed_away", is_armed, is_triggered, AlarmFeature::ARM_AWAY);
-            update_alarm_button("bt_night", "armed_night", is_armed, is_triggered, AlarmFeature::ARM_NIGHT);
-            update_alarm_button("bt_vacat", "armed_vacation", is_armed, is_triggered, AlarmFeature::ARM_VACATION);
-            update_alarm_button("bt_bypass", "armed_custom_bypass", is_armed, is_triggered, AlarmFeature::ARM_CUSTOM_BYPASS);
-            update_alarm_button("bt_disarm", "disarmed", is_armed, is_triggered, AlarmFeature::ALWAYS_SHOW);
-
-            // Page - Params
-            ESP_LOGV("${TAG_PAGE_ALARM}", "Page - Params");
-            disp1->set_component_text("code_format", code_format.c_str());
-            disp1->set_component_text("code_arm_req", code_arm_required ? "1" : "0");
-
-            // Buttons - Text
-            ESP_LOGV("${TAG_PAGE_ALARM}", "Buttons - Text");
-            disp1->set_component_text("bt_home_text", wrapText("${LANG_ALARM_HOME}",
-                                      10, ${LANG_BYTES_PER_CHAR}).c_str());
-            disp1->set_component_text("bt_away_text", wrapText("${LANG_ALARM_AWAY}",
-                                      10, ${LANG_BYTES_PER_CHAR}).c_str());
-            disp1->set_component_text("bt_night_text", wrapText("${LANG_ALARM_NIGHT}",
-                                      10, ${LANG_BYTES_PER_CHAR}).c_str());
-            disp1->set_component_text("bt_vacat_text", wrapText("${LANG_ALARM_VACATION}",
-                                      10, ${LANG_BYTES_PER_CHAR}).c_str());
-            disp1->set_component_text("bt_bypass_text", wrapText("${LANG_ALARM_BYPASS}",
-                                      10, ${LANG_BYTES_PER_CHAR}).c_str());
-            disp1->set_component_text("bt_disarm_text", wrapText("${LANG_ALARM_DISARM}",
-                                      10, ${LANG_BYTES_PER_CHAR}).c_str());
-
-            ESP_LOGV("${TAG_PAGE_ALARM}", "Done!");
+            page_alarm_render->execute(state, supported_features, code_format, code_arm_required, entity);
 
 esphome:
   build_flags:
@@ -165,6 +69,146 @@ script:
                                                   code_format.c_str(), "");
             }  // endif numeric keypad required
           }
+
+  # Renders the alarm settings page. Called with the alarm entity from the Blueprint's entity snapshot
+  # (#636); the panel computes everything else.
+  - id: page_alarm_render
+    mode: restart
+    parameters:
+      state: string            # Current state of the alarm system (e.g., "armed_home", "disarmed").
+      supported_features: int  # Bitmask of the features the alarm supports, deciding which controls are shown.
+      code_format: string      # Format required for the alarm code (number, text), or "none".
+      code_arm_required: bool  # Whether a code is needed to arm the system.
+      entity: string           # Entity ID of the alarm system, for state updates and control.
+    then:
+      - lambda: |-
+          if (current_page_id != get_page_id("alarm")) return;
+
+          // Helper function to update alarm button state and visibility
+          // Handles feature checking, logging, and UI updates for all buttons including disarm
+          auto update_alarm_button = [&](
+              const char* button_name,  // Button prefix (e.g., "bt_home", "bt_disarm")
+              const char* armed_state,  // State string (e.g., "armed_home", "disarmed")
+              bool is_armed,
+              bool is_triggered,
+              AlarmFeature feature_bit  // Supported feature bit (ALWAYS_SHOW = always show)
+          ) {
+            // Check if button should be processed
+            if (feature_bit != AlarmFeature::ALWAYS_SHOW &&
+                !((supported_features & static_cast<uint8_t>(feature_bit)) || (state == armed_state))) {
+              return;
+            }
+
+            ESP_LOGV("${TAG_PAGE_ALARM}", "Button - %s (state: %s)", button_name, armed_state);
+
+            const bool is_this_state = (state == armed_state);
+
+            // Update button appearance based on state
+            disp1->set_component_pic(
+                (std::string(button_name) + "_pic").c_str(),
+                is_this_state ? 43 : 42
+            );
+
+            const uint32_t bg_color = is_this_state ? Colors::RGB565_GREEN : Colors::RGB565_GRAY_LIGHT;
+            const uint32_t font_color = is_this_state ? Colors::RGB565_WHITE : Colors::RGB565_BLACK;
+
+            disp1->set_component_background_color((std::string(button_name) + "_text").c_str(), bg_color);
+            disp1->set_component_background_color((std::string(button_name) + "_icon").c_str(), bg_color);
+            disp1->set_component_font_color((std::string(button_name) + "_text").c_str(), font_color);
+            disp1->set_component_font_color((std::string(button_name) + "_icon").c_str(), font_color);
+
+            // Handle visibility based on button type and configuration
+            bool should_hide;
+            if (feature_bit == AlarmFeature::ALWAYS_SHOW) {
+              // Disarm button: hide when already disarmed
+              should_hide = is_this_state;
+            } else {
+              // Armed mode buttons: hide based on configuration
+              #ifdef USE_REQUIRE_DISARM_BEFORE_REARM
+              should_hide = is_this_state || is_triggered || is_armed;
+              #else  // USE_REQUIRE_DISARM_BEFORE_REARM
+              should_hide = is_this_state || is_triggered;
+              #endif  // USE_REQUIRE_DISARM_BEFORE_REARM
+            }
+
+            #if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)  // ESPHome v2025.11.0+
+            disp1->set_component_visibility(button_name, !should_hide);
+            #else  // ESPHome < v2025.11.0
+            disp1->send_command_printf("vis %s,%i", button_name, should_hide ? 0 : 1);
+            #endif  // ESPHOME_VERSION_CODE
+          };
+
+          // Set detailed entity sensor
+          ESP_LOGV("${TAG_PAGE_ALARM}", "Set detailed entity sensor");
+          detailed_entity->publish_state(entity.c_str());
+
+          // Determine alarm states
+          const bool is_armed = (state.find("armed_") == 0) || (state == "arming") || (state == "pending");
+          const bool is_triggered = (state == "triggered");
+          #ifdef USE_REQUIRE_DISARM_BEFORE_REARM
+          ESP_LOGV("${TAG_PAGE_ALARM}", "Alarm is armed: %s", YESNO(is_armed));
+          #endif  // USE_REQUIRE_DISARM_BEFORE_REARM
+          ESP_LOGV("${TAG_PAGE_ALARM}", "Alarm is triggered: %s", YESNO(is_triggered));
+
+          // Update all alarm mode buttons
+          update_alarm_button("bt_home", "armed_home", is_armed, is_triggered, AlarmFeature::ARM_HOME);
+          update_alarm_button("bt_away", "armed_away", is_armed, is_triggered, AlarmFeature::ARM_AWAY);
+          update_alarm_button("bt_night", "armed_night", is_armed, is_triggered, AlarmFeature::ARM_NIGHT);
+          update_alarm_button("bt_vacat", "armed_vacation", is_armed, is_triggered, AlarmFeature::ARM_VACATION);
+          update_alarm_button("bt_bypass", "armed_custom_bypass", is_armed, is_triggered, AlarmFeature::ARM_CUSTOM_BYPASS);
+          update_alarm_button("bt_disarm", "disarmed", is_armed, is_triggered, AlarmFeature::ALWAYS_SHOW);
+
+          // Page - Params
+          ESP_LOGV("${TAG_PAGE_ALARM}", "Page - Params");
+          disp1->set_component_text("code_format", code_format.c_str());
+          disp1->set_component_text("code_arm_req", code_arm_required ? "1" : "0");
+
+          // Buttons - Text
+          ESP_LOGV("${TAG_PAGE_ALARM}", "Buttons - Text");
+          disp1->set_component_text("bt_home_text", wrapText("${LANG_ALARM_HOME}",
+                                    10, ${LANG_BYTES_PER_CHAR}).c_str());
+          disp1->set_component_text("bt_away_text", wrapText("${LANG_ALARM_AWAY}",
+                                    10, ${LANG_BYTES_PER_CHAR}).c_str());
+          disp1->set_component_text("bt_night_text", wrapText("${LANG_ALARM_NIGHT}",
+                                    10, ${LANG_BYTES_PER_CHAR}).c_str());
+          disp1->set_component_text("bt_vacat_text", wrapText("${LANG_ALARM_VACATION}",
+                                    10, ${LANG_BYTES_PER_CHAR}).c_str());
+          disp1->set_component_text("bt_bypass_text", wrapText("${LANG_ALARM_BYPASS}",
+                                    10, ${LANG_BYTES_PER_CHAR}).c_str());
+          disp1->set_component_text("bt_disarm_text", wrapText("${LANG_ALARM_DISARM}",
+                                    10, ${LANG_BYTES_PER_CHAR}).c_str());
+
+          ESP_LOGV("${TAG_PAGE_ALARM}", "Done!");
+
+  # Renders the alarm page from the Blueprint's entity snapshot (#636): the title and icon, then the page
+  # itself, from the entity's state and attributes, as the Blueprint sent them before the snapshot.
+  - id: !extend entity_snapshot_received
+    then:
+      - lambda: |-
+          if (entity_snapshot.page != "alarm") return;
+          const SnapshotEntity *entity = entity_snapshot.find("main");
+          if (entity == nullptr) {
+            ESP_LOGW("${TAG_PAGE_ALARM}", "Snapshot without a main entity, ignored");
+            return;
+          }  // if (no main entity)
+          const HomeAssistantEntity ha_entity = extractHomeAssistantEntity(entity->entity_id);
+          if (ha_entity.domain != "alarm") {  // extractHomeAssistantEntity() names alarm_control_panel "alarm"
+            ESP_LOGW("${TAG_PAGE_ALARM}", "Unsupported entity for alarm page: %s", entity->entity_id.c_str());
+            return;
+          }  // if (not an alarm)
+          const int32_t supported_features = atoi(entity->attribute("supported_features", "0").c_str());
+          if (supported_features <= 0) {
+            ESP_LOGW("${TAG_PAGE_ALARM}", "%s supports no features, ignored", entity->entity_id.c_str());
+            return;
+          }  // if (no features)
+          blueprint_setting_received();
+          details_render_title(*entity);
+          // As the Blueprint sent them: no code format is "none"; the code is required to arm only when
+          // the alarm says so (a missing or null code_arm_required is false)
+          const std::string code_format = entity->attribute("code_format", "none");
+          const bool code_arm_required = entity->attribute("code_arm_required", "false") == "true";
+          page_alarm_render->execute(entity->state, supported_features, code_format.empty() ? "none" : code_format,
+                                     code_arm_required, entity->entity_id);
 
   - id: alarm_control_panel_action
     mode: single
