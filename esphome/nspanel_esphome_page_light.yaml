@@ -168,16 +168,6 @@ script:
             disp1->send_command("features.en=1");
           }  // if (page opened)
 
-  - id: !extend page_change
-    then:
-      - lambda: |-
-          if (new_page_id == get_page_id("light"))
-            page_light->execute();
-
-  - id: page_light
-    mode: single
-    then:  # There's nothing here so far
-
   - id: !extend picker_selected
     then:
       - lambda: |-
@@ -205,8 +195,4 @@ script:
           if (new_page_id == get_page_id("light")) {
             display_entity_keep = true;
           }
-
-  - id: !extend stop_page_constructors
-    then:
-      - lambda: page_light->stop();
 ...
