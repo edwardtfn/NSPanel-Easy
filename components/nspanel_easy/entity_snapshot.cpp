@@ -62,6 +62,7 @@ bool parse_entity_snapshot(const std::string &json, EntitySnapshot &snapshot) {
   const bool parsed = json::parse_json(json, [&snapshot](JsonObject root) -> bool {
     snapshot.page = root["page"] | "";
     snapshot.constructor = root["constructor"] | false;
+    snapshot.compact_unit_display = root["compact_unit_display"] | false;
     // Ranges are kept in locals: iterating over the result of as<>() directly makes GCC warn about a
     // dangling reference to the temporary proxy (-Wdangling-reference).
     const JsonArrayConst items = root["entities"].as<JsonArrayConst>();
