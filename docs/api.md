@@ -32,7 +32,6 @@ This document provides details on custom actions designed for integration with H
   - [Wake Up Action (`wake_up`)](#wake-up-action-wake_up): Activates the display from a screensaver or low-brightness state. Opt-in.
   - [Alarm Settings Page Action (`page_alarm`)](#alarm-settings-page-action-page_alarm): Updates the Alarm page with current state information.
   - [Climate Page Action (`page_climate`)](#climate-page-action-page_climate): Updates the Climate page with current state information.
-  - [Media Player Page Action (`page_media_player`)](#media-player-page-action-page_media_player): Updates the Media Player page with current state information.
 - [Screen Components](#screen-components)
   - [Chips](#chips)
     - [User-defined Chips](#user-defined-chips)
@@ -85,7 +84,6 @@ You can look up the action names available on your Home Assistant instance under
 | [`notification_show`](#notification-show-action-notification_show) | [Notification Show Action](#notification-show-action-notification_show) | Displays a notification-message on the screen. |
 | [`page_alarm`](#alarm-settings-page-action-page_alarm) | [Alarm Settings Page Action](#alarm-settings-page-action-page_alarm) | Updates the Alarm page with current state information. |
 | [`page_climate`](#climate-page-action-page_climate) | [Climate Page Action](#climate-page-action-page_climate) | Updates the Climate page with current state information. |
-| [`page_media_player`](#media-player-page-action-page_media_player) | [Media Player Page Action](#media-player-page-action-page_media_player) | Updates the Media Player page with current state information. |
 | [`qrcode`](#qr-code-action-qrcode) | [QR Code Action](#qr-code-action-qrcode) | Displays a QR code on the panel or updates the QR code information for local control. |
 | [`rtttl_play`](#rtttl-play-action-rtttl_play) | [RTTTL Play Action](#rtttl-play-action-rtttl_play) | Plays melodies encoded in the RTTTL format. |
 | [`upload_tft`](#tft-file-update-action-upload_tft) | [Upload TFT Action](#tft-file-update-action-upload_tft) | Enables TFT file updates from a URL, requiring the "Upload TFT" add-on. Opt-in. |
@@ -453,7 +451,7 @@ data:
 ### Entity Snapshot Action: `entity_snapshot`
 
 Sends the state and attributes of the entities shown on an entity details page, and the panel renders the page from them.
-The NSPanel Easy Blueprint uses it for the alarm, button, fan, light, select, switch, timer and vacuum / lawn mower pages;
+The NSPanel Easy Blueprint uses it for the alarm, button, fan, light, media player, select, switch, timer and vacuum / lawn mower pages;
 the other entity details pages still receive each text and value from the Blueprint.
 
 **Usage:**
@@ -706,79 +704,6 @@ data:
 - AUX_HEAT = 64
 - TURN_OFF = 128
 - TURN_ON = 256
-
-### Media Player Page Action: `page_media_player`
-
-Updates the media player page with current configuration and state information,
-integrating seamlessly with the panel's interface to display the latest media playback status and controls.
-
-**Usage:**
-The `page_media_player` action is specifically tailored to dynamically update the media player page,
-ensuring users have immediate access to media playback controls and information.
-This action is essential for providing a responsive and user-friendly interface for media management,
-allowing real-time interaction with the media player directly from the panel.
-
-**Parameters:**
-
-- `entity` (string): The entity ID of the media player.
-- `state` (string): The current state of the media player (e.g., playing, paused, stopped).
-- `is_volume_muted` (bool): Indicates whether the volume is currently muted.
-- `volume_level` (int): The current volume level of the media player.
-- `media_title` (string): The title of the currently playing media.
-- `media_artist` (string): The artist of the currently playing media.
-- `media_duration` (float): The total duration of the currently playing media in seconds.
-- `media_position` (float): The current playback position within the media in seconds.
-- `media_position_delta` (float): The amount of time in seconds since the last update of the media position.
-- `supported_features` (int): A bitmask indicating the features supported by the media player, such as play/pause, next/previous track, volume control, etc.
-The bitmask values correspond to the
-[Home Assistant Media Player Supported Features](#supported-features-of-the-media-player-entity).
-
-**Home Assistant Example:**
-
-```yaml
-action: esphome.<your_panel_name>_page_media_player
-data:
-  entity: "media_player.living_room"
-  state: "playing"
-  is_volume_muted: false
-  volume_level: 40
-  media_title: "Favorite Song"
-  media_artist: "Famous Artist"
-  media_duration: 180
-  media_position: 30
-  media_position_delta: 0.5
-  supported_features: 84  # Example: Play, Pause, Next, Previous
-```
-
-> [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
-> This action ensures the media player page reflects the latest in media playback settings and status,
-> enhancing the user experience by providing up-to-date information.
-
-#### Supported features of the media player entity
-
-- PAUSE = 1
-- SEEK = 2
-- VOLUME_SET = 4
-- VOLUME_MUTE = 8
-- PREVIOUS_TRACK = 16
-- NEXT_TRACK = 32
-
-- TURN_ON = 128
-- TURN_OFF = 256
-- PLAY_MEDIA = 512
-- VOLUME_STEP = 1024
-- SELECT_SOURCE = 2048
-- STOP = 4096
-- CLEAR_PLAYLIST = 8192
-- PLAY = 16384
-- SHUFFLE_SET = 32768
-- SELECT_SOUND_MODE = 65536
-- BROWSE_MEDIA = 131072
-- REPEAT_SET = 262144
-- GROUPING = 524288
-- MEDIA_ANNOUNCE = 1048576
-- MEDIA_ENQUEUE = 2097152
 
 ### QR Code Action: `qrcode`
 

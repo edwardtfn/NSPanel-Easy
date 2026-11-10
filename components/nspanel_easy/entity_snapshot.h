@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -75,6 +76,15 @@ extern EntitySnapshot entity_snapshot;
  * @return true when the JSON was parsed and has a page; false otherwise (snapshot left empty).
  */
 bool parse_entity_snapshot(const std::string &json, EntitySnapshot &snapshot);
+
+/**
+ * @brief Parse an ISO 8601 date and time with an offset ("2026-11-09T20:15:00+00:00") into a Unix time.
+ *
+ * @param text Date and time.
+ * @param epoch Receives the Unix time.
+ * @return false when the text is not a date and time with an offset (or Z).
+ */
+bool parse_iso_datetime(const std::string &text, int64_t &epoch);
 
 /**
  * @brief Write the title and the title icon of an entity details page, from a snapshot entity.
