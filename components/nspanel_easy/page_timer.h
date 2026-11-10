@@ -32,15 +32,6 @@ struct TimerView {
 int timer_parse_duration(const std::string &text);
 
 /**
- * @brief Parse an ISO 8601 date and time with an offset ("2026-11-09T20:15:00+00:00") into a Unix time.
- *
- * @param text Date and time.
- * @param epoch Receives the Unix time.
- * @return false when the text is not a date and time with an offset (or Z).
- */
-bool timer_parse_datetime(const std::string &text, int64_t &epoch);
-
-/**
  * @brief What the page shows for a timer.
  *
  * While active, the seconds left come from `finishes_at`, as `remaining` is only
