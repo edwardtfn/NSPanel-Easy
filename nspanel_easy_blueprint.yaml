@@ -4776,7 +4776,10 @@ blueprint:
               max: 60000
               unit_of_measurement: milliseconds
         media_player_update_delay:
-          name: Media player - Delay (msec) after entity updade call?
+          name: Media player - Delay after entity update call
+          description: >
+            Time (msec) to wait after asking Home Assistant to refresh the media player entity, before sending its
+            state to the panel. Gives polled integrations (Spotify, Sonos, etc.) time to report the refreshed state.
           default: 500
           selector:
             number:
@@ -5243,7 +5246,7 @@ variables:
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
   # and MAJOR when it follows a firmware change that removed an action or changed its parameters.
   # Kept as a list: Home Assistant would convert "1.10" to the number 1.1.
-  api_version: [2, 1]
+  api_version: [3, 0]
 
   # Firmware version as reported by the ESPHome integration in the device registry.
   # Format: "<project_version> (ESPHome <compiler_version>)", e.g. "2026.8.5 (ESPHome 2026.6.0)".
@@ -7594,8 +7597,10 @@ actions:
               {%- set ns_attributes = namespace(values={}) -%}
               {%- if valid -%}
                 {%- for name in snapshot_attributes.get(entity.split(".")[0], []) -%}
-                  {%- if state_attr(entity, name) is not none -%}
-                    {%- set ns_attributes.values = dict(ns_attributes.values, **{name: state_attr(entity, name)}) -%}
+                  {%- set value = state_attr(entity, name) -%}
+                  {%- if value is not none -%}
+                    {#- to_json refuses datetime objects (e.g. media_position_updated_at): sent as ISO 8601 text -#}
+                    {%- set ns_attributes.values = dict(ns_attributes.values, **{name: value.isoformat() if value is datetime else value}) -%}
                   {%- endif -%}
                 {%- endfor -%}
               {%- endif -%}
@@ -10333,134 +10338,52 @@ actions:
                                   }}
                               sequence: &refresh_page_media_player
                                 - *get_entity_id_from_event_or_trigger
+                                ##### The panel renders the page from a snapshot of the entity (#636) #####
+                                # Polled integrations (Spotify, Sonos, etc.) only refresh the entity when asked: as the page opens,
+                                # and then at each media player update interval without a change (not after each change of the entity)
                                 - variables:
-                                    wait_completed: false
-                                    # Cross-iteration state for cheap-refresh logic. last_signature
-                                    # is a content fingerprint of every field except media_position
-                                    # (which is resynced separately and very cheaply). last_full_refresh
-                                    # is the timestamp of the most recent full payload send, used by
-                                    # the 60s safety net.
-                                    last_signature: ''
-                                    last_full_refresh: 0
-                                - *variable_entity
-                                - *entity_details_title_with_icon
-                                - alias: Refresh page in a loop
-                                  repeat:
-                                    sequence:
-                                      - condition:
-                                          - >-
-                                            {{
-                                              nspanel_event.entity is defined and
-                                              nspanel_event.entity is string and
-                                              nspanel_event.entity | length > 0 and
-                                              nspanel_event.entity is match "media_player."
-                                            }}
-                                      - action: homeassistant.update_entity
-                                        data:
-                                          entity_id: '{{ nspanel_event.entity }}'
-                                        continue_on_error: true
-                                      - delay:
-                                          milliseconds: '{{ media_player_update_delay }}'
-                                      # All values of an iteration in a single template, so the loop holds one template here
-                                      # instead of one per value (issue #657).
-                                      # - Media player groups don't expose correct supported_features, so we override with a known-good mask:
-                                      #   PAUSE(1) + VOLUME_SET(4) + VOLUME_MUTE(8) + PREVIOUS_TRACK(16) + NEXT_TRACK(32) + TURN_ON(128) +
-                                      #   TURN_OFF(256) + PLAY_MEDIA(512) + STOP(4096) + PLAY(16384) = 21437
-                                      # - Title and artist are sanitized once for both the signature and the payload.
-                                      # - `signature` is a content fingerprint covering everything the ESPHome lambda
-                                      #   conditions UI writes on, EXCEPT media_position (resynced
-                                      #   cheaply between full refreshes). Order is fixed; '|' is a
-                                      #   safe separator since none of the fields can contain it
-                                      #   except free-text title/artist — and even if they do, a
-                                      #   collision only causes a missed cheap-path optimization,
-                                      #   not incorrect UI state (the 60s safety net catches it).
-                                      - variables:
-                                          media_player: >-
-                                            {%- set title = state_attr(entity_id, "media_title") -%}
-                                            {%- set artist = state_attr(entity_id, "media_artist") -%}
-                                            {%- set updated_at = state_attr(entity_id, "media_position_updated_at") -%}
-                                            {%- set now_ts = now() | as_timestamp -%}
-                                            {%- set mp = {
-                                                  "state": states(entity_id),
-                                                  "is_volume_muted": state_attr(entity_id, "is_volume_muted"),
-                                                  "volume_level": (state_attr(entity_id, "volume_level") | round(2, default=0) * 100) | int(0),
-                                                  "media_title": title
-                                                                 if title is string and title | length > 0 and title not in enum.states.unknown
-                                                                 else "",
-                                                  "media_artist": artist
-                                                                  if artist is string and artist | length > 0 and artist not in enum.states.unknown
-                                                                  else "",
-                                                  "media_duration": state_attr(entity_id, "media_duration") | int(0),
-                                                  "media_position": state_attr(entity_id, "media_position") | int(0),
-                                                  "media_position_delta":
-                                                    ((now_ts - (updated_at | as_timestamp | default(now_ts, true))) | round(0) | int)
-                                                    if updated_at not in [None, "", "unknown", "unavailable", false, 0]
-                                                    else 0,
-                                                  "supported_features":
-                                                    (1+4+8+16+32+128+256+512+4096+16384)
-                                                    if (state_attr(entity_id, "mass_player_type") | default("")) == "group"
-                                                    else state_attr(entity_id, "supported_features") | int(0),
-                                                  "now_ts": now_ts | int
-                                                } -%}
-                                            {%- set signature = [mp.state, mp.is_volume_muted, mp.volume_level, mp.media_title, mp.media_artist,
-                                                                 mp.media_duration, mp.supported_features] | join("|") -%}
-                                            {{ dict(mp, signature=signature,
-                                                    needs_full_refresh=signature != last_signature or (mp.now_ts - last_full_refresh) >= 60) }}
-                                      # Branch: full refresh when content changed or safety-net
-                                      # cadence elapsed; otherwise cheap component_val resync of
-                                      # prg_current only (skipped entirely when nothing to track).
-                                      # NOTE: prg_current clamp here MUST mirror the C++ clamp in
-                                      # nspanel_esphome_page_media_player.yaml (capped_pos logic).
-                                      # If you change one, change the other.
-                                      - choose:
-                                          - conditions: '{{ media_player.needs_full_refresh }}'
-                                            sequence:
-                                              - action: 'esphome.{{ action_prefix }}_page_media_player'
-                                                # A single template for all fields keeps the title and artist as text: rendered as separate fields,
-                                                # Home Assistant would parse a title such as `1.00` into the number 1.0.
-                                                data: >-
-                                                  {{
-                                                    {
-                                                      "entity": entity_id,
-                                                      "state": media_player.state if media_player.state is string else "",
-                                                      "is_volume_muted": media_player.is_volume_muted if media_player.is_volume_muted is boolean else false,
-                                                      "volume_level": media_player.volume_level,
-                                                      "media_title": media_player.media_title,
-                                                      "media_artist": media_player.media_artist,
-                                                      "media_duration": media_player.media_duration,
-                                                      "media_position": media_player.media_position,
-                                                      "media_position_delta": media_player.media_position_delta,
-                                                      "supported_features": media_player.supported_features
-                                                    }
-                                                  }}
-                                                continue_on_error: true
-                                              - variables:
-                                                  last_signature: '{{ media_player.signature }}'
-                                                  last_full_refresh: '{{ media_player.now_ts }}'
-                                          - conditions: '{{ media_player.media_duration > 0 and media_player.state == "playing" }}'
-                                            sequence:
-                                              - action: 'esphome.{{ action_prefix }}_component_val'
-                                                data:
-                                                  page: media_player
-                                                  id: prg_current
-                                                  val: >-
-                                                    {%- set pos = [[media_player.media_position, 0] | max, media_player.media_duration] | min -%}
-                                                    {%- set delta = [media_player.media_position_delta, 0] | max -%}
-                                                    {{ pos + [delta, media_player.media_duration - pos] | min }}
-                                                continue_on_error: true
-                                      - wait_template: '{{ states(currentpage) != pages.media_player }}'
-                                        timeout:
-                                          milliseconds: '{{ media_player_update_interval }}'
-                                        continue_on_timeout: true
-                                      - variables:
-                                          wait_completed: '{{ wait.completed and media_player.media_duration > 0 }}'
-                                    until:
-                                      - or:
-                                          - '{{ nspanel_event is not defined }}'
-                                          - '{{ nspanel_event.entity is not defined }}'
-                                          - '{{ wait_completed }}'
-                                          - '{{ states(currentpage) != pages.media_player }}'  # Don't replace this by pages.current as this have to be evaluated all the time
-                                          - '{{ nspanel_event.type != "page_changed" }}'
+                                    media_player_poll: >-
+                                      {{
+                                        (repeat.index == 1 or refresh_settled) and
+                                        entity_id is string and entity_id is match "media_player." and
+                                        states[entity_id] is not none
+                                      }}
+                                    media_player_stamp: '{{ states[entity_id].last_updated | string if media_player_poll else "" }}'
+                                - if: '{{ media_player_poll }}'
+                                  then:
+                                    - action: homeassistant.update_entity
+                                      data:
+                                        entity_id: '{{ entity_id }}'
+                                      continue_on_error: true
+                                    - delay:
+                                        milliseconds: '{{ media_player_update_delay }}'
+                                # A poll that brought nothing new is not sent: the panel already shows it (and moves the position
+                                # of a playing media forward itself); the page opening is always sent
+                                - if: >-
+                                    {{
+                                      repeat.index == 1 or not media_player_poll or states[entity_id] is none or
+                                      states[entity_id].last_updated | string != media_player_stamp
+                                    }}
+                                  then:
+                                    - variables:
+                                        # Entities shown on the page, by role
+                                        snapshot_roles: '{{ {"main": entity_id} }}'
+                                        # Attributes each domain sends in a snapshot; plain lists, not templates
+                                        snapshot_attributes:
+                                          media_player:
+                                            - supported_features
+                                            - mass_player_type
+                                            - is_volume_muted
+                                            - volume_level
+                                            - media_title
+                                            - media_artist
+                                            - media_duration
+                                            - media_position
+                                            - media_position_updated_at
+                                            - icon
+                                            - device_class
+                                    - *send_entity_snapshot
+
                             - alias: Alarm settings page
                               conditions:
                                 - >-
@@ -11594,12 +11517,17 @@ actions:
                                 else ''
                               ) != entity_initial_stamp
                             }}
-                          # Settle pass: debounce time; otherwise the fallback refresh interval (seconds)
+                          # Settle pass: debounce time; media player page: its update interval, to poll the entity;
+                          # otherwise the fallback refresh interval (seconds)
                           timeout: >-
                             {{
                               (entity_details_pages_debounce_ms | int(1000)) / 1000
                               if refresh_pending_settle
-                              else entity_details_pages_update_interval_s | int(60)
+                              else (
+                                (media_player_update_interval | int(5000)) / 1000
+                                if current_page_from_sensor == pages.media_player
+                                else entity_details_pages_update_interval_s | int(60)
+                              )
                             }}
                           continue_on_timeout: true
                         - condition: *conditions_entity_details_pages_loop

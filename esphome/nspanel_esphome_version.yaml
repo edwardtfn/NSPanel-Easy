@@ -15,7 +15,7 @@ substitutions:
   # Select '${version}' (or 'next') when you change the "contract" between ESPHome and Blueprint
   # Versioning workflow will replace this by the new version being generated
   # Prefer '${version}': it is a valid version in development builds, while 'next' fails the firmware's version check
-  min_blueprint_version: 2026.11.9
+  min_blueprint_version: ${version}
 
   # API version (MAJOR.MINOR) provided by this firmware, reported to the Blueprint in every event
   # Keep it quoted: unquoted, YAML reads 1.10 as the number 1.1
@@ -23,7 +23,7 @@ substitutions:
   # MAJOR: bump (and reset MINOR to 0) when an API action is removed or its parameters change,
   #        and also set min_blueprint_version to '${version}', as older Blueprints can no longer call it
   # The Blueprint declares the API version it uses in its 'api_version' variable
-  api_version: "2.1"
+  api_version: "3.0"
 
   # Minimum required TFT version for compatibility
   # Must be manually updated with Nextion Editor
