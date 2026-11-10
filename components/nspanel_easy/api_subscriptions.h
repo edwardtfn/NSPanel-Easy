@@ -691,6 +691,14 @@ void sub_icon_names_add(uint16_t start, const std::string &names);
 bool sub_icon_lookup(const char *name, char *glyph, size_t size);
 
 /**
+ * @brief Icon of an icon rule key (icon_rules.h), e.g. "cover.garage-open".
+ *
+ * @param key Rule key.
+ * @return The codepoint, or nullptr when there is no rule for the key.
+ */
+const char *sub_icon_rule(const char *key);
+
+/**
  * @brief Icon of an entity, resolved on the panel in the same order as the Blueprint's Variable Entity.
  *
  * For the entities the panel has no binding for, e.g. on the entity details pages:
