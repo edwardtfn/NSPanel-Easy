@@ -55,16 +55,6 @@ api:
       - script.execute: update_flag_api_ready
 
   actions:
-    # Sends custom commands directly to the display for dynamic interactions and updates.
-    - action: command
-      variables:
-        cmd: string  # Command string to be sent. Refer to the Nextion Instruction Set for supported commands: https://nextion.tech/instruction-set/
-      then:
-        - lambda: |-
-            ESP_LOGW("${TAG_API}", "Action: command (DEPRECATED)");
-            ESP_LOGV("${TAG_API}", "  cmd: %s", cmd.c_str());
-            disp1->send_command(cmd.c_str());
-
     # Changes the foreground color of a specified component on the display.
     - action: component_color
       variables:
