@@ -145,6 +145,14 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
+      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      - name: Check build size
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} (latest)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        run: |
+          python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
 
   # ===========================================================================
   # ESPHome Dev
@@ -171,6 +179,14 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
+      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      - name: Check build size
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} (dev)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        run: |
+          python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
 
   # ===========================================================================
   # Pre-built firmware - ESPHome Latest
@@ -195,6 +211,14 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
+      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      - name: Check build size
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (latest)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        run: |
+          python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
       - name: Verify compiled output
         run: |
           # Locate the binary produced by the build action.
@@ -240,6 +264,14 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
+      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      - name: Check build size
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (dev)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        run: |
+          python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
       - name: Verify compiled output
         run: |
           # Locate the binary produced by the build action.
@@ -262,61 +294,6 @@ jobs:
           [ "$ok" = true ] || exit 1
 
   # ===========================================================================
-  # Size guard — RAM and flash of every build, from the job logs
-  # ===========================================================================
-  size_guard:
-    name: Build size guard
-    runs-on: ubuntu-latest
-    needs:
-      - build_latest
-      - build_dev
-      - build_prebuilt_latest
-      - build_prebuilt_dev
-    # Runs whenever any build ran; failed builds already fail the workflow and are not checked
-    if: >-
-      always() && (
-        needs.build_latest.result != 'skipped' ||
-        needs.build_dev.result != 'skipped' ||
-        needs.build_prebuilt_latest.result != 'skipped' ||
-        needs.build_prebuilt_dev.result != 'skipped'
-      )
-    permissions:
-      actions: read  # Job list and logs of this run
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-          sparse-checkout: .github/scripts
-
-      # The logs only give numbers to the guard: the logs of PRs from forks are untrusted data
-      - name: Download the build logs
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          logs_dir="$RUNNER_TEMP/logs"
-          mkdir -p "$logs_dir"
-          : > "$RUNNER_TEMP/index.tsv"
-          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
-            --jq '.jobs[]
-              | select(.name | test("\\((latest|dev)\\)$"))
-              | select(.conclusion == "success")
-              | [.id, .conclusion, .name] | @tsv' > "$RUNNER_TEMP/jobs.tsv"
-          while IFS=$'\t' read -r job_id conclusion name; do
-            log_file="$logs_dir/$job_id.log"
-            if ! gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$job_id/logs" > "$log_file"; then
-              echo "::warning title=Build size::Could not read the log of '$name'"
-              continue
-            fi
-            printf '%s\t%s\t%s\n' "$log_file" "$conclusion" "$name" >> "$RUNNER_TEMP/index.tsv"
-          done < "$RUNNER_TEMP/jobs.tsv"
-
-      - name: Check RAM and flash usage
-        run: python3 .github/scripts/esphome_size_guard.py "$RUNNER_TEMP/index.tsv" --summary "$GITHUB_STEP_SUMMARY"
-
-  # ===========================================================================
   # Gate — required status check for branch protection
   # ===========================================================================
   all-checks-passed:
@@ -330,7 +307,6 @@ jobs:
       - build_dev
       - build_prebuilt_latest
       - build_prebuilt_dev
-      - size_guard
     if: always()
     steps:
       - name: Check all jobs passed
@@ -342,7 +318,6 @@ jobs:
             "build_dev=${{ needs.build_dev.result }}"
             "build_prebuilt_latest=${{ needs.build_prebuilt_latest.result }}"
             "build_prebuilt_dev=${{ needs.build_prebuilt_dev.result }}"
-            "size_guard=${{ needs.size_guard.result }}"
           )
           failed=false
           for entry in "${results[@]}"; do
