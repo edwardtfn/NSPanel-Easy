@@ -52,6 +52,7 @@ struct SnapshotEntity {
 struct EntitySnapshot {
   std::string page;                      ///< Page the snapshot is for, e.g. "select"
   bool constructor{false};               ///< True for the first snapshot after the page opens
+  bool compact_unit_display{false};      ///< Units follow values without a space (Blueprint setting)
   std::vector<SnapshotEntity> entities;  ///< Entities shown on the page, each with its role
 
   /**
@@ -67,8 +68,8 @@ extern EntitySnapshot entity_snapshot;
 
 /**
  * @brief Parse a snapshot sent by the Blueprint.
- * @param json Snapshot as JSON: {"page", "constructor", "entities": [{"role", "entity_id", "exists",
- *             "state", "name", "attributes": {...}}]}.
+ * @param json Snapshot as JSON: {"page", "constructor", "compact_unit_display", "entities": [{"role", "entity_id",
+ * "exists", "state", "name", "attributes": {...}}]}.
  * @param snapshot Filled with the parsed snapshot; cleared first.
  * @return true when the JSON was parsed and has a page; false otherwise (snapshot left empty).
  */

@@ -110,6 +110,64 @@ script:
             }
           }
 
+  # Renders the light page from the Blueprint's entity snapshot (#636): the title and icon, then the
+  # brightness, colour temperature and effect, as the Blueprint wrote them (the effect list, the features
+  # mask and the picker context only when the page opens).
+  - id: !extend entity_snapshot_received
+    then:
+      - lambda: |-
+          if (entity_snapshot.page != "light") return;
+          const SnapshotEntity *entity = entity_snapshot.find("main");
+          if (entity == nullptr) {
+            ESP_LOGW("${TAG_PAGE_LIGHT}", "Snapshot without a main entity, ignored");
+            return;
+          }  // if (no main entity)
+          blueprint_setting_received();
+          details_render_title(*entity);
+          const LightFeatures features = light_features(*entity);
+          const char *unit_space = entity_snapshot.compact_unit_display ? "" : " ";
+
+          if (features.brightness) {
+            const int brightness_pct = light_brightness_pct(*entity);
+            disp1->send_command_printf("lightslider.val=%d", brightness_pct);
+            disp1->send_command_printf("light_value.txt=\"%d%s%%\"", brightness_pct, unit_space);
+            disp1->send_command_printf("light_value_2.txt=\"%d%s%%\"", brightness_pct, unit_space);
+            disp1->send_command("power_button.pco=50712");  // [192, 192, 192]
+          }  // if (brightness)
+
+          if (features.color_temp) {
+            const LightColorTemp temp = light_color_temp(*entity);
+            disp1->send_command_printf("temp_value.txt=\"%dK\"", temp.current);
+            disp1->send_command_printf("temp_value_2.txt=\"%dK\"", temp.current);
+            disp1->send_command_printf("tempslider.val=%d", temp.min + temp.max - temp.current);
+            disp1->send_command_printf("tempslider.minval=%d", temp.min);
+            disp1->send_command_printf("tempslider.maxval=%d", temp.max);
+          }  // if (color_temp)
+
+          if (features.effects) {
+            const std::string current = light_current_effect(*entity);
+            action_component_text_list->execute("mem", "popup_select_current", std::vector<std::string>{current});
+            if (entity_snapshot.constructor) {
+              const std::vector<std::string> *effect_list = entity->list("effect_list");
+              const std::vector<std::string> effects = effect_list != nullptr ? *effect_list : std::vector<std::string>{};
+              #ifdef NSPANEL_EASY_PAGE_SELECT
+              // The picker pages through up to 32 options, always including the current one
+              const std::vector<std::string> shown = select_picker_options(effects, current);
+              #else  // NSPANEL_EASY_PAGE_SELECT
+              const std::vector<std::string> shown(effects.begin(), effects.begin() + std::min<size_t>(effects.size(), 32));
+              #endif  // NSPANEL_EASY_PAGE_SELECT
+              action_component_text_list->execute("mem", "popup_select_context", std::vector<std::string>{"light_effect"});
+              action_component_val->execute("mem", "popup_select_mode", 0);
+              action_component_text_list->execute("mem", "popup_select_options", shown);
+            }  // if (page opened)
+          }  // if (effects)
+
+          if (entity_snapshot.constructor) {
+            // Bit 0 brightness, bit 1 temperature, bit 2 colour, bit 3 effects
+            disp1->send_command_printf("light_features_mask=%d", features.mask());
+            disp1->send_command("features.en=1");
+          }  // if (page opened)
+
   - id: !extend page_change
     then:
       - lambda: |-

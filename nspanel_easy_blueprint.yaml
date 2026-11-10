@@ -7442,6 +7442,182 @@ actions:
               {%- endif -%}  {#- if overlap_icon_valid -#}
             {%- endif -%}  {#- if entity_id_valid -#}
 
+      - &get_entity_id_from_event_or_trigger
+        variables:
+          entity_id: '{{ original_state.entity_id }}'
+          entity_id_valid: '{{ original_state.entity_id_valid }}'
+          # Set on every refresh, so the configured title and icon are not lost when
+          # another step of this run reassigns `overlap`.
+          overlap: '{{ details_overlap }}'
+
+      - &entity_details_title_with_icon
+        alias: Fill title of entity details page
+        sequence:
+          - variables:
+              txt_list: >
+                {%- set ns = namespace(items=[]) -%}
+                {%- if entity_name is string and entity_name | length > 0 -%}
+                  {%- set ns.items = ns.items + ['page_label.txt="' + entity_name + '"'] -%}
+                {%- endif -%}
+                {%- if entity_icon is string and entity_icon | length > 0 -%}
+                  {%- set ns.items = ns.items + ['icon_state.txt="' + entity_icon + '"'] -%}
+                {%- endif -%}
+                {{ ns.items }}
+          - if: '{{ txt_list | length > 0 }}'
+            then:
+              - action: 'esphome.{{ action_prefix }}_component_text_list'
+                data:
+                  page: mem
+                  id: command
+                  txt_list: '{{ txt_list }}'
+                continue_on_error: true
+              - *delay_default
+
+      - &variables_light_modes
+        alias: variables_light_modes
+        variables:
+          entity_id_valid: '{{ entity_id is string and entity_id.split(".") | count == 2 }}'
+          # "embedded_climate" is not a real entity_id and cannot be split, but it
+          # must still resolve to the climate domain so its detail page can open.
+          entity_domain: >-
+            {{
+              "climate"
+              if entity_id == "embedded_climate"
+              else (entity_id.split(".")[0] if entity_id_valid else "")
+            }}
+          entity_domain_is_light: '{{ entity_id_valid and entity_domain == "light" }}'
+          supported_features: '{{ state_attr(entity_id, "supported_features") | int(0) if entity_id_valid else 0 }}'
+          supported_color_modes: >-
+            {{
+              state_attr(entity_id, "supported_color_modes") | default([], true)
+              if entity_domain_is_light
+              else []
+            }}
+          color_mode_brightness: >-
+            {{
+              entity_domain_is_light and
+              (
+                supported_features | bitwise_and(1) > 0 or
+                states[entity_id] is defined and "brightness" in states[entity_id].attributes or
+                enum.ColorMode.BRIGHTNESS in supported_color_modes or
+                "brightness" in supported_color_modes or
+                supported_color_modes
+                  | map(attribute="value") | list
+                  | select("in", ["brightness"])
+                  | list | length > 0 or
+                state_attr(entity_id, "brightness") | int(-1) >= 0
+              )
+            }}
+          color_mode_color: >-
+            {{
+              entity_domain_is_light and
+              (
+                supported_features | bitwise_and(16) > 0 or
+                enum.ColorMode.HS in supported_color_modes or
+                enum.ColorMode.XY in supported_color_modes or
+                enum.ColorMode.RGB in supported_color_modes or
+                enum.ColorMode.RGBW in supported_color_modes or
+                enum.ColorMode.RGBWW in supported_color_modes or
+                "hs" in supported_color_modes or
+                "xy" in supported_color_modes or
+                "rgb" in supported_color_modes or
+                "rgbw" in supported_color_modes or
+                "rgbww" in supported_color_modes or
+                state_attr(entity_id, "rgb_color") | default("unknown") is list or
+                supported_color_modes
+                  | map(attribute="value") | list
+                  | select("in", ["hs", "xy", "rgb", "rgbw", "rgbww"])
+                  | list | length > 0
+              )
+            }}
+          color_mode_temp: >-
+            {{
+              entity_domain_is_light and
+              (
+                supported_features | bitwise_and(2) > 0 or
+                enum.ColorMode.COLOR_TEMP in supported_color_modes or
+                "color_temp" in supported_color_modes or
+                supported_color_modes
+                  | map(attribute="value") | list
+                  | select("in", ["color_temp"])
+                  | list | length > 0 or
+                state_attr(entity_id, "color_temp_kelvin") | int(-1) >= 0
+              )
+            }}
+          effects_available: '{{ entity_domain_is_light and supported_features | bitwise_and(4) > 0 }}'
+          # Single source of truth for "is there anything to show on this light's
+          # detail page?" — a light with none of these renders an empty page where
+          # only the always-visible power button remains, duplicating the short
+          # press. Unlike click_opens_details, effects count here: the effect tab
+          # is reachable on the detail page but is not a tap action. See #285.
+          light_has_details: >-
+            {{
+              entity_domain_is_light and
+              (
+                color_mode_brightness or
+                color_mode_color or
+                color_mode_temp or
+                effects_available
+              )
+            }}
+          # Single source of truth for "does a tap on this entity open its detail
+          # card instead of performing the short-press action?" — shared by every
+          # place that renders per-entity buttons (Home page, Buttons pages), so a
+          # capability added for one can't silently miss the other.
+          # Entities without a toggle always open the card. Adjustable entities do so
+          # only when the user opted in via `button_tap_behavior`; by default a tap
+          # toggles and the card is reached with a long press (#446).
+          click_opens_details: >-
+            {{
+              entity_domain in domains_functionality.detailed_only or
+              (
+                button_tap_behavior == "details_when_adjustable" and
+                (
+                  (entity_domain == "cover" and supported_features | bitwise_and(132) > 0) or
+                  (entity_domain == "fan" and supported_features | bitwise_and(11) > 0) or
+                  (entity_domain == "light" and (color_mode_brightness or color_mode_color or color_mode_temp))
+                )
+              )
+            }}
+
+      - &send_entity_snapshot
+        alias: Send entity snapshot
+        action: 'esphome.{{ action_prefix }}_entity_snapshot'
+        data:
+          # JSON with the state, name and selected attributes of each entity in snapshot_roles.
+          # "constructor" is always a JSON boolean, so Home Assistant never reads the text
+          # as a Python literal and always passes it on as a string.
+          snapshot: >-
+            {%- set ns = namespace(entities=[]) -%}
+            {%- for role, entity in snapshot_roles.items() -%}
+              {%- set valid = entity is string and entity.split(".") | count == 2 and states[entity] is not none -%}
+              {%- set ns_attributes = namespace(values={}) -%}
+              {%- if valid -%}
+                {%- for name in snapshot_attributes.get(entity.split(".")[0], []) -%}
+                  {%- if state_attr(entity, name) is not none -%}
+                    {%- set ns_attributes.values = dict(ns_attributes.values, **{name: state_attr(entity, name)}) -%}
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endif -%}
+              {%- set ns.entities = ns.entities + [{
+                    "role": role,
+                    "entity_id": entity,
+                    "exists": valid,
+                    "state": states(entity) if valid else "unknown",
+                    "name": states[entity].name if valid else "",
+                    "attributes": ns_attributes.values
+                  }] -%}
+            {%- endfor -%}
+            {{
+              {
+                "page": current_page_from_sensor,
+                "constructor": page_constructor | bool,
+                "compact_unit_display": compact_unit_display | bool,
+                "entities": ns.entities
+              } | to_json
+            }}
+        continue_on_error: true
+
   - alias: Main choices
     choose:
       - alias: NSPanel event
@@ -10057,287 +10233,27 @@ actions:
                                     (repeat.index == 1 or original_state.entity_domain in page_entity_domains.get(current_page_from_sensor, []))
                                   }}
                               sequence: &refresh_page_light
-                                - &get_entity_id_from_event_or_trigger
-                                  variables:
-                                    entity_id: '{{ original_state.entity_id }}'
-                                    entity_id_valid: '{{ original_state.entity_id_valid }}'
-                                    # Set on every refresh, so the configured title and icon are not lost when
-                                    # another step of this run reassigns `overlap`.
-                                    overlap: '{{ details_overlap }}'
-                                - *variable_entity
-                                - &entity_details_title_with_icon
-                                  alias: Fill title of entity details page
-                                  sequence:
-                                    - variables:
-                                        txt_list: >
-                                          {%- set ns = namespace(items=[]) -%}
-                                          {%- if entity_name is string and entity_name | length > 0 -%}
-                                            {%- set ns.items = ns.items + ['page_label.txt="' + entity_name + '"'] -%}
-                                          {%- endif -%}
-                                          {%- if entity_icon is string and entity_icon | length > 0 -%}
-                                            {%- set ns.items = ns.items + ['icon_state.txt="' + entity_icon + '"'] -%}
-                                          {%- endif -%}
-                                          {{ ns.items }}
-                                    - if: '{{ txt_list | length > 0 }}'
-                                      then:
-                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                          data:
-                                            page: mem
-                                            id: command
-                                            txt_list: '{{ txt_list }}'
-                                          continue_on_error: true
-                                        - *delay_default
-                                - &variables_light_modes
-                                  alias: variables_light_modes
-                                  variables:
-                                    entity_id_valid: '{{ entity_id is string and entity_id.split(".") | count == 2 }}'
-                                    # "embedded_climate" is not a real entity_id and cannot be split, but it
-                                    # must still resolve to the climate domain so its detail page can open.
-                                    entity_domain: >-
-                                      {{
-                                        "climate"
-                                        if entity_id == "embedded_climate"
-                                        else (entity_id.split(".")[0] if entity_id_valid else "")
-                                      }}
-                                    entity_domain_is_light: '{{ entity_id_valid and entity_domain == "light" }}'
-                                    supported_features: '{{ state_attr(entity_id, "supported_features") | int(0) if entity_id_valid else 0 }}'
-                                    supported_color_modes: >-
-                                      {{
-                                        state_attr(entity_id, "supported_color_modes") | default([], true)
-                                        if entity_domain_is_light
-                                        else []
-                                      }}
-                                    color_mode_brightness: >-
-                                      {{
-                                        entity_domain_is_light and
-                                        (
-                                          supported_features | bitwise_and(1) > 0 or
-                                          states[entity_id] is defined and "brightness" in states[entity_id].attributes or
-                                          enum.ColorMode.BRIGHTNESS in supported_color_modes or
-                                          "brightness" in supported_color_modes or
-                                          supported_color_modes
-                                            | map(attribute="value") | list
-                                            | select("in", ["brightness"])
-                                            | list | length > 0 or
-                                          state_attr(entity_id, "brightness") | int(-1) >= 0
-                                        )
-                                      }}
-                                    color_mode_color: >-
-                                      {{
-                                        entity_domain_is_light and
-                                        (
-                                          supported_features | bitwise_and(16) > 0 or
-                                          enum.ColorMode.HS in supported_color_modes or
-                                          enum.ColorMode.XY in supported_color_modes or
-                                          enum.ColorMode.RGB in supported_color_modes or
-                                          enum.ColorMode.RGBW in supported_color_modes or
-                                          enum.ColorMode.RGBWW in supported_color_modes or
-                                          "hs" in supported_color_modes or
-                                          "xy" in supported_color_modes or
-                                          "rgb" in supported_color_modes or
-                                          "rgbw" in supported_color_modes or
-                                          "rgbww" in supported_color_modes or
-                                          state_attr(entity_id, "rgb_color") | default("unknown") is list or
-                                          supported_color_modes
-                                            | map(attribute="value") | list
-                                            | select("in", ["hs", "xy", "rgb", "rgbw", "rgbww"])
-                                            | list | length > 0
-                                        )
-                                      }}
-                                    color_mode_temp: >-
-                                      {{
-                                        entity_domain_is_light and
-                                        (
-                                          supported_features | bitwise_and(2) > 0 or
-                                          enum.ColorMode.COLOR_TEMP in supported_color_modes or
-                                          "color_temp" in supported_color_modes or
-                                          supported_color_modes
-                                            | map(attribute="value") | list
-                                            | select("in", ["color_temp"])
-                                            | list | length > 0 or
-                                          state_attr(entity_id, "color_temp_kelvin") | int(-1) >= 0
-                                        )
-                                      }}
-                                    effects_available: '{{ entity_domain_is_light and supported_features | bitwise_and(4) > 0 }}'
-                                    # Single source of truth for "is there anything to show on this light's
-                                    # detail page?" — a light with none of these renders an empty page where
-                                    # only the always-visible power button remains, duplicating the short
-                                    # press. Unlike click_opens_details, effects count here: the effect tab
-                                    # is reachable on the detail page but is not a tap action. See #285.
-                                    light_has_details: >-
-                                      {{
-                                        entity_domain_is_light and
-                                        (
-                                          color_mode_brightness or
-                                          color_mode_color or
-                                          color_mode_temp or
-                                          effects_available
-                                        )
-                                      }}
-                                    # Single source of truth for "does a tap on this entity open its detail
-                                    # card instead of performing the short-press action?" — shared by every
-                                    # place that renders per-entity buttons (Home page, Buttons pages), so a
-                                    # capability added for one can't silently miss the other.
-                                    # Entities without a toggle always open the card. Adjustable entities do so
-                                    # only when the user opted in via `button_tap_behavior`; by default a tap
-                                    # toggles and the card is reached with a long press (#446).
-                                    click_opens_details: >-
-                                      {{
-                                        entity_domain in domains_functionality.detailed_only or
-                                        (
-                                          button_tap_behavior == "details_when_adjustable" and
-                                          (
-                                            (entity_domain == "cover" and supported_features | bitwise_and(132) > 0) or
-                                            (entity_domain == "fan" and supported_features | bitwise_and(11) > 0) or
-                                            (entity_domain == "light" and (color_mode_brightness or color_mode_color or color_mode_temp))
-                                          )
-                                        )
-                                      }}
+                                - *get_entity_id_from_event_or_trigger
+                                ##### The panel renders the page from a snapshot of the entity (#636) #####
+                                # The effect list is only used when the page opens, but the attributes are fixed per domain
+                                - variables:
+                                    # Entities shown on the page, by role
+                                    snapshot_roles: '{{ {"main": entity_id} }}'
+                                    # Attributes each domain sends in a snapshot; plain lists, not templates
+                                    snapshot_attributes:
+                                      light:
+                                        - supported_features
+                                        - supported_color_modes
+                                        - brightness
+                                        - color_temp_kelvin
+                                        - min_color_temp_kelvin
+                                        - max_color_temp_kelvin
+                                        - effect
+                                        - effect_list
+                                        - icon
+                                        - device_class
+                                - *send_entity_snapshot
 
-                                ##### LIGHT State #####
-                                - alias: Light brightness
-                                  if: '{{ color_mode_brightness }}'
-                                  then:
-                                    - variables:
-                                        curr_brightness: '{{ (state_attr(entity_id, "brightness") | int(0) * 100 / 255) | round(0) }}'
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: mem
-                                        id: command
-                                        txt_list:
-                                          - 'lightslider.val={{ curr_brightness }}'
-                                          - 'light_value.txt="{{ curr_brightness ~ ("" if compact_unit_display else " ") }}%"'
-                                          - 'light_value_2.txt="{{ curr_brightness ~ ("" if compact_unit_display else " ") }}%"'
-                                          - 'power_button.pco=50712'  # [192, 192, 192]
-                                      continue_on_error: true
-                                    - *delay_default
-
-                                ##### LIGHT Check Color_Temp Value is available when yes send some current Values #####
-                                - alias: Light temperature
-                                  if: '{{ color_mode_temp }}'
-                                  then:
-                                    - variables:
-                                        curr_color_temp: '{{ state_attr(entity_id, "color_temp_kelvin") | int(-1) }}'
-                                        min_color_temp_kelvin: '{{ state_attr(entity_id, "min_color_temp_kelvin") | int(2000) }}'
-                                        max_color_temp_kelvin: '{{ state_attr(entity_id, "max_color_temp_kelvin") | int(6535) }}'
-                                    - variables:
-                                        curr_color_temp: >
-                                          {{
-                                            curr_color_temp
-                                            if curr_color_temp >= min_color_temp_kelvin and curr_color_temp <= max_color_temp_kelvin
-                                            else ((min_color_temp_kelvin+max_color_temp_kelvin)/2) | int(4268)
-                                          }}
-                                    - condition: '{{ is_number(curr_color_temp) }}'
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: mem
-                                        id: command
-                                        txt_list:
-                                          - 'temp_value.txt="{{ curr_color_temp }}K"'
-                                          - 'temp_value_2.txt="{{ curr_color_temp }}K"'
-                                          - 'tempslider.val={{ (min_color_temp_kelvin + max_color_temp_kelvin - curr_color_temp) | int }}'
-                                          - 'tempslider.minval={{ min_color_temp_kelvin }}'
-                                          - 'tempslider.maxval={{ max_color_temp_kelvin }}'
-                                      continue_on_error: true
-                                    - *delay_default
-
-                                ##### LIGHT Effects #####
-                                - alias: Light effects
-                                  if:
-                                    - '{{ effects_available }}'
-                                  then:
-                                    - variables:
-                                        current_effect_raw: '{{ state_attr(entity_id, "effect") }}'
-                                        current_effect: >-
-                                          {{
-                                            current_effect_raw | trim
-                                            if current_effect_raw is string and current_effect_raw | length > 0
-                                            else ""
-                                          }}
-                                    ##### Always (construction and updates): push current effect #####
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: mem
-                                        id: popup_select_current
-                                        txt_list:
-                                          - '{{ current_effect }}'
-                                      continue_on_error: true
-                                    - *delay_default
-
-                                    - if: '{{ page_constructor }}'
-                                      then:
-                                        - variables:
-                                            effect_list_raw_attr: '{{ state_attr(entity_id, "effect_list") }}'
-                                            effect_list_raw: >
-                                              {{
-                                                effect_list_raw_attr | list
-                                                if
-                                                  effect_list_raw_attr is iterable and
-                                                  effect_list_raw_attr is not string
-                                                else []
-                                              }}
-
-                                            # Truncation rule (the picker pages through up to 32 options): current always included.
-                                            # If <=32: send all in HA order.
-                                            # If >32 and current in first 32: send first 32.
-                                            # If >32 and current in positions 32+: send [current] + first 31 excluding current.
-                                            effect_list_truncated: >
-                                              {%- if effect_list_raw | length <= 32 -%}
-                                                {%- if current_effect | length == 0 or current_effect in effect_list_raw -%}
-                                                  {{ effect_list_raw }}
-                                                {%- else -%}
-                                                  {{ ([current_effect] + (effect_list_raw | list))[:32] }}
-                                                {%- endif -%}
-                                              {%- elif current_effect | length == 0 or current_effect in effect_list_raw[:32] -%}
-                                                {{ effect_list_raw[:32] }}
-                                              {%- else -%}
-                                                {{ [current_effect] + (effect_list_raw[:31] | reject("equalto", current_effect) | list) }}
-                                              {%- endif -%}
-                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                          data:
-                                            page: mem
-                                            id: popup_select_context
-                                            txt_list:
-                                              - 'light_effect'
-                                          continue_on_error: true
-                                        - *delay_default
-                                        - action: 'esphome.{{ action_prefix }}_component_val'
-                                          data:
-                                            page: mem
-                                            id: popup_select_mode
-                                            val: 0
-                                          continue_on_error: true
-                                        - *delay_default
-                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                          data:
-                                            page: mem
-                                            id: popup_select_options
-                                            txt_list: '{{ effect_list_truncated }}'
-                                          continue_on_error: true
-                                        - *delay_default
-
-                                ##### LIGHT Features mask (construction-only) #####
-                                # Bitmask: bit 0=brightness, bit 1=temp, bit 2=color, bit 3=effects
-                                - alias: Light features mask
-                                  if: '{{ page_constructor }}'
-                                  then:
-                                    - variables:
-                                        light_features_mask: >-
-                                          {{
-                                            (1 if color_mode_brightness else 0) +
-                                            (2 if color_mode_temp       else 0) +
-                                            (4 if color_mode_color      else 0) +
-                                            (8 if effects_available     else 0)
-                                          }}
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: mem
-                                        id: command
-                                        txt_list:
-                                          - 'light_features_mask={{ light_features_mask }}'
-                                          - 'features.en=1'
-                                      continue_on_error: true
-                                    - *delay_default
                             - alias: Cover settings page
                               conditions:
                                 - >-
@@ -11017,36 +10933,7 @@ actions:
                                     snapshot_attributes:
                                       alarm_control_panel:
                                         ["supported_features", "code_format", "code_arm_required", "icon", "device_class"]
-                                - &send_entity_snapshot
-                                  alias: Send entity snapshot
-                                  action: 'esphome.{{ action_prefix }}_entity_snapshot'
-                                  data:
-                                    # JSON with the state, name and selected attributes of each entity in snapshot_roles.
-                                    # "constructor" is always a JSON boolean, so Home Assistant never reads the text
-                                    # as a Python literal and always passes it on as a string.
-                                    snapshot: >-
-                                      {%- set ns = namespace(entities=[]) -%}
-                                      {%- for role, entity in snapshot_roles.items() -%}
-                                        {%- set valid = entity is string and entity.split(".") | count == 2 and states[entity] is not none -%}
-                                        {%- set ns_attributes = namespace(values={}) -%}
-                                        {%- if valid -%}
-                                          {%- for name in snapshot_attributes.get(entity.split(".")[0], []) -%}
-                                            {%- if state_attr(entity, name) is not none -%}
-                                              {%- set ns_attributes.values = dict(ns_attributes.values, **{name: state_attr(entity, name)}) -%}
-                                            {%- endif -%}
-                                          {%- endfor -%}
-                                        {%- endif -%}
-                                        {%- set ns.entities = ns.entities + [{
-                                              "role": role,
-                                              "entity_id": entity,
-                                              "exists": valid,
-                                              "state": states(entity) if valid else "unknown",
-                                              "name": states[entity].name if valid else "",
-                                              "attributes": ns_attributes.values
-                                            }] -%}
-                                      {%- endfor -%}
-                                      {{ {"page": current_page_from_sensor, "constructor": page_constructor | bool, "entities": ns.entities} | to_json }}
-                                  continue_on_error: true
+                                - *send_entity_snapshot
                             - alias: Climate page
                               conditions:
                                 - >-
