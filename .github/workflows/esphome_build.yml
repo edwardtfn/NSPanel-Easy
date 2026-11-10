@@ -145,6 +145,14 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
+      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      - name: Check build size
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} (latest)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        run: |
+          python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
 
   # ===========================================================================
   # ESPHome Dev
@@ -171,6 +179,14 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
+      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      - name: Check build size
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} (dev)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        run: |
+          python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
 
   # ===========================================================================
   # Pre-built firmware - ESPHome Latest
@@ -195,6 +211,14 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
+      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      - name: Check build size
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (latest)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        run: |
+          python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
       - name: Verify compiled output
         run: |
           # Locate the binary produced by the build action.
@@ -240,6 +264,14 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
+      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      - name: Check build size
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (dev)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        run: |
+          python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
       - name: Verify compiled output
         run: |
           # Locate the binary produced by the build action.
