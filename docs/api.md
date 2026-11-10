@@ -8,7 +8,10 @@ This document provides details on custom actions designed for integration with H
   - [API Subscribe Action (`api_subscribe`)](#api-subscribe-actions-api_subscribe-api_subscribe_end):
     Binds a Home Assistant entity directly to a panel component, so state changes render without an automation run.
   - [API Subscribe End Action (`api_subscribe_end`)](#api-subscribe-actions-api_subscribe-api_subscribe_end): Closes a binding push and states how many bindings were sent.
+  - [API Subscribe Icon Names Action (`api_subscribe_icon_names`)](api_subscribe.md#api_subscribe_icon_names):
+    Sends the MDI icon names, so the panel resolves icons given by name.
   - [Button Action (`button`)](#button-action-button): Configures properties and state of buttons on a specified button page.
+  - [Buttons Setup Action (`buttons_setup`)](api_subscribe.md#button-pages): Sends the settings of a button page that the panel draws itself.
   - [Command Action (`command`) - DEPRECATED](#command-action-command): Sends a custom command directly to the display.
   - [Component Color Action (`component_color`)](#component-color-action-component_color): Changes the foreground color of a specified component on the display.
   - [Component Text List Action (`component_text_list`)](#component-text-list-action-component_text_list): Updates the text of a specified component on the display using a list of values.
@@ -68,7 +71,9 @@ You can look up the action names available on your Home Assistant instance under
 | --------- | ----------- | ----------- |
 | [`api_subscribe`](#api-subscribe-actions-api_subscribe-api_subscribe_end) | [API Subscribe Action](#api-subscribe-actions-api_subscribe-api_subscribe_end) | Binds a Home Assistant entity directly to a panel component, so state changes render without an automation run. |
 | [`api_subscribe_end`](#api-subscribe-actions-api_subscribe-api_subscribe_end) | [API Subscribe End Action](#api-subscribe-actions-api_subscribe-api_subscribe_end) | Closes a binding push and states how many bindings were sent. |
+| [`api_subscribe_icon_names`](api_subscribe.md#api_subscribe_icon_names) | [API Subscribe Icon Names Action](api_subscribe.md#api_subscribe_icon_names) | Sends the MDI icon names, so the panel resolves icons given by name. |
 | [`button`](#button-action-button) | [Button Action](#button-action-button) | Configures properties and state of buttons on a specified button page. |
+| [`buttons_setup`](api_subscribe.md#button-pages) | [Buttons Setup Action](api_subscribe.md#button-pages) | Sends the settings of a button page that the panel draws itself. |
 | [`command`](#command-action-command) | [Command Action](#command-action-command) | Sends a custom command directly to the display. |
 | [`component_color`](#component-color-action-component_color) | [Component Color Action](#component-color-action-component_color) | Changes the foreground color of a specified component on the display. |
 | [`component_text_list`](#component-text-list-action-component_text_list) | [Component Text List Action](#component-text-list-action-component_text_list) | Updates the text of a specified component on the display using a list of values. |
@@ -93,7 +98,7 @@ You can look up the action names available on your Home Assistant instance under
 
 ### API Subscribe Actions: `api_subscribe`, `api_subscribe_end`
 
-These two actions register bindings between Home Assistant entities and panel components. Once
+These two actions, with `api_subscribe_icon_names` and `buttons_setup`, register bindings between Home Assistant entities and panel components. Once
 bound, Home Assistant streams state changes straight to the panel over the API connection and the
 panel renders them locally — no automation runs per state change.
 
@@ -108,6 +113,11 @@ classification, on-device appearance resolution, and troubleshooting.
 ### Button Action: `button`
 
 Configures the properties and state of buttons on a specified button page, allowing for dynamic updates to button appearance and behavior based on specified parameters.
+
+> [!NOTE]
+> With the Blueprint, the button pages are drawn by the panel from [bindings](api_subscribe.md#button-pages),
+> so a button drawn with this action is drawn again by the panel at the next change of its entity or page.
+> The Blueprint uses this action for the climate page's custom buttons.
 
 **Usage:**
 This action is designed for dynamic user interface adjustments, enabling the customization of button states, icons, colors, and labels.
@@ -473,7 +483,8 @@ data:
 ### Entity Snapshot Action: `entity_snapshot`
 
 Sends the state and attributes of the entities shown on an entity details page, and the panel renders the page from them.
-The NSPanel Easy Blueprint uses it for the select page; other entity details pages still receive each text and value from the Blueprint.
+The NSPanel Easy Blueprint uses it for the alarm, button, fan, light, select, switch, timer and vacuum / lawn mower pages;
+the other entity details pages still receive each text and value from the Blueprint.
 
 **Usage:**
 Meant for the Blueprint, which sends a snapshot when an entity details page opens and whenever one of its entities changes.
@@ -483,12 +494,15 @@ Meant for the Blueprint, which sends a snapshot when an entity details page open
 - `snapshot` (string): JSON with the page and its entities:
   - `page` (string): page the snapshot is for, e.g. `select`.
   - `constructor` (boolean): `true` for the first snapshot after the page opens, which also sets the parts that do not change while it is open.
+  - `compact_unit_display` (boolean, optional): units follow values without a space, e.g. `50%` instead of `50 %`.
+  - `settled` (boolean, optional): the snapshot is sent after the entity went quiet, so pending presses on the page are cleared.
   - `entities` (list): one object per entity, with:
-    - `role` (string): role of the entity on the page; `main` for the entity the page shows.
+    - `role` (string): role of the entity on the page; `main` for the entity the page shows, `battery` for the device's battery sensor on the vacuum page.
     - `entity_id` (string), `exists` (boolean), `state` (string) and `name` (string, the entity's friendly name).
-    - `attributes` (object): the attributes the page needs (for the select page: `options`).
+    - `attributes` (object): the attributes the page needs, e.g. `options` for the select page, or `supported_features`,
+      `brightness` and the colour temperature range for the light page; `icon` and `device_class` for the title icon.
 
-  Snapshots larger than 8 KB are ignored.
+  Snapshots larger than 8 KB are ignored, and so are snapshots for a page that is no longer shown.
 
 **Home Assistant Example:**
 
