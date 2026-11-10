@@ -28,7 +28,8 @@ Supported display models: EU (landscape), US portrait, and US landscape.
 - `.test/` - ESPHome configurations used by the CI build matrix.
 - `prebuilt/` - Prebuilt firmware configuration and binaries (experimental).
 - `versioning/` - Version files managed by CI. Do not edit.
-- `.github/` - Workflows, issue templates, CI scripts and pinned Python tooling (`requirements.txt`).
+- `.github/` - Workflows, issue templates, CI scripts and pinned Python tooling (`requirements*.txt`: `requirements.txt` for the
+  validation scripts, and one file per tool installed by a single workflow, such as clang-format and esp-idf-size).
 - `.rules/` - Linter configurations (yamllint, markdownlint, markdown link check).
 
 ## Build and validation

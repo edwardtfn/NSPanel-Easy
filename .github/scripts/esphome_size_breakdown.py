@@ -8,7 +8,9 @@ and the largest object files, as reported by Espressif's esp-idf-size
 so size work targets the real contributors.
 
 Informational only: it never fails the job, also when the map cannot be found
-or read (e.g. builds whose map esp-idf-size does not understand).
+or read (e.g. builds whose map esp-idf-size does not understand). The tables
+come from the build, so from the PR: every line is sanitized before it is
+written to the summary.
 
 Usage:
   esphome_size_breakdown.py --name NAME --search-dir DIR --summary FILE [--rows N]
@@ -37,9 +39,11 @@ def find_map(search_dir):
 def run_size(map_path, option):
     """Text table from esp-idf-size, or None when it fails."""
     env = dict(os.environ, COLUMNS="160", NO_COLOR="1", TERM="dumb")
+    # A fixed argument list, no shell: the map path is a file found by the script, passed as a single argument
+    command = [sys.executable, "-m", "esp_idf_size", "--format", "table", option, str(map_path)]
     try:
-        result = subprocess.run([sys.executable, "-m", "esp_idf_size", "--format", "table", option, str(map_path)],
-                                capture_output=True, text=True, timeout=TIMEOUT_S, env=env, check=False)
+        result = subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+            command, capture_output=True, text=True, timeout=TIMEOUT_S, env=env, check=False)
     except (OSError, subprocess.TimeoutExpired) as error:
         print(f"esp-idf-size {option} failed: {error}")
         return None
@@ -47,6 +51,16 @@ def run_size(map_path, option):
         print(f"esp-idf-size {option} failed ({result.returncode}): {result.stderr.strip()[:500]}")
         return None
     return result.stdout
+
+
+def sanitize(line):
+    """A table line that cannot close the code fence nor carry Markdown or HTML out of it.
+
+    Symbol and file names come from the build, so from the PR: backticks and tildes, which
+    could close the fence, are replaced, as are angle brackets, and control characters dropped.
+    """
+    line = line.replace("`", "'").replace("~", "-").replace("<", "(").replace(">", ")")
+    return "".join(character for character in line if character.isprintable())[:200]
 
 
 def main():
@@ -70,7 +84,7 @@ def main():
                 continue
             rows = table.rstrip("\n").splitlines()
             # Heading lines of the table (title, column names, rule) plus the largest rows
-            shown = rows[: args.rows + 6]
+            shown = [sanitize(row) for row in rows[: args.rows + 6]]
             lines += [f"<details><summary>{title} (largest {args.rows})</summary>", "", "```text", *shown, "```",
                       "", "</details>", ""]
     with open(args.summary, "a", encoding="utf-8") as f:

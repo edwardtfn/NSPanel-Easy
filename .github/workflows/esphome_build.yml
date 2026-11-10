@@ -161,9 +161,11 @@ jobs:
         env:
           BUILD_NAME: ${{ matrix.firmware.name }} (latest)
           YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        # A virtual environment: the runner's system Python is externally managed (PEP 668)
         run: |
-          pip install --quiet -r .github/requirements-esp-idf-size.txt
-          python3 .github/scripts/esphome_size_breakdown.py --name "$BUILD_NAME" \
+          python3 -m venv "$RUNNER_TEMP/esp-idf-size"
+          "$RUNNER_TEMP/esp-idf-size/bin/pip" install --quiet -r .github/requirements-esp-idf-size.txt
+          "$RUNNER_TEMP/esp-idf-size/bin/python" .github/scripts/esphome_size_breakdown.py --name "$BUILD_NAME" \
             --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
 
   # ===========================================================================
@@ -238,9 +240,11 @@ jobs:
         env:
           BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (latest)
           YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        # A virtual environment: the runner's system Python is externally managed (PEP 668)
         run: |
-          pip install --quiet -r .github/requirements-esp-idf-size.txt
-          python3 .github/scripts/esphome_size_breakdown.py --name "$BUILD_NAME" \
+          python3 -m venv "$RUNNER_TEMP/esp-idf-size"
+          "$RUNNER_TEMP/esp-idf-size/bin/pip" install --quiet -r .github/requirements-esp-idf-size.txt
+          "$RUNNER_TEMP/esp-idf-size/bin/python" .github/scripts/esphome_size_breakdown.py --name "$BUILD_NAME" \
             --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
       - name: Verify compiled output
         run: |
