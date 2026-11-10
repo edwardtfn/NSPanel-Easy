@@ -11374,178 +11374,33 @@ actions:
                                   }}
                               sequence: &refresh_page_vacuum
                                 - *get_entity_id_from_event_or_trigger
+                                ##### The panel renders the page from a snapshot of the entity (#636) #####
                                 - variables:
-                                    # ── Domain detection ──────────────────────────
-                                    entity_domain: '{{ entity_id.split(".")[0] }}'
-                                    is_mower: '{{ entity_domain == "lawn_mower" }}'
-
-                                    # ── Raw attributes ────────────────────────────
-                                    entity_state: '{{ states(entity_id) }}'
-                                    supported_features: '{{ state_attr(entity_id, "supported_features") | int(0) }}'
-                                    # Home Assistant 2026.9 moved the vacuum battery from the battery_level attribute to a battery sensor of the device
-                                    battery_level: >-
-                                      {% set battery_attribute = state_attr(entity_id, "battery_level") %}
-                                      {% set device = device_id(entity_id) %}
-                                      {% set battery_values = (device_entities(device) if device else [])
-                                          | select("match", "sensor\\.")
-                                          | select("is_state_attr", "device_class", "battery")
-                                          | map("states")
-                                          | select("is_number")
-                                          | map("float")
-                                          | list %}
-                                      {# Round half up (+0.5 then truncate); battery levels are never negative #}
-                                      {% if is_number(battery_attribute) %}
-                                        {{ (battery_attribute | float + 0.5) | int }}
-                                      {% elif battery_values | count > 0 %}
-                                        {{ (battery_values | first + 0.5) | int }}
-                                      {% else %}
-                                        -1
-                                      {% endif %}
-
-                                    # ── State groups ─────────────────────────────
-                                    is_active: >-
+                                    # Home Assistant 2026.9 moved the vacuum battery from the battery_level attribute to a battery
+                                    # sensor of the device; the panel uses the sensor when the attribute is missing
+                                    battery_entity: >-
+                                      {%- set ns = namespace(entity="") -%}
+                                      {%- if state_attr(entity_id, "battery_level") is none -%}
+                                        {%- set device = device_id(entity_id) if entity_id is string else none -%}
+                                        {%- for battery in (device_entities(device) if device else [])
+                                              | select("match", "sensor\\.")
+                                              | select("is_state_attr", "device_class", "battery") -%}
+                                          {%- if not ns.entity and is_number(states(battery)) -%}
+                                            {%- set ns.entity = battery -%}
+                                          {%- endif -%}
+                                        {%- endfor -%}
+                                      {%- endif -%}
+                                      {{ ns.entity }}
+                                    # Entities shown on the page, by role
+                                    snapshot_roles: >-
                                       {{
-                                        entity_state in ["cleaning", "mowing", "returning", "paused", "idle"]
+                                        dict({"main": entity_id}, **({"battery": battery_entity} if battery_entity else {}))
                                       }}
-                                    is_docked: '{{ entity_state == "docked" }}'
-                                    is_running: '{{ entity_state in ["cleaning", "mowing", "returning"] }}'
-
-                                    # ── Vacuum feature flags ──────────────────────
-                                    has_start: '{{ not is_mower and supported_features | bitwise_and(8192) > 0 }}'
-                                    has_pause: '{{ not is_mower and supported_features | bitwise_and(4) > 0 }}'
-                                    has_stop: '{{ not is_mower and supported_features | bitwise_and(8) > 0 }}'
-                                    has_return_home: '{{ not is_mower and supported_features | bitwise_and(16) > 0 }}'
-                                    has_battery: '{{ battery_level >= 0 }}'
-
-                                    # ── Mower feature flags ───────────────────────
-                                    mower_has_start: '{{ is_mower and supported_features | bitwise_and(1) > 0 }}'
-                                    mower_has_pause: '{{ is_mower and supported_features | bitwise_and(2) > 0 }}'
-                                    mower_has_dock: '{{ is_mower and supported_features | bitwise_and(4) > 0 }}'
-
-                                    # ── Unified button availability ───────────────
-                                    btn_start_pause_available: >-
-                                      {{
-                                        (has_start or has_pause)
-                                        if not is_mower
-                                        else (mower_has_start or mower_has_pause)
-                                      }}
-                                    btn_stop_available: '{{ has_stop }}'  # always false for mower
-                                    btn_return_available: >-
-                                      {{
-                                        has_return_home if not is_mower else mower_has_dock
-                                      }}
-
-                                    # ── Picture slots ─────────────────────────────
-                                    pic_active_dark: '{{ 96 if not is_mower else 100 }}'
-                                    pic_active_light: '{{ 97 if not is_mower else 101 }}'
-                                    pic_docked_dark: '{{ 98 if not is_mower else 102 }}'
-                                    pic_docked_light: '{{ 99 if not is_mower else 103 }}'
-
-                                - *variable_entity
-                                - *entity_details_title_with_icon
-
-                                ##### State label #####
-                                - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                  data:
-                                    page: vacuum
-                                    id: state_label
-                                    txt_list:
-                                      - '{{ entity_state | capitalize }}'
-                                  continue_on_error: true
-                                - *delay_default
-
-                                ##### vacuum_pic — active vs. docked #####
-                                - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                  data:
-                                    page: mem
-                                    id: command
-                                    txt_list:
-                                      - >-
-                                        vacuum_pic.pic={{
-                                          pic_active_light if (is_active and theme == "light")
-                                          else (
-                                            pic_active_dark if is_active
-                                            else (
-                                              pic_docked_light if theme == "light"
-                                              else pic_docked_dark
-                                            )
-                                          )
-                                        }}
-                                  continue_on_error: true
-                                - *delay_default
-
-                                ##### bt_start_pause #####
-                                - action: 'esphome.{{ action_prefix }}_icon'
-                                  data:
-                                    page: vacuum
-                                    id: bt_start_pause
-                                    icon: '{{ "\uE3E3" if is_running else "\uE409" }}{# mdi:pause, mdi:play #}'
-                                    icon_color: '{{ nextion.color.grey_white }}'
-                                    visible: '{{ btn_start_pause_available }}'
-                                  continue_on_error: true
-                                - *delay_default
-
-                                ##### bt_stop #####
-                                - action: 'esphome.{{ action_prefix }}_icon'
-                                  data:
-                                    page: vacuum
-                                    id: bt_stop
-                                    icon: '{{ "\uE4DA" }}{# mdi:stop #}'
-                                    icon_color: '{{ nextion.color.grey_white }}'
-                                    visible: '{{ btn_stop_available }}'
-                                  continue_on_error: true
-                                - *delay_default
-
-                                ##### bt_return #####
-                                - action: 'esphome.{{ action_prefix }}_icon'
-                                  data:
-                                    page: vacuum
-                                    id: bt_return
-                                    icon: '{{ "\uEF9B" }}{# mdi:home-import-outline #}'
-                                    icon_color: '{{ nextion.color.grey_white }}'
-                                    visible: '{{ btn_return_available and not is_docked }}'
-                                  continue_on_error: true
-                                - *delay_default
-
-                                ##### Battery (vacuum only, feature-gated) #####
-                                - action: 'esphome.{{ action_prefix }}_icon'
-                                  data:
-                                    page: vacuum
-                                    id: battery_icon
-                                    icon: >-
-                                      {% set lvl = battery_level %}
-                                      {% if lvl >= 95 %}{{ "\uE078" }}{# mdi:battery #}
-                                      {% elif lvl >= 85 %}{{ "\uE081" }}{# mdi:battery-90 #}
-                                      {% elif lvl >= 75 %}{{ "\uE080" }}{# mdi:battery-80 #}
-                                      {% elif lvl >= 65 %}{{ "\uE07F" }}{# mdi:battery-70 #}
-                                      {% elif lvl >= 55 %}{{ "\uE07E" }}{# mdi:battery-60 #}
-                                      {% elif lvl >= 45 %}{{ "\uE07D" }}{# mdi:battery-50 #}
-                                      {% elif lvl >= 35 %}{{ "\uE07C" }}{# mdi:battery-40 #}
-                                      {% elif lvl >= 25 %}{{ "\uE07B" }}{# mdi:battery-30 #}
-                                      {% elif lvl >= 15 %}{{ "\uE07A" }}{# mdi:battery-20 #}
-                                      {% else %}{{ "\uE079" }}{# mdi:battery-10 #}
-                                      {% endif %}
-                                    icon_color: '{{ nextion.color.grey_white }}'
-                                    visible: '{{ has_battery and battery_level >= 0 }}'
-                                  continue_on_error: true
-                                - *delay_default
-                                - if: '{{ has_battery and battery_level >= 0 }}'
-                                  then:
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: vacuum
-                                        id: battery_value
-                                        txt_list:
-                                          - '{{ battery_level }}%'
-                                      continue_on_error: true
-                                    - *delay_default
-                                - action: 'esphome.{{ action_prefix }}_components_visibility'
-                                  data:
-                                    page: vacuum
-                                    ids: ["battery_value"]
-                                    visible: '{{ has_battery and battery_level >= 0 }}'
-                                  continue_on_error: true
-                                - *delay_default
+                                    # Attributes each domain sends in a snapshot; plain lists, not templates
+                                    snapshot_attributes:
+                                      vacuum: ["supported_features", "battery_level", "icon", "device_class"]
+                                      lawn_mower: ["supported_features", "battery_level", "icon", "device_class"]
+                                - *send_entity_snapshot
 
                         # Values of the home, climate and water heater pages, rendered as the page opens: one copy of
                         # `display_value` for the three pages, instead of one in each page's rendering (#657). Afterwards,
