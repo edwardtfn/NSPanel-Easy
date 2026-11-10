@@ -7594,8 +7594,10 @@ actions:
               {%- set ns_attributes = namespace(values={}) -%}
               {%- if valid -%}
                 {%- for name in snapshot_attributes.get(entity.split(".")[0], []) -%}
-                  {%- if state_attr(entity, name) is not none -%}
-                    {%- set ns_attributes.values = dict(ns_attributes.values, **{name: state_attr(entity, name)}) -%}
+                  {%- set value = state_attr(entity, name) -%}
+                  {%- if value is not none -%}
+                    {#- to_json refuses datetime objects (e.g. media_position_updated_at): sent as ISO 8601 text -#}
+                    {%- set ns_attributes.values = dict(ns_attributes.values, **{name: value.isoformat() if value is datetime else value}) -%}
                   {%- endif -%}
                 {%- endfor -%}
               {%- endif -%}
