@@ -294,14 +294,6 @@ script:
             }
           }
 
-  - id: !extend page_change
-    then:
-      - lambda: if (new_page_id == get_page_id("media_player")) page_media_player->execute();
-
-  - id: page_media_player
-    mode: restart
-    then:  # There's nothing here so far
-
   - id: !extend reset_globals
     then:
       - lambda: |-
@@ -312,12 +304,4 @@ script:
           last_volume_level = 0;
           last_media_duration = 0;
           last_media_position = 0;
-
-  - id: !extend stop_all
-    then:
-      - lambda: page_media_player->stop();
-
-  - id: !extend stop_page_constructors
-    then:
-      - lambda: page_media_player->stop();
 ...

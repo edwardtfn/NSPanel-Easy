@@ -214,14 +214,6 @@ script:
             }  // if (preset_buttons)
           }  // if (preset_modes)
 
-  - id: !extend page_change
-    then:
-      - lambda: if (new_page_id == get_page_id("fan")) page_fan->execute();
-
-  - id: page_fan
-    mode: single
-    then:  # There's nothing here so far
-
   - id: !extend picker_selected
     then:
       - lambda: |-
@@ -250,8 +242,4 @@ script:
           if (new_page_id == get_page_id("fan")) {
             display_entity_keep = true;
           }
-
-  - id: !extend stop_page_constructors
-    then:
-      - lambda: page_fan->stop();
 ...

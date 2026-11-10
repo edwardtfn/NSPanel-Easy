@@ -108,22 +108,10 @@ script:
           }  // if (has_battery)
           disp1->send_command_printf("vis battery_value,%d", has_battery ? 1 : 0);
 
-  - id: !extend page_change
-    then:
-      - lambda: if (new_page_id == get_page_id("vacuum")) page_vacuum->execute();
-
-  - id: page_vacuum
-    mode: single
-    then:  # Placeholder — Blueprint drives refresh via page_changed handler
-
   - id: !extend reset_globals
     then:
       - lambda: |-
           if (new_page_id == get_page_id("vacuum")) {
             display_entity_keep = true;
           }
-
-  - id: !extend stop_page_constructors
-    then:
-      - lambda: page_vacuum->stop();
 ...

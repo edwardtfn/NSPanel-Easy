@@ -45,24 +45,10 @@ script:
             goto_page->execute(base_domain.empty() ? home_page_id : get_page_id(base_domain.c_str()));
           }  // endif params[0] == "keyb_num"
 
-  - id: !extend page_change
-    then:
-      - lambda: |-
-          if (new_page_id == get_page_id("keyb_num"))
-            page_keyb_num->execute();
-
-  - id: page_keyb_num
-    mode: single
-    then:  # There's nothing here so far
-
   - id: !extend reset_globals
     then:
       - lambda: |-
           if (new_page_id == get_page_id("keyb_num")) {
             display_entity_keep = true;
           }
-
-  - id: !extend stop_page_constructors
-    then:
-      - lambda: page_keyb_num->stop();
 ...
