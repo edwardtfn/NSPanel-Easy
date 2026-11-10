@@ -253,16 +253,6 @@ script:
             #error "The package nspanel_esphome_standard_page_keyb_num.yaml is required."
           #endif
 
-  - id: page_alarm
-    mode: single
-    then:  # There's nothing here so far
-
-  - id: !extend page_change
-    then:
-      - lambda: |-
-          if (new_page_id == get_page_id("alarm"))
-            page_alarm->execute();
-
   - id: !extend reset_globals
     then:
       - lambda: |-
@@ -275,10 +265,6 @@ script:
       - lambda: |-
           alarm_control_panel_action->stop();
           update_alarm_icon->stop();
-
-  - id: !extend stop_page_constructors
-    then:
-      - lambda: page_alarm->stop();
 
   - id: update_alarm_icon
     mode: single

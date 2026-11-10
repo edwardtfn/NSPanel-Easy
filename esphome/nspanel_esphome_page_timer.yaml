@@ -67,23 +67,9 @@ script:
           disp1->send_command_printf("duration_label.txt=\"%s\"", view.duration_label.c_str());
           disp1->send_command("tick.en=1");
 
-  - id: !extend page_change
-    then:
-      - lambda: |-
-          if (new_page_id != get_page_id("timer")) return;
-          page_timer->execute();
-
-  - id: page_timer
-    mode: single
-    then:  # There's nothing here so far
-
   - id: !extend reset_globals
     then:
       - lambda: |-
           if (new_page_id != get_page_id("timer")) return;
           display_entity_keep = true;
-
-  - id: !extend stop_page_constructors
-    then:
-      - lambda: page_timer->stop();
 ...
