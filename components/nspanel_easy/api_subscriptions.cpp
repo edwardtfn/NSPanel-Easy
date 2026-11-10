@@ -572,6 +572,8 @@ static const char *sub_icon_table_find(const char *key) {
   return nullptr;
 }
 
+const char *sub_icon_rule(const char *key) { return key != nullptr ? sub_icon_table_find(key) : nullptr; }
+
 /**
  * @brief Look up an icon rule key built from parts.
  *

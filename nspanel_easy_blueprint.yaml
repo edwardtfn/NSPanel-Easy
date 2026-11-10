@@ -10264,175 +10264,40 @@ actions:
                                   }}
                               sequence: &refresh_page_cover
                                 - *get_entity_id_from_event_or_trigger
-                                - *variable_entity
+                                ##### The panel renders the page from a snapshot of the entity (#636) #####
                                 - variables:
-                                    current_position_attr: '{{ state_attr(entity_id, "current_position") }}'
-                                - alias: Cover state
-                                  if: '{{ is_number(current_position_attr) }}'
-                                  then:
-                                    - variables:
-                                        current_position: '{{ current_position_attr | round(0) | int }}'
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: mem
-                                        id: command
-                                        txt_list:
-                                          # The page holds two position sliders: one next to the tilt
-                                          # slider and one centered for covers without tilt. Only one of
-                                          # them is visible, both are written.
-                                          - 'coverslider.val={{ current_position }}'
-                                          - 'cover_value.txt="{{ current_position ~ ("" if compact_unit_display else " ") }}%"'
-                                          - 'coverslider2.val={{ current_position }}'
-                                          - 'cover_value_2.txt="{{ current_position ~ ("" if compact_unit_display else " ") }}%"'
-                                      continue_on_error: true
-                                    - *delay_default
-
-                                - variables:
-                                    current_tilt_attr: '{{ state_attr(entity_id, "current_tilt_position") }}'
-                                - alias: Cover tilt state
-                                  if: '{{ is_number(current_tilt_attr) }}'
-                                  then:
-                                    - variables:
-                                        current_tilt: '{{ current_tilt_attr | round(0) | int }}'
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: mem
-                                        id: command
-                                        txt_list:
-                                          - 'tiltslider.val={{ current_tilt }}'
-                                          - 'tilt_value.txt="{{ current_tilt ~ ("" if compact_unit_display else " ") }}%"'
-                                      continue_on_error: true
-                                    - *delay_default
-
-                                - condition: '{{ page_constructor }}'  # Page constructor
-                                - variables:
-                                    entity_device_class_raw: >-
+                                    # Battery of a cover without a battery attribute: a battery sensor of its device with a
+                                    # number, else sensor.<object_id>_battery, else the cover's name with "battery" for "cover"
+                                    battery_entity: >-
+                                      {%- set ns = namespace(entity="") -%}
+                                      {%- if entity_id_valid and not is_number(state_attr(entity_id, "battery")) -%}
+                                        {%- set device = device_id(entity_id) -%}
+                                        {%- for battery in (device_entities(device) if device else [])
+                                              | select("is_state_attr", "device_class", "battery") -%}
+                                          {%- if not ns.entity and is_number(states(battery)) -%}
+                                            {%- set ns.entity = battery -%}
+                                          {%- endif -%}
+                                        {%- endfor -%}
+                                        {%- set by_suffix = entity_id | replace("cover.", "sensor.") ~ "_battery" -%}
+                                        {%- set by_name = entity_id | replace("cover.", "sensor.") | replace("cover", "battery") -%}
+                                        {%- if not ns.entity and has_value(by_suffix) -%}
+                                          {%- set ns.entity = by_suffix -%}
+                                        {%- elif not ns.entity and has_value(by_name) -%}
+                                          {%- set ns.entity = by_name -%}
+                                        {%- endif -%}
+                                      {%- endif -%}
+                                      {{ ns.entity }}
+                                    # Entities shown on the page, by role
+                                    snapshot_roles: >-
                                       {{
-                                        state_attr(entity_id, "device_class") | default("window")
-                                        if entity_id_valid
-                                        else "window"
+                                        dict({"main": entity_id}, **({"battery": battery_entity} if battery_entity else {}))
                                       }}
-                                    entity_device_class: >-
-                                      {{
-                                        entity_device_class_raw
-                                        if
-                                          entity_device_class_raw is string and
-                                          entity_device_class_raw | length > 0
-                                        else "window"
-                                      }}
-                                    cover_icons:
-                                      open: >
-                                        {{
-                                          (special_icons[(device_class_icons.cover[entity_device_class ~ "-open"])] if (device_class_icons.cover[entity_device_class ~ "-open"]) in special_icons
-                                            else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (device_class_icons.cover[entity_device_class ~ "-open"]) ~ ",")].count(",")))
-                                            if ("," ~ (device_class_icons.cover[entity_device_class ~ "-open"]) ~ ",") in all_icon_names
-                                            else "")
-                                          if (entity_device_class ~ "-open") in device_class_icons.cover
-                                          else "\uE5B0"
-                                        }}{# mdi:window-open #}
-                                      close: >
-                                        {{
-                                          (special_icons[(device_class_icons.cover[entity_device_class ~ "-closed"])] if (device_class_icons.cover[entity_device_class ~ "-closed"]) in special_icons
-                                            else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (device_class_icons.cover[entity_device_class ~ "-closed"]) ~ ",")].count(",")))
-                                            if ("," ~ (device_class_icons.cover[entity_device_class ~ "-closed"]) ~ ",") in all_icon_names
-                                            else "")
-                                          if (entity_device_class ~ "-closed") in device_class_icons.cover
-                                          else "\uE5AD"
-                                        }}{# mdi:window-closed #}
-                                - *entity_details_title_with_icon
-                                - alias: Cover open-close icons
-                                  action: 'esphome.{{ action_prefix }}_component_text_list'
-                                  data:
-                                    page: mem
-                                    id: command
-                                    txt_list:
-                                      - 'cover_open.txt="{{ cover_icons.open }}"'
-                                      - 'cover_close.txt="{{ cover_icons.close }}"'
-                                  continue_on_error: true
-                                - *delay_default
-                                - alias: Cover sliders
-                                  # Component coordinates are fixed at design time, so the page holds both
-                                  # layouts: a centered position slider, or the position and tilt pair.
-                                  # `vis` is not sticky across page loads, so set it both ways every time.
-                                  sequence:
-                                    - variables:
-                                        cover_tilt_available: '{{ state_attr(entity_id, "supported_features") | int(0) | bitwise_and(128) > 0 }}'
-                                    - action: 'esphome.{{ action_prefix }}_components_visibility'
-                                      data:
-                                        page: cover
-                                        ids:
-                                          - coverslider
-                                          - cover_value
-                                          - tiltslider
-                                          - tilt_value
-                                        visible: '{{ cover_tilt_available }}'
-                                      continue_on_error: true
-                                    - action: 'esphome.{{ action_prefix }}_components_visibility'
-                                      data:
-                                        page: cover
-                                        ids:
-                                          - coverslider2
-                                          - cover_value_2
-                                        visible: '{{ not cover_tilt_available }}'
-                                      continue_on_error: true
-                                    - *delay_default
-                                - alias: Cover battery icon
-                                  sequence:
-                                    - variables:
-                                        battery_attribute: '{{ state_attr(entity_id, "battery") | default("unavailable") }}'
-                                        battery_level: >
-                                          {% if is_number(battery_attribute) %}
-                                            {{ battery_attribute }}
-                                          {% elif expand(device_entities(device_id(entity_id)))
-                                                  | selectattr("attributes.device_class", "defined")
-                                                  | selectattr("attributes.device_class", "eq", "battery")
-                                                  | map(attribute="state")
-                                                  | map("float", default=none)
-                                                  | select("ne", none)
-                                                  | list
-                                                  | count > 0 %}
-                                            {{
-                                              expand(device_entities(device_id(entity_id)))
-                                              | selectattr("attributes.device_class", "defined")
-                                              | selectattr("attributes.device_class", "eq", "battery")
-                                              | map(attribute="state")
-                                              | map("float", default=none)
-                                              | select("ne", none)
-                                              | list
-                                              | first
-                                              | round(0)
-                                            }}
-                                          {% elif has_value(entity_id | replace("cover.","sensor.") ~ "_battery") %}
-                                            {{ states(entity_id | replace("cover.","sensor.") ~ "_battery", rounded=true) | default("unavailable") }}
-                                          {% elif has_value(entity_id | replace("cover.","sensor.") | replace("cover", "battery")) %}
-                                            {{ states(entity_id | replace("cover.","sensor.") | replace("cover", "battery"), rounded=true) | default("unavailable") }}
-                                          {% else %} unavailable
-                                          {% endif %}
-                                    - condition: '{{ is_number(battery_level) }}'
-                                    - variables:
-                                        battery_icon: >
-                                          {% if battery_level >= 80 %}
-                                            battery-high
-                                          {% elif battery_level >= 40 %}
-                                            battery-medium
-                                          {% elif battery_level >= 15 %}
-                                            battery-low
-                                          {% else %}
-                                            battery-outline
-                                          {% endif %}
-                                    - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                      data:
-                                        page: mem
-                                        id: command
-                                        txt_list:
-                                          - 'battery_value.txt="{{ battery_level ~ ("" if compact_unit_display else " ") }}%"'
-                                          - 'battery_icon.txt="{{ (special_icons[(battery_icon)] if (battery_icon) in special_icons
-                                            else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (battery_icon) ~ ",")].count(",")))
-                                            if ("," ~ (battery_icon) ~ ",") in all_icon_names
-                                            else "") }}"'
-                                          - 'battery_icon.pco=52857'  # nextion.color.grey_super_light
-                                      continue_on_error: true
-                                    - *delay_default
+                                    # Attributes each domain sends in a snapshot; plain lists, not templates
+                                    snapshot_attributes:
+                                      cover: ["current_position", "current_tilt_position", "supported_features", "battery", "icon",
+                                              "device_class"]
+                                - *send_entity_snapshot
+
                             - alias: Fan settings page
                               conditions:
                                 - >-
