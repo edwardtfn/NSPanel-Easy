@@ -55,6 +55,7 @@ jobs:
             prebuilt/wall_display*.yaml
             .github/workflows/esphome_build.yml
             .github/requirements.txt
+            .github/requirements-esp-idf-size.txt
             .rules/yamllint.yml
             .test/*.yaml
             **/*.h
@@ -153,6 +154,17 @@ jobs:
         run: |
           python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
             --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
+      # Informational: where the flash goes, by archive and by file, in the job summary (never fails)
+      - name: Flash breakdown
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} (latest)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        run: |
+          pip install --quiet -r .github/requirements-esp-idf-size.txt
+          python3 .github/scripts/esphome_size_breakdown.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
 
   # ===========================================================================
   # ESPHome Dev
@@ -218,6 +230,17 @@ jobs:
           YAML_FILE: ${{ matrix.firmware.yaml-file }}
         run: |
           python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
+      # Informational: where the flash goes, by archive and by file, in the job summary (never fails)
+      - name: Flash breakdown
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (latest)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        run: |
+          pip install --quiet -r .github/requirements-esp-idf-size.txt
+          python3 .github/scripts/esphome_size_breakdown.py --name "$BUILD_NAME" \
             --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
       - name: Verify compiled output
         run: |
