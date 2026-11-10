@@ -274,7 +274,7 @@ script:
               fire_ha_event("action_call", {
                 {"action", "media_player.volume_set"},
                 {"key", "volume_level"},
-                {"value", to_string(value_float)},
+                {"value", to_string(value_float).c_str()},
                 {"entity", detailed_entity->state.c_str()}
               });
 

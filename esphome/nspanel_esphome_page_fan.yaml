@@ -49,8 +49,8 @@ display:
                   // is a speed or a preset mode, based on the entity.
                   fire_ha_event("button_click", {
                     {"page", "fan"},
-                    {"component", "mode_bt" + std::to_string(component_id - 15)},
-                    {"entity", detailed_entity->state}
+                    {"component", ("mode_bt" + std::to_string(component_id - 15)).c_str()},
+                    {"entity", detailed_entity->state.c_str()}
                   });
                   break;
               }
