@@ -2,10 +2,12 @@
 """Break the flash usage of an ESPHome build down by archive and by file.
 
 Run in the build job, right after the build: finds the build's linker map and
-appends to the job summary the largest archives (libraries, ESPHome components)
-and the largest object files, as reported by Espressif's esp-idf-size
-(pinned in .github/requirements-esp-idf-size.txt). It shows where flash goes,
-so size work targets the real contributors.
+appends to the job summary the largest archives (libraries, ESPHome components),
+the largest object files and the largest symbols of libsrc.a (where ESPHome,
+this component and the code generated from the YAML lambdas are linked), as
+reported by Espressif's esp-idf-size (pinned in
+.github/requirements-esp-idf-size.txt). It shows where flash goes, so size work
+targets the real contributors.
 
 Informational only: it never fails the job, also when the map cannot be found
 or read (e.g. builds whose map esp-idf-size does not understand). The tables
@@ -36,19 +38,19 @@ def find_map(search_dir):
     return max(maps, key=lambda path: path.stat().st_mtime) if maps else None
 
 
-def run_size(map_path, option):
+def run_size(map_path, options):
     """Text table from esp-idf-size, or None when it fails."""
     env = dict(os.environ, COLUMNS="160", NO_COLOR="1", TERM="dumb")
     # A fixed argument list, no shell: the map path is a file found by the script, passed as a single argument
-    command = [sys.executable, "-m", "esp_idf_size", "--format", "table", option, str(map_path)]
+    command = [sys.executable, "-m", "esp_idf_size", "--format", "table", *options, str(map_path)]
     try:
         result = subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
             command, capture_output=True, text=True, timeout=TIMEOUT_S, env=env, check=False)
     except (OSError, subprocess.TimeoutExpired) as error:
-        print(f"esp-idf-size {option} failed: {error}")
+        print(f"esp-idf-size {' '.join(options)} failed: {error}")
         return None
     if result.returncode != 0 or not result.stdout.strip():
-        print(f"esp-idf-size {option} failed ({result.returncode}): {result.stderr.strip()[:500]}")
+        print(f"esp-idf-size {' '.join(options)} failed ({result.returncode}): {result.stderr.strip()[:500]}")
         return None
     return result.stdout
 
@@ -77,8 +79,10 @@ def main():
         lines.append("No linker map found.")
     else:
         print(f"Linker map: {map_path}")
-        for option, title in (("--archives", "By archive"), ("--files", "By file")):
-            table = run_size(map_path, option)
+        for options, title in ((("--archives",), "By archive"), (("--files",), "By file"),
+                               (("--archive-details", "libsrc.a"),
+                                "By symbol in libsrc.a (ESPHome, this component and the YAML lambdas)")):
+            table = run_size(map_path, options)
             if table is None:
                 lines += [f"{title}: not available.", ""]
                 continue

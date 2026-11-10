@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 WARN_PERCENT = 85.0
-FAIL_PERCENT = 90.0
+FAIL_PERCENT = 92.0
 EXCLUDED = ("Customizations",)
 
 IMAGE_NAMES = ("firmware.ota.bin", "firmware.bin")

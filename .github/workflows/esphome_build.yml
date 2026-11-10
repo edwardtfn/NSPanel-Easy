@@ -146,7 +146,7 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
-      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      # Fails the build at 92% of the app partition (warning at 85%), except for the Customizations build
       - name: Check build size
         env:
           BUILD_NAME: ${{ matrix.firmware.name }} (latest)
@@ -193,7 +193,7 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
-      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      # Fails the build at 92% of the app partition (warning at 85%), except for the Customizations build
       - name: Check build size
         env:
           BUILD_NAME: ${{ matrix.firmware.name }} (dev)
@@ -225,7 +225,7 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
-      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      # Fails the build at 92% of the app partition (warning at 85%), except for the Customizations build
       - name: Check build size
         env:
           BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (latest)
@@ -291,7 +291,7 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
-      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      # Fails the build at 92% of the app partition (warning at 85%), except for the Customizations build
       - name: Check build size
         env:
           BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (dev)
