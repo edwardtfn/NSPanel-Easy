@@ -4776,7 +4776,10 @@ blueprint:
               max: 60000
               unit_of_measurement: milliseconds
         media_player_update_delay:
-          name: Media player - Delay (msec) after entity updade call?
+          name: Media player - Delay after entity update call
+          description: >
+            Time (msec) to wait after asking Home Assistant to refresh the media player entity, before sending its
+            state to the panel. Gives polled integrations (Spotify, Sonos, etc.) time to report the refreshed state.
           default: 500
           selector:
             number:
@@ -10338,11 +10341,15 @@ actions:
                                 ##### The panel renders the page from a snapshot of the entity (#636) #####
                                 # Polled integrations (Spotify, Sonos, etc.) only refresh the entity when asked: as the page opens,
                                 # and then at each media player update interval without a change (not after each change of the entity)
-                                - if: >-
-                                    {{
-                                      (repeat.index == 1 or refresh_settled) and
-                                      entity_id is string and entity_id is match "media_player."
-                                    }}
+                                - variables:
+                                    media_player_poll: >-
+                                      {{
+                                        (repeat.index == 1 or refresh_settled) and
+                                        entity_id is string and entity_id is match "media_player." and
+                                        states[entity_id] is not none
+                                      }}
+                                    media_player_stamp: '{{ states[entity_id].last_updated | string if media_player_poll else "" }}'
+                                - if: '{{ media_player_poll }}'
                                   then:
                                     - action: homeassistant.update_entity
                                       data:
@@ -10350,24 +10357,32 @@ actions:
                                       continue_on_error: true
                                     - delay:
                                         milliseconds: '{{ media_player_update_delay }}'
-                                - variables:
-                                    # Entities shown on the page, by role
-                                    snapshot_roles: '{{ {"main": entity_id} }}'
-                                    # Attributes each domain sends in a snapshot; plain lists, not templates
-                                    snapshot_attributes:
-                                      media_player:
-                                        - supported_features
-                                        - mass_player_type
-                                        - is_volume_muted
-                                        - volume_level
-                                        - media_title
-                                        - media_artist
-                                        - media_duration
-                                        - media_position
-                                        - media_position_updated_at
-                                        - icon
-                                        - device_class
-                                - *send_entity_snapshot
+                                # A poll that brought nothing new is not sent: the panel already shows it (and moves the position
+                                # of a playing media forward itself); the page opening is always sent
+                                - if: >-
+                                    {{
+                                      repeat.index == 1 or not media_player_poll or states[entity_id] is none or
+                                      states[entity_id].last_updated | string != media_player_stamp
+                                    }}
+                                  then:
+                                    - variables:
+                                        # Entities shown on the page, by role
+                                        snapshot_roles: '{{ {"main": entity_id} }}'
+                                        # Attributes each domain sends in a snapshot; plain lists, not templates
+                                        snapshot_attributes:
+                                          media_player:
+                                            - supported_features
+                                            - mass_player_type
+                                            - is_volume_muted
+                                            - volume_level
+                                            - media_title
+                                            - media_artist
+                                            - media_duration
+                                            - media_position
+                                            - media_position_updated_at
+                                            - icon
+                                            - device_class
+                                    - *send_entity_snapshot
 
                             - alias: Alarm settings page
                               conditions:
