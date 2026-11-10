@@ -65,6 +65,51 @@ script:
             } // endif key is a position
           } // endif page == "cover"
 
+  # Renders the cover page from the Blueprint's entity snapshot (#636): the position and tilt on every
+  # snapshot; when the page opens, also the title and icon, the open and close icons, which sliders show,
+  # and the battery (from the battery sensor the Blueprint found, role "battery", when the cover has no
+  # battery attribute), as the Blueprint wrote them.
+  - id: !extend entity_snapshot_received
+    then:
+      - lambda: |-
+          if (entity_snapshot.page != "cover") return;
+          const SnapshotEntity *entity = entity_snapshot.find("main");
+          if (entity == nullptr) {
+            ESP_LOGW("${TAG_PAGE_COVER}", "Snapshot without a main entity, ignored");
+            return;
+          }  // if (no main entity)
+          blueprint_setting_received();
+          const CoverView view = cover_view(*entity, entity_snapshot.find("battery"));
+          const char *unit_space = entity_snapshot.compact_unit_display ? "" : " ";
+          if (view.position >= 0) {
+            // Two position sliders: one next to the tilt slider, one centered; only one is visible
+            disp1->send_command_printf("coverslider.val=%d", view.position);
+            disp1->send_command_printf("cover_value.txt=\"%d%s%%\"", view.position, unit_space);
+            disp1->send_command_printf("coverslider2.val=%d", view.position);
+            disp1->send_command_printf("cover_value_2.txt=\"%d%s%%\"", view.position, unit_space);
+          }  // if (position)
+          if (view.tilt >= 0) {
+            disp1->send_command_printf("tiltslider.val=%d", view.tilt);
+            disp1->send_command_printf("tilt_value.txt=\"%d%s%%\"", view.tilt, unit_space);
+          }  // if (tilt)
+          if (!entity_snapshot.constructor) return;
+
+          details_render_title(*entity);
+          disp1->send_command_printf("cover_open.txt=\"%s\"", view.icon_open);
+          disp1->send_command_printf("cover_close.txt=\"%s\"", view.icon_close);
+          // `vis` is not sticky across page loads, so set it both ways every time
+          for (const char *component : {"coverslider", "cover_value", "tiltslider", "tilt_value"}) {
+            disp1->send_command_printf("vis %s,%d", component, view.tilt_available ? 1 : 0);
+          }  // for each position-and-tilt component
+          for (const char *component : {"coverslider2", "cover_value_2"}) {
+            disp1->send_command_printf("vis %s,%d", component, view.tilt_available ? 0 : 1);
+          }  // for each centered-slider component
+          if (view.battery >= 0) {
+            disp1->send_command_printf("battery_value.txt=\"%d%s%%\"", view.battery, unit_space);
+            disp1->send_command_printf("battery_icon.txt=\"%s\"", view.battery_icon);
+            disp1->send_command("battery_icon.pco=52857");  // nextion.color.grey_super_light
+          }  // if (battery)
+
   - id: !extend reset_globals
     then:
       - lambda: |-
