@@ -12,7 +12,6 @@ This document provides details on custom actions designed for integration with H
     Sends the MDI icon names, so the panel resolves icons given by name.
   - [Button Action (`button`)](#button-action-button): Configures properties and state of buttons on a specified button page.
   - [Buttons Setup Action (`buttons_setup`)](api_subscribe.md#button-pages): Sends the settings of a button page that the panel draws itself.
-  - [Command Action (`command`) - DEPRECATED](#command-action-command): Sends a custom command directly to the display.
   - [Component Color Action (`component_color`)](#component-color-action-component_color): Changes the foreground color of a specified component on the display.
   - [Component Text List Action (`component_text_list`)](#component-text-list-action-component_text_list): Updates the text of a specified component on the display using a list of values.
   - [Component Value Action (`component_val`)](#component-value-action-component_val): Updates the value of a specified component on the display.
@@ -74,7 +73,6 @@ You can look up the action names available on your Home Assistant instance under
 | [`api_subscribe_icon_names`](api_subscribe.md#api_subscribe_icon_names) | [API Subscribe Icon Names Action](api_subscribe.md#api_subscribe_icon_names) | Sends the MDI icon names, so the panel resolves icons given by name. |
 | [`button`](#button-action-button) | [Button Action](#button-action-button) | Configures properties and state of buttons on a specified button page. |
 | [`buttons_setup`](api_subscribe.md#button-pages) | [Buttons Setup Action](api_subscribe.md#button-pages) | Sends the settings of a button page that the panel draws itself. |
-| [`command`](#command-action-command) | [Command Action](#command-action-command) | Sends a custom command directly to the display. |
 | [`component_color`](#component-color-action-component_color) | [Component Color Action](#component-color-action-component_color) | Changes the foreground color of a specified component on the display. |
 | [`component_text_list`](#component-text-list-action-component_text_list) | [Component Text List Action](#component-text-list-action-component_text_list) | Updates the text of a specified component on the display using a list of values. |
 | [`component_val`](#component-value-action-component_val) | [Component Value Action](#component-value-action-component_val) | Updates the value of a specified component on the display. |
@@ -158,35 +156,6 @@ data:
 > [!NOTE]
 > Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
 > This action dynamically updates the specified button's properties to match the provided parameters.
-
-### Command Action: `command`
-
-> [!IMPORTANT]
-> This command is deprecated and will be removed soon.
-
-Sends a custom command directly to the display, enabling direct interaction and dynamic content updates.
-
-**Usage:**
-This action is particularly useful for advanced customizations and direct display manipulations,
-such as showing messages, updating statuses, or any other display-centric commands.
-
-**Parameters:**
-
-- `cmd` (string): The command string to be sent to the display.
-Please refer to [The Nextion Instruction Set](https://nextion.tech/instruction-set/) for a comprehensive list of commands supported.
-
-**Home Assistant Example:**
-
-```yaml
-action: esphome.<your_panel_name>_command
-data:
-  cmd: "page home"  # Go to page "Home"
-```
-
-> [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
->
-> Ensure the command string (`cmd`) is properly formatted according to your display's command processing capabilities.
 
 ### Component Color Action: `component_color`
 
@@ -276,7 +245,8 @@ Also used by page modules that store list-shaped data in memory (e.g. the option
 > Some `mem` targets are provided by the core packages and are therefore always available:
 >
 > - `command` — sends each non-empty element of `txt_list` to the display as a raw Nextion command,
->   in the order given (provided by `nspanel_esphome_hw_display.yaml`, part of `nspanel_esphome_core.yaml`)
+>   in the order given (provided by `nspanel_esphome_hw_display.yaml`, part of `nspanel_esphome_core.yaml`).
+>   This replaces the former `command` action, e.g. `txt_list: ["page home"]` opens the home page.
 > - `details_overlap` — sets the title and icon of the next entity details page opened with
 >   [`entity_details_show`](#entity-details-show-action-entity_details_show).
 >   `txt_list` is `[entity, title, icon]`, where `entity` must match the entity passed to `entity_details_show`,

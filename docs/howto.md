@@ -230,13 +230,17 @@ The following action enables this functionality:
 
 ### Basic Pages
 
-To open a specific page, you can utilize the `esphome.xxxxxx_command` action.
+To open a specific page, send the Nextion `page` command with the `esphome.xxxxx_component_text_list` action,
+targeting the `command` memory variable.
 Here's an example that demonstrates how to open the `home` page:
 
 ```yaml
-action: esphome.xxxxx_command
+action: esphome.xxxxx_component_text_list
 data:
-  cmd: page home
+  page: mem
+  id: command
+  txt_list:
+    - page home
 ```
 
 Currently, the following pages can be accessed using this method:
@@ -257,13 +261,16 @@ Currently, the following pages can be accessed using this method:
 For instance, to directly navigate to button page 2, replace `home` in the command with `buttonpage02`:
 
 ```yaml
-action: esphome.xxxxx_command
+action: esphome.xxxxx_component_text_list
 data:
-  cmd: page buttonpage02
+  page: mem
+  id: command
+  txt_list:
+    - page buttonpage02
 ```
 
 > [!NOTE]
-> For more details about this action call, please refer to our [API documentation](api.md#command-action-command).
+> For more details about this action call, please refer to our [API documentation](api.md#component-text-list-action-component_text_list).
 
 ### Entity-Specific Pages
 
