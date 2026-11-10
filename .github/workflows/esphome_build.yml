@@ -55,6 +55,7 @@ jobs:
             prebuilt/wall_display*.yaml
             .github/workflows/esphome_build.yml
             .github/requirements.txt
+            .github/requirements-esp-idf-size.txt
             .rules/yamllint.yml
             .test/*.yaml
             **/*.h
@@ -145,13 +146,26 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
-      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      # Fails the build at 92% of the app partition (warning at 85%), except for the Customizations build
       - name: Check build size
         env:
           BUILD_NAME: ${{ matrix.firmware.name }} (latest)
           YAML_FILE: ${{ matrix.firmware.yaml-file }}
         run: |
           python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
+      # Informational: where the flash goes, by archive and by file, in the job summary (never fails)
+      - name: Flash breakdown
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} (latest)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        # A virtual environment: the runner's system Python is externally managed (PEP 668)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/esp-idf-size"
+          "$RUNNER_TEMP/esp-idf-size/bin/pip" install --quiet -r .github/requirements-esp-idf-size.txt
+          "$RUNNER_TEMP/esp-idf-size/bin/python" .github/scripts/esphome_size_breakdown.py --name "$BUILD_NAME" \
             --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
 
   # ===========================================================================
@@ -179,7 +193,7 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
-      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      # Fails the build at 92% of the app partition (warning at 85%), except for the Customizations build
       - name: Check build size
         env:
           BUILD_NAME: ${{ matrix.firmware.name }} (dev)
@@ -211,13 +225,26 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
-      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      # Fails the build at 92% of the app partition (warning at 85%), except for the Customizations build
       - name: Check build size
         env:
           BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (latest)
           YAML_FILE: ${{ matrix.firmware.yaml-file }}
         run: |
           python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
+      # Informational: where the flash goes, by archive and by file, in the job summary (never fails)
+      - name: Flash breakdown
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (latest)
+          YAML_FILE: ${{ matrix.firmware.yaml-file }}
+        # A virtual environment: the runner's system Python is externally managed (PEP 668)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/esp-idf-size"
+          "$RUNNER_TEMP/esp-idf-size/bin/pip" install --quiet -r .github/requirements-esp-idf-size.txt
+          "$RUNNER_TEMP/esp-idf-size/bin/python" .github/scripts/esphome_size_breakdown.py --name "$BUILD_NAME" \
             --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
       - name: Verify compiled output
         run: |
@@ -264,7 +291,7 @@ jobs:
           substitutions: |
             ref_name=${{ env.REF_NAME }}
             ref_url=${{ env.REF_URL }}
-      # Fails the build at 90% of the app partition (warning at 85%), except for the Customizations build
+      # Fails the build at 92% of the app partition (warning at 85%), except for the Customizations build
       - name: Check build size
         env:
           BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (dev)
