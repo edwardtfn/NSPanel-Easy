@@ -42,6 +42,8 @@ script:
                 ESP_LOGW("${TAG_PAGE_COVER}", "Bad %s: %s", key.c_str(), value.c_str());
                 return;
               }
+              // Shown on the page until the cover gets there (see cover_position_to_show)
+              (key == "position" ? cover_pending_position : cover_pending_tilt) = CoverPending{static_cast<int>(pos), false};
               const std::string pos_str = std::to_string(pos);
               ESP_LOGV("${TAG_PAGE_COVER}", "Setting %s: %s", key.c_str(), pos_str.c_str());
 
@@ -57,6 +59,9 @@ script:
               });
             } else {
               ESP_LOGV("${TAG_PAGE_COVER}", "Executing action: %s", key.c_str());
+              // Open, close or stop: a new request, so the page shows what the cover reports again
+              cover_pending_position = CoverPending{};
+              cover_pending_tilt = CoverPending{};
               const std::string action = "cover." + key;
               fire_ha_event("action_call", {
                 {"action", action.c_str()},
@@ -81,17 +86,32 @@ script:
           blueprint_setting_received();
           const CoverView view = cover_view(*entity, entity_snapshot.find("battery"));
           const char *unit_space = entity_snapshot.compact_unit_display ? "" : " ";
-          if (view.position >= 0) {
+          // A position asked for on the page stays on screen until the cover gets there, so the slider does not
+          // go back to the old position and then step through the intermediate ones
+          const bool clear_pending = entity_snapshot.constructor || entity_snapshot.settled;
+          if (entity_snapshot.constructor) {
+            cover_shown_position = -1;
+            cover_shown_tilt = -1;
+          }  // if (page opened)
+          const int position = cover_position_to_show(cover_pending_position, view.position, entity->state, clear_pending);
+          const int tilt = cover_position_to_show(cover_pending_tilt, view.tilt, entity->state, clear_pending);
+          // Only changed values, and only to the visible slider: each write redraws the slider
+          if (position >= 0 && position != cover_shown_position) {
+            cover_shown_position = position;
             // Two position sliders: one next to the tilt slider, one centered; only one is visible
-            disp1->send_command_printf("coverslider.val=%d", view.position);
-            disp1->send_command_printf("cover_value.txt=\"%d%s%%\"", view.position, unit_space);
-            disp1->send_command_printf("coverslider2.val=%d", view.position);
-            disp1->send_command_printf("cover_value_2.txt=\"%d%s%%\"", view.position, unit_space);
-          }  // if (position)
-          if (view.tilt >= 0) {
-            disp1->send_command_printf("tiltslider.val=%d", view.tilt);
-            disp1->send_command_printf("tilt_value.txt=\"%d%s%%\"", view.tilt, unit_space);
-          }  // if (tilt)
+            if (view.tilt_available) {
+              disp1->send_command_printf("coverslider.val=%d", position);
+              disp1->send_command_printf("cover_value.txt=\"%d%s%%\"", position, unit_space);
+            } else {
+              disp1->send_command_printf("coverslider2.val=%d", position);
+              disp1->send_command_printf("cover_value_2.txt=\"%d%s%%\"", position, unit_space);
+            }  // if (view.tilt_available)
+          }  // if (position changed)
+          if (view.tilt_available && tilt >= 0 && tilt != cover_shown_tilt) {
+            cover_shown_tilt = tilt;
+            disp1->send_command_printf("tiltslider.val=%d", tilt);
+            disp1->send_command_printf("tilt_value.txt=\"%d%s%%\"", tilt, unit_space);
+          }  // if (tilt changed)
           if (!entity_snapshot.constructor) return;
 
           details_render_title(*entity);
@@ -115,5 +135,8 @@ script:
       - lambda: |-
           if (new_page_id == get_page_id("cover")) {
             display_entity_keep = true;
-          }
+            return;
+          }  // if (cover page)
+          cover_pending_position = CoverPending{};
+          cover_pending_tilt = CoverPending{};
 ...

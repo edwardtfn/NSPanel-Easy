@@ -16,6 +16,11 @@
 
 namespace esphome::nspanel_easy {
 
+CoverPending cover_pending_position;
+CoverPending cover_pending_tilt;
+int cover_shown_position = -1;
+int cover_shown_tilt = -1;
+
 /**
  * @brief Parse a whole text as a finite number, rounded.
  *
@@ -77,6 +82,23 @@ CoverView cover_view(const SnapshotEntity &entity, const SnapshotEntity *battery
     view.battery = -1;
   }
   return view;
+}
+
+int cover_position_to_show(CoverPending &pending, int reported, const std::string &state, bool clear) {
+  if (pending.target < 0) {
+    return reported;
+  }  // if (nothing pending)
+  const bool moving = state == "opening" || state == "closing";
+  // Unknown or unavailable (e.g. a short connection loss) says nothing about the movement: the request is kept
+  const bool stopped = state == "open" || state == "closed";
+  if (moving) {
+    pending.moved = true;
+  }  // if (moving)
+  if (clear || reported == pending.target || (pending.moved && stopped)) {
+    pending = CoverPending{};
+    return reported;
+  }  // if (request done)
+  return pending.target;
 }
 
 }  // namespace esphome::nspanel_easy
