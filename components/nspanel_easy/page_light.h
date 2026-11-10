@@ -29,8 +29,10 @@ struct LightFeatures {
 /**
  * @brief What a light supports, as the Blueprint worked it out.
  *
- * From `supported_features`, `supported_color_modes` and the attributes the
- * light reports. As in Home Assistant, every colour mode other than on/off also
+ * From `supported_features`, `supported_color_modes` and the brightness and
+ * colour temperature the light reports. Colour support comes only from the
+ * features and colour modes: `rgb_color` is also reported by colour
+ * temperature only lights. As in Home Assistant, every colour mode other than on/off also
  * supports brightness, which the Blueprint detected from the `brightness`
  * attribute being present (the snapshot leaves out empty attributes).
  *

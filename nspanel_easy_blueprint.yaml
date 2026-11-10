@@ -10248,7 +10248,6 @@ actions:
                                         - color_temp_kelvin
                                         - min_color_temp_kelvin
                                         - max_color_temp_kelvin
-                                        - rgb_color
                                         - effect
                                         - effect_list
                                         - icon

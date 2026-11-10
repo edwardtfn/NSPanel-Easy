@@ -51,8 +51,9 @@ LightFeatures light_features(const SnapshotEntity &entity) {
                         (light_number(entity.attribute("brightness"), number) && number >= 0.0f);
   features.color_temp = (supported & 2) != 0 || has_mode({"color_temp"}) ||
                         (light_number(entity.attribute("color_temp_kelvin"), number) && number >= 0.0f);
-  features.color =
-      (supported & 16) != 0 || has_mode({"hs", "xy", "rgb", "rgbw", "rgbww"}) || entity.list("rgb_color") != nullptr;
+  // Not from rgb_color: Home Assistant reports it for every light able to show a colour, also colour
+  // temperature only lights (as a tuple, which the Blueprint's `is list` test never matched)
+  features.color = (supported & 16) != 0 || has_mode({"hs", "xy", "rgb", "rgbw", "rgbww"});
   features.effects = (supported & 4) != 0;
   return features;
 }
