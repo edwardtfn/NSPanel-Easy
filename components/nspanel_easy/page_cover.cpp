@@ -89,10 +89,12 @@ int cover_position_to_show(CoverPending &pending, int reported, const std::strin
     return reported;
   }  // if (nothing pending)
   const bool moving = state == "opening" || state == "closing";
+  // Unknown or unavailable (e.g. a short connection loss) says nothing about the movement: the request is kept
+  const bool stopped = state == "open" || state == "closed";
   if (moving) {
     pending.moved = true;
   }  // if (moving)
-  if (clear || reported == pending.target || (pending.moved && !moving)) {
+  if (clear || reported == pending.target || (pending.moved && stopped)) {
     pending = CoverPending{};
     return reported;
   }  // if (request done)

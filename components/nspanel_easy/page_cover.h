@@ -55,7 +55,8 @@ extern int cover_shown_tilt;                 ///< Tilt on screen; -1 when not wr
  * Covers keep reporting the old position for a while after a request, and then the
  * intermediate positions while they move. Showing those would move the slider back to the
  * old position and then step by step to the new one, so the requested position is shown
- * instead, until the cover reports it, stops after moving, or the request is cleared.
+ * instead, until the cover reports it, stops (open or closed) after moving, or the request is
+ * cleared. An unknown or unavailable state keeps the request.
  *
  * @param pending The request; cleared when it is done.
  * @param reported Position reported by the cover; -1 when it reports none.
