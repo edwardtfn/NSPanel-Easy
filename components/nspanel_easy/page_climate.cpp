@@ -10,9 +10,10 @@
 #include <cstring>
 
 #include "base.h"
-#include "pages.h"                 // For get_page_id
+#include "esphome/components/nextion/nextion.h"
 #include "esphome/core/helpers.h"  // For parse_number
 #include "esphome/core/log.h"
+#include "pages.h"  // For get_page_id
 
 #ifdef NSPANEL_EASY_PAGE_BUTTONS
 #include "page_buttons.h"  // For button_draw
