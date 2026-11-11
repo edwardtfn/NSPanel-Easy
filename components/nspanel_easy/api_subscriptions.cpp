@@ -198,6 +198,33 @@ static ESPPreferenceObject sub_chunk_pref(uint16_t chunk) {
 }
 
 /**
+ * @brief Whether the header stored in NVS is the given one.
+ *
+ * Read back after a sync, as its result covers every queued preference: another
+ * component's failed write does not mean that this header was not written.
+ *
+ * @param expected Header that should be stored.
+ * @return true when the stored header matches.
+ */
+static bool sub_header_stored(const SubHeader &expected) {
+  SubHeader stored{};
+  return sub_header_pref().load(&stored) && memcmp(&stored, &expected, sizeof(SubHeader)) == 0;
+}
+
+/**
+ * @brief Whether a chunk stored in NVS is the given one.
+ *
+ * @param chunk Chunk index.
+ * @param expected Chunk that should be stored.
+ * @return true when the stored chunk matches.
+ * @see sub_header_stored()
+ */
+static bool sub_chunk_stored(uint16_t chunk, const SubChunk &expected) {
+  SubChunk stored{};
+  return sub_chunk_pref(chunk).load(&stored) && memcmp(&stored, &expected, sizeof(SubChunk)) == 0;
+}
+
+/**
  * @brief Copy a string into a fixed buffer, always null-terminating.
  *
  * @param dest Destination buffer.
@@ -855,52 +882,64 @@ bool sub_persist(bool verified) {
   // save() only queues a write, and sync() writes every queued item on its own:
   // one item can fail while the others are written. So each phase is flushed
   // before the next one starts, or the real header could reach NVS while a
-  // chunk did not (#374).
+  // chunk did not (#374). The result of sync() covers every queued preference,
+  // also those of other components, so each phase is confirmed by reading back
+  // what was stored.
   const SubHeader invalid{SUB_FORMAT_VERSION, SUB_ENTITY_LEN, 0, 0, sub_unverified, {0, 0, 0}};
-  if (!sub_header_pref().save(&invalid) || !global_preferences->sync()) {
+  sub_header_pref().save(&invalid);
+  global_preferences->sync();
+  if (!sub_header_stored(invalid)) {
     ESP_LOGE(TAG, "Could not invalidate the stored header; leaving the saved set untouched");
-    return false;  // Nothing was written, so the previous set is still coherent
+    return false;  // The header was not written, so the previous set is still coherent
   }
 
   const uint16_t chunks = (sub_staged + SUB_CHUNK_SIZE - 1) / SUB_CHUNK_SIZE;
   bool ok = false;
-  uint32_t checksum = SUB_CHECKSUM_INIT;
+
+  // One chunk of the staged set, as it is stored; unused slots stay zeroed
+  const auto staged_chunk = [](uint16_t chunk) {
+    SubChunk data{};
+    for (uint16_t slot = 0; slot < SUB_CHUNK_SIZE; ++slot) {
+      const uint16_t idx = (chunk * SUB_CHUNK_SIZE) + slot;
+      if (idx < sub_staged) {
+        data.bindings[slot] = sub_staging[idx];
+      }
+    }  // for each slot
+    return data;
+  };
 
   // Written twice at most: a first sync writes what fits, which can release the
   // space that the rewrite of an existing key needs before its old copy can be
   // dropped. Chunks already written are then found unchanged and skipped.
   for (uint8_t attempt = 0; attempt < 2 && !ok; ++attempt) {
-    ok = true;
-    checksum = SUB_CHECKSUM_INIT;
     for (uint16_t chunk = 0; chunk < chunks; ++chunk) {
-      SubChunk data{};
-      for (uint16_t slot = 0; slot < SUB_CHUNK_SIZE; ++slot) {
-        const uint16_t idx = (chunk * SUB_CHUNK_SIZE) + slot;
-        if (idx < sub_staged) {
-          data.bindings[slot] = sub_staging[idx];
-          checksum = sub_checksum(checksum, data.bindings[slot]);
-        }
-      }
-      if (!sub_chunk_pref(chunk).save(&data)) {
-        ok = false;
-        break;
-      }
+      const SubChunk data = staged_chunk(chunk);
+      sub_chunk_pref(chunk).save(&data);
     }  // for each chunk
     // Every chunk must reach NVS before the header describes them
-    if (!global_preferences->sync()) {
-      ok = false;
-    }
+    global_preferences->sync();
+    ok = true;
+    for (uint16_t chunk = 0; chunk < chunks && ok; ++chunk) {
+      ok = sub_chunk_stored(chunk, staged_chunk(chunk));
+    }  // for each chunk read back
     if (!ok && attempt == 0) {
       ESP_LOGW(TAG, "The binding chunks failed to save; retrying once");
     }
   }  // for each attempt
+
+  uint32_t checksum = SUB_CHECKSUM_INIT;
+  for (uint16_t idx = 0; idx < sub_staged; ++idx) {
+    checksum = sub_checksum(checksum, sub_staging[idx]);
+  }  // for each staged binding
 
   uint8_t committed_unverified = sub_unverified;
   if (ok) {
     // The header stays empty until here, so a partial set is never loaded
     committed_unverified = verified ? 0 : static_cast<uint8_t>(sub_unverified + 1);
     const SubHeader header{SUB_FORMAT_VERSION, SUB_ENTITY_LEN, sub_staged, checksum, committed_unverified, {0, 0, 0}};
-    ok = sub_header_pref().save(&header) && global_preferences->sync();
+    sub_header_pref().save(&header);
+    global_preferences->sync();
+    ok = sub_header_stored(header);
   }
 
   if (ok) {
@@ -912,8 +951,9 @@ bool sub_persist(bool verified) {
 
   if (!ok) {
     // Never schedule a restart here. A restart on a write that cannot succeed
-    // is an unrecoverable boot loop. The panel keeps the previously loaded
-    // bindings instead: wrong, but stable and diagnosable.
+    // is an unrecoverable boot loop. The panel keeps running the previously
+    // loaded bindings instead, until its next reboot: wrong, but stable and
+    // diagnosable.
     ESP_LOGE(TAG,
              "Could not persist %" PRIu16 " binding(s); the stored set is now empty and the panel will "
              "subscribe to nothing after the next reboot. This usually means the NVS partition is full or "

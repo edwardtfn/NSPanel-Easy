@@ -535,7 +535,9 @@ panel then stores them and restarts once.
 ### `Could not persist` in the log
 
 The bindings could not be written to NVS, so the panel is still running the set it loaded at boot
-and your changes have not taken effect. The NVS partition can be full or fragmented; a factory reset of
+and your changes have not taken effect. That set is no longer stored: after the next reboot the panel
+starts without bindings, until the Blueprint sends them again and they can be stored.
+The NVS partition can be full or fragmented; a factory reset of
 the panel clears it. The entry counts in `dump_config` show whether the partition is genuinely too
 small, which happens on panels first flashed with much older firmware — those need to be flashed
 over USB once.
