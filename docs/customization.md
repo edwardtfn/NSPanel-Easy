@@ -288,6 +288,9 @@ While Home Assistant is disconnected, the panel does not open pages that need it
 
 The pages that work without Home Assistant are the home page, settings, QR code, and the climate page when it shows the embedded thermostat.
 
+After a restart without Home Assistant, the panel waits about a minute for it and then completes its boot on its own, with the settings it has stored.
+It asks the Blueprint for its settings again as soon as Home Assistant is connected.
+
 You can also play a tone when this happens. It is disabled by default:
 
 ```yaml

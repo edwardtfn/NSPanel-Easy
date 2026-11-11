@@ -252,6 +252,44 @@ extern uint32_t blueprint_last_setting_ms;
 inline void blueprint_setting_received() { blueprint_last_setting_ms = App.get_loop_component_start_time(); }
 
 /**
+ * @brief Loop time at which the boot sequence started waiting for the Blueprint settings.
+ *
+ * @see blueprint_wait_start()
+ * @see blueprint_wait_expired()
+ */
+extern uint32_t blueprint_wait_started_ms;
+
+/**
+ * @brief Record that the boot sequence starts waiting for the Blueprint settings now.
+ */
+inline void blueprint_wait_start() { blueprint_wait_started_ms = App.get_loop_component_start_time(); }
+
+/**
+ * @brief Check if the boot sequence should stop waiting for the Blueprint settings.
+ *
+ * The boot sequence must complete also when the Blueprint cannot answer, so the panel keeps
+ * working on its own with the settings it has stored (#516):
+ * - Without Home Assistant there is no Blueprint to wait for.
+ * - With Home Assistant connected, the wait ends after `timeout_ms`, unless settings are still
+ *   arriving: a push in progress on a slow Home Assistant is not a missing Blueprint (#636).
+ *
+ * @param api_connected Whether Home Assistant is connected (with state subscription).
+ * @param timeout_ms Time to wait for the Blueprint while Home Assistant is connected, in milliseconds.
+ * @param quiet_ms Time without any setting from the Blueprint to consider its push as ended, in milliseconds.
+ * @return true when the boot sequence should go on without the Blueprint, false to keep waiting.
+ */
+inline bool blueprint_wait_expired(const bool api_connected, const uint32_t timeout_ms, const uint32_t quiet_ms) {
+  if (!api_connected) {
+    return true;
+  }  // if (!api_connected)
+  const uint32_t now = App.get_loop_component_start_time();
+  if (static_cast<uint32_t>(now - blueprint_wait_started_ms) < timeout_ms) {
+    return false;
+  }  // if still within the timeout
+  return blueprint_last_setting_ms == 0 || static_cast<uint32_t>(now - blueprint_last_setting_ms) >= quiet_ms;
+}
+
+/**
  * @brief Fire a Home Assistant event for NSPanel HA Blueprint
  *
  * Automatically adds device_name, type and, when available, api_version to the event data.
