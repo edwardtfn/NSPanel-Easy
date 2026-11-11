@@ -232,8 +232,8 @@ api:
             // here, and takes its entity from the snapshot.
             const SnapshotEntity *main_entity = entity_snapshot.find("main");
             const std::string &shown_entity = detailed_entity->state;
-            if (main_entity != nullptr and !main_entity->entity_id.empty() and
-                shown_entity.find('.') != std::string::npos and main_entity->entity_id != shown_entity) {
+            if (main_entity != nullptr and shown_entity.find('.') != std::string::npos and
+                main_entity->entity_id != shown_entity) {
               ESP_LOGD("${TAG_API}", "Page '%s' now shows '%s'; snapshot of '%s' ignored", entity_snapshot.page.c_str(),
                        shown_entity.c_str(), main_entity->entity_id.c_str());
               return;
