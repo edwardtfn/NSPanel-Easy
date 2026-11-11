@@ -12,63 +12,10 @@
 ---
 substitutions:
   BUTTON_LONG_PRESS_DELAY: 800ms
-  BUTTON_RENDER_QUEUE_TIMEOUT: 25ms  # Max wait for the Nextion queue to drain before rendering a button
   TAG_PAGE_BUTTONS: nspanel.page.buttons
 
 api:
   actions:
-    # Dynamically configures button properties on a specified page,
-    # enhancing UI interactivity by allowing updates to button appearance and behavior based on given parameters.
-    - action: button
-      variables:
-        page: string          # Identifier of the page where the button is located.
-        id: string            # Unique identifier for the button.
-        state: bool           # Determines the button's state, influencing background and other visual aspects.
-        icon: string          # Icon codepoint from HASwitchPlate Material Design Icons. Example: "\uE6E8" for mdi:lightbulb-on-outline.
-        icon_color: int[]     # RGB color array for the icon.
-        icon_font: int        # Nextion font identifier for the icon, default is 8.
-        bri: string           # Brightness level or other dynamic info to be displayed close to the icon.
-        label: string         # Main text label for the button.
-        is_page_render: bool  # Set to true when called from a full page render, or false for a single button refresh
-        icon_only: bool       # True for single-component buttons (climate custom buttons), which have no `pic`/`bri`/`text` siblings.
-        available: bool       # False when the bound entity reports unavailable; rendering follows the `unavailable_behavior` setting.
-      then:
-        - lambda: |-
-            const uint16_t icon_color_rgb565 = rgbTo565(icon_color);
-
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "Action `button` triggered:");
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  page: %s", page.c_str());
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  id: %s", id.c_str());
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  state: %s", ONOFF(state));
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  icon_color: %" PRIu16, icon_color_rgb565);
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  icon_font: %" PRId32, icon_font);
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  bri: %s", bri.c_str());
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  label: %s", label.c_str());
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  is_page_render: %s", YESNO(is_page_render));
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  icon_only: %s", YESNO(icon_only));
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  available: %s", YESNO(available));
-
-            const uint8_t page_id = get_page_id(page.c_str());
-            if (current_page_id != page_id) {
-              ESP_LOGW("${TAG_PAGE_BUTTONS}", "Skipping button render: page '%s' not active (current: '%s')",
-                                      page.c_str(), page_names[current_page_id]);
-              return;
-            }
-
-            action_button->execute(
-              page_id,
-              id.c_str(),
-              state,
-              icon.c_str(),
-              icon_color_rgb565,
-              static_cast<uint8_t>(icon_font),
-              bri.c_str(),
-              label.c_str(),
-              is_page_render,
-              icon_only,
-              available
-            );
-
     # Settings of one button page, sent by the Blueprint once per session. With subscriptions, the
     # button pages are drawn by the panel itself, from these settings and the bound entities.
     - action: buttons_setup
@@ -92,45 +39,6 @@ esphome:
     - -D NSPANEL_EASY_PAGE_BUTTONS
 
 script:
-  - id: action_button
-    mode: queued
-    max_runs: 24
-    parameters:
-      page_id: uint8_t      # Identifier of the page where the button is located
-      button_id: string     # Unique identifier for the button
-      state: bool           # Determines the button's state, influencing background and other visual aspects
-      icon: string          # Icon codepoint from HASwitchPlate Material Design Icons. Example: "\uE6E8" for mdi:lightbulb-on-outline
-      icon_color: uint16_t  # RGB color (RGB565) for the icon
-      icon_font: uint8_t    # Nextion font identifier for the icon, default is 8
-      bri: string           # Brightness level or other dynamic info to be displayed close to the icon
-      label: string         # Main text label for the button
-      is_page_render: bool  # When true, skips picc calls for off-state buttons (Preinitialize already set them)
-      icon_only: bool       # When true, the button is a single text component holding the glyph (climate custom buttons)
-      available: bool       # When false, the bound entity is unavailable; `unavailable_behavior` decides what that looks like
-    then:
-      # Wait for the Nextion queue to drain before rendering this button.
-      # Workaround for esphome/esphome#19018: with `command_spacing`, a command sent
-      # directly while spacing-deferred entries are still waiting is queued behind
-      # them, and its ack removes an entry that was never sent, so one component
-      # keeps its previous appearance. The timeout keeps a stuck entry from
-      # blocking the render, and a page change ends the wait right away, as the
-      # render below is skipped anyway and the queue may already hold the new
-      # page's commands.
-      - wait_until:
-          condition:
-            lambda: return (current_page_id != page_id) or (disp1->queue_size() == 0);
-          timeout: ${BUTTON_RENDER_QUEUE_TIMEOUT}
-      - lambda: |-
-          // Timeout reached without draining the queue: render anyway, but make it visible
-          const size_t queue_size = disp1->queue_size();
-          if (current_page_id == page_id && queue_size > 0)
-            ESP_LOGD("${TAG_PAGE_BUTTONS}", "Render queue wait timed out (%zu queued), id: %s", queue_size, button_id.c_str());
-
-          // Drawn by the same function as the subscription-driven button pages, so every button
-          // surface follows the same rules
-          button_draw(page_id, button_id.c_str(), state, icon.c_str(), icon_color, icon_font, bri.c_str(),
-                      label.c_str(), is_page_render, icon_only, available, ${LANG_BYTES_PER_CHAR});
-
   ##### Subscription-driven button pages: draws the pending updates #####
   - id: !extend page_change
     then:

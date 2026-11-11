@@ -185,7 +185,7 @@ script:
             if (entity_snapshot.constructor) {
               #ifdef NSPANEL_EASY_PAGE_SELECT
               // The picker pages through up to 32 options, always including the current one
-              const std::vector<std::string> shown = select_picker_options(fan.modes, fan.preset_mode);
+              const std::vector<std::string> shown = popup_select_visible_options(fan.modes, fan.preset_mode);
               #else  // NSPANEL_EASY_PAGE_SELECT
               const std::vector<std::string> shown(fan.modes.begin(), fan.modes.begin() + std::min<size_t>(fan.modes.size(), 32));
               #endif  // NSPANEL_EASY_PAGE_SELECT
