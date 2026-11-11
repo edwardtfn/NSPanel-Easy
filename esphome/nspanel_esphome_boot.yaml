@@ -72,6 +72,7 @@ script:
 
           // Wait for a response from the blueprint
           boot_request_blueprint_settings->execute("start");
+          blueprint_wait_start();  // Once per boot: the wait in the wrap-up shares this timeout
           wait_for_blueprint->execute();
       - script.wait: wait_for_blueprint
       - lambda: |-
@@ -89,6 +90,7 @@ script:
           wait_for_wifi->execute();
           // Without Home Assistant, the API and the Blueprint were already waited for above. Waiting again
           // would only delay a boot that completes with the settings stored on the panel (#516).
+          // With Home Assistant, this wait shares the timeout of the one above, so it ends at once if that expired.
           if (api_server->is_connected_with_state_subscription()) {
             wait_for_blueprint->execute();
           }  // if (api_server->is_connected_with_state_subscription())

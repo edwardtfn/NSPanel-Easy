@@ -261,6 +261,8 @@ extern uint32_t blueprint_wait_started_ms;
 
 /**
  * @brief Record that the boot sequence starts waiting for the Blueprint settings now.
+ *
+ * Called once per boot sequence, before its first wait for the Blueprint.
  */
 inline void blueprint_wait_start() { blueprint_wait_started_ms = App.get_loop_component_start_time(); }
 
@@ -272,6 +274,11 @@ inline void blueprint_wait_start() { blueprint_wait_started_ms = App.get_loop_co
  * - Without Home Assistant there is no Blueprint to wait for.
  * - With Home Assistant connected, the wait ends after `timeout_ms`, unless settings are still
  *   arriving: a push in progress on a slow Home Assistant is not a missing Blueprint (#636).
+ * - Settings that keep arriving extend the wait up to twice `timeout_ms` only, so nothing can
+ *   hold the boot forever.
+ *
+ * The wait is counted from blueprint_wait_start(), which the boot sequence calls once, so waiting
+ * for the Blueprint again later in the same boot does not start a new timeout.
  *
  * @param api_connected Whether Home Assistant is connected (with state subscription).
  * @param timeout_ms Time to wait for the Blueprint while Home Assistant is connected, in milliseconds.
@@ -283,9 +290,13 @@ inline bool blueprint_wait_expired(const bool api_connected, const uint32_t time
     return true;
   }  // if (!api_connected)
   const uint32_t now = App.get_loop_component_start_time();
-  if (static_cast<uint32_t>(now - blueprint_wait_started_ms) < timeout_ms) {
+  const uint32_t waited_ms = now - blueprint_wait_started_ms;
+  if (waited_ms < timeout_ms) {
     return false;
   }  // if still within the timeout
+  if (waited_ms / 2 >= timeout_ms) {
+    return true;
+  }  // if the extension for settings still arriving is also over
   return blueprint_last_setting_ms == 0 || static_cast<uint32_t>(now - blueprint_last_setting_ms) >= quiet_ms;
 }
 

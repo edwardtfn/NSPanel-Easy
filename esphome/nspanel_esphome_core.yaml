@@ -183,13 +183,12 @@ script:  # Scripts
   - id: wait_for_blueprint
     mode: single
     then:
-      - lambda: |-
-          boot_log->execute("Boot", "Waiting for Blueprint");
-          blueprint_wait_start();
+      - lambda: boot_log->execute("Boot", "Waiting for Blueprint");
       - while:
           condition:
             # The wait ends without the Blueprint when Home Assistant is not connected, or when the Blueprint
-            # does not answer in time: the boot then completes with the settings stored on the panel (#516)
+            # does not answer in time: the boot then completes with the settings stored on the panel (#516).
+            # The time is counted from `blueprint_wait_start()`, called by the `boot` script.
             - lambda: |-
                 return (not system_flags.blueprint_ready) and (not is_blueprint_fully_ready()) and
                        (not blueprint_wait_expired(api_server->is_connected_with_state_subscription(),
