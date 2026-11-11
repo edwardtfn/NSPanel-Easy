@@ -15,7 +15,7 @@ substitutions:
   # Select '${version}' (or 'next') when you change the "contract" between ESPHome and Blueprint
   # Versioning workflow will replace this by the new version being generated
   # Prefer '${version}': it is a valid version in development builds, while 'next' fails the firmware's version check
-  min_blueprint_version: ${version}
+  min_blueprint_version: 2026.11.16
 
   # API version (MAJOR.MINOR) provided by this firmware, reported to the Blueprint in every event
   # Keep it quoted: unquoted, YAML reads 1.10 as the number 1.1
