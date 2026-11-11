@@ -104,22 +104,34 @@ struct HwButtonBarArea {
   uint16_t w;  ///< Width
   uint16_t h;  ///< Height
   /**
-   * @brief Whether the bar is vertical (US Landscape model, buttons on the side)
+   * @brief Whether the bar is vertical (US Landscape models, buttons on the side)
    * @return true when the bar is taller than wide (h > w), false otherwise
    */
   constexpr bool is_vertical() const { return h > w; }
+  /**
+   * @brief Whether the display model has a bar for the button
+   * @return false for a model without bars (an empty area), true otherwise
+   */
+  constexpr bool is_shown() const { return w > 0 && h > 0; }
 };
 
 /**
  * @brief Hardware button bar areas, indexed by [display model][button]
  *
- * Display model: 0 = EU, 1 = US Portrait, 2 = US Landscape (display_mode - 1).
+ * Display model (display_mode - 1): 0 = EU, 1 = US Portrait, 2 = US Landscape, 3 = Blank (no bars),
+ * 4 = US Landscape with the buttons on the left.
  * Button: 0 = left, 1 = right.
+ *
+ * The last model is the US Landscape one rotated by 180 degrees, so its bars are the same ones
+ * mirrored on both axes: x = 480 - 467 - 3, and the two buttons swap their vertical positions.
  */
-constexpr HwButtonBarArea HW_BUTTON_BAR_AREAS[3][2] = {
+constexpr uint8_t HW_BUTTON_BAR_MODELS = 5;
+constexpr HwButtonBarArea HW_BUTTON_BAR_AREAS[HW_BUTTON_BAR_MODELS][2] = {
     {{47, 312, 120, 3}, {288, 312, 120, 3}},  // EU
     {{16, 471, 120, 3}, {183, 471, 120, 3}},  // US Portrait
     {{467, 173, 3, 120}, {467, 27, 3, 120}},  // US Landscape
+    {{0, 0, 0, 0}, {0, 0, 0, 0}},             // Blank
+    {{10, 27, 3, 120}, {10, 173, 3, 120}},    // US Landscape, buttons on the left
 };
 
 }  // namespace esphome::nspanel_easy
