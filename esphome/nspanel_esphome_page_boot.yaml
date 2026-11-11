@@ -250,7 +250,7 @@ script:
           if (magic_flag == 0) {
             ESP_LOGW("${TAG_PAGE_BOOT}", "  EEPROM was uninitialized at boot — using hard-coded default");
           }  // if (magic_flag == 0)
-          if (mode > 0 && mode <= ${DISPLAY_MODES.BLANK.ID}) {
+          if (mode > 0 && mode <= display_model->size()) {  // A mode is the position of its option, plus one
             auto call = display_model->make_call();
             call.set_index(mode - 1);
             call.perform();
