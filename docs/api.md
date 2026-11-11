@@ -398,7 +398,7 @@ data:
 ### Entity Snapshot Action: `entity_snapshot`
 
 Sends the state and attributes of the entities shown on an entity details page, and the panel renders the page from them.
-The NSPanel Easy Blueprint uses it for the alarm, button, climate, cover, fan, light, media player, select, switch, timer and vacuum / lawn mower pages;
+The NSPanel Easy Blueprint uses it for the alarm, button, climate, cover, fan, light, media player, select, switch, timer, vacuum / lawn mower and water heater (also humidifier) pages;
 the other entity details pages still receive each text and value from the Blueprint.
 
 **Usage:**
