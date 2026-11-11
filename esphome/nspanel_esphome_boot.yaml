@@ -162,15 +162,28 @@ script:
       - lambda: |-
           if (system_flags.blueprint_ready and step != "display_ack") return;
           static uint32_t last_boot_event_fired = 0;
+          // Last full request (every step but "start", which the Blueprint answers with the version only)
+          static uint32_t last_full_request_fired = 0;
           // Set when a full request (every step but "start") was sent while no client was connected.
           // ESPHome drops such events, and the Blueprint answers "start" with the version only.
           static bool full_request_lost = false;
           const uint32_t now = App.get_loop_component_start_time();
-          // "start" opens the boot sequence and "display_ack" restarts the state replay after an
-          // unexpected display reset, so neither may be dropped. Every other step is a retry and
-          // stays rate-limited to keep a stalled boot from flooding Home Assistant.
+          // "start" opens the boot sequence, so it is never dropped. "display_ack" after the Blueprint settings
+          // were received restarts the state replay after an unexpected display reset, so it is not dropped
+          // either. Every other step is a retry and stays rate-limited to keep a stalled boot from flooding
+          // Home Assistant.
+          const bool display_reset = (step == "display_ack" && system_flags.blueprint_ready);
           if (step != "start" && step != "display_ack" &&
               (uint32_t)(now - last_boot_event_fired) < ${BOOT_EVENT_REPEAT_INTERVAL_MS}) return;
+          // During boot, the display repeats "display_ack" until it is set up (it ignores display_ack=1 before
+          // that). Each one used to start a full push in parallel with the others (#636): once a full request
+          // reached Home Assistant, the repeats wait for the repeat interval. A display reset later in the boot
+          // still requests the settings again after that interval.
+          if (step == "display_ack" && !display_reset && last_full_request_fired != 0 &&
+              (uint32_t)(now - last_full_request_fired) < ${BOOT_EVENT_REPEAT_INTERVAL_MS}) {
+            ESP_LOGD("${TAG_BOOT}", "Display acknowledged again while booting, request skipped");
+            return;
+          }  // if repeated display_ack while booting
           // A retry while the Blueprint is still sending settings would start a second full push in
           // parallel with the one in progress, slowing Home Assistant down and both pushes with it (#636).
           if (step != "start" && step != "display_ack" && blueprint_last_setting_ms != 0 &&
@@ -184,6 +197,7 @@ script:
           last_boot_event_fired = now;
           if (step != "start") {
             if (api_connected) {
+              last_full_request_fired = now;  // Only a request that reached Home Assistant holds the repeats back
               full_request_lost = false;
             } else if (step != "display_ack" or disp1->is_setup()) {
               // Until the display is set up, ESPHome drops display_ack=1 and the display sends display_ack again
@@ -194,6 +208,7 @@ script:
             // A display that is not set up yet sends display_ack again by itself.
             ESP_LOGD("${TAG_BOOT}", "Request blueprint settings again, the full request was lost before the API connected");
             fire_ha_event("boot", {{"step", "display_ack"}});
+            last_full_request_fired = now;
             full_request_lost = false;
           }
 
