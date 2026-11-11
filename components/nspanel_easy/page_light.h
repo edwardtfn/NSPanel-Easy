@@ -15,15 +15,18 @@
 
 namespace esphome::nspanel_easy {
 
-/// @brief What a light lets the page adjust; also the page's features mask (bits 0 to 3).
+/// @brief What a light lets the page adjust; also the page's features mask (bits 0 to 4).
 struct LightFeatures {
   bool brightness{false};  ///< Bit 0: brightness slider
   bool color_temp{false};  ///< Bit 1: colour temperature slider
   bool color{false};       ///< Bit 2: colour wheel
   bool effects{false};     ///< Bit 3: effect picker
+  bool white{false};       ///< Bit 4: white button, for a white mode without colour temperature
 
   /// @brief The features as the page's light_features_mask.
-  int mask() const { return (brightness ? 1 : 0) + (color_temp ? 2 : 0) + (color ? 4 : 0) + (effects ? 8 : 0); }
+  int mask() const {
+    return (brightness ? 1 : 0) + (color_temp ? 2 : 0) + (color ? 4 : 0) + (effects ? 8 : 0) + (white ? 16 : 0);
+  }
 };
 
 /**
