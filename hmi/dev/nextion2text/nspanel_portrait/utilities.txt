@@ -1,0 +1,1359 @@
+Page utilities
+    Attributes
+        ID                 : 0
+        Scope              : local
+        Dragging           : 0
+        Send Component ID  : on press and release
+        Opacity            : 127
+        Width              : 320
+        Effect             : load
+        Effect Priority    : 0
+        Effect Time        : 300
+        Locked             : no
+        Swide up page ID   : disabled
+        Swide down page ID : disabled
+        Swide left page ID : disabled
+        Swide right page ID: disabled
+        Fill               : picture
+        Back. Picture ID   : 0
+    
+    Events
+        Preinitialize Event
+            if(api==0)
+            {
+                page home_page_id
+            }
+            vis 255,0
+            // Page background
+            utilities.pic=pic_background_main
+            // Foreground color: valid on every drawable component.
+            // `group06_line` is the last drawable one - everything after it is the timer
+            // and the `*_line_d` variables, which have neither `pco` nor `picc` and would
+            // answer 0x1A (invalid variable name).
+            for(sys0=1;sys0<=group06_line.id;sys0++)
+            {
+                b[sys0].pco=color_pco_secondary
+            }
+            // Cropped background: only text/button components expose `picc`, so the seven
+            // `*_line` sliders must be left out and each block is handled separately.
+            // Header + home block (button_back .. homeb)
+            for(sys0=1;sys0<home_line.id;sys0++)
+            {
+                b[sys0].picc=pic_background_main
+            }
+            // Grid block (no line)
+            for(sys0=grid_icon.id;sys0<=gridb.id;sys0++)
+            {
+                b[sys0].picc=pic_background_main
+            }
+            // Group blocks: icon, label, value1, value2 (the line/slider is excluded)
+            for(sys0=group01_icon.id;sys0<group01_line.id;sys0++)
+            {
+                b[sys0].picc=pic_background_main
+            }
+            for(sys0=group02_icon.id;sys0<group02_line.id;sys0++)
+            {
+                b[sys0].picc=pic_background_main
+            }
+            for(sys0=group03_icon.id;sys0<group03_line.id;sys0++)
+            {
+                b[sys0].picc=pic_background_main
+            }
+            for(sys0=group04_icon.id;sys0<group04_line.id;sys0++)
+            {
+                b[sys0].picc=pic_background_main
+            }
+            for(sys0=group05_icon.id;sys0<group05_line.id;sys0++)
+            {
+                b[sys0].picc=pic_background_main
+            }
+            for(sys0=group06_icon.id;sys0<group06_line.id;sys0++)
+            {
+                b[sys0].picc=pic_background_main
+            }
+            title_icon.pco=color_pco_main
+            vis title_icon,1
+            title.pco=color_pco_main
+            vis title,1
+            button_back.font=button_back_font
+            button_back.pco=color_pco_navigation
+            button_back.picc2=pic_background_main
+            vis button_back,1
+            dim=brightness
+            sendme
+        
+Variable (int32) home_line_d
+    Attributes
+        ID   : 45
+        Scope: local
+        Value: 4294967295
+    
+Variable (int32) group01_line_d
+    Attributes
+        ID   : 46
+        Scope: local
+        Value: 1
+    
+Variable (int32) group02_line_d
+    Attributes
+        ID   : 47
+        Scope: local
+        Value: 4294967295
+    
+Variable (int32) group03_line_d
+    Attributes
+        ID   : 48
+        Scope: local
+        Value: 1
+    
+Variable (int32) group04_line_d
+    Attributes
+        ID   : 49
+        Scope: local
+        Value: 4294967295
+    
+Variable (int32) group05_line_d
+    Attributes
+        ID   : 50
+        Scope: local
+        Value: 1
+    
+Variable (int32) group06_line_d
+    Attributes
+        ID   : 51
+        Scope: local
+        Value: 4294967295
+    
+Variable (int32) last_component
+    Attributes
+        ID   : 52
+        Scope: local
+        Value: 0
+    
+Text unavailable
+    Attributes
+        ID                  : 2
+        Scope               : local
+        Dragging            : 0
+        Send Component ID   : disabled
+        Opacity             : 127
+        x coordinate        : 318
+        y coordinate        : 478
+        Width               : 2
+        Height              : 2
+        Effect              : load
+        Effect Priority     : 0
+        Effect Time         : 300
+        Fill                : solid color
+        Style               : flat
+        Associated Keyboard : none
+        Font ID             : 0
+        Back. Color         : 0
+        Font Color          : 0
+        Horizontal Alignment: center
+        Vertical Alignment  : center
+        Input Type          : character
+        Text                : 
+        Max. Text Size      : 1
+        Word wrap           : disabled
+        Horizontal Spacing  : 0
+        Vertical Spacing    : 0
+    
+Text title_icon
+    Attributes
+        ID                      : 3
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 12
+        y coordinate            : 8
+        Width                   : 35
+        Height                  : 35
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text title
+    Attributes
+        ID                      : 4
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 48
+        y coordinate            : 8
+        Width                   : 213
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 100
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text home_icon
+    Attributes
+        ID                      : 5
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 136
+        y coordinate            : 364
+        Width                   : 48
+        Height                  : 48
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xef\xa4\x83
+        Max. Text Size          : 4
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text home_label
+    Attributes
+        ID                      : 6
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 128
+        y coordinate            : 409
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 1
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : top
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text home
+    Attributes
+        ID                      : 7
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 128
+        y coordinate            : 428
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text homeb
+    Attributes
+        ID                      : 8
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 128
+        y coordinate            : 448
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text grid_icon
+    Attributes
+        ID                      : 10
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 136
+        y coordinate            : 68
+        Width                   : 48
+        Height                  : 48
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xee\xb4\xbd
+        Max. Text Size          : 4
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text grid_label
+    Attributes
+        ID                      : 11
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 128
+        y coordinate            : 48
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 1
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text grid
+    Attributes
+        ID                      : 12
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 87
+        y coordinate            : 113
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : right
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text gridb
+    Attributes
+        ID                      : 13
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 163
+        y coordinate            : 113
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group01_icon
+    Attributes
+        ID                      : 14
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 17
+        y coordinate            : 68
+        Width                   : 48
+        Height                  : 48
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : top
+        Input Type              : character
+        Text                    : \xee\x98\xa4
+        Max. Text Size          : 4
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group01_label
+    Attributes
+        ID                      : 15
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 6
+        y coordinate            : 48
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 1
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group01
+    Attributes
+        ID                      : 16
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 6
+        y coordinate            : 113
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group01b
+    Attributes
+        ID                      : 17
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 6
+        y coordinate            : 133
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group02_icon
+    Attributes
+        ID                      : 19
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 260
+        y coordinate            : 68
+        Width                   : 48
+        Height                  : 48
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : \xee\x98\xa4
+        Max. Text Size          : 4
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group02_label
+    Attributes
+        ID                      : 20
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 248
+        y coordinate            : 48
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 1
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group02
+    Attributes
+        ID                      : 21
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 248
+        y coordinate            : 113
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group02b
+    Attributes
+        ID                      : 22
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 248
+        y coordinate            : 133
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group03_icon
+    Attributes
+        ID                      : 24
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 17
+        y coordinate            : 217
+        Width                   : 48
+        Height                  : 48
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : top
+        Input Type              : character
+        Text                    : \xee\x98\xa4
+        Max. Text Size          : 4
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group03_label
+    Attributes
+        ID                      : 25
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 6
+        y coordinate            : 197
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 1
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group03
+    Attributes
+        ID                      : 26
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 6
+        y coordinate            : 262
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group03b
+    Attributes
+        ID                      : 27
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 6
+        y coordinate            : 282
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group04_icon
+    Attributes
+        ID                      : 29
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 260
+        y coordinate            : 217
+        Width                   : 48
+        Height                  : 48
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : \xee\x98\xa4
+        Max. Text Size          : 4
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group04_label
+    Attributes
+        ID                      : 30
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 248
+        y coordinate            : 197
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 1
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group04
+    Attributes
+        ID                      : 31
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 248
+        y coordinate            : 262
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group04b
+    Attributes
+        ID                      : 32
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 248
+        y coordinate            : 282
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group05_icon
+    Attributes
+        ID                      : 34
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 17
+        y coordinate            : 365
+        Width                   : 48
+        Height                  : 48
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : top
+        Input Type              : character
+        Text                    : \xee\x98\xa4
+        Max. Text Size          : 4
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group05_label
+    Attributes
+        ID                      : 35
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 6
+        y coordinate            : 345
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 1
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group05
+    Attributes
+        ID                      : 36
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 6
+        y coordinate            : 410
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group05b
+    Attributes
+        ID                      : 37
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 6
+        y coordinate            : 430
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group06_icon
+    Attributes
+        ID                      : 39
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 260
+        y coordinate            : 365
+        Width                   : 48
+        Height                  : 48
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : \xee\x98\xa4
+        Max. Text Size          : 4
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group06_label
+    Attributes
+        ID                      : 40
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 248
+        y coordinate            : 345
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 1
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group06
+    Attributes
+        ID                      : 41
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 248
+        y coordinate            : 410
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text group06b
+    Attributes
+        ID                      : 42
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 248
+        y coordinate            : 430
+        Width                   : 70
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    :  
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Slider home_line
+    Attributes
+        ID                : 9
+        Scope             : local
+        Dragging          : 0
+        Send Component ID : disabled
+        Opacity           : 127
+        x coordinate      : 158
+        y coordinate      : 116
+        Width             : 4
+        Height            : 250
+        Effect            : load
+        Effect Priority   : 0
+        Effect Time       : 300
+        Direction         : vertical
+        Fill              : solid color
+        Cursor width      : auto
+        Cursor height     : 255
+        Back. Color       : 50712
+        Slided Back. Color: 50712
+        Font Color        : 59196
+        Position          : 50
+        Upper range limit : 100
+        Lower range limit : 0
+    
+Slider group01_line
+    Attributes
+        ID                : 18
+        Scope             : local
+        Dragging          : 0
+        Send Component ID : on press and release
+        Opacity           : 127
+        x coordinate      : 65
+        y coordinate      : 92
+        Width             : 65
+        Height            : 4
+        Effect            : load
+        Effect Priority   : 0
+        Effect Time       : 300
+        Direction         : horizontal
+        Fill              : solid color
+        Cursor width      : 5
+        Cursor height     : 255
+        Back. Color       : 50712
+        Slided Back. Color: 50712
+        Font Color        : 59196
+        Position          : 50
+        Upper range limit : 100
+        Lower range limit : 0
+    
+Slider group02_line
+    Attributes
+        ID                : 23
+        Scope             : local
+        Dragging          : 0
+        Send Component ID : disabled
+        Opacity           : 127
+        x coordinate      : 189
+        y coordinate      : 91
+        Width             : 65
+        Height            : 4
+        Effect            : load
+        Effect Priority   : 0
+        Effect Time       : 300
+        Direction         : horizontal
+        Fill              : solid color
+        Cursor width      : 5
+        Cursor height     : 255
+        Back. Color       : 50712
+        Slided Back. Color: 50712
+        Font Color        : 59196
+        Position          : 50
+        Upper range limit : 100
+        Lower range limit : 0
+    
+Slider group03_line
+    Attributes
+        ID                : 28
+        Scope             : local
+        Dragging          : 0
+        Send Component ID : disabled
+        Opacity           : 127
+        x coordinate      : 66
+        y coordinate      : 240
+        Width             : 92
+        Height            : 4
+        Effect            : load
+        Effect Priority   : 0
+        Effect Time       : 300
+        Direction         : vertical
+        Fill              : solid color
+        Cursor width      : 5
+        Cursor height     : 255
+        Back. Color       : 50712
+        Slided Back. Color: 50712
+        Font Color        : 59196
+        Position          : 50
+        Upper range limit : 100
+        Lower range limit : 0
+    
+Slider group04_line
+    Attributes
+        ID                : 33
+        Scope             : local
+        Dragging          : 0
+        Send Component ID : disabled
+        Opacity           : 127
+        x coordinate      : 160
+        y coordinate      : 240
+        Width             : 95
+        Height            : 4
+        Effect            : load
+        Effect Priority   : 0
+        Effect Time       : 300
+        Direction         : vertical
+        Fill              : solid color
+        Cursor width      : 5
+        Cursor height     : 255
+        Back. Color       : 50712
+        Slided Back. Color: 50712
+        Font Color        : 59196
+        Position          : 50
+        Upper range limit : 100
+        Lower range limit : 0
+    
+Slider group05_line
+    Attributes
+        ID                : 38
+        Scope             : local
+        Dragging          : 0
+        Send Component ID : disabled
+        Opacity           : 127
+        x coordinate      : 64
+        y coordinate      : 389
+        Width             : 65
+        Height            : 4
+        Effect            : load
+        Effect Priority   : 0
+        Effect Time       : 300
+        Direction         : vertical
+        Fill              : solid color
+        Cursor width      : 5
+        Cursor height     : 255
+        Back. Color       : 50712
+        Slided Back. Color: 50712
+        Font Color        : 59196
+        Position          : 50
+        Upper range limit : 100
+        Lower range limit : 0
+    
+Slider group06_line
+    Attributes
+        ID                : 43
+        Scope             : local
+        Dragging          : 0
+        Send Component ID : disabled
+        Opacity           : 127
+        x coordinate      : 189
+        y coordinate      : 390
+        Width             : 65
+        Height            : 4
+        Effect            : load
+        Effect Priority   : 0
+        Effect Time       : 300
+        Direction         : vertical
+        Fill              : solid color
+        Cursor width      : 5
+        Cursor height     : 255
+        Back. Color       : 50712
+        Slided Back. Color: 50712
+        Font Color        : 59196
+        Position          : 50
+        Upper range limit : 100
+        Lower range limit : 0
+    
+Button button_back
+    Attributes
+        ID                                  : 1
+        Scope                               : local
+        Dragging                            : 0
+        Send Component ID                   : on release
+        Opacity                             : 127
+        x coordinate                        : 260
+        y coordinate                        : 0
+        Width                               : 60
+        Height                              : 47
+        Effect                              : load
+        Effect Priority                     : 0
+        Effect Time                         : 300
+        Fill                                : crop image
+        Font ID                             : 8
+        Cropped Back. Picture ID (Unpressed): 0
+        Back. Picture ID (Pressed)          : 65535
+        Cropped Back. Picture ID (Pressed)  : 0
+        Horizontal Alignment                : center
+        Vertical Alignment                  : center
+        State                               : unpressed
+        Text                                : \xee\x85\x98
+        Max. Text Size                      : 3
+        Word wrap                           : disabled
+        Horizontal Spacing                  : 0
+        Vertical Spacing                    : 0
+    
+    Events
+        Touch Press Event
+            page home_page_id
+        
+Timer tm_movement
+    Attributes
+        ID         : 44
+        Scope      : local
+        Period (ms): 150
+        Enabled    : yes
+    
+    Events
+        Timer Event
+            //line_main
+            home_line.val+=home_line_d.val
+            if(home_line.val>=home_line.maxval)
+            {
+                home_line.val=home_line.minval
+            }else if(home_line.val<=home_line.minval)
+            {
+                home_line.val=home_line.maxval
+            }
+            //group01_line
+            group01_line.val+=group01_line_d.val
+            if(group01_line.val>=group01_line.maxval)
+            {
+                group01_line.val=group01_line.minval
+            }else if(group01_line.val<=group01_line.minval)
+            {
+                group01_line.val=group01_line.maxval
+            }
+            //group02_line
+            group02_line.val+=group02_line_d.val
+            if(group02_line.val>=group02_line.maxval)
+            {
+                group02_line.val=group02_line.minval
+            }else if(group02_line.val<=group02_line.minval)
+            {
+                group02_line.val=group02_line.maxval
+            }
+            //group03_line
+            group03_line.val+=group03_line_d.val
+            if(group03_line.val>=group03_line.maxval)
+            {
+                group03_line.val=group03_line.minval
+            }else if(group03_line.val<=group03_line.minval)
+            {
+                group03_line.val=group03_line.maxval
+            }
+            //group04_line
+            group04_line.val+=group04_line_d.val
+            if(group04_line.val>=group04_line.maxval)
+            {
+                group04_line.val=group04_line.minval
+            }else if(group04_line.val<=group04_line.minval)
+            {
+                group04_line.val=group04_line.maxval
+            }
+            //group05_line
+            group05_line.val+=group05_line_d.val
+            if(group05_line.val>=group05_line.maxval)
+            {
+                group05_line.val=group05_line.minval
+            }else if(group05_line.val<=group05_line.minval)
+            {
+                group05_line.val=group05_line.maxval
+            }
+            //group06_line
+            group06_line.val+=group06_line_d.val
+            if(group06_line.val>=group06_line.maxval)
+            {
+                group06_line.val=group06_line.minval
+            }else if(group06_line.val<=group06_line.minval)
+            {
+                group06_line.val=group06_line.maxval
+            }
+        

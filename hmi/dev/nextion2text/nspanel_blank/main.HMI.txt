@@ -1,0 +1,3 @@
+main.HMI
+    Model: NX4832F035_011 (Nextion 3.5" Discovery 320x480)
+    Orientation: 270
