@@ -52,7 +52,8 @@ jobs:
 
       # The metrics go to the job summary, compared with the target branch on pull requests. They are informative,
       # except the number of distinct templates: above --max-distinct the step fails, keeping a margin below Spook's
-      # template cache of 1,024 entries (issue #636). Raise it only as a deliberate decision.
+      # template cache of 1,024 entries, which the Blueprint shares with the rest of the installation (issue #636).
+      # Set close to the current count, so the reductions do not slip back; raise it only as a deliberate decision.
       - name: Blueprint metrics
         id: metrics
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
@@ -65,7 +66,7 @@ jobs:
           fi  # if a base Blueprint is available
           status=0
           python3 .github/scripts/blueprint_metrics.py nspanel_easy_blueprint.yaml "${base_args[@]}" \
-            --markdown --output "$RUNNER_TEMP/blueprint_metrics.md" --max-distinct 980 || status=$?
+            --markdown --output "$RUNNER_TEMP/blueprint_metrics.md" --max-distinct 700 || status=$?
           # The report is also written when the limit fails the step, so it always reaches the summary
           if [[ -f "$RUNNER_TEMP/blueprint_metrics.md" ]]; then
             cat "$RUNNER_TEMP/blueprint_metrics.md" >> "$GITHUB_STEP_SUMMARY"
