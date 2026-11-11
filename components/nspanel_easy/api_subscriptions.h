@@ -788,6 +788,13 @@ bool sub_persist(bool verified);
 /// @brief Re-render every binding from its last known state.
 void sub_render_all();
 
+/**
+ * @brief Re-render the bindings of one page from their last known state, e.g. when the page opens.
+ *
+ * @param page Target page of the bindings, e.g. "climate".
+ */
+void sub_render_page(const char *page);
+
 /// @brief Bindings named in the statistics log line, by updates received.
 static constexpr uint8_t SUB_STATS_TOP = 5;
 

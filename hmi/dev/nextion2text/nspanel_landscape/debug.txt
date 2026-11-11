@@ -1,0 +1,234 @@
+Page debug
+    Attributes
+        ID                 : 0
+        Scope              : local
+        Dragging           : 0
+        Send Component ID  : disabled
+        Opacity            : 127
+        Width              : 480
+        Effect             : load
+        Effect Priority    : 0
+        Effect Time        : 300
+        Locked             : no
+        Swide up page ID   : disabled
+        Swide down page ID : disabled
+        Swide left page ID : disabled
+        Swide right page ID: disabled
+        Fill               : picture
+        Back. Picture ID   : 0
+    
+    Events
+        Preinitialize Event
+            global_vars.txt+="\r- home_page_id: "
+            covx home_page_id,aux.txt,0,0
+            global_vars.txt+=aux.txt
+            global_vars.txt+="\r- back_page_id: "
+            covx back_page_id,aux.txt,0,0
+            global_vars.txt+=aux.txt
+            global_vars.txt+="\r- wakeup_page_id: "
+            covx wakeup_page_id,aux.txt,0,0
+            global_vars.txt+=aux.txt
+            global_vars.txt+="\r- api: "
+            covx api,aux.txt,0,0
+            global_vars.txt+=aux.txt
+            global_vars.txt+="\r- brightness: "
+            covx brightness,aux.txt,0,0
+            global_vars.txt+=aux.txt
+            global_vars.txt+="\r- brightness_dim: "
+            covx brightness_dim,aux.txt,0,0
+            global_vars.txt+=aux.txt
+            global_vars.txt+="\r- brightness_sleep: "
+            covx brightness_sleep,aux.txt,0,0
+            global_vars.txt+=aux.txt
+            global_vars.txt+="\r- display_mode: "
+            covx display_mode,aux.txt,0,0
+            global_vars.txt+=aux.txt
+            global_vars.txt+="\r- climate_embedded: "
+            covx climate_embedded,aux.txt,0,0
+            global_vars.txt+=aux.txt
+            global_vars.txt+="\r- vis_home: "
+            covx vis_home,aux.txt,0,0
+            global_vars.txt+=aux.txt
+            pages_flags.txt+="\r- is_buttonpage01: "
+            covx is_buttonpage01,aux.txt,0,0
+            pages_flags.txt+=aux.txt
+            pages_flags.txt+="\r- is_buttonpage02: "
+            covx is_buttonpage02,aux.txt,0,0
+            pages_flags.txt+=aux.txt
+            pages_flags.txt+="\r- is_buttonpage03: "
+            covx is_buttonpage03,aux.txt,0,0
+            pages_flags.txt+=aux.txt
+            pages_flags.txt+="\r- is_buttonpage04: "
+            covx is_buttonpage04,aux.txt,0,0
+            pages_flags.txt+=aux.txt
+            pages_flags.txt+="\r- is_entitypage01: "
+            covx is_entitypage01,aux.txt,0,0
+            pages_flags.txt+=aux.txt
+            pages_flags.txt+="\r- is_entitypage02: "
+            covx is_entitypage02,aux.txt,0,0
+            pages_flags.txt+=aux.txt
+            pages_flags.txt+="\r- is_entitypage03: "
+            covx is_entitypage03,aux.txt,0,0
+            pages_flags.txt+=aux.txt
+            pages_flags.txt+="\r- is_entitypage04: "
+            covx is_entitypage04,aux.txt,0,0
+            pages_flags.txt+=aux.txt
+            system_vars.txt+="\r- bauds: "
+            covx baud,aux.txt,0,0
+            system_vars.txt+=aux.txt
+            system_vars.txt+="\r- recmod: "
+            covx recmod,aux.txt,0,0
+            system_vars.txt+=aux.txt
+            system_vars.txt+="\r- dim: "
+            covx dim,aux.txt,0,0
+            system_vars.txt+=aux.txt
+            button_back.font=button_back_font
+            sendme
+        
+Variable (string) aux
+    Attributes
+        ID            : 1
+        Scope         : local
+        Text          : 
+        Max. Text Size: 10
+    
+Text title
+    Attributes
+        ID                      : 3
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 10
+        y coordinate            : 5
+        Width                   : 250
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : NSPanel Easy
+        Max. Text Size          : 12
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text global_vars
+    Attributes
+        ID                      : 4
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 10
+        y coordinate            : 40
+        Width                   : 200
+        Height                  : 180
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : left
+        Vertical Alignment      : top
+        Input Type              : character
+        Text                    : Global vars:
+        Max. Text Size          : 300
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text pages_flags
+    Attributes
+        ID                      : 5
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 225
+        y coordinate            : 40
+        Width                   : 200
+        Height                  : 260
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : left
+        Vertical Alignment      : top
+        Input Type              : character
+        Text                    : Pages flags:
+        Max. Text Size          : 300
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text system_vars
+    Attributes
+        ID                      : 6
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 10
+        y coordinate            : 230
+        Width                   : 200
+        Height                  : 70
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 0
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : left
+        Vertical Alignment      : top
+        Input Type              : character
+        Text                    : System vars:
+        Max. Text Size          : 300
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Button button_back
+    Attributes
+        ID                                  : 2
+        Scope                               : local
+        Dragging                            : 0
+        Send Component ID                   : on press and release
+        Opacity                             : 127
+        x coordinate                        : 385
+        y coordinate                        : 0
+        Width                               : 95
+        Height                              : 48
+        Effect                              : load
+        Effect Priority                     : 0
+        Effect Time                         : 300
+        Fill                                : crop image
+        Font ID                             : 8
+        Cropped Back. Picture ID (Unpressed): 33
+        Back. Picture ID (Pressed)          : 65535
+        Cropped Back. Picture ID (Pressed)  : 33
+        Horizontal Alignment                : center
+        Vertical Alignment                  : center
+        State                               : unpressed
+        Text                                : \xee\x85\x98
+        Max. Text Size                      : 3
+        Word wrap                           : disabled
+        Horizontal Spacing                  : 0
+        Vertical Spacing                    : 0
+    
+    Events
+        Touch Press Event
+            page home_page_id
+        
