@@ -141,7 +141,7 @@ Registers one binding. Called once per subscribable component.
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `push_id` | string | Identifier of the push, the same for every call of one push, up to 23 characters. See [Push identifier](#push-identifier). |
-| `page` | string | Target page. `chips`, `home`, `wakeup`, `calibration` and `buttonpage01` to `buttonpage04` have renderers. |
+| `page` | string | Target page. `chips`, `home`, `wakeup`, `calibration`, `buttonpage01` to `buttonpage04` and `climate` have renderers. |
 | `component` | string | Target component, e.g. `chip01`. |
 | `entity` | string | Home Assistant `entity_id`. |
 | `attribute` | string | Attribute to follow instead of the state. Send an empty string to follow the state. |
@@ -429,7 +429,8 @@ Celsius and is converted when the panel is compiled for Fahrenheit.
 
 ## Limits and behaviour
 
-- **`chips`, `home`, `wakeup`, `calibration` and the button pages have renderers.** `wakeup` and `calibration` draw
+- **`chips`, `home`, `wakeup`, `calibration`, the button pages and `climate` have renderers.** `climate` draws the
+  climate page custom buttons (components `button08` and `button09`, icon only). `wakeup` and `calibration` draw
   nothing: they feed the wake-up sensors and the temperature reference. A `calibration` binding
   targets component `temperature` for auto-calibration only, or `thermostat` to also make it the
   Climate add-on's thermostat temperature. Bindings for other pages are accepted, persisted and
