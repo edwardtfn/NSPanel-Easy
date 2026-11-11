@@ -207,6 +207,10 @@ script:
               }  // if (preset_buttons)
             }  // if (page opened)
             action_component_text_list->execute("mem", "popup_select_current", std::vector<std::string>{fan.preset_mode});
+            // The active preset mode, shown under the mode button (#274); the preset buttons highlight it instead
+            std::string mode_label = fan.preset_buttons ? "" : fan.preset_mode;
+            mode_label.erase(std::remove(mode_label.begin(), mode_label.end(), '"'), mode_label.end());
+            disp1->set_component_text("mode_label", mode_label.c_str());
             if (fan.preset_buttons) {
               for (size_t idx = 0; idx < fan.modes.size(); ++idx) {
                 paint_mode_button(static_cast<int>(idx) + 1, on && fan.modes[idx] == fan.preset_mode);

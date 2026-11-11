@@ -42,6 +42,8 @@ on fan.load:
     bt_oscillate.pco=color_pco_secondary
     mode_button.picc=pic_background_main
     mode_button.pco=color_pco_secondary
+    mode_label.picc=pic_background_main
+    mode_label.pco=color_pco_secondary
   }
   dim=brightness
   sendme
