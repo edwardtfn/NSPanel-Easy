@@ -288,58 +288,65 @@ on slider_high.slide:
   target_high.txt=home.tenths_txt.txt+temp_unit.txt
 
 on button01.up:
+  // The firmware decides what each slot of this row does (an HVAC mode or a preset)
   printh 92
   prints "localevent",0
   printh 00
-  prints "climate,hvac_mode,auto",0
+  prints "climate,slot,1",0
   printh 00
   printh FF FF FF
 
 on button02.up:
+  // The firmware decides what each slot of this row does (an HVAC mode or a preset)
   printh 92
   prints "localevent",0
   printh 00
-  prints "climate,hvac_mode,heat_cool",0
+  prints "climate,slot,2",0
   printh 00
   printh FF FF FF
 
 on button03.up:
+  // The firmware decides what each slot of this row does (an HVAC mode or a preset)
   printh 92
   prints "localevent",0
   printh 00
-  prints "climate,hvac_mode,heat",0
+  prints "climate,slot,3",0
   printh 00
   printh FF FF FF
 
 on button04.up:
+  // The firmware decides what each slot of this row does (an HVAC mode or a preset)
   printh 92
   prints "localevent",0
   printh 00
-  prints "climate,hvac_mode,cool",0
+  prints "climate,slot,4",0
   printh 00
   printh FF FF FF
 
 on button05.up:
+  // The firmware decides what each slot of this row does (an HVAC mode or a preset)
   printh 92
   prints "localevent",0
   printh 00
-  prints "climate,hvac_mode,dry",0
+  prints "climate,slot,5",0
   printh 00
   printh FF FF FF
 
 on button06.up:
+  // The firmware decides what each slot of this row does (an HVAC mode or a preset)
   printh 92
   prints "localevent",0
   printh 00
-  prints "climate,hvac_mode,fan_only",0
+  prints "climate,slot,6",0
   printh 00
   printh FF FF FF
 
 on button07.up:
+  // The firmware decides what each slot of this row does (an HVAC mode or a preset)
   printh 92
   prints "localevent",0
   printh 00
-  prints "climate,hvac_mode,off",0
+  prints "climate,slot,7",0
   printh 00
   printh FF FF FF
 

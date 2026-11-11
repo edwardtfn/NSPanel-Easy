@@ -170,6 +170,11 @@ On the blueprint settings, you will also find settings for sensors and custom bu
 > [!NOTE]
 > The panel follows the custom buttons' entities through [API subscriptions](api_subscribe.md), so changing which entity a custom button uses restarts the panel once.
 
+A climate entity with up to five presets (not counting `none`) shows them as buttons in the row of the HVAC mode buttons, when they fit there:
+the HVAC modes on the left and the presets on the right, with the active preset highlighted.
+One tap selects a preset, and a tap on the active preset leaves it (it selects `none`, when the entity has it).
+With more presets, or for the embedded thermostat, the page has a preset button instead, as described next.
+
 When a climate entity supports preset modes (like `eco`, `comfort` or `away`), its climate page shows a preset button that opens a list with the available presets.
 The button shows the icon of the active preset and is highlighted while a preset is active. Custom presets use the generic preset icon.
 
