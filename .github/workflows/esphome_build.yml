@@ -81,7 +81,8 @@ jobs:
         run: python3 .github/scripts/select_esphome_tests.py
 
       # The build sizes are posted to the PR by pr_metrics_comment.yml (workflow_run), which has the write permission
-      # that this workflow lacks on PRs from forks. It reads the sizes from the job logs; only the PR number goes here.
+      # that this workflow lacks on PRs from forks. The PR number goes here, and each build with ESPHome latest
+      # uploads its own sizes ("Upload build size for the PR comment").
       - name: Save PR number for the PR comment
         if: github.event_name == 'pull_request'
         env:
@@ -152,8 +153,19 @@ jobs:
           BUILD_NAME: ${{ matrix.firmware.name }} (latest)
           YAML_FILE: ${{ matrix.firmware.yaml-file }}
         run: |
+          mkdir -p "$RUNNER_TEMP/build_size"
           python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
-            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY" \
+            --output "$RUNNER_TEMP/build_size/size.json"
+      # The sizes of this build, for the PR comment posted by pr_metrics_comment.yml (also when the check above fails)
+      - name: Upload build size for the PR comment
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: esphome-build-size-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/build_size/size.json
+          retention-days: 1
+          if-no-files-found: ignore
       # Informational: where the flash goes, by archive and by file, in the job summary (never fails)
       - name: Flash breakdown
         if: ${{ !cancelled() }}
@@ -231,8 +243,19 @@ jobs:
           BUILD_NAME: ${{ matrix.firmware.name }} - Pre-built (latest)
           YAML_FILE: ${{ matrix.firmware.yaml-file }}
         run: |
+          mkdir -p "$RUNNER_TEMP/build_size"
           python3 .github/scripts/esphome_size_guard.py --name "$BUILD_NAME" \
-            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY"
+            --search-dir "$(dirname "$YAML_FILE")" --summary "$GITHUB_STEP_SUMMARY" \
+            --output "$RUNNER_TEMP/build_size/size.json"
+      # The sizes of this build, for the PR comment posted by pr_metrics_comment.yml (also when the check above fails)
+      - name: Upload build size for the PR comment
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: esphome-build-size-prebuilt-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/build_size/size.json
+          retention-days: 1
+          if-no-files-found: ignore
       # Informational: where the flash goes, by archive and by file, in the job summary (never fails)
       - name: Flash breakdown
         if: ${{ !cancelled() }}
