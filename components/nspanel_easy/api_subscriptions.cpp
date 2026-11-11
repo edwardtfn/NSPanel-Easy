@@ -422,16 +422,10 @@ uint16_t sub_load() {
       break;
     }
     for (uint16_t slot = 0; slot < SUB_CHUNK_SIZE && sub_count < header.count; ++slot) {
-      checksum = sub_checksum(checksum, data.bindings[slot]);  // As persisted, before the domain is re-derived
+      // Only copied and added to the checksum here: the strings of a damaged
+      // chunk may not be terminated, so nothing reads them before the check below
+      checksum = sub_checksum(checksum, data.bindings[slot]);
       sub_bindings[sub_count] = data.bindings[slot];
-      // The domain is a pure function of the entity_id, so re-derive it rather
-      // than trusting the persisted value: bindings stored by an older firmware
-      // then pick up any domain reclassification without needing a new push.
-      sub_bindings[sub_count].domain = static_cast<uint8_t>(parse_sub_domain(sub_bindings[sub_count].entity));
-      sub_renderers[sub_count] = sub_resolve_renderer(sub_bindings[sub_count].page);
-      if (sub_renderers[sub_count] == nullptr) {
-        ESP_LOGW(TAG, "No renderer for page '%s'", sub_bindings[sub_count].page);
-      }
       ++sub_count;
     }
   }  // for each chunk
@@ -452,6 +446,17 @@ uint16_t sub_load() {
     sub_count = 0;
     return 0;
   }  // if integrity check failed
+
+  for (uint16_t idx = 0; idx < sub_count; ++idx) {
+    // The domain is a pure function of the entity_id, so re-derive it rather
+    // than trusting the persisted value: bindings stored by an older firmware
+    // then pick up any domain reclassification without needing a new push.
+    sub_bindings[idx].domain = static_cast<uint8_t>(parse_sub_domain(sub_bindings[idx].entity));
+    sub_renderers[idx] = sub_resolve_renderer(sub_bindings[idx].page);
+    if (sub_renderers[idx] == nullptr) {
+      ESP_LOGW(TAG, "No renderer for page '%s'", sub_bindings[idx].page);
+    }
+  }  // for each verified binding
 
   ESP_LOGCONFIG(TAG, "Loaded %" PRIu16 " binding(s)", sub_count);
   return sub_count;
