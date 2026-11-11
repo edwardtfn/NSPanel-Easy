@@ -5712,26 +5712,6 @@ triggers:
         for:
           seconds: 1
 
-      - alias: Button 01
-        id: climate_button08_state
-        trigger: state
-        entity_id: !input climate_button08
-        not_to:
-          - unknown
-          - unavailable
-        for:
-          seconds: 1
-
-      - alias: Button 02
-        id: climate_button09_state
-        trigger: state
-        entity_id: !input climate_button09
-        not_to:
-          - unknown
-          - unavailable
-        for:
-          seconds: 1
-
   - triggers:  # Water heater page
       - alias: Value 01
         id: trigger_water_heater_page_value_state
@@ -6035,7 +6015,7 @@ conditions:
   - >  # Do not update values when page climate is not visible
     {{
       pages.current == pages.climate or
-      trigger.id not in ["trigger_climatepage_value_state", "climate_button08_state", "climate_button09_state"]
+      trigger.id not in ["trigger_climatepage_value_state"]
     }}
   - >  # Climate entity: run only when something shown on the panel changed (#641)
     {#- The trigger fires on every change of the entity, including attribute-only updates
@@ -6891,39 +6871,6 @@ actions:
             page: entitypage04
             component: value08
 
-      ##### Climate page #####
-      page_climate:
-        buttons:
-          hvac_mode:
-            - mode: auto
-              icon: refresh-auto
-              color: green
-              component: button01
-            - mode: heat_cool
-              icon: autorenew
-              color: amber
-              component: button02
-            - mode: heat
-              icon: fire
-              color: deep_orange
-              component: button03
-            - mode: cool
-              icon: snowflake
-              color: blue
-              component: button04
-            - mode: dry
-              icon: water-percent
-              color: orange
-              component: button05
-            - mode: fan_only
-              icon: fan
-              color: cyan
-              component: button06
-            - mode: "off"
-              icon: power
-              color: "off"
-              component: button07
-
       ##### Utilities page #####
       pages_utilities:
         cursor:
@@ -7690,6 +7637,18 @@ actions:
                                 {%- endif -%}
                           - variables:
                               wake_up_sensors_tmp: !input wake_up_sensors
+                          # Climate page custom buttons, drawn by the panel from their subscriptions; also read by their clicks
+                          - &climate_custom_buttons_variables
+                            variables:
+                              climate_custom_buttons:
+                                - entity: !input climate_button08
+                                  icon: !input climate_button08_icon
+                                  icon_color_rgb: !input climate_button08_icon_color
+                                  component: button08
+                                - entity: !input climate_button09
+                                  icon: !input climate_button09_icon
+                                  icon_color_rgb: !input climate_button09_icon_color
+                                  component: button09
                           - variables:
                               # Home page chips: inputs only, so no templates to render
                               subs_chips:
@@ -7809,6 +7768,7 @@ actions:
                                     + ns_buttons.items
                                     + weather
                                     + (home_page.custom_buttons | map("combine", {"page": "home"}) | list)
+                                    + (climate_custom_buttons | map("combine", {"page": "climate"}) | list)
                                     + (ns.wakeup | map("combine", {"page": "wakeup"}) | list)
                                     + calibration
                                   )
@@ -10293,30 +10253,6 @@ actions:
                                         )
                                         else climate
                                       }}
-                                    settings_entity_domain: >
-                                      {{
-                                        climate_entity.split(".")[0]
-                                        if
-                                          climate_entity is string and
-                                          (climate_entity == "embedded_climate" or climate_entity.split(".") | count == 2)
-                                        else "unknown"
-                                      }}
-                                    hvac_modes: '{{ state_attr(climate_entity, "hvac_modes") if settings_entity_domain == "climate" }}'
-                                    friendly_name_raw: '{{ state_attr(climate_entity, "friendly_name") }}'
-                                    friendly_name: >-
-                                      {%- if
-                                            details_overlap.name is string and
-                                            details_overlap.name | length > 0 and
-                                            (
-                                              "embedded_climate"
-                                              if climate_entity == thermostat_embedded
-                                              else climate_entity
-                                            ) == original_state.entity_id
-                                      -%}
-                                        {{ details_overlap.name }}
-                                      {%- else -%}
-                                        {{ friendly_name_raw if friendly_name_raw and friendly_name_raw is string else "" }}
-                                      {%- endif -%}
                                 - if:
                                     - >-
                                       {{
@@ -10336,334 +10272,34 @@ actions:
                                       continue_on_error: true
                                     - *delay_default
 
-                                - condition: '{{ settings_entity_domain == "climate" }}'
-                                - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                  data:
-                                    page: mem
-                                    id: command
-                                    txt_list:
-                                      - 'page_label.txt="{{ friendly_name | replace("\\", "\\\\") | replace("\"", "\\\"") }}"'
-                                  continue_on_error: true
-                                - *delay_default
-
-                                ##### Slider & climate values #####
-                                - &climate-update_slider
-                                  if: '{{ not (climate_entity == climate and embedded_climate) }}'
-                                  then:
-                                    # `hvac_modes` updates the variable of the enclosing sequence, read by the climate buttons
-                                    - variables:
-                                        hvac_modes: '{{ state_attr(climate_entity, "hvac_modes") }}'
-                                    - action: 'esphome.{{ action_prefix }}_page_climate'
-                                      # All values in a single template, so each copy of this block holds one template here
-                                      # instead of one per value (issue #657)
-                                      data: >-
-                                        {%- set supported_features = state_attr(climate_entity, "supported_features") | int(0) -%}
-                                        {%- set target_temp_step = state_attr(climate_entity, "target_temp_step") -%}
-                                        {%- if not is_number(target_temp_step) -%}
-                                          {%- set target_temp_step = state_attr(climate_entity, "target_temperature_step") -%}
-                                        {%- endif -%}
-                                        {%- set target_temp_step = target_temp_step | float(0.5) | abs -%}
-                                        {%- set temp_step = ((10 * target_temp_step) | round(0) | int)
-                                                            if is_number(target_temp_step) and target_temp_step > 0 else 10 -%}
-                                        {%- set temp_offset_raw = (state_attr(climate_entity, "min_temp") | float(7) * 10) | round(0) | int -%}
-                                        {%- set temp_offset = temp_offset_raw if (temp_offset_raw % temp_step) == 0
-                                                              else temp_offset_raw + temp_step - (temp_offset_raw % temp_step) -%}
-                                        {%- set max_temp = (state_attr(climate_entity, "max_temp") | float(35) * 10) | round(0) | int -%}
-                                        {%- set climate_state = states(climate_entity) | default("unavailable")
-                                                                if climate_entity is string else "unavailable" -%}
-                                        {%- set hvac_action = state_attr(climate_entity, "hvac_action") | default("") -%}
-                                        {%- set climate_action = hvac_action
-                                                                 if hvac_action and hvac_action not in enum.states.unknown
-                                                                 else climate_state -%}
-                                        {%- if "off" in climate_action -%}
-                                          {%- set climate_icon = "\uFFFF" -%}{#- blank -#}
-                                        {%- elif "heat_cool" in climate_action -%}
-                                          {%- set climate_icon = "\uE069" -%}{#- mdi:autorenew -#}
-                                        {%- elif "heating" in climate_action or "heat" in climate_action -%}
-                                          {%- set climate_icon = "\uE50F" -%}{#- mdi:thermometer-lines -#}
-                                        {%- elif "cooling" in climate_action or "cool" in climate_action -%}
-                                          {%- set climate_icon = "\uE716" -%}{#- mdi:snowflake -#}
-                                        {%- elif "drying" in climate_action or "dry" in climate_action -%}
-                                          {%- set climate_icon = "\uE58D" -%}{#- mdi:water-percent -#}
-                                        {%- elif "fan" in climate_action or "fan_only" in climate_action -%}
-                                          {%- set climate_icon = "\uE20F" -%}{#- mdi:fan -#}
-                                        {%- elif "auto" in climate_action -%}
-                                          {%- set climate_icon = "\uF8F1" -%}{#- mdi:refresh-auto -#}
-                                        {%- elif "idle" in climate_action -%}
-                                          {%- set climate_icon = "\uE50E" -%}{#- mdi:thermometer -#}
-                                        {%- else -%}
-                                          {%- set climate_icon = "\uFFFF" -%}{#- blank -#}
-                                        {%- endif -%}
-                                        {{
-                                          {
-                                            "current_temp": state_attr(climate_entity, "current_temperature") | float(-999) | round(1),
-                                            "supported_features": supported_features,
-                                            "target_temp": state_attr(climate_entity, "temperature") | float(-999) | round(1)
-                                                           if supported_features | bitwise_and(1) > 0 else -999,
-                                            "target_temp_high": state_attr(climate_entity, "target_temp_high") | float(-999) | round(1)
-                                                                if supported_features | bitwise_and(2) > 0 else -999,
-                                            "target_temp_low": state_attr(climate_entity, "target_temp_low") | float(-999) | round(1)
-                                                               if supported_features | bitwise_and(2) > 0 else -999,
-                                            "temp_step": temp_step,
-                                            "total_steps": (((max_temp - temp_offset) / temp_step) | int)
-                                                           if max_temp >= temp_offset and temp_step > 0 else 0,
-                                            "temp_offset": temp_offset,
-                                            "climate_icon": climate_icon,
-                                            "entity": "embedded_climate" if climate_entity == thermostat_embedded else climate_entity
-                                          }
-                                        }}
-                                      continue_on_error: true
-                                    - *delay_default
-
-                                ##### Climate buttons #####
-                                - &climate-update_buttons
-                                  if: '{{ not (climate_entity == climate and embedded_climate) }}'
-                                  then:
-                                    - repeat:
-                                        for_each: '{{ page_climate.buttons.hvac_mode }}'
-                                        sequence:
-                                          - condition: '{{ repeat.item.mode in hvac_modes }}'
-                                          ### ICON Font Color ###
-                                          - action: 'esphome.{{ action_prefix }}_component_color'
-                                            data:
-                                              page: climate
-                                              id: '{{ repeat.item.component }}'
-                                              color: >
-                                                {{
-                                                  nextion.color[repeat.item.color]
-                                                  if states(climate_entity) == repeat.item.mode
-                                                  else nextion.color.disabled
-                                                }}
-                                            continue_on_error: true
-                                          - *delay_default
-                                          ### ICON Font ###
-                                          - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                            data:
-                                              page: mem
-                                              id: command
-                                              txt_list:
-                                                - '{{ repeat.item.component }}.txt="{{ (special_icons[(repeat.item.icon)] if (repeat.item.icon) in special_icons
-                                                  else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (repeat.item.icon) ~ ",")].count(",")))
-                                                  if ("," ~ (repeat.item.icon) ~ ",") in all_icon_names
-                                                  else "") }}"'
-                                                - 'vis {{ repeat.item.component }},1'
-                                            continue_on_error: true
-                                          - *delay_default
-
-                                ##### Preset mode #####
-                                - &climate-update_preset
-                                  # The embedded thermostat is drawn by ESPHome, which also builds its preset
-                                  # picker, so the picker keeps working with the API disconnected.
-                                  if: '{{ climate_entity != thermostat_embedded }}'
-                                  then:
-                                    - variables:
-                                        preset_modes_attr: '{{ state_attr(climate_entity, "preset_modes") }}'
-                                        current_preset_mode_raw: '{{ state_attr(climate_entity, "preset_mode") }}'
-                                    - variables:
-                                        preset_modes_raw: >
-                                          {{
-                                            preset_modes_attr
-                                            if
-                                              state_attr(climate_entity, "supported_features") | int(0) | bitwise_and(16) > 0 and
-                                              preset_modes_attr is iterable and
-                                              preset_modes_attr is not string
-                                            else []
-                                          }}
-                                        current_preset_mode: >-
-                                          {{
-                                            current_preset_mode_raw | trim
-                                            if current_preset_mode_raw is string and current_preset_mode_raw | length > 0
-                                            else ""
-                                          }}
-                                        # Options and button visibility are pushed on construction, and on updates only when the
-                                        # preset support or list changes, or when the active preset changes while the list is
-                                        # truncated (the active preset must stay among the retained options).
-                                        preset_refresh: >-
-                                          {%- if page_constructor -%}
-                                            true
-                                          {%- else -%}
-                                            {#- Only state_changed events carry old_state; the details refresh loop runs from the panel event #}
-                                            {%- set old_state = (
-                                              trigger.event.data.old_state
-                                              if trigger.event is defined and trigger.event.data is defined and trigger.event.data.old_state is defined
-                                              else none
-                                            ) -%}
-                                            {#- No previous state to compare against: push the options again #}
-                                            {%- if old_state is none -%}
-                                              true
-                                            {%- else -%}
-                                              {%- set old_supported = old_state.attributes.get("supported_features", 0) | int(0) | bitwise_and(16) > 0 -%}
-                                              {%- set new_supported = state_attr(climate_entity, "supported_features") | int(0) | bitwise_and(16) > 0 -%}
-                                              {{
-                                                old_supported != new_supported
-                                                or old_state.attributes.get("preset_modes") != preset_modes_attr
-                                                or (preset_modes_raw | length > 32 and old_state.attributes.get("preset_mode") != current_preset_mode_raw)
-                                              }}
-                                            {%- endif -%}
-                                          {%- endif -%}
-
-                                    ##### Construction and preset list changes: push options + show preset button #####
-                                    - if: '{{ preset_refresh }}'
-                                      then:
-                                        - if: '{{ preset_modes_raw | length > 0 }}'
-                                          then:
-                                            - variables:
-                                                # The picker pages through up to 32 options; a supported current preset is always included
-                                                preset_modes_truncated: >
-                                                  {%- if preset_modes_raw | length <= 32 -%}
-                                                    {{ preset_modes_raw }}
-                                                  {%- elif
-                                                    current_preset_mode | length == 0 or
-                                                    current_preset_mode not in preset_modes_raw or
-                                                    current_preset_mode in preset_modes_raw[:32]
-                                                  -%}
-                                                    {{ preset_modes_raw[:32] }}
-                                                  {%- else -%}
-                                                    {{ [current_preset_mode] + (preset_modes_raw[:31] | reject("equalto", current_preset_mode) | list) }}
-                                                  {%- endif -%}
-                                            - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                              data:
-                                                page: mem
-                                                id: popup_select_context
-                                                txt_list:
-                                                  - 'climate_preset_mode'
-                                              continue_on_error: true
-                                            - *delay_default
-                                            - action: 'esphome.{{ action_prefix }}_component_val'
-                                              data:
-                                                page: mem
-                                                id: popup_select_mode
-                                                val: 0
-                                              continue_on_error: true
-                                            - *delay_default
-                                            - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                              data:
-                                                page: mem
-                                                id: popup_select_options
-                                                txt_list: '{{ preset_modes_truncated }}'
-                                              continue_on_error: true
-                                            - *delay_default
-                                        - action: 'esphome.{{ action_prefix }}_components_visibility'
-                                          data:
-                                            page: climate
-                                            ids:
-                                              - preset_button
-                                            visible: '{{ preset_modes_raw | length > 0 }}'
-                                          continue_on_error: true
-                                        - *delay_default
-
-                                    ##### Always (construction and updates): push current preset_mode #####
-                                    # Read the active preset again right before writing it. The automation runs in parallel mode, so
-                                    # a newer state change may already have been pushed while this run sent the options above.
-                                    - variables:
-                                        preset_mode_now: >-
-                                          {%- set preset_mode_attr = state_attr(climate_entity, "preset_mode") -%}
-                                          {{ preset_mode_attr | trim if preset_mode_attr is string and preset_mode_attr | length > 0 else "" }}
-                                    - if: '{{ preset_modes_raw | length > 0 }}'
-                                      then:
-                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                          data:
-                                            page: mem
-                                            id: popup_select_current
-                                            txt_list:
-                                              - '{{ preset_mode_now }}'
-                                          continue_on_error: true
-                                        - *delay_default
-
-                                        ##### Always: show the active preset on the preset button #####
-                                        # Standard presets get the icon Home Assistant uses for them; no preset or a
-                                        # custom one keeps the generic icon. The font color marks whether a preset is
-                                        # active, using the display theme colors. This also clears the press color.
-                                        - action: 'esphome.{{ action_prefix }}_component_text_list'
-                                          data:
-                                            page: mem
-                                            id: command
-                                            txt_list: >-
-                                              {%- set preset_icons = {
-                                                "home": "home",
-                                                "away": "account-arrow-right",
-                                                "boost": "rocket-launch",
-                                                "comfort": "sofa",
-                                                "eco": "leaf",
-                                                "sleep": "bed",
-                                                "activity": "motion-sensor"
-                                              } -%}
-                                              {%- set preset = preset_mode_now | lower -%}
-                                              {%- set preset_active = preset | length > 0 and preset != "none" -%}
-                                              {{
-                                                [
-                                                  'preset_button.txt="' ~ (special_icons[(preset_icons.get(preset, "tune-variant"))] if (preset_icons.get(preset, "tune-variant")) in special_icons
-                                                    else ("%c" | format(57344 + all_icon_names[:all_icon_names.find("," ~ (preset_icons.get(preset, "tune-variant")) ~ ",")].count(",")))
-                                                    if ("," ~ (preset_icons.get(preset, "tune-variant")) ~ ",") in all_icon_names
-                                                    else "") ~ '"',
-                                                  "preset_button.pco=" ~ ("color_pco_main" if preset_active else "color_pco_secondary")
-                                                ]
-                                              }}
-                                          continue_on_error: true
-                                        - *delay_default
-
-                                - &climate_custom_buttons
-                                  alias: Climate custom buttons
-                                  sequence:
-                                    - &climate_custom_buttons_variables
-                                      variables:
-                                        climate_custom_buttons:
-                                          - entity: !input climate_button08
-                                            icon: !input climate_button08_icon
-                                            icon_color_rgb: !input climate_button08_icon_color
-                                            component: button08
-                                          - entity: !input climate_button09
-                                            icon: !input climate_button09_icon
-                                            icon_color_rgb: !input climate_button09_icon_color
-                                            component: button09
-                                    - &climate_custom_buttons_update
-                                      repeat:
-                                        for_each: '{{ climate_custom_buttons | selectattr("entity", "defined") | rejectattr("entity", "eq", []) | list }}'
-                                        sequence:
-                                          - condition: '{{ repeat.item.entity is defined and repeat.item.entity is string and repeat.item.entity | length > 0 }}'
-                                          - variables:
-                                              entity_id: '{{ repeat.item.entity }}'
-                                              overlap:
-                                                icon: >
-                                                  {{
-                                                    repeat.item.icon
-                                                    if
-                                                      repeat.item.icon is defined and
-                                                      repeat.item.icon is string and
-                                                      repeat.item.icon | length > 0 and
-                                                      repeat.item.icon is match "mdi:" and
-                                                      ((repeat.item.icon.split("mdi:") | last) in special_icons or ("," ~ (repeat.item.icon.split("mdi:") | last) ~ ",") in all_icon_names)
-                                                    else
-                                                      None
-                                                  }}
-                                                icon_color: '{{ repeat.item.icon_color_rgb }}'
-                                          - *variable_entity
-                                          # Climate custom buttons are icon-only: a single text component
-                                          # with no `pic`/`bri`/`text` siblings, always toggle, no long
-                                          # click and no detail page. They still go through the shared
-                                          # `button` action (with `icon_only`) so that every per-entity
-                                          # button is rendered by one code path.
-                                          - action: 'esphome.{{ action_prefix }}_button'
-                                            data:
-                                              page: '{{ pages.climate }}'
-                                              id: '{{ repeat.item.component }}'
-                                              state: false
-                                              icon: '{{ entity_icon }}'
-                                              icon_color: >
-                                                {{
-                                                  entity_icon_color
-                                                  if entity_icon_color is list
-                                                      and entity_icon_color | count == 3
-                                                  else [200, 200, 200]
-                                                }}
-                                              icon_font: 0     # Unused while `icon_only` is set: the font is fixed on the TFT
-                                              bri: ""
-                                              label: ""
-                                              is_page_render: false
-                                              icon_only: true
-                                              available: '{{ entity_state not in ["unavailable"] }}'
-                                            continue_on_error: true
-                                          - *delay_default
+                                ##### The panel renders the page from a snapshot of the entity (#636) #####
+                                # The embedded thermostat is drawn by the panel itself, and the custom buttons follow their
+                                # subscriptions
+                                - condition: >-
+                                    {{
+                                      climate_entity is string and climate_entity is match "climate." and
+                                      not (climate_entity == climate and embedded_climate)
+                                    }}
+                                - variables:
+                                    # Entities shown on the page, by role
+                                    snapshot_roles: '{{ {"main": climate_entity} }}'
+                                    # Attributes each domain sends in a snapshot; plain lists, not templates
+                                    snapshot_attributes:
+                                      climate:
+                                        - supported_features
+                                        - hvac_modes
+                                        - hvac_action
+                                        - current_temperature
+                                        - temperature
+                                        - target_temp_high
+                                        - target_temp_low
+                                        - target_temp_step
+                                        - target_temperature_step
+                                        - min_temp
+                                        - max_temp
+                                        - preset_modes
+                                        - preset_mode
+                                - *send_entity_snapshot
                             - alias: Button page
                               conditions:
                                 - >-
@@ -12377,22 +12013,12 @@ actions:
                   trigger.event.data.entity_id == states(detailed_entity)
                 }}
             then:
+              # The page opened from the home page has no entity of its own, so the refresh loop does not follow it
               - variables:
-                  climate_entity: '{{ trigger.event.data.entity_id }}'
-                  hvac_modes: '{{ state_attr(climate_entity, "hvac_modes") }}'
-              - *climate-update_slider
-              - *climate-update_buttons
-              - *climate-update_preset
-
-      - alias: Update climate page custom buttons
-        conditions:
-          - condition: trigger
-            id:
-              - climate_button08_state
-              - climate_button09_state
-          - '{{ pages.current == pages.climate }}'
-        sequence:
-          - *climate_custom_buttons
+                  page_constructor: false
+                  refresh_settled: false
+                  current_page_from_sensor: '{{ pages.climate }}'
+              - sequence: *refresh_page_climate
 
       - alias: Update entities pages
         conditions:
