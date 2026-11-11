@@ -1,0 +1,979 @@
+Page water_heater
+    Attributes
+        ID                 : 0
+        Scope              : local
+        Dragging           : 0
+        Send Component ID  : on press and release
+        Opacity            : 127
+        Width              : 480
+        Effect             : load
+        Effect Priority    : 0
+        Effect Time        : 300
+        Locked             : no
+        Swide up page ID   : disabled
+        Swide down page ID : disabled
+        Swide left page ID : disabled
+        Swide right page ID: disabled
+        Fill               : picture
+        Back. Picture ID   : 37
+    
+    Events
+        Preinitialize Event
+            if(api==0)
+            {
+                page home_page_id
+            }
+            water_heater.pic=climate.b[0].pic
+            // page_label
+            page_label.picc=water_heater.pic
+            page_label.pco=color_pco_main
+            // button_back
+            button_back.picc=water_heater.pic
+            button_back.picc2=water_heater.pic
+            button_back.pco=color_pco_navigation
+            // current_temp
+            current_temp.picc=water_heater.pic
+            current_temp.pco=color_pco_main
+            // target_icon
+            vis target_icon,0
+            target_icon.picc=water_heater.pic
+            target_icon.pco=color_pco_main
+            // target
+            target.picc=water_heater.pic
+            target.pco=color_pco_main
+            // values 01-04
+            for(sys0=8;sys0<=15;sys0++)
+            {
+                b[sys0].picc=water_heater.pic
+                b[sys0].pco=color_pco_secondary
+            }
+            // buttons 01-08
+            for(sys0=16;sys0<=23;sys0++)
+            {
+                vis b[sys0],0
+                b[sys0].picc=water_heater.pic
+                b[sys0].font=button_font.val
+            }
+            // other
+            vis slider,0
+            vis decrease_temp,0
+            vis increase_temp,0
+            dim=brightness
+            sendme
+        
+        Page Exit Event
+            if(timer0.en==1)
+            {
+                timer0.en=0
+                covx temp_number0.val,va1.txt,0,0
+                climatesetting.txt="water_heater,temperature,"+va1.txt
+                printh 92
+                prints "localevent",0
+                printh 00
+                prints climatesetting.txt,0
+                printh 00
+                printh FF FF FF
+            }
+        
+Variable (int32) temp_number0
+    Attributes
+        ID   : 24
+        Scope: local
+        Value: 0
+    
+Variable (int32) temp_number1
+    Attributes
+        ID   : 27
+        Scope: local
+        Value: 0
+    
+Variable (int32) temp_number2
+    Attributes
+        ID   : 28
+        Scope: local
+        Value: 0
+    
+Variable (string) temp_unit
+    Attributes
+        ID            : 29
+        Scope         : local
+        Text          : \xc2\xb0
+        Max. Text Size: 10
+    
+Variable (int32) temp_gap
+    Attributes
+        ID   : 30
+        Scope: local
+        Value: 0
+    
+Variable (int32) button_font
+    Attributes
+        ID   : 31
+        Scope: global
+        Value: 8
+    
+Variable (string) climatesetting
+    Attributes
+        ID            : 33
+        Scope         : local
+        Text          : 
+        Max. Text Size: 50
+    
+Variable (string) lastclick
+    Attributes
+        ID            : 34
+        Scope         : local
+        Text          : 
+        Max. Text Size: 255
+    
+Variable (int32) temp_offset
+    Attributes
+        ID   : 36
+        Scope: local
+        Value: 0
+    
+Variable (int32) temp_step
+    Attributes
+        ID   : 37
+        Scope: local
+        Value: 1
+    
+Variable (string) va1
+    Attributes
+        ID            : 38
+        Scope         : local
+        Text          : 
+        Max. Text Size: 10
+    
+Text current_temp
+    Attributes
+        ID                      : 3
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 84
+        y coordinate            : 47
+        Width                   : 314
+        Height                  : 55
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 5
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 25
+        Word wrap               : enabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text page_label
+    Attributes
+        ID                      : 6
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 48
+        y coordinate            : 8
+        Width                   : 300
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 100
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text target_icon
+    Attributes
+        ID                      : 7
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 12
+        y coordinate            : 8
+        Width                   : 35
+        Height                  : 35
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 7
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value01_icon
+    Attributes
+        ID                      : 8
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 29
+        y coordinate            : 111
+        Width                   : 30
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 7
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : right
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value01
+    Attributes
+        ID                      : 9
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 60
+        y coordinate            : 111
+        Width                   : 70
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 6
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value02_icon
+    Attributes
+        ID                      : 10
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 135
+        y coordinate            : 111
+        Width                   : 30
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 7
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : right
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value02
+    Attributes
+        ID                      : 11
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 166
+        y coordinate            : 111
+        Width                   : 70
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 6
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value03_icon
+    Attributes
+        ID                      : 12
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 241
+        y coordinate            : 111
+        Width                   : 30
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 7
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : right
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value03
+    Attributes
+        ID                      : 13
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 272
+        y coordinate            : 111
+        Width                   : 70
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 6
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value04_icon
+    Attributes
+        ID                      : 14
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 348
+        y coordinate            : 111
+        Width                   : 30
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 7
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : right
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text value04
+    Attributes
+        ID                      : 15
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 378
+        y coordinate            : 111
+        Width                   : 70
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 6
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text button01
+    Attributes
+        ID                      : 16
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 6
+        y coordinate            : 264
+        Width                   : 45
+        Height                  : 45
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xee\xbe\x91
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Release Event
+            lastclick.txt="water_heater,operation_mode,on"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints lastclick.txt,0
+            printh 00
+            printh FF FF FF
+        
+Text button02
+    Attributes
+        ID                      : 17
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 63
+        y coordinate            : 264
+        Width                   : 45
+        Height                  : 45
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xee\x8c\xa9
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Release Event
+            lastclick.txt="water_heater,operation_mode,eco"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints lastclick.txt,0
+            printh 00
+            printh FF FF FF
+        
+Text button03
+    Attributes
+        ID                      : 18
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 120
+        y coordinate            : 264
+        Width                   : 45
+        Height                  : 45
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xef\x90\x8a
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Release Event
+            lastclick.txt="water_heater,operation_mode,electric"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints lastclick.txt,0
+            printh 00
+            printh FF FF FF
+        
+Text button04
+    Attributes
+        ID                      : 19
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 177
+        y coordinate            : 264
+        Width                   : 45
+        Height                  : 45
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xee\x88\xb7
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Release Event
+            lastclick.txt="water_heater,operation_mode,gas"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints lastclick.txt,0
+            printh 00
+            printh FF FF FF
+        
+Text button05
+    Attributes
+        ID                      : 20
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 234
+        y coordinate            : 264
+        Width                   : 45
+        Height                  : 45
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xef\xa9\x82
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Release Event
+            lastclick.txt="water_heater,operation_mode,heat_pump"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints lastclick.txt,0
+            printh 00
+            printh FF FF FF
+        
+Text button06
+    Attributes
+        ID                      : 21
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 291
+        y coordinate            : 264
+        Width                   : 45
+        Height                  : 45
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xef\xa9\x84
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Release Event
+            lastclick.txt="water_heater,operation_mode,performance"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints lastclick.txt,0
+            printh 00
+            printh FF FF FF
+        
+Text button07
+    Attributes
+        ID                      : 22
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 348
+        y coordinate            : 264
+        Width                   : 45
+        Height                  : 45
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xee\x93\x84
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Release Event
+            lastclick.txt="water_heater,operation_mode,high_demand"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints lastclick.txt,0
+            printh 00
+            printh FF FF FF
+        
+Text button08
+    Attributes
+        ID                      : 23
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 405
+        y coordinate            : 264
+        Width                   : 45
+        Height                  : 45
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xee\x90\xa4
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Release Event
+            lastclick.txt="water_heater,operation_mode,off"
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints lastclick.txt,0
+            printh 00
+            printh FF FF FF
+        
+Text target
+    Attributes
+        ID                      : 32
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 303
+        y coordinate            : 163
+        Width                   : 125
+        Height                  : 40
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 4
+        Cropped Back. Picture ID: 37
+        Horizontal Alignment    : right
+        Vertical Alignment      : bottom
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Slider slider
+    Attributes
+        ID                             : 26
+        Scope                          : local
+        Dragging                       : 0
+        Send Component ID              : on press and release
+        Opacity                        : 127
+        x coordinate                   : 97
+        y coordinate                   : 205
+        Width                          : 261
+        Height                         : 25
+        Effect                         : load
+        Effect Priority                : 0
+        Effect Time                    : 300
+        Direction                      : horizontal
+        Fill                           : crop image
+        Cursor width                   : auto
+        Cursor height                  : 255
+        Cropped Back. Picture ID       : 37
+        Cropped Slided Back. Picture ID: 37
+        Position                       : 200
+        Upper range limit              : 400
+        Lower range limit              : 0
+    
+    Events
+        Touch Release Event
+            temp_number0.val=slider.val*temp_step.val
+            temp_number0.val+=temp_offset.val
+            sys0=temp_number0.val
+            sys1=temp_step.val
+            call format_tenths
+            target.txt=home.tenths_txt.txt+temp_unit.txt
+            timer0.en=1
+        
+        Touch Move Event
+            temp_number0.val=slider.val*temp_step.val
+            temp_number0.val+=temp_offset.val
+            sys0=temp_number0.val
+            sys1=temp_step.val
+            call format_tenths
+            target.txt=home.tenths_txt.txt+temp_unit.txt
+        
+Button button_back
+    Attributes
+        ID                                  : 25
+        Scope                               : local
+        Dragging                            : 0
+        Send Component ID                   : on press and release
+        Opacity                             : 127
+        x coordinate                        : 385
+        y coordinate                        : 0
+        Width                               : 95
+        Height                              : 48
+        Effect                              : load
+        Effect Priority                     : 0
+        Effect Time                         : 300
+        Fill                                : crop image
+        Font ID                             : 8
+        Cropped Back. Picture ID (Unpressed): 37
+        Back. Picture ID (Pressed)          : 65535
+        Cropped Back. Picture ID (Pressed)  : 37
+        Horizontal Alignment                : center
+        Vertical Alignment                  : center
+        State                               : unpressed
+        Text                                : \xee\x85\x98
+        Max. Text Size                      : 3
+        Word wrap                           : disabled
+        Horizontal Spacing                  : 0
+        Vertical Spacing                    : 0
+    
+    Events
+        Touch Press Event
+            page back_page_id
+        
+Hotspot decrease_temp
+    Attributes
+        ID               : 4
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: on press and release
+        Opacity          : 127
+        x coordinate     : 34
+        y coordinate     : 190
+        Width            : 55
+        Height           : 55
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+    
+    Events
+        Touch Press Event
+            if(slider.val>0)
+            {
+                slider.val--
+                temp_number0.val=slider.val*temp_step.val
+                temp_number0.val+=temp_offset.val
+                sys0=temp_number0.val
+                sys1=temp_step.val
+                call format_tenths
+                target.txt=home.tenths_txt.txt+temp_unit.txt
+            }
+        
+        Touch Release Event
+            timer0.en=1
+        
+Hotspot increase_temp
+    Attributes
+        ID               : 5
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: on press and release
+        Opacity          : 127
+        x coordinate     : 360
+        y coordinate     : 190
+        Width            : 55
+        Height           : 55
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+    
+    Events
+        Touch Press Event
+            if(slider.val<slider.maxval)
+            {
+                slider.val++
+                temp_number0.val=slider.val*temp_step.val
+                temp_number0.val+=temp_offset.val
+                sys0=temp_number0.val
+                sys1=temp_step.val
+                call format_tenths
+                target.txt=home.tenths_txt.txt+temp_unit.txt
+            }
+        
+        Touch Release Event
+            timer0.en=1
+        
+Timer swipestore
+    Attributes
+        ID         : 2
+        Scope      : local
+        Period (ms): 50
+        Enabled    : no
+    
+    Events
+        Timer Event
+            swipex=tch0
+            swipey=tch1
+        
+Timer timer0
+    Attributes
+        ID         : 35
+        Scope      : local
+        Period (ms): 1000
+        Enabled    : no
+    
+    Events
+        Timer Event
+            timer0.en=0
+            covx temp_number0.val,va1.txt,0,0
+            climatesetting.txt="water_heater,temperature,"+va1.txt
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints climatesetting.txt,0
+            printh 00
+            printh FF FF FF
+        
+TouchCap swipe
+    Attributes
+        ID   : 1
+        Scope: local
+        Value: 0
+    
+    Events
+        Touch Press Event
+            swipestore.en=1 // Start swipestore timer
+        
+        Touch Release Event
+            swipestore.en=0
+            // Touch has ended, x
+            if(tch0==0)
+            {
+                swipec=swipex-tch2
+                // From Left to Right
+                if(swipec>swipedx)
+                {
+                    //page
+                }
+                // Right to Left
+                swipec2=0-swipedx
+                if(swipec<swipec2)
+                {
+                    //page
+                }
+            }
+            // Touch has ended, y
+            if(tch1==0)
+            {
+                swipec=swipey-tch3
+                // From Up to Down
+                if(swipec>100)
+                {
+                    //page
+                }
+                // Down to Up
+                swipec2=0-swipedy
+                if(swipec<-100)
+                {
+                    //page
+                }
+            }
+        

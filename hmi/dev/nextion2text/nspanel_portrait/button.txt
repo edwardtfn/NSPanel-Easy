@@ -1,0 +1,277 @@
+Page button
+    Attributes
+        ID                 : 0
+        Scope              : local
+        Dragging           : 0
+        Send Component ID  : on press and release
+        Opacity            : 127
+        Width              : 320
+        Effect             : load
+        Effect Priority    : 0
+        Effect Time        : 300
+        Locked             : no
+        Swide up page ID   : disabled
+        Swide down page ID : disabled
+        Swide left page ID : disabled
+        Swide right page ID: disabled
+        Fill               : picture
+        Back. Picture ID   : 0
+    
+    Events
+        Preinitialize Event
+            if(api==0)
+            {
+                page home_page_id
+            }
+            // set background image and fg color to all components
+            button.pic=pic_background_main
+            icon_state.picc=pic_background_main
+            page_label.picc=pic_background_main
+            button_back.font=button_back_font
+            button_back.pco=color_pco_navigation
+            button_back.picc2=pic_background_main
+            dim=brightness
+            sendme
+        
+Variable (int32) state
+    Attributes
+        ID   : 4
+        Scope: local
+        Value: 4294967295
+    
+Variable (int32) color_idle
+    Attributes
+        ID   : 5
+        Scope: local
+        Value: 16904
+    
+Variable (int32) color_pressed
+    Attributes
+        ID   : 6
+        Scope: local
+        Value: 15483
+    
+Variable (int32) color_unavail
+    Attributes
+        ID   : 7
+        Scope: local
+        Value: 10565
+    
+Variable (int32) color_ring
+    Attributes
+        ID   : 8
+        Scope: local
+        Value: 21162
+    
+Variable (int32) cx
+    Attributes
+        ID   : 9
+        Scope: local
+        Value: 0
+    
+Variable (int32) cy
+    Attributes
+        ID   : 10
+        Scope: local
+        Value: 0
+    
+Variable (int32) outer_r
+    Attributes
+        ID   : 13
+        Scope: local
+        Value: 0
+    
+Variable (int32) inner_r
+    Attributes
+        ID   : 14
+        Scope: local
+        Value: 0
+    
+Variable (string) icon
+    Attributes
+        ID            : 15
+        Scope         : local
+        Text          : 
+        Max. Text Size: 4
+    
+Variable (int32) inner_d
+    Attributes
+        ID   : 16
+        Scope: local
+        Value: 0
+    
+Variable (int32) icon_x
+    Attributes
+        ID   : 17
+        Scope: local
+        Value: 0
+    
+Variable (int32) icon_y
+    Attributes
+        ID   : 18
+        Scope: local
+        Value: 0
+    
+Text page_label
+    Attributes
+        ID                      : 1
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 46
+        y coordinate            : 8
+        Width                   : 204
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 100
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text icon_state
+    Attributes
+        ID                      : 2
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 10
+        y coordinate            : 8
+        Width                   : 35
+        Height                  : 35
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Button button_back
+    Attributes
+        ID                                  : 3
+        Scope                               : local
+        Dragging                            : 0
+        Send Component ID                   : on press and release
+        Opacity                             : 127
+        x coordinate                        : 260
+        y coordinate                        : 0
+        Width                               : 60
+        Height                              : 48
+        Effect                              : load
+        Effect Priority                     : 0
+        Effect Time                         : 300
+        Fill                                : crop image
+        Font ID                             : 8
+        Cropped Back. Picture ID (Unpressed): 0
+        Back. Picture ID (Pressed)          : 65535
+        Cropped Back. Picture ID (Pressed)  : 0
+        Horizontal Alignment                : center
+        Vertical Alignment                  : center
+        State                               : unpressed
+        Text                                : \xee\x85\x98
+        Max. Text Size                      : 3
+        Word wrap                           : disabled
+        Horizontal Spacing                  : 0
+        Vertical Spacing                    : 0
+    
+    Events
+        Touch Press Event
+            page back_page_id
+        
+Hotspot touch_area
+    Attributes
+        ID               : 11
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: disabled
+        Opacity          : 127
+        x coordinate     : 120
+        y coordinate     : 200
+        Width            : 80
+        Height           : 80
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+    
+    Events
+        Touch Press Event
+            if(state.val==0)
+            {
+                // Draw pressed color immediately (local, no UART)
+                state.val=1
+                cirs cx.val,cy.val,inner_r.val,color_pressed.val
+                xstr icon_x.val,icon_y.val,inner_d.val,inner_d.val,10,WHITE,color_pressed.val,1,1,3,icon.txt
+                // Send event to ESPHome
+                printh 92
+                prints "localevent",0
+                printh 00
+                prints "button,press",0
+                printh 00
+                printh FF FF FF
+            }
+        
+Timer render
+    Attributes
+        ID         : 12
+        Scope      : local
+        Period (ms): 50
+        Enabled    : no
+    
+    Events
+        Timer Event
+            // Self-disable first
+            render.en=0
+            // Derive center from touch_area position
+            sys0=touch_area.w/2
+            sys1=touch_area.h/2
+            cx.val=touch_area.x+sys0
+            cy.val=touch_area.y+sys1
+            // Pre-compute radii and icon coordinates
+            outer_r.val=sys0
+            inner_r.val=outer_r.val-4
+            inner_d.val=inner_r.val*2
+            icon_x.val=cx.val-inner_r.val
+            icon_y.val=cy.val-inner_r.val
+            // Resolve fill color
+            if(state.val==0)
+            {
+                sys0=color_idle.val
+            }else if(state.val==1)
+            {
+                sys0=color_pressed.val
+            }else
+            {
+                sys0=color_unavail.val
+            }
+            // Draw ring
+            cirs cx.val,cy.val,outer_r.val,color_ring.val
+            cirs cx.val,cy.val,outer_r.val-1,color_ring.val
+            cirs cx.val,cy.val,outer_r.val-2,color_ring.val
+            cirs cx.val,cy.val,outer_r.val-3,color_ring.val
+            // Draw inner fill
+            cirs cx.val,cy.val,inner_r.val,sys0
+            // Draw icon
+            xstr icon_x.val,icon_y.val,inner_d.val,inner_d.val,10,WHITE,sys0,1,1,3,icon.txt
+            // Ensure touch_area in the front
+            ref touch_area
+        
