@@ -1,0 +1,748 @@
+Page fan
+    Attributes
+        ID                 : 0
+        Scope              : local
+        Dragging           : 0
+        Send Component ID  : on press and release
+        Opacity            : 127
+        Width              : 480
+        Effect             : load
+        Effect Priority    : 0
+        Effect Time        : 300
+        Locked             : no
+        Swide up page ID   : disabled
+        Swide down page ID : disabled
+        Swide left page ID : disabled
+        Swide right page ID: disabled
+        Fill               : picture
+        Back. Picture ID   : 0
+    
+    Events
+        Preinitialize Event
+            if(api==0)
+            {
+                page home_page_id
+            }
+            // Optional fan controls hidden by default
+            vis bt_oscillate,0
+            vis mode_button,0
+            vis fan_value,0
+            vis fanslider,0
+            vis button_up,0
+            vis button_down,0
+            vis mode_bt1,0
+            vis mode_bt2,0
+            vis mode_bt3,0
+            vis mode_bt4,0
+            vis mode_bt5,0
+            // Light mode only: override HMI defaults (which target dark theme).
+            // Dark theme uses the component defaults directly, so no else branch.
+            if(theme==1)
+            {
+                fan.pic=pic_background_main
+                button_back.font=button_back_font
+                button_back.picc=pic_background_main
+                button_back.picc2=pic_background_main
+                button_back.pco=color_pco_navigation
+                icon_state.picc=pic_background_main
+                icon_state.pco=color_pco_main
+                page_label.picc=pic_background_main
+                page_label.pco=color_pco_main
+                fan_value.picc=pic_background_main
+                fan_value.pco=color_pco_main
+                button_up.picc=pic_background_main
+                button_up.picc2=pic_background_main
+                button_up.pco=color_pco_secondary
+                button_down.picc=pic_background_main
+                button_down.picc2=pic_background_main
+                button_down.pco=color_pco_secondary
+                power_button.picc=pic_background_main
+                power_button.pco=color_pco_secondary
+                bt_oscillate.picc=pic_background_main
+                bt_oscillate.pco=color_pco_secondary
+                mode_button.picc=pic_background_main
+                mode_button.pco=color_pco_secondary
+            }
+            dim=brightness
+            sendme
+        
+Variable (string) fansetting
+    Attributes
+        ID            : 7
+        Scope         : local
+        Text          : 
+        Max. Text Size: 255
+    
+Variable (string) va0
+    Attributes
+        ID            : 8
+        Scope         : local
+        Text          : 
+        Max. Text Size: 10
+    
+Text fan_value
+    Attributes
+        ID                      : 1
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 183
+        y coordinate            : 43
+        Width                   : 83
+        Height                  : 20
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text page_label
+    Attributes
+        ID                      : 2
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 48
+        y coordinate            : 8
+        Width                   : 300
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 100
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text icon_state
+    Attributes
+        ID                      : 6
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 12
+        y coordinate            : 8
+        Width                   : 35
+        Height                  : 35
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text bt_oscillate
+    Attributes
+        ID                      : 13
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 27
+        y coordinate            : 60
+        Width                   : 60
+        Height                  : 60
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xee\x81\xa9
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Release Event
+            bt_oscillate.pco=color_pco_highlight
+        
+Text power_button
+    Attributes
+        ID                      : 14
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 27
+        y coordinate            : 255
+        Width                   : 60
+        Height                  : 60
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xee\x90\xa4
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Release Event
+            power_button.pco=31
+        
+Text mode_button
+    Attributes
+        ID                      : 15
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 27
+        y coordinate            : 140
+        Width                   : 60
+        Height                  : 60
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 10
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : \xef\x95\x81
+        Max. Text Size          : 3
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+    Events
+        Touch Press Event
+            mode_button.pco=31
+        
+Slider fanslider
+    Attributes
+        ID                     : 3
+        Scope                  : global
+        Dragging               : 0
+        Send Component ID      : on press and release
+        Opacity                : 127
+        x coordinate           : 183
+        y coordinate           : 67
+        Width                  : 85
+        Height                 : 235
+        Effect                 : load
+        Effect Priority        : 0
+        Effect Time            : 300
+        Direction              : vertical
+        Fill                   : image
+        Cursor width           : auto
+        Cursor height          : 255
+        Back. Picture ID       : 39
+        Slided Back. Picture ID: 40
+        Position               : 0
+        Upper range limit      : 4
+        Lower range limit      : 0
+    
+    Events
+        Touch Release Event
+            sys0=100*fanslider.val/fanslider.maxval
+            covx sys0,va0.txt,0,0
+            fan_value.txt=va0.txt
+            fan_value.txt+=home.units_sep.txt
+            fan_value.txt+="%"
+            if(fanslider.val>fanslider.minval)
+            {
+                button_down.pco=59164
+            }else
+            {
+                button_down.pco=10597
+            }
+            if(fanslider.val<fanslider.maxval)
+            {
+                button_up.pco=59164
+            }else
+            {
+                button_up.pco=10597
+            }
+            timer0.en=1
+        
+        Touch Move Event
+            sys0=100*fanslider.val/fanslider.maxval
+            covx sys0,va0.txt,0,0
+            fan_value.txt=va0.txt
+            fan_value.txt+=home.units_sep.txt
+            fan_value.txt+="%"
+            if(fanslider.val>fanslider.minval)
+            {
+                button_down.pco=59164
+            }else
+            {
+                button_down.pco=10597
+            }
+            if(fanslider.val<fanslider.maxval)
+            {
+                button_up.pco=59164
+            }else
+            {
+                button_up.pco=10597
+            }
+        
+Button button_up
+    Attributes
+        ID                                  : 9
+        Scope                               : local
+        Dragging                            : 0
+        Send Component ID                   : on press and release
+        Opacity                             : 127
+        x coordinate                        : 315
+        y coordinate                        : 66
+        Width                               : 60
+        Height                              : 50
+        Effect                              : load
+        Effect Priority                     : 0
+        Effect Time                         : 300
+        Fill                                : crop image
+        Font ID                             : 10
+        Cropped Back. Picture ID (Unpressed): 0
+        Back. Picture ID (Pressed)          : 65535
+        Cropped Back. Picture ID (Pressed)  : 0
+        Horizontal Alignment                : center
+        Vertical Alignment                  : center
+        State                               : unpressed
+        Text                                : \xef\x91\xad
+        Max. Text Size                      : 3
+        Word wrap                           : disabled
+        Horizontal Spacing                  : 0
+        Vertical Spacing                    : 0
+    
+    Events
+        Touch Press Event
+            if(fanslider.val<fanslider.maxval)
+            {
+                fanslider.val++
+                sys0=100*fanslider.val/fanslider.maxval
+                covx sys0,va0.txt,0,0
+                fan_value.txt=va0.txt
+                fan_value.txt+=home.units_sep.txt
+                fan_value.txt+="%"
+            }
+            if(fanslider.val>fanslider.minval)
+            {
+                button_down.pco=59164
+            }else
+            {
+                button_down.pco=10597
+            }
+            if(fanslider.val<fanslider.maxval)
+            {
+                button_up.pco=59164
+            }else
+            {
+                button_up.pco=10597
+            }
+        
+        Touch Release Event
+            timer0.en=1
+        
+Button button_down
+    Attributes
+        ID                                  : 10
+        Scope                               : local
+        Dragging                            : 0
+        Send Component ID                   : on press and release
+        Opacity                             : 127
+        x coordinate                        : 315
+        y coordinate                        : 252
+        Width                               : 60
+        Height                              : 50
+        Effect                              : load
+        Effect Priority                     : 0
+        Effect Time                         : 300
+        Fill                                : crop image
+        Font ID                             : 10
+        Cropped Back. Picture ID (Unpressed): 0
+        Back. Picture ID (Pressed)          : 65535
+        Cropped Back. Picture ID (Pressed)  : 0
+        Horizontal Alignment                : center
+        Vertical Alignment                  : center
+        State                               : unpressed
+        Text                                : \xef\x91\xac
+        Max. Text Size                      : 3
+        Word wrap                           : disabled
+        Horizontal Spacing                  : 0
+        Vertical Spacing                    : 0
+    
+    Events
+        Touch Press Event
+            if(fanslider.val>fanslider.minval)
+            {
+                fanslider.val--
+                sys0=100*fanslider.val/fanslider.maxval
+                covx sys0,va0.txt,0,0
+                fan_value.txt=va0.txt
+                fan_value.txt+=home.units_sep.txt
+                fan_value.txt+="%"
+            }
+            if(fanslider.val>fanslider.minval)
+            {
+                button_down.pco=59164
+            }else
+            {
+                button_down.pco=10597
+            }
+            if(fanslider.val<fanslider.maxval)
+            {
+                button_up.pco=59164
+            }else
+            {
+                button_up.pco=10597
+            }
+        
+        Touch Release Event
+            timer0.en=1
+        
+Button button_back
+    Attributes
+        ID                                  : 12
+        Scope                               : local
+        Dragging                            : 0
+        Send Component ID                   : on press and release
+        Opacity                             : 127
+        x coordinate                        : 385
+        y coordinate                        : 0
+        Width                               : 95
+        Height                              : 48
+        Effect                              : load
+        Effect Priority                     : 0
+        Effect Time                         : 300
+        Fill                                : crop image
+        Font ID                             : 8
+        Cropped Back. Picture ID (Unpressed): 0
+        Back. Picture ID (Pressed)          : 65535
+        Cropped Back. Picture ID (Pressed)  : 0
+        Horizontal Alignment                : center
+        Vertical Alignment                  : center
+        State                               : unpressed
+        Text                                : \xee\x85\x98
+        Max. Text Size                      : 3
+        Word wrap                           : disabled
+        Horizontal Spacing                  : 0
+        Vertical Spacing                    : 0
+    
+    Events
+        Touch Press Event
+            page back_page_id
+        
+Dual-state Button mode_bt1
+    Attributes
+        ID                               : 16
+        Scope                            : local
+        Dragging                         : 0
+        Send Component ID                : on release
+        Opacity                          : 127
+        x coordinate                     : 200
+        y coordinate                     : 66
+        Width                            : 150
+        Height                           : 40
+        Effect                           : load
+        Effect Priority                  : 0
+        Effect Time                      : 300
+        Fill                             : image
+        Font ID                          : 2
+        Background Picture ID (Unpressed): 65535
+        Back. Picture ID (Pressed)       : 65535
+        Horizontal Alignment             : center
+        Vertical Alignment               : center
+        State                            : unpressed
+        Text                             : 
+        Max. Text Size                   : 20
+        Word wrap                        : disabled
+        Horizontal Spacing               : 0
+        Vertical Spacing                 : 0
+    
+    Events
+        Touch Release Event
+            if(mode_bt1.val==0)
+            {
+                // Was already the confirmed button: restore it; nothing is pending
+                mode_bt1.val=1
+            }else
+            {
+                // Background stays on the confirmed state; the glyph marks the pending request
+                mode_bt1.val=0
+                mode_bt1.pco=color_pco_highlight
+            }
+        
+Dual-state Button mode_bt2
+    Attributes
+        ID                               : 17
+        Scope                            : local
+        Dragging                         : 0
+        Send Component ID                : on release
+        Opacity                          : 127
+        x coordinate                     : 200
+        y coordinate                     : 115
+        Width                            : 150
+        Height                           : 40
+        Effect                           : load
+        Effect Priority                  : 0
+        Effect Time                      : 300
+        Fill                             : image
+        Font ID                          : 2
+        Background Picture ID (Unpressed): 65535
+        Back. Picture ID (Pressed)       : 65535
+        Horizontal Alignment             : center
+        Vertical Alignment               : center
+        State                            : unpressed
+        Text                             : 
+        Max. Text Size                   : 20
+        Word wrap                        : disabled
+        Horizontal Spacing               : 0
+        Vertical Spacing                 : 0
+    
+    Events
+        Touch Release Event
+            if(mode_bt2.val==0)
+            {
+                // Was already the confirmed button: restore it; nothing is pending
+                mode_bt2.val=1
+            }else
+            {
+                // Background stays on the confirmed state; the glyph marks the pending request
+                mode_bt2.val=0
+                mode_bt2.pco=color_pco_highlight
+            }
+        
+Dual-state Button mode_bt3
+    Attributes
+        ID                               : 18
+        Scope                            : local
+        Dragging                         : 0
+        Send Component ID                : on release
+        Opacity                          : 127
+        x coordinate                     : 200
+        y coordinate                     : 164
+        Width                            : 150
+        Height                           : 40
+        Effect                           : load
+        Effect Priority                  : 0
+        Effect Time                      : 300
+        Fill                             : image
+        Font ID                          : 2
+        Background Picture ID (Unpressed): 65535
+        Back. Picture ID (Pressed)       : 65535
+        Horizontal Alignment             : center
+        Vertical Alignment               : center
+        State                            : unpressed
+        Text                             : 
+        Max. Text Size                   : 20
+        Word wrap                        : disabled
+        Horizontal Spacing               : 0
+        Vertical Spacing                 : 0
+    
+    Events
+        Touch Release Event
+            if(mode_bt3.val==0)
+            {
+                // Was already the confirmed button: restore it; nothing is pending
+                mode_bt3.val=1
+            }else
+            {
+                // Background stays on the confirmed state; the glyph marks the pending request
+                mode_bt3.val=0
+                mode_bt3.pco=color_pco_highlight
+            }
+        
+Dual-state Button mode_bt4
+    Attributes
+        ID                               : 19
+        Scope                            : local
+        Dragging                         : 0
+        Send Component ID                : on release
+        Opacity                          : 127
+        x coordinate                     : 200
+        y coordinate                     : 213
+        Width                            : 150
+        Height                           : 40
+        Effect                           : load
+        Effect Priority                  : 0
+        Effect Time                      : 300
+        Fill                             : image
+        Font ID                          : 2
+        Background Picture ID (Unpressed): 65535
+        Back. Picture ID (Pressed)       : 65535
+        Horizontal Alignment             : center
+        Vertical Alignment               : center
+        State                            : unpressed
+        Text                             : 
+        Max. Text Size                   : 20
+        Word wrap                        : disabled
+        Horizontal Spacing               : 0
+        Vertical Spacing                 : 0
+    
+    Events
+        Touch Release Event
+            if(mode_bt4.val==0)
+            {
+                // Was already the confirmed button: restore it; nothing is pending
+                mode_bt4.val=1
+            }else
+            {
+                // Background stays on the confirmed state; the glyph marks the pending request
+                mode_bt4.val=0
+                mode_bt4.pco=color_pco_highlight
+            }
+        
+Dual-state Button mode_bt5
+    Attributes
+        ID                               : 20
+        Scope                            : local
+        Dragging                         : 0
+        Send Component ID                : on release
+        Opacity                          : 127
+        x coordinate                     : 200
+        y coordinate                     : 262
+        Width                            : 150
+        Height                           : 40
+        Effect                           : load
+        Effect Priority                  : 0
+        Effect Time                      : 300
+        Fill                             : image
+        Font ID                          : 2
+        Background Picture ID (Unpressed): 65535
+        Back. Picture ID (Pressed)       : 65535
+        Horizontal Alignment             : center
+        Vertical Alignment               : center
+        State                            : unpressed
+        Text                             : 
+        Max. Text Size                   : 20
+        Word wrap                        : disabled
+        Horizontal Spacing               : 0
+        Vertical Spacing                 : 0
+    
+    Events
+        Touch Release Event
+            if(mode_bt5.val==0)
+            {
+                // Was already the confirmed button: restore it; nothing is pending
+                mode_bt5.val=1
+            }else
+            {
+                // Background stays on the confirmed state; the glyph marks the pending request
+                mode_bt5.val=0
+                mode_bt5.pco=color_pco_highlight
+            }
+        
+Timer swipestore
+    Attributes
+        ID         : 5
+        Scope      : local
+        Period (ms): 50
+        Enabled    : no
+    
+    Events
+        Timer Event
+            swipex=tch0
+            swipey=tch1
+        
+Timer timer0
+    Attributes
+        ID         : 11
+        Scope      : local
+        Period (ms): 1000
+        Enabled    : no
+    
+    Events
+        Timer Event
+            timer0.en=0
+            sys0=100*fanslider.val/fanslider.maxval
+            covx sys0,va0.txt,0,0
+            fan_value.txt=va0.txt+"%"
+            fansetting.txt="fan,percentage,"+va0.txt
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints fansetting.txt,0
+            printh 00
+            printh FF FF FF
+        
+TouchCap swipe
+    Attributes
+        ID   : 4
+        Scope: local
+        Value: 0
+    
+    Events
+        Touch Press Event
+            swipestore.en=1 // Start swipestore timer
+        
+        Touch Release Event
+            swipestore.en=0
+            // Touch has ended, x
+            if(tch0==0)
+            {
+                swipec=swipex-tch2
+                // From Left to Right
+                if(swipec>swipedx)
+                {
+                    //page
+                }
+                // Right to Left
+                swipec2=0-swipedx
+                if(swipec<swipec2)
+                {
+                    //page
+                }
+            }
+            // Touch has ended, y
+            if(tch1==0)
+            {
+                swipec=swipey-tch3
+                // From Up to Down
+                if(swipec>100)
+                {
+                    //page
+                }
+                // Down to Up
+                swipec2=0-swipedy
+                if(swipec<-100)
+                {
+                    //page
+                }
+            }
+        

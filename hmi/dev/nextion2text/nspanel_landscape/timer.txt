@@ -1,0 +1,555 @@
+Page timer
+    Attributes
+        ID                 : 0
+        Scope              : local
+        Dragging           : 0
+        Send Component ID  : on press and release
+        Opacity            : 127
+        Width              : 480
+        Effect             : load
+        Effect Priority    : 0
+        Effect Time        : 300
+        Locked             : no
+        Swide up page ID   : disabled
+        Swide down page ID : disabled
+        Swide left page ID : disabled
+        Swide right page ID: disabled
+        Fill               : picture
+        Back. Picture ID   : 0
+    
+    Events
+        Preinitialize Event
+            if(api==0)
+            {
+                page home_page_id
+            }
+            // Background and theme
+            timer.pic=pic_background_main
+            if(theme==1)
+            {
+                button_back.picc2=pic_background_main
+                icon_state.picc=pic_background_main
+                page_label.picc=pic_background_main
+                countdown.picc=pic_background_main
+                duration_label.picc=pic_background_main
+                bt_play_pic.pic=92
+                bt_cancel_pic.pic=93
+                bt_finish_pic.pic=94
+            }
+            button_back.font=button_back_font
+            button_back.pco=color_pco_navigation
+            // Default: idle state
+            vis bt_cancel_pic,0
+            vis bt_cancel_icon,0
+            vis bt_cancel_hs,0
+            vis bt_finish_pic,0
+            vis bt_finish_icon,0
+            vis bt_finish_hs,0
+            dim=brightness
+            sendme
+        
+Variable (int32) remaining
+    Attributes
+        ID   : 4
+        Scope: local
+        Value: 0
+    
+Variable (int32) timer_state
+    Attributes
+        ID   : 5
+        Scope: local
+        Value: 4294967294
+    
+Variable (int32) dur_secs
+    Attributes
+        ID   : 6
+        Scope: local
+        Value: 0
+    
+Variable (string) time_sep
+    Attributes
+        ID            : 7
+        Scope         : local
+        Text          : :
+        Max. Text Size: 1
+    
+Variable (string) va0
+    Attributes
+        ID            : 8
+        Scope         : local
+        Text          : 
+        Max. Text Size: 10
+    
+Variable (string) icon_play
+    Attributes
+        ID            : 21
+        Scope         : local
+        Text          : \xee\x90\x89
+        Max. Text Size: 3
+    
+Variable (string) icon_pause
+    Attributes
+        ID            : 22
+        Scope         : local
+        Text          : \xee\x8f\xa3
+        Max. Text Size: 3
+    
+Text page_label
+    Attributes
+        ID                      : 1
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 48
+        y coordinate            : 8
+        Width                   : 300
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : left
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 100
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text icon_state
+    Attributes
+        ID                      : 2
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : on press and release
+        Opacity                 : 127
+        x coordinate            : 12
+        y coordinate            : 8
+        Width                   : 35
+        Height                  : 35
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 8
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 10
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text countdown
+    Attributes
+        ID                      : 10
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 10
+        y coordinate            : 44
+        Width                   : 430
+        Height                  : 160
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 6
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 16
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text duration_label
+    Attributes
+        ID                      : 11
+        Scope                   : local
+        Dragging                : 0
+        Send Component ID       : disabled
+        Opacity                 : 127
+        x coordinate            : 175
+        y coordinate            : 277
+        Width                   : 100
+        Height                  : 30
+        Effect                  : load
+        Effect Priority         : 0
+        Effect Time             : 300
+        Fill                    : crop image
+        Associated Keyboard     : none
+        Font ID                 : 2
+        Cropped Back. Picture ID: 0
+        Horizontal Alignment    : center
+        Vertical Alignment      : center
+        Input Type              : character
+        Text                    : 
+        Max. Text Size          : 16
+        Word wrap               : disabled
+        Horizontal Spacing      : 0
+        Vertical Spacing        : 0
+    
+Text bt_play_icon
+    Attributes
+        ID                  : 15
+        Scope               : local
+        Dragging            : 0
+        Send Component ID   : disabled
+        Opacity             : 127
+        x coordinate        : 62
+        y coordinate        : 215
+        Width               : 50
+        Height              : 50
+        Effect              : load
+        Effect Priority     : 0
+        Effect Time         : 300
+        Fill                : solid color
+        Style               : flat
+        Associated Keyboard : none
+        Font ID             : 10
+        Back. Color         : 10597
+        Font Color          : 65535
+        Horizontal Alignment: center
+        Vertical Alignment  : center
+        Input Type          : character
+        Text                : \xee\x90\x8d
+        Max. Text Size      : 4
+        Word wrap           : disabled
+        Horizontal Spacing  : 0
+        Vertical Spacing    : 0
+    
+Text bt_cancel_icon
+    Attributes
+        ID                  : 16
+        Scope               : local
+        Dragging            : 0
+        Send Component ID   : disabled
+        Opacity             : 127
+        x coordinate        : 182
+        y coordinate        : 215
+        Width               : 50
+        Height              : 50
+        Effect              : load
+        Effect Priority     : 0
+        Effect Time         : 300
+        Fill                : solid color
+        Style               : flat
+        Associated Keyboard : none
+        Font ID             : 10
+        Back. Color         : 10597
+        Font Color          : 65535
+        Horizontal Alignment: center
+        Vertical Alignment  : center
+        Input Type          : character
+        Text                : \xee\x85\x95
+        Max. Text Size      : 4
+        Word wrap           : disabled
+        Horizontal Spacing  : 0
+        Vertical Spacing    : 0
+    
+Text bt_finish_icon
+    Attributes
+        ID                  : 17
+        Scope               : local
+        Dragging            : 0
+        Send Component ID   : disabled
+        Opacity             : 127
+        x coordinate        : 302
+        y coordinate        : 215
+        Width               : 50
+        Height              : 50
+        Effect              : load
+        Effect Priority     : 0
+        Effect Time         : 300
+        Fill                : solid color
+        Style               : flat
+        Associated Keyboard : none
+        Font ID             : 10
+        Back. Color         : 10597
+        Font Color          : 65535
+        Horizontal Alignment: center
+        Vertical Alignment  : center
+        Input Type          : character
+        Text                : \xee\x84\xab
+        Max. Text Size      : 4
+        Word wrap           : disabled
+        Horizontal Spacing  : 0
+        Vertical Spacing    : 0
+    
+Picture bt_play_pic
+    Attributes
+        ID               : 12
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: disabled
+        Opacity          : 127
+        x coordinate     : 57
+        y coordinate     : 210
+        Width            : 60
+        Height           : 60
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+        Picture ID       : 85
+    
+Picture bt_cancel_pic
+    Attributes
+        ID               : 13
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: disabled
+        Opacity          : 127
+        x coordinate     : 177
+        y coordinate     : 210
+        Width            : 60
+        Height           : 60
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+        Picture ID       : 86
+    
+Picture bt_finish_pic
+    Attributes
+        ID               : 14
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: disabled
+        Opacity          : 127
+        x coordinate     : 297
+        y coordinate     : 210
+        Width            : 60
+        Height           : 60
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+        Picture ID       : 87
+    
+Button button_back
+    Attributes
+        ID                                  : 3
+        Scope                               : local
+        Dragging                            : 0
+        Send Component ID                   : on press and release
+        Opacity                             : 127
+        x coordinate                        : 385
+        y coordinate                        : 0
+        Width                               : 95
+        Height                              : 48
+        Effect                              : load
+        Effect Priority                     : 0
+        Effect Time                         : 300
+        Fill                                : crop image
+        Font ID                             : 8
+        Cropped Back. Picture ID (Unpressed): 0
+        Back. Picture ID (Pressed)          : 65535
+        Cropped Back. Picture ID (Pressed)  : 0
+        Horizontal Alignment                : center
+        Vertical Alignment                  : center
+        State                               : unpressed
+        Text                                : \xee\x85\x98
+        Max. Text Size                      : 3
+        Word wrap                           : disabled
+        Horizontal Spacing                  : 0
+        Vertical Spacing                    : 0
+    
+    Events
+        Touch Press Event
+            page back_page_id
+        
+Hotspot bt_play_hs
+    Attributes
+        ID               : 18
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: on press and release
+        Opacity          : 127
+        x coordinate     : 52
+        y coordinate     : 205
+        Width            : 70
+        Height           : 70
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+    
+    Events
+        Touch Release Event
+            printh 92
+            prints "localevent",0
+            printh 00
+            if(timer_state.val==1)
+            {
+                prints "timer,pause",0
+            }else
+            {
+                prints "timer,start",0
+            }
+            printh 00
+            printh FF FF FF
+        
+Hotspot bt_cancel_hs
+    Attributes
+        ID               : 19
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: on press and release
+        Opacity          : 127
+        x coordinate     : 172
+        y coordinate     : 205
+        Width            : 70
+        Height           : 70
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+    
+    Events
+        Touch Release Event
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints "timer,cancel",0
+            printh 00
+            printh FF FF FF
+        
+Hotspot bt_finish_hs
+    Attributes
+        ID               : 20
+        Scope            : local
+        Dragging         : 0
+        Send Component ID: on press and release
+        Opacity          : 127
+        x coordinate     : 292
+        y coordinate     : 205
+        Width            : 70
+        Height           : 70
+        Effect           : load
+        Effect Priority  : 0
+        Effect Time      : 300
+    
+    Events
+        Touch Release Event
+            printh 92
+            prints "localevent",0
+            printh 00
+            prints "timer,finish",0
+            printh 00
+            printh FF FF FF
+        
+Timer tick
+    Attributes
+        ID         : 9
+        Scope      : local
+        Period (ms): 1000
+        Enabled    : no
+    
+    Events
+        Timer Event
+            // Decrement
+            if(timer_state.val==1&&remaining.val>0)
+            {
+                remaining.val--
+            }
+            // Select font and build string based on remaining seconds
+            if(remaining.val>=3600)
+            {
+                countdown.font=6
+                sys0=remaining.val/3600
+                sys2=remaining.val%3600
+                sys1=sys2/60
+                sys2=sys2%60
+                covx sys0,va0.txt,0,0
+                countdown.txt=va0.txt+time_sep.txt
+                if(sys1<10)
+                {
+                    countdown.txt+="0"
+                }
+                covx sys1,va0.txt,0,0
+                countdown.txt+=va0.txt+time_sep.txt
+                if(sys2<10)
+                {
+                    countdown.txt+="0"
+                }
+                covx sys2,va0.txt,0,0
+                countdown.txt+=va0.txt
+            }else
+            {
+                if(remaining.val>=60)
+                {
+                    countdown.font=11
+                    sys1=remaining.val/60
+                    sys2=remaining.val%60
+                    covx sys1,va0.txt,0,0
+                    countdown.txt=va0.txt+time_sep.txt
+                    if(sys2<10)
+                    {
+                        countdown.txt+="0"
+                    }
+                    covx sys2,va0.txt,0,0
+                    countdown.txt+=va0.txt
+                }else
+                {
+                    countdown.font=12
+                    covx remaining.val,countdown.txt,0,0
+                }
+            }
+            // Stop timer when expired
+            if(remaining.val==0)
+            {
+                tick.en=0
+                timer_state.val=0
+                bt_play_icon.txt=icon_play.txt
+                vis bt_cancel_pic,0
+                vis bt_cancel_icon,0
+                vis bt_cancel_hs,0
+                vis bt_finish_pic,0
+                vis bt_finish_icon,0
+                vis bt_finish_hs,0
+            }
+        
+Timer refresh_bts
+    Attributes
+        ID         : 23
+        Scope      : local
+        Period (ms): 50
+        Enabled    : no
+    
+    Events
+        Timer Event
+            refresh_bts.en=0
+            if(timer_state.val==1)  // Active
+            {
+                bt_play_icon.txt=icon_pause.txt
+            }else
+            {
+                bt_play_icon.txt=icon_play.txt
+            }
+            if(timer_state.val>0)  // Active or paused
+            {
+                vis bt_cancel_pic,1
+                vis bt_cancel_icon,1
+                vis bt_cancel_hs,1
+                vis bt_finish_pic,1
+                vis bt_finish_icon,1
+                vis bt_finish_hs,1
+            }else // Idle
+            {
+                vis bt_cancel_pic,0
+                vis bt_cancel_icon,0
+                vis bt_cancel_hs,0
+                vis bt_finish_pic,0
+                vis bt_finish_icon,0
+                vis bt_finish_hs,0
+            }
+        

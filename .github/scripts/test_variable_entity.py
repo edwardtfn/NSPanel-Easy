@@ -192,8 +192,12 @@ def run_anchor(hass, variables, globals_, db, inputs):
     return result
 
 
-def entity_cases():
-    """(entity_id, state, attributes) to test, covering every domain and state the anchor handles."""
+def entity_cases(domains=()):
+    """(entity_id, state, attributes) to test, covering every domain and state the anchor handles.
+
+    `domains` adds a default-icon case for every domain the hand-written cases below do not cover
+    (e.g. every domain in `nextion.icon.domain`), so a change to any domain's default icon is detected.
+    """
     cases = []
     for state in ("disarmed", "disarming", "armed_home", "armed_away", "armed_night", "armed_vacation",
                   "armed_bypass", "armed_custom_bypass", "pending", "arming", "triggered", "unknown", "unavailable"):
@@ -226,6 +230,9 @@ def entity_cases():
         cases.append(("switch.test", state, {"icon": icon} if icon else {}))
     for state in ("open", "closed", "opening"):
         cases.append(("cover.test", state, {"device_class": "garage"}))
+    covered = {entity_id.split(".")[0] for entity_id, _, _ in cases}
+    for domain, state in itertools.product(sorted(set(domains) - covered), ("on", "off", "unavailable")):
+        cases.append((f"{domain}.test", state, {}))
     return cases
 
 
@@ -257,8 +264,10 @@ def compare(reference, candidate):
                     print(f"DIFF {label}: {name}\n"
                           f"  reference: {expected.get(name)!r}\n  tested:    {actual.get(name)!r}")
 
+    # Every domain with a default icon in either version, so a domain added or removed is checked too
+    domains = set(ref_globals["nextion"]["icon"]["domain"]) | set(new_globals["nextion"]["icon"]["domain"])
     for (entity_id, state, attributes), overlap, forced in itertools.product(
-            entity_cases(), OVERLAPS, FORCED_ICON_STATES):
+            entity_cases(domains), OVERLAPS, FORCED_ICON_STATES):
         attributes = dict(attributes, friendly_name="Friendly name")
         db = {entity_id: MockState(entity_id, state, attributes)}
         check(f"{entity_id}={state} {attributes} overlap={overlap} forced={forced}", db,
