@@ -71,6 +71,7 @@ number:
       then:
         - lambda: |-
             if (x == 0 and current_page_id == get_page_id("screensaver")) {
+              brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));  // Not a user action (#656)
               wakeup->execute(false);
             }
             timer_sleep->execute();
@@ -124,6 +125,9 @@ script:
       - lambda: |-
           const bool is_hw_button = (component == "hw_bt_left" or component == "hw_bt_right");
           const bool keep_dimmed = (is_hw_button and ${wakeup_with_button_press_dimmed | lower});
+          // A button is a user action: it ends the hold after an automatic change, and `brightness_dim_hold`
+          // then decides on the brightness (#656)
+          brightness_auto_hold = false;
           if (current_page_id != get_page_id("screensaver")) {
             // A dimmed display stays dimmed, only the timers are reset
             if (keep_dimmed and brightness_current == static_cast<uint8_t>(display_dim_brightness->state)) {
@@ -165,6 +169,8 @@ script:
           if (id(screensaver_display_time)) refresh_datetime->execute();
           brightness_current = int(display_sleep_brightness->state);
           brightness_dim_hold = false;  // The next wake-up decides on its own brightness
+          brightness_auto_hold = false;
+          brightness_auto_hold_armed = false;
           page_screensaver_apply_settings_with_delay->execute();
 
   - id: page_screensaver_apply_settings

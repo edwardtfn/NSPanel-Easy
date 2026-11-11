@@ -470,6 +470,11 @@ wake-up, including on page changes. Further hardware button presses on a dimmed 
 raising the brightness. A touch on the screen restores the regular brightness, and the hold is released when the display
 goes back to sleep.
 
+Without this option, the regular "Display Brightness" only returns on an action of yours: a touch on the screen, a hardware button,
+a wake-up asked by a sensor or through the `wake_up` action, or a page opened by Home Assistant (such as a notification).
+What the panel does on its own keeps a dimmed display at "Display Brightness Dimdown":
+the return to the home page after the page timeout, and the wake-up page shown after a restart, also after a power outage in the middle of the night.
+
 ### Set display as a light
 
 > [!NOTE]
