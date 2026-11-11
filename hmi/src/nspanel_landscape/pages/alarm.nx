@@ -1,0 +1,114 @@
+on alarm.load:
+  dim=brightness
+  if(api==0)
+  {
+    page home_page_id
+  }else
+  {
+    vis bt_home,0
+    vis bt_away,0
+    vis bt_night,0
+    vis bt_vacat,0
+    vis bt_bypass,0
+  }
+  button_back.font=button_back_font
+  sendme
+
+on bt_home.down:
+  bt_home_pic.pic=@pic(picture-0044)
+  bt_home_text.bco=65024
+  bt_home_text.pco=0
+  bt_home_icon.bco=65024
+  bt_home_icon.pco=0
+
+on bt_home.up:
+  lastclick.txt="alarm,home,"+code_format.txt+","+code_arm_req.txt+","+bt_home_text.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on bt_away.down:
+  bt_away_pic.pic=@pic(picture-0044)
+  bt_away_text.bco=65024
+  bt_away_text.pco=0
+  bt_away_icon.bco=65024
+  bt_away_icon.pco=0
+
+on bt_away.up:
+  lastclick.txt="alarm,away,"+code_format.txt+","+code_arm_req.txt+","+bt_away_text.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on bt_night.down:
+  bt_night_pic.pic=@pic(picture-0044)
+  bt_night_text.bco=65024
+  bt_night_text.pco=0
+  bt_night_icon.bco=65024
+  bt_night_icon.pco=0
+
+on bt_night.up:
+  lastclick.txt="alarm,night,"+code_format.txt+","+code_arm_req.txt+","+bt_night_text.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on bt_vacat.down:
+  bt_vacat_pic.pic=@pic(picture-0044)
+  bt_vacat_text.bco=65024
+  bt_vacat_text.pco=0
+  bt_vacat_icon.bco=65024
+  bt_vacat_icon.pco=0
+
+on bt_vacat.up:
+  lastclick.txt="alarm,vacation,"+code_format.txt+","+code_arm_req.txt+","+bt_vacat_text.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on bt_bypass.down:
+  bt_bypass_pic.pic=@pic(picture-0044)
+  bt_bypass_text.bco=65024
+  bt_bypass_text.pco=0
+  bt_bypass_icon.bco=65024
+  bt_bypass_icon.pco=0
+
+on bt_bypass.up:
+  lastclick.txt="alarm,bypass,"+code_format.txt+","+code_arm_req.txt+","+bt_bypass_text.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on bt_disarm.down:
+  bt_disarm_pic.pic=@pic(picture-0044)
+  bt_disarm_text.bco=65024
+  bt_disarm_text.pco=0
+  bt_disarm_icon.bco=65024
+  bt_disarm_icon.pco=0
+
+on bt_disarm.up:
+  lastclick.txt="alarm,disarm,"+code_format.txt+","+code_arm_req.txt+","+bt_disarm_text.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+
+on button_back.down:
+  page back_page_id

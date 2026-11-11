@@ -24,8 +24,9 @@ Follow these guidelines carefully to ensure a smooth and consistent release proc
        - For all `.hmi` files (e.g., `nspanel_xxx.hmi`), update the `version` variable on the boot page. You can use `scripts/update_nextion_version.sh <new_version>` for that.
 
 2. **Generate new TFT files**:
-   - Compile each modified `.hmi` file to generate the updated `.tft` files. Use Nextion Editor v1.68.2 or later, as the project uses macros.
-   - Run `scripts/generate_nextion_txt.sh` to generate the text files showing what's updated from the HMI.
+   - CI builds the `.hmi` and `.tft` files from `hmi/src/` and commits them to `dev` after each merge that changes the source, so they are up to date on `dev`.
+   - To build locally, run `scripts/hmi_build.sh`. If the version was updated with `update_nextion_version.sh`,
+     which changes the `.hmi` files, run `scripts/hmi_import.sh` first so the source carries the new version.
 
 3. **Create a new branch with the version name**:
    - After updating the version in all required files, create a new branch from the `dev` branch with the new version number prefixed with `v`:

@@ -4,8 +4,14 @@ Equivalence test for the Blueprint's "Variable Entity" anchor (&variable_entity)
 
 Renders the anchor of two versions of the Blueprint with mocked Home Assistant
 state, for many entities, states and attributes, and compares every variable
-the reference version defines. Meant for refactorings that must not change
+the tested version defines. Meant for refactorings that must not change
 what the panel shows (issue #657): run it against the version before the change.
+
+Variables only the reference defines are internal steps the tested version
+dropped; their effect is still checked through the variables both define.
+The `entity` dictionary of earlier versions (`entity.name`, `entity.icon`,
+`entity.icon_color`) is compared as `entity_name`, `entity_icon` and
+`entity_icon_color`.
 
 The mock covers what the anchor uses (states, state_attr, has_value and the
 `list`/`match`/`search` tests) and approximates how Home Assistant parses a
@@ -167,17 +173,31 @@ def render(hass, node, context):
     return node
 
 
+# Variables of the `entity` dictionary of earlier versions, and the variable each one became
+LEGACY_ENTITY_KEYS = {"name": "entity_name", "icon": "entity_icon", "icon_color": "entity_icon_color"}
+
+
 def run_anchor(hass, variables, globals_, db, inputs):
-    """Render the anchor's variables in order, each seeing the ones before it."""
+    """Render the anchor's variables in order, each seeing the ones before it; return the anchor's variables."""
     hass.db = db
     context = dict(globals_, **inputs)
     for name, value in variables.items():
         context[name] = render(hass, value, context)
-    return context
+    result = {name: context[name] for name in variables}
+    legacy_entity = result.pop("entity", None)
+    if isinstance(legacy_entity, dict):
+        for key, name in LEGACY_ENTITY_KEYS.items():
+            if key in legacy_entity:
+                result[name] = legacy_entity[key]
+    return result
 
 
-def entity_cases():
-    """(entity_id, state, attributes) to test, covering every domain and state the anchor handles."""
+def entity_cases(domains=()):
+    """(entity_id, state, attributes) to test, covering every domain and state the anchor handles.
+
+    `domains` adds a default-icon case for every domain the hand-written cases below do not cover
+    (e.g. every domain in `nextion.icon.domain`), so a change to any domain's default icon is detected.
+    """
     cases = []
     for state in ("disarmed", "disarming", "armed_home", "armed_away", "armed_night", "armed_vacation",
                   "armed_bypass", "armed_custom_bypass", "pending", "arming", "triggered", "unknown", "unavailable"):
@@ -210,6 +230,9 @@ def entity_cases():
         cases.append(("switch.test", state, {"icon": icon} if icon else {}))
     for state in ("open", "closed", "opening"):
         cases.append(("cover.test", state, {"device_class": "garage"}))
+    covered = {entity_id.split(".")[0] for entity_id, _, _ in cases}
+    for domain, state in itertools.product(sorted(set(domains) - covered), ("on", "off", "unavailable")):
+        cases.append((f"{domain}.test", state, {}))
     return cases
 
 
@@ -234,15 +257,17 @@ def compare(reference, candidate):
         total += 1
         expected = run_anchor(hass, ref_vars, ref_globals, db, inputs)
         actual = run_anchor(hass, new_vars, new_globals, db, inputs)
-        for name in ref_vars:
-            if expected.get(name) != actual.get(name):
+        for name in actual:
+            if name not in expected or expected[name] != actual[name]:
                 differences += 1
                 if differences <= MAX_REPORTED_DIFFERENCES:
                     print(f"DIFF {label}: {name}\n"
                           f"  reference: {expected.get(name)!r}\n  tested:    {actual.get(name)!r}")
 
+    # Every domain with a default icon in either version, so a domain added or removed is checked too
+    domains = set(ref_globals["nextion"]["icon"]["domain"]) | set(new_globals["nextion"]["icon"]["domain"])
     for (entity_id, state, attributes), overlap, forced in itertools.product(
-            entity_cases(), OVERLAPS, FORCED_ICON_STATES):
+            entity_cases(domains), OVERLAPS, FORCED_ICON_STATES):
         attributes = dict(attributes, friendly_name="Friendly name")
         db = {entity_id: MockState(entity_id, state, attributes)}
         check(f"{entity_id}={state} {attributes} overlap={overlap} forced={forced}", db,
@@ -259,7 +284,7 @@ def main():
     reference = load_anchor(sys.argv[1])
     candidate = load_anchor(sys.argv[2] if len(sys.argv) == 3 else "nspanel_easy_blueprint.yaml")
     total, differences = compare(reference, candidate)
-    print(f"{total:,} cases, {len(reference[0])} variables each, {differences:,} differences")
+    print(f"{total:,} cases, {len(candidate[0])} variables each, {differences:,} differences")
     return 1 if differences else 0
 
 

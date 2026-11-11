@@ -4,8 +4,10 @@
 
 #include "api_subscriptions.h"
 #include "base.h"
+#include "icon_rules.h"
 #include "nextion_components.h"
 
+#include <algorithm>
 #include <cinttypes>
 
 #include <esp_heap_caps.h>
@@ -29,6 +31,12 @@
 #ifdef NSPANEL_EASY_HW_TEMPERATURE
 #include "hw_temperature.h"
 #endif  // NSPANEL_EASY_HW_TEMPERATURE
+#ifdef NSPANEL_EASY_PAGE_BUTTONS
+#include "page_buttons.h"
+#endif  // NSPANEL_EASY_PAGE_BUTTONS
+#ifdef NSPANEL_EASY_PAGE_CLIMATE
+#include "page_climate.h"
+#endif  // NSPANEL_EASY_PAGE_CLIMATE
 
 namespace esphome::nspanel_easy {
 
@@ -59,6 +67,10 @@ static SubBinding *sub_staging = nullptr;
 
 /// @brief Bindings received in the push currently in progress.
 static uint16_t sub_staged = 0;
+
+/// @brief Bindings of the push in progress dropped for exceeding SUB_MAX. Counted
+///        against the end marker, so the bindings that fit are still committed.
+static uint16_t sub_dropped = 0;
 
 /// @brief Whether a push is currently in progress.
 static bool sub_pushing = false;
@@ -97,6 +109,25 @@ static bool sub_push_superseded(const char *push_id) {
   if ((uint32_t) (App.get_loop_component_start_time() - sub_last_push_end_ms) >= SUB_LATE_CALL_WINDOW_MS)
     return false;
   return strcmp(push_id, sub_last_push_id) < 0;
+}
+
+/// @brief Updates received from Home Assistant in the current statistics window.
+static uint32_t sub_stats_received = 0;
+
+/// @brief Updates in the current statistics window that changed a value.
+static uint32_t sub_stats_changed = 0;
+
+/**
+ * @brief Count one update received for a binding.
+ *
+ * @param idx Binding index.
+ */
+static void sub_stats_count(uint16_t idx) {
+  ++sub_stats_received;
+  SubRuntime &rt = sub_runtime[idx];
+  if (rt.received < UINT16_MAX) {
+    ++rt.received;
+  }
 }
 
 /// @brief Consecutive commits that never received an end marker.
@@ -245,6 +276,15 @@ SubRenderFn sub_resolve_renderer(const char *page) {
 #ifdef NSPANEL_EASY_HW_TEMPERATURE
       {"calibration", &temp_reference_render},
 #endif  // NSPANEL_EASY_HW_TEMPERATURE
+#ifdef NSPANEL_EASY_PAGE_BUTTONS
+      {"buttonpage01", &buttons_sub_render},
+      {"buttonpage02", &buttons_sub_render},
+      {"buttonpage03", &buttons_sub_render},
+      {"buttonpage04", &buttons_sub_render},
+#endif  // NSPANEL_EASY_PAGE_BUTTONS
+#ifdef NSPANEL_EASY_PAGE_CLIMATE
+      {"climate", &climate_sub_render},  // Custom buttons
+#endif                                   // NSPANEL_EASY_PAGE_CLIMATE
   };
   for (const PageEntry &entry : PAGES) {
     if (strcmp(page, entry.page) == 0) {
@@ -370,10 +410,12 @@ void sub_subscribe_all() {
     // allocated once here and never resized, and a binding change restarts.
     api::global_api_server->subscribe_home_assistant_state(
         binding.entity, attribute, std::function<void(StringRef)>([idx](StringRef state) {
+          sub_stats_count(idx);
           SubRuntime &rt = sub_runtime[idx];
           if (strncmp(rt.state, state.c_str(), sizeof(rt.state)) == 0) {
             return;  // Unchanged; nothing to recompute
           }
+          ++sub_stats_changed;
           sub_copy(rt.state, sizeof(rt.state), state.c_str());
           sub_apply(idx);
         }));
@@ -383,10 +425,12 @@ void sub_subscribe_all() {
     if (binding.domain == SUB_DOMAIN_CLIMATE && attribute == nullptr) {
       api::global_api_server->subscribe_home_assistant_state(
           binding.entity, SUB_HVAC_ACTION, std::function<void(StringRef)>([idx](StringRef action) {
+            sub_stats_count(idx);
             SubRuntime &rt = sub_runtime[idx];
             if (strncmp(rt.action, action.c_str(), sizeof(rt.action)) == 0) {
               return;  // Unchanged; nothing to recompute
             }
+            ++sub_stats_changed;
             sub_copy(rt.action, sizeof(rt.action), action.c_str());
             sub_apply(idx);
           }));
@@ -402,7 +446,18 @@ void sub_subscribe_all() {
 
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
-                      uint16_t color_on, uint16_t color_off, bool inverted) {
+                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name) {
+  // An icon sent by name is resolved here, once, into the codepoint the renderers use
+  char named_icon[4] = "";
+  if ((icon_on == nullptr || icon_on[0] == '\0') && icon_name != nullptr && icon_name[0] != '\0') {
+    if (sub_icon_lookup(icon_name, named_icon, sizeof(named_icon))) {
+      icon_on = named_icon;
+      icon_off = named_icon;
+    } else {
+      ESP_LOGW(TAG, "%s.%s: icon '%s' is not known", page, component, icon_name);
+    }
+  }  // if (icon by name)
+
   if (!sub_target_allowed(page, component)) {
     ESP_LOGW(TAG, "%s.%s is driven locally and cannot be bound", page, component);
     return;
@@ -421,6 +476,7 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
              sub_staged);
     memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
     sub_staged = 0;
+    sub_dropped = 0;
     sub_copy(sub_push_id, sizeof(sub_push_id), push_id);
   }  // if newer push
 
@@ -435,6 +491,7 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
     }
     memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
     sub_staged = 0;
+    sub_dropped = 0;
     sub_pushing = true;
     sub_copy(sub_push_id, sizeof(sub_push_id), push_id);
     ESP_LOGD(TAG, "Binding push '%s' started", sub_push_id);
@@ -450,10 +507,13 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
              sub_staged);
     memset(sub_staging, 0, sizeof(SubBinding) * SUB_MAX);
     sub_staged = 0;
+    sub_dropped = 0;
   }  // if target already staged
 
   if (sub_staged >= SUB_MAX) {
-    ESP_LOGW(TAG, "More than %" PRIu16 " bindings pushed; '%s' ignored", SUB_MAX, entity);
+    // Counted, so the end marker still matches and the bindings that fit are committed
+    ++sub_dropped;
+    ESP_LOGW(TAG, "More than %" PRIu16 " bindings pushed; %s.%s ('%s') ignored", SUB_MAX, page, component, entity);
     return;
   }
 
@@ -501,6 +561,243 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
     sub_apply(idx);
     break;
   }  // for each live binding
+}
+
+/**
+ * @brief Look up an icon rule key.
+ *
+ * @param key Rule key.
+ * @return The codepoint, or nullptr when there is no rule for the key.
+ */
+static const char *sub_icon_table_find(const char *key) {
+  for (const IconRule &rule : ICON_RULES) {
+    if (strcmp(rule.key, key) == 0) {
+      return rule.icon;
+    }
+  }  // for each rule
+  return nullptr;
+}
+
+const char *sub_icon_rule(const char *key) { return key != nullptr ? sub_icon_table_find(key) : nullptr; }
+
+/**
+ * @brief Look up an icon rule key built from parts.
+ *
+ * A key that does not fit SUB_ICON_KEY_LEN cannot be a rule, so it is not
+ * looked up rather than looked up truncated.
+ *
+ * @param domain Entity domain.
+ * @param device_class Device class; empty for a domain default by state; nullptr for the domain default.
+ * @param state State suffix, or nullptr for none.
+ * @return The codepoint, or nullptr when the key is not in the table.
+ */
+static const char *sub_icon_table_find(const char *domain, const char *device_class, const char *state) {
+  char key[SUB_ICON_KEY_LEN];
+  int len = 0;
+  if (device_class == nullptr) {
+    len = snprintf(key, sizeof(key), "%s", domain);
+  } else if (state == nullptr) {
+    len = snprintf(key, sizeof(key), "%s.%s", domain, device_class);
+  } else if (device_class[0] == '\0') {
+    len = snprintf(key, sizeof(key), "%s-%s", domain, state);
+  } else {
+    len = snprintf(key, sizeof(key), "%s.%s-%s", domain, device_class, state);
+  }
+  if (len < 0 || static_cast<size_t>(len) >= sizeof(key)) {
+    return nullptr;  // Longer than any rule key
+  }
+  return sub_icon_table_find(key);
+}
+
+/**
+ * @brief Icon of an entity from the icon rules: the device class icon for the state, then the domain default.
+ *
+ * @param entity_id Entity id, e.g. "binary_sensor.door".
+ * @param device_class Device class; empty when unset.
+ * @param state State string.
+ * @param active Whether the state classifies as active, for the "on"/"off" fallback.
+ * @return The codepoint, or nullptr when no rule matches.
+ */
+static const char *sub_rule_icon(const char *entity_id, const char *device_class, const char *state, bool active) {
+  // Domain of the entity: everything before the dot
+  const char *dot = strchr(entity_id, '.');
+  if (dot == nullptr || static_cast<size_t>(dot - entity_id) >= SUB_ICON_KEY_LEN) {
+    return nullptr;
+  }
+  char entity_domain[SUB_ICON_KEY_LEN];
+  memcpy(entity_domain, entity_id, dot - entity_id);
+  entity_domain[dot - entity_id] = '\0';
+
+  const char *icon = nullptr;
+  if (device_class != nullptr && device_class[0] != '\0') {
+    // As the Blueprint keys them: no state for button, event and sensor; otherwise the
+    // exact state first, then "on"/"off" by how the state classifies
+    const bool stateless = strcmp(entity_domain, "button") == 0 || strcmp(entity_domain, "event") == 0 ||
+                           strcmp(entity_domain, "sensor") == 0;
+    if (stateless) {
+      icon = sub_icon_table_find(entity_domain, device_class, nullptr);
+    } else {
+      icon = sub_icon_table_find(entity_domain, device_class, state);
+      if (icon == nullptr) {
+        icon = sub_icon_table_find(entity_domain, device_class, active ? "on" : "off");
+      }
+    }  // if (stateless)
+  }  // if (device_class)
+  if (icon == nullptr) {
+    // Domain default, for the state first (e.g. "sun-below_horizon")
+    icon = sub_icon_table_find(entity_domain, "", state);
+    if (icon == nullptr) {
+      icon = sub_icon_table_find(entity_domain, nullptr, nullptr);
+    }
+  }
+  return icon;
+}
+
+SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *state, uint16_t color_on,
+                                         uint16_t color_off) {
+  const SubDomain domain = static_cast<SubDomain>(binding.domain);
+  SubAppearance look = resolve_sub_appearance(domain, binding.device_class, state, color_on, color_off);
+  if (look.icon != nullptr) {
+    return look;  // A multi-state domain
+  }
+  const bool active = (evaluate_sub_state(domain, state) == SUB_STATE_ON);
+  look.color = active ? color_on : color_off;
+  look.icon = sub_rule_icon(binding.entity, binding.device_class, state, active);
+  return look;
+}
+
+std::string resolve_entity_icon(const char *entity_id, const char *device_class, const char *state,
+                                const char *icon_override, const char *icon_attribute) {
+  char glyph[4] = {};
+  // 1. The icon set on the button that opened the page
+  if (sub_icon_lookup(icon_override, glyph, sizeof(glyph))) {
+    return glyph;
+  }
+  // 2. The domains whose icon follows the state, except covers (the entity's own icon wins over theirs)
+  const SubDomain domain = parse_sub_domain(entity_id);
+  const bool state_icon_first = domain == SUB_DOMAIN_ALARM || domain == SUB_DOMAIN_CLIMATE ||
+                                domain == SUB_DOMAIN_LOCK || domain == SUB_DOMAIN_WATER_HEATER;
+  if (state_icon_first) {
+    const SubAppearance look = resolve_sub_appearance(domain, device_class, state, 0, 0);
+    if (look.icon != nullptr) {
+      return look.icon;
+    }
+  }  // if (state_icon_first)
+  // 3. The entity's own icon
+  if (sub_icon_lookup(icon_attribute, glyph, sizeof(glyph))) {
+    return glyph;
+  }
+  // 4. Covers by device class and state, then the icon rules
+  if (domain == SUB_DOMAIN_COVER) {
+    const SubAppearance look = resolve_sub_appearance(domain, device_class, state, 0, 0);
+    if (look.icon != nullptr) {
+      return look.icon;
+    }
+  }  // if (cover)
+  const char *icon = sub_rule_icon(entity_id, device_class, state, evaluate_sub_state(domain, state) == SUB_STATE_ON);
+  return icon != nullptr ? icon : Icons::MDI_ALERT_CIRCLE;
+}
+
+/// @brief MDI names in codepoint order, as the Blueprint's all_icon_names: ",name0,name1,...,". The name at
+///        position i (0-based) is U+E000 + i. Allocated on first use (PSRAM when available). Never persisted.
+static char *sub_icon_names = nullptr;
+
+/// @brief Characters used in sub_icon_names, null excluded.
+static size_t sub_icon_names_len = 0;
+
+/// @brief Names received in this session, so a chunk can be checked against its start index.
+static uint16_t sub_icon_names_count = 0;
+
+void sub_icon_names_add(uint16_t start, const std::string &names) {
+  if (sub_icon_names == nullptr) {
+    sub_icon_names = static_cast<char *>(sub_alloc(SUB_ICON_NAMES_CAPACITY));
+    if (sub_icon_names == nullptr) {
+      ESP_LOGW(TAG, "Out of memory for the icon names");
+      return;
+    }
+  }  // if (sub_icon_names == nullptr)
+  if (start == 0) {
+    sub_icon_names[0] = ',';
+    sub_icon_names[1] = '\0';
+    sub_icon_names_len = 1;
+    sub_icon_names_count = 0;
+  } else if (start != sub_icon_names_count) {
+    ESP_LOGW(TAG, "Icon names: chunk at %" PRIu16 " but %" PRIu16 " received; ignored", start, sub_icon_names_count);
+    return;
+  }
+  if (names.empty()) {
+    return;
+  }
+  if (sub_icon_names_len + names.size() + 2 > SUB_ICON_NAMES_CAPACITY) {
+    ESP_LOGW(TAG, "Icon names: more than %" PRIu32 " bytes; the rest is not resolved", SUB_ICON_NAMES_CAPACITY);
+    sub_icon_names_count = UINT16_MAX;  // Refuse the following chunks too
+    return;
+  }
+  memcpy(sub_icon_names + sub_icon_names_len, names.data(), names.size());
+  sub_icon_names_len += names.size();
+  sub_icon_names[sub_icon_names_len++] = ',';
+  sub_icon_names[sub_icon_names_len] = '\0';
+  sub_icon_names_count = static_cast<uint16_t>(sub_icon_names_count + 1 + std::count(names.begin(), names.end(), ','));
+  ESP_LOGV(TAG, "Icon names: %" PRIu16 " received", sub_icon_names_count);
+}
+
+bool sub_icon_lookup(const char *name, char *glyph, size_t size) {
+  if (name == nullptr || glyph == nullptr || size < 4) {
+    return false;
+  }
+  if (strncmp(name, "mdi:", 4) == 0) {
+    name += 4;
+  }
+  const size_t name_len = strlen(name);
+  if (name_len == 0 || name_len > 64) {
+    return false;
+  }
+
+  // Names the Blueprint maps outside the font order (its special_icons)
+  if (strcmp(name, "blank") == 0 || strcmp(name, "void") == 0) {
+    return sub_copy(glyph, size, "\uFFFF");
+  }
+  if (strcmp(name, "unknown") == 0 || strcmp(name, "unavailable") == 0) {
+    return sub_copy(glyph, size, Icons::MDI_ALERT_CIRCLE);
+  }
+  if (sub_icon_names == nullptr || sub_icon_names_len < 2) {
+    return false;  // The list has not arrived yet
+  }
+
+  // ",name," marks the whole name; its position is the number of names before it
+  char needle[68];
+  snprintf(needle, sizeof(needle), ",%s,", name);
+  const char *found = strstr(sub_icon_names, needle);
+  if (found == nullptr) {
+    return false;
+  }
+  const uint32_t index = static_cast<uint32_t>(std::count(static_cast<const char *>(sub_icon_names), found, ','));
+  const uint32_t codepoint = 0xE000 + index;
+  if (codepoint > 0xFFFF) {
+    return false;
+  }
+  // UTF-8, always three bytes in this range
+  glyph[0] = static_cast<char>(0xE0 | (codepoint >> 12));
+  glyph[1] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+  glyph[2] = static_cast<char>(0x80 | (codepoint & 0x3F));
+  glyph[3] = '\0';
+  return true;
+}
+
+void sub_set_icon(const char *page, const char *component, const char *icon) {
+  const uint16_t idx = sub_find_target(sub_bindings, sub_count, page, component);
+  if (idx >= sub_count) {
+    ESP_LOGD(TAG, "%s.%s is not bound; icon ignored", page, component);
+    return;
+  }
+  SubRuntime &rt = sub_runtime[idx];
+  if (!sub_copy(rt.icon_on, sizeof(rt.icon_on), icon)) {
+    ESP_LOGW(TAG, "%s.%s: icon does not fit; ignored", page, component);
+    sub_copy(rt.icon_on, sizeof(rt.icon_on), rt.icon_off);  // Keep the previous icon
+    return;
+  }
+  sub_copy(rt.icon_off, sizeof(rt.icon_off), icon);
+  sub_apply(idx);
 }
 
 bool sub_persist(bool verified) {
@@ -607,6 +904,7 @@ static void sub_push_release() {
   free(sub_staging);
   sub_staging = nullptr;
   sub_staged = 0;
+  sub_dropped = 0;
   sub_pushing = false;
   sub_copy(sub_last_push_id, sizeof(sub_last_push_id), sub_push_id);
   sub_last_push_end_ms = App.get_loop_component_start_time();
@@ -649,8 +947,9 @@ bool sub_push_end(const char *push_id, uint16_t count) {
     return false;
   }
 
-  if (count != sub_staged) {
-    ESP_LOGE(TAG, "Push incomplete: %" PRIu16 " of %" PRIu16 " binding(s) received, discarding", sub_staged, count);
+  if (count != sub_staged + sub_dropped) {
+    ESP_LOGE(TAG, "Push incomplete: %" PRIu16 " of %" PRIu16 " binding(s) received, discarding",
+             static_cast<uint16_t>(sub_staged + sub_dropped), count);
     sub_push_release();
     return false;
   }
@@ -662,6 +961,10 @@ bool sub_push_end(const char *push_id, uint16_t count) {
     return false;
   }
 
+  if (sub_dropped > 0) {
+    ESP_LOGW(TAG, "%" PRIu16 " binding(s) over the limit of %" PRIu16 " were not bound; raise api_subscribe_max",
+             sub_dropped, SUB_MAX);
+  }
   const bool persisted = sub_persist(true);
   sub_push_release();
   return persisted;
@@ -698,6 +1001,65 @@ bool sub_push_timeout() {
 void sub_render_all() {
   for (uint16_t idx = 0; idx < sub_count; ++idx) {
     sub_apply(idx);
+  }
+}
+
+void sub_render_page(const char *page) {
+  for (uint16_t idx = 0; idx < sub_count; ++idx) {
+    if (strcmp(sub_bindings[idx].page, page) == 0) {
+      sub_apply(idx);
+    }  // if (binding on the page)
+  }  // for each binding
+}
+
+void sub_log_stats(uint32_t window_s) {
+  if (sub_stats_received == 0) {
+    return;  // Nothing arrived; stay quiet
+  }
+
+  // Busiest bindings first: a partial selection, as only a few are named
+  uint16_t top[SUB_STATS_TOP] = {};
+  uint8_t top_count = 0;
+  for (uint16_t idx = 0; idx < sub_count; ++idx) {
+    const uint16_t received = sub_runtime[idx].received;
+    if (received == 0) {
+      continue;
+    }
+    uint8_t pos = top_count;
+    while (pos > 0 && sub_runtime[top[pos - 1]].received < received) {
+      if (pos < SUB_STATS_TOP) {
+        top[pos] = top[pos - 1];
+      }
+      --pos;
+    }
+    if (pos < SUB_STATS_TOP) {
+      top[pos] = idx;
+      if (top_count < SUB_STATS_TOP) {
+        ++top_count;
+      }
+    }
+  }  // for each binding
+
+  char busiest[256] = {};
+  size_t used = 0;
+  for (uint8_t pos = 0; pos < top_count && used < sizeof(busiest); ++pos) {
+    const SubBinding &binding = sub_bindings[top[pos]];
+    const int written =
+        snprintf(busiest + used, sizeof(busiest) - used, "%s%s%s%s (%" PRIu16 ")", pos > 0 ? ", " : "", binding.entity,
+                 binding.attribute[0] != '\0' ? "." : "", binding.attribute, sub_runtime[top[pos]].received);
+    if (written < 0) {
+      break;
+    }
+    used += static_cast<size_t>(written);
+  }  // for each of the busiest
+
+  ESP_LOGI(TAG, "Updates in the last %" PRIu32 " s: %" PRIu32 " received, %" PRIu32 " changed; busiest: %s", window_s,
+           sub_stats_received, sub_stats_changed, busiest);
+
+  sub_stats_received = 0;
+  sub_stats_changed = 0;
+  for (uint16_t idx = 0; idx < sub_count; ++idx) {
+    sub_runtime[idx].received = 0;
   }
 }
 

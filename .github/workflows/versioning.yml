@@ -14,7 +14,8 @@
 # 11. Updates the stable and latest floating tags
 # 12. Announces the release on Discord
 # 13. Brings dev up to date with the released main, creating it if missing
-#     (runs in parallel with step 12, so a failure never blocks the announcement)
+#     (runs in parallel with step 12, so a failure never blocks the announcement),
+#     then marks the Blueprint on dev with the development version 9999.99.9
 #
 # The workflow skips execution if the head commit message contains
 # [skip-versioning], preventing loops caused by its own version bump and
@@ -95,7 +96,7 @@ jobs:
 
       - name: Set up yq
         if: steps.skip_check.outputs.skip == 'false'
-        uses: mikefarah/yq@v4.54.1
+        uses: mikefarah/yq@v4.54.2
 
       - name: Get PR information
         id: pr_info
@@ -870,4 +871,31 @@ jobs:
             # A plain push: if dev moved again meanwhile, it is rejected rather than overwritten.
             git push origin HEAD:refs/heads/dev
           fi  # if git merge-base --is-ancestor "$RELEASE_SHA" origin/dev
+
+      # A Blueprint taken from dev must never look like a release, so dev carries a development version.
+      # Only the Blueprint's name and blueprint_version are changed: versioning/version.yaml stays the real
+      # version, as the next release is calculated from it. The release bump overwrites both lines again.
+      - name: Mark the Blueprint on dev as a development version
+        env:
+          DEV_VERSION: "9999.99.9"
+        run: |
+          BLUEPRINT="nspanel_easy_blueprint.yaml"
+          git fetch origin dev
+          git checkout -B dev origin/dev
+          sed -i \
+            "s/^  name: NSPanel Easy Configuration.*/  name: NSPanel Easy Configuration (v${DEV_VERSION})/" \
+            "$BLUEPRINT"
+          sed -i "s/^  blueprint_version: .*/  blueprint_version: ${DEV_VERSION}/" "$BLUEPRINT"
+          if ! grep -q "^  name: NSPanel Easy Configuration (v${DEV_VERSION})$" "$BLUEPRINT" \
+             || ! grep -q "^  blueprint_version: ${DEV_VERSION}$" "$BLUEPRINT"; then
+            echo "ERROR: Failed to set the development version in $BLUEPRINT"
+            exit 1
+          fi  # if (version lines not set)
+          if git diff --quiet; then
+            echo "The Blueprint on dev already has the development version ${DEV_VERSION}"
+            exit 0
+          fi  # if (nothing changed)
+          git commit -am "chore: Mark the Blueprint on dev as development version ${DEV_VERSION}"
+          # A plain push: if dev moved again meanwhile, it is rejected rather than overwritten.
+          git push origin HEAD:refs/heads/dev
 ...

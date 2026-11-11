@@ -1,0 +1,303 @@
+[page]
+name = "keyb_num"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 320
+h = 480
+sta = 0
+
+[[component]]
+name = "t0"
+type = "text"
+sendkey = 3
+x = 10
+y = 11
+w = 300
+h = 455
+style = 1
+borderc = "#18b2ff"
+bco = "#393c39"
+txt = ""
+
+[[component]]
+name = "pin"
+type = "text"
+sendkey = 3
+x = 45
+y = 16
+w = 205
+h = 50
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+pw = 1
+txt = ""
+txt_maxl = 60
+
+[[component]]
+name = "b1"
+type = "button"
+sendkey = 3
+x = 15
+y = 71
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = "1"
+txt_maxl = 1
+
+[[component]]
+name = "bclose"
+type = "button"
+sendkey = 3
+x = 255
+y = 16
+w = 50
+h = 50
+style = 0
+font = "font-08"
+bco = "#393c39"
+bco2 = "#ff0000"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "b2"
+type = "button"
+sendkey = 3
+x = 113
+y = 71
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = "2"
+txt_maxl = 1
+
+[[component]]
+name = "b3"
+type = "button"
+sendkey = 2
+x = 212
+y = 71
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = "3"
+txt_maxl = 1
+
+[[component]]
+name = "b4"
+type = "button"
+sendkey = 3
+x = 15
+y = 169
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = "4"
+txt_maxl = 1
+
+[[component]]
+name = "b5"
+type = "button"
+sendkey = 3
+x = 113
+y = 169
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = "5"
+txt_maxl = 1
+
+[[component]]
+name = "b6"
+type = "button"
+sendkey = 3
+x = 212
+y = 169
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = "6"
+txt_maxl = 1
+
+[[component]]
+name = "b7"
+type = "button"
+sendkey = 3
+x = 15
+y = 267
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = "7"
+txt_maxl = 1
+
+[[component]]
+name = "b8"
+type = "button"
+sendkey = 3
+x = 113
+y = 267
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = "8"
+txt_maxl = 1
+
+[[component]]
+name = "b9"
+type = "button"
+sendkey = 2
+x = 212
+y = 267
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = "9"
+txt_maxl = 1
+
+[[component]]
+name = "bclear"
+type = "button"
+sendkey = 3
+x = 15
+y = 365
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-10"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "b0"
+type = "button"
+sendkey = 3
+x = 113
+y = 365
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-05"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = "0"
+txt_maxl = 1
+
+[[component]]
+name = "benter"
+type = "button"
+sendkey = 3
+x = 212
+y = 365
+w = 93
+h = 93
+style = 1
+borderc = "#c6c3c6"
+font = "font-10"
+bco = "#393c39"
+bco2 = "#e7e3e7"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bview"
+type = "button"
+sendkey = 3
+x = 15
+y = 16
+w = 50
+h = 50
+style = 0
+font = "font-08"
+bco = "#393c39"
+bco2 = "#ffff00"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "page_id"
+type = "variable"
+txt = "home"
+
+[[component]]
+name = "key"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "domain"
+type = "variable"
+sta = 1
+txt = "alarm"
+
+[[component]]
+name = "aux"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 255
+
+[[component]]
+name = "value"
+type = "variable"
+sta = 1
+txt = ""

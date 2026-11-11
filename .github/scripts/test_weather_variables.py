@@ -12,6 +12,10 @@ values of the day) from mocked forecasts with missing, empty, `none`, non-numeri
 must render the same in both versions, except where the reference fails with a template error: there the
 tested version must render (a fix), and an error in the tested version always counts as a difference.
 
+The values of the day may be separate variables or entries of one `forecast_values` variable (one template
+for all of them, issue #636); both forms are compared by name. When rendering `parameters`, the values are
+given in both forms, so either version reads them.
+
 The variables themselves may differ in value types (Home Assistant parses each rendered template on its
 own, so a field rendered as a separate template can become a number), so `parameters` is compared after
 the `repeat` that sends it to the panel, as the panel receives it.
@@ -49,6 +53,8 @@ UNIT_NAMES = ("humidity", "hours_of_sun", "precipitation", "precipitation_probab
 
 MAX_REPORTED_DIFFERENCES = 20
 
+# Variable holding several values of the day as a dictionary, when they are not separate variables
+FORECAST_VALUES_DICT = "forecast_values"
 # Forecast values of a page, rendered from `forecast_day` (in order)
 FORECAST_VALUE_NAMES = ("temp_min", "temp_max", "precipitation", "precipitation_probability", "pressure",
                         "wind_speed", "hours_of_sun", "uv_index", "thunderstorm_probability", "humidity")
@@ -108,7 +114,8 @@ def load_forecast(branch, path):
     values = find(branch, lambda d: "temp_min" in d and "temp_max" in d)
     if builder is None or fallback is None or values is None:
         sys.exit(f"ERROR: the forecast variables were not found in {path}")
-    return builder, fallback["forecast_day"], {name: values[name] for name in FORECAST_VALUE_NAMES}
+    names = FORECAST_VALUE_NAMES + (FORECAST_VALUES_DICT,)
+    return builder, fallback["forecast_day"], {name: values[name] for name in names if name in values}
 
 
 def load_branch(path):
@@ -180,7 +187,14 @@ def run_forecast(hass, forecast_parts, context):
         context["forecast_day"] = render(hass, fallback, context)
         if not len(context["forecast_day"]) > 0:
             return "no forecast"
-        return {name: render(hass, source, context) for name, source in values.items()}
+        result = {}
+        for name, source in values.items():
+            rendered = render(hass, source, context)
+            if name == FORECAST_VALUES_DICT:
+                result.update(rendered)  # Several values of the day at once
+            else:
+                result[name] = rendered
+        return result
     except Exception as error:  # pylint: disable=broad-except - any template error is a result
         return f"ERROR {type(error).__name__}: {error}"
 
@@ -244,6 +258,7 @@ def compare(reference, candidate):
             db[WEATHER_ENTITY] = MockState(WEATHER_ENTITY, "sunny",
                                            {f"{key}_unit": value for key, value in attributes.items()})
         context = dict(values, weather_entity=weather_entity, compact_unit_display=compact)
+        context[FORECAST_VALUES_DICT] = dict(values)  # The same values, for a version reading them as a dictionary
         total += 1
         expected = run_branch(hass, reference, db, context)
         actual = run_branch(hass, candidate, db, context)

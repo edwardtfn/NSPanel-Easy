@@ -1,0 +1,483 @@
+on climate.load:
+  if(api==0&&climate_embedded==0)
+  {
+    page home_page_id
+  }
+  // Hide sliders and temperature display initially
+  vis current_temp,0
+  vis target_icon,0
+  vis target_high,0
+  vis target_low,0
+  vis climateslider,0
+  vis slider_high,0
+  vis slider_low,0
+  // Hide HVAC mode buttons initially (ids 17-23) and set button fonts
+  for(sys0=17;sys0<=23;sys0++)
+  {
+    vis b[sys0],0
+    b[sys0].font=button_font.val
+  }
+  // Preset mode button: hidden until ESPHome or the Blueprint confirms presets
+  vis preset_button,0
+  preset_button.font=button_font.val
+  preset_button.pco=color_pco_secondary
+  // button08 and button09: set fonts
+  button08.font=button_font.val
+  button09.font=button_font.val
+  button_back.font=button_back_font
+  if(theme==1)
+  {
+    // page_label (6), slider_high (7, picc=track bg), target_icon (8),
+    // value01_icon..value04_icon, value01..value04 (9-16),
+    // button01..button07 (17-23)
+    for(sys0=6;sys0<=23;sys0++)
+    {
+      b[sys0].picc=climate.pic
+    }
+    // value slots (ids 9-16): secondary color
+    for(sys0=9;sys0<=16;sys0++)
+    {
+      b[sys0].pco=color_pco_secondary
+    }
+    // HVAC mode buttons (ids 17-23): unsupported color
+    for(sys0=17;sys0<=23;sys0++)
+    {
+      b[sys0].pco=color_pco_unsupported
+    }
+    // button08, button09: secondary color; target_high: background only
+    button08.picc=climate.pic
+    button08.pco=color_pco_secondary
+    button09.picc=climate.pic
+    button09.pco=color_pco_secondary
+    target_high.picc=climate.pic
+    // Preset mode button: secondary color
+    preset_button.picc=climate.pic
+    // Sliders use picc1 for the track background
+    slider_high.picc1=climate.pic
+    slider_low.picc1=climate.pic
+    climateslider.picc1=climate.pic
+    // button_back
+    button_back.pco=color_pco_navigation
+    button_back.picc=climate.pic
+    button_back.picc2=climate.pic
+    // Labels and temperatures
+    page_label.pco=color_pco_main
+    // current_temp
+    current_temp.picc=climate.pic
+    current_temp.pco=color_pco_main
+    target_icon.pco=color_pco_main
+    target_high.pco=color_pco_main
+    target_low.pco=color_pco_main
+    target_low.picc=climate.pic
+  }
+  dim=brightness
+  sendme
+
+on climate.unload:
+  if(timer0.en==1)
+  {
+    timer0.en=0
+    covx temp_number0.val,va2.txt,0,0
+    climatesetting.txt="climate,temperature,"+va2.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints climatesetting.txt,0
+    printh 00
+    printh FF FF FF
+  }
+  if(timer1.en==1)
+  {
+    timer1.en=0
+    covx temp_number1.val,va2.txt,0,0
+    climatesetting.txt="climate,target_temp_high,"+va2.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints climatesetting.txt,0
+    printh 00
+    printh FF FF FF
+  }
+  if(timer2.en==1)
+  {
+    timer2.en=0
+    covx temp_number2.val,va2.txt,0,0
+    climatesetting.txt="climate,target_temp_low,"+va2.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints climatesetting.txt,0
+    printh 00
+    printh FF FF FF
+  }
+
+on swipe.down:
+  swipestore.en=1 // Start swipestore timer
+
+on swipe.up:
+  swipestore.en=0
+  // Touch has ended, x
+  if(tch0==0)
+  {
+    swipec=swipex-tch2
+    // From Left to Right
+    if(swipec>swipedx)
+    {
+      //page
+    }
+    // Right to Left
+    swipec2=0-swipedx
+    if(swipec<swipec2)
+    {
+      //page
+    }
+  }
+  // Touch has ended, y
+  if(tch1==0)
+  {
+    swipec=swipey-tch3
+    // From Up to Down
+    if(swipec>100)
+    {
+      //page
+    }
+    // Down to Up
+    swipec2=0-swipedy
+    if(swipec<-100)
+    {
+      //page
+    }
+  }
+
+on swipestore.timer:
+  swipex=tch0
+  swipey=tch1
+
+on decrease_temp.down:
+  if(active_slider.val==0)
+  {
+    if(climateslider.val>0)
+    {
+      climateslider.val--
+      temp_number0.val=climateslider.val*temp_step.val
+      temp_number0.val+=temp_offset.val
+      sys0=temp_number0.val
+      sys1=temp_step.val
+      call format_tenths
+      target_high.txt=home.tenths_txt.txt+temp_unit.txt
+    }
+  }else if(active_slider.val==1)
+  {
+    if(slider_high.val>0)
+    {
+      slider_high.val--
+      temp_number1.val=slider_high.val*temp_step.val
+      temp_number1.val+=temp_offset.val
+      sys0=temp_number1.val
+      sys1=temp_step.val
+      call format_tenths
+      target_high.txt=home.tenths_txt.txt+temp_unit.txt
+    }
+  }else if(active_slider.val==2)
+  {
+    if(slider_low.val>0)
+    {
+      slider_low.val--
+      temp_number2.val=slider_low.val*temp_step.val
+      temp_number2.val+=temp_offset.val
+      sys0=temp_number2.val
+      sys1=temp_step.val
+      call format_tenths
+      target_low.txt=home.tenths_txt.txt+temp_unit.txt
+    }
+  }
+
+on decrease_temp.up:
+  if(active_slider.val==0)
+  {
+    timer0.en=1
+  }else if(active_slider.val==1)
+  {
+    timer1.en=1
+  }else if(active_slider.val==2)
+  {
+    timer2.en=1
+  }
+
+on increase_temp.down:
+  if(active_slider.val==0)
+  {
+    if(climateslider.val<climateslider.maxval)
+    {
+      climateslider.val++
+      temp_number0.val=climateslider.val*temp_step.val
+      temp_number0.val+=temp_offset.val
+      sys0=temp_number0.val
+      sys1=temp_step.val
+      call format_tenths
+      target_high.txt=home.tenths_txt.txt+temp_unit.txt
+    }
+  }else if(active_slider.val==1)
+  {
+    if(slider_high.val<slider_high.maxval)
+    {
+      slider_high.val++
+      temp_number1.val=slider_high.val*temp_step.val
+      temp_number1.val+=temp_offset.val
+      sys0=temp_number1.val
+      sys1=temp_step.val
+      call format_tenths
+      target_high.txt=home.tenths_txt.txt+temp_unit.txt
+    }
+  }else if(active_slider.val==2)
+  {
+    if(slider_low.val<slider_low.maxval)
+    {
+      slider_low.val++
+      temp_number2.val=slider_low.val*temp_step.val
+      temp_number2.val+=temp_offset.val
+      sys0=temp_number2.val
+      sys1=temp_step.val
+      call format_tenths
+      target_low.txt=home.tenths_txt.txt+temp_unit.txt
+    }
+  }
+
+on increase_temp.up:
+  if(active_slider.val==0)
+  {
+    timer0.en=1
+  }else if(active_slider.val==1)
+  {
+    timer1.en=1
+  }else if(active_slider.val==2)
+  {
+    timer2.en=1
+  }
+
+on slider_high.down:
+  temp_gap.val=3*temp_step.val
+  temp_high_min.val=slider_low.val+temp_gap.val
+
+on slider_high.up:
+  if(slider_high.val<temp_high_min.val)
+  {
+    slider_high.val=temp_high_min.val
+  }
+  temp_number1.val=slider_high.val*temp_step.val
+  temp_number1.val+=temp_offset.val
+  sys0=temp_number1.val
+  sys1=temp_step.val
+  call format_tenths
+  target_high.txt=home.tenths_txt.txt+temp_unit.txt
+  timer1.en=1
+  active_slider.val=1
+  temp_gap.val=3*temp_step.val
+  temp_low_max.val=slider_high.val-temp_gap.val
+
+on slider_high.slide:
+  if(slider_high.val<temp_high_min.val)
+  {
+    slider_high.val=temp_high_min.val
+  }
+  temp_number1.val=slider_high.val*temp_step.val
+  temp_number1.val+=temp_offset.val
+  sys0=temp_number1.val
+  sys1=temp_step.val
+  call format_tenths
+  target_high.txt=home.tenths_txt.txt+temp_unit.txt
+
+on button01.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "climate,hvac_mode,auto",0
+  printh 00
+  printh FF FF FF
+
+on button02.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "climate,hvac_mode,heat_cool",0
+  printh 00
+  printh FF FF FF
+
+on button03.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "climate,hvac_mode,heat",0
+  printh 00
+  printh FF FF FF
+
+on button04.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "climate,hvac_mode,cool",0
+  printh 00
+  printh FF FF FF
+
+on button05.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "climate,hvac_mode,dry",0
+  printh 00
+  printh FF FF FF
+
+on button06.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "climate,hvac_mode,fan_only",0
+  printh 00
+  printh FF FF FF
+
+on button07.up:
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints "climate,hvac_mode,off",0
+  printh 00
+  printh FF FF FF
+
+on timer0.timer:
+  timer0.en=0
+  covx temp_number0.val,va2.txt,0,0
+  climatesetting.txt="climate,temperature,"+va2.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints climatesetting.txt,0
+  printh 00
+  printh FF FF FF
+
+on button08.down:
+  click_comp.txt="button08"
+  click_timer.en=1
+
+on button08.up:
+  if(click_timer.en==1)
+  {
+    click_timer.en=0
+    lastclick.txt="climate,short_click,"+click_comp.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints lastclick.txt,0
+    printh 00
+    printh FF FF FF
+  }
+
+on button09.down:
+  click_comp.txt="button09"
+  click_timer.en=1
+
+on button09.up:
+  if(click_timer.en==1)
+  {
+    click_timer.en=0
+    lastclick.txt="climate,short_click,"+click_comp.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints lastclick.txt,0
+    printh 00
+    printh FF FF FF
+  }
+
+on target_high.up:
+  active_slider.val=is_temp_range.val
+
+on button_back.down:
+  page back_page_id
+
+on click_timer.timer:
+  lastclick.txt="climate,long_click,"+click_comp.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints lastclick.txt,0
+  printh 00
+  printh FF FF FF
+  click_timer.en=0
+
+on slider_low.down:
+  temp_gap.val=3*temp_step.val
+  temp_low_max.val=slider_high.val-temp_gap.val
+
+on slider_low.up:
+  if(slider_low.val>temp_low_max.val)
+  {
+    slider_low.val=temp_low_max.val
+  }
+  temp_number2.val=slider_low.val*temp_step.val
+  temp_number2.val+=temp_offset.val
+  sys0=temp_number2.val
+  sys1=temp_step.val
+  call format_tenths
+  target_low.txt=home.tenths_txt.txt+temp_unit.txt
+  timer2.en=1
+  active_slider.val=2
+  temp_gap.val=3*temp_step.val
+  temp_high_min.val=slider_low.val+temp_gap.val
+
+on slider_low.slide:
+  if(slider_low.val>temp_low_max.val)
+  {
+    slider_low.val=temp_low_max.val
+  }
+  temp_number2.val=slider_low.val*temp_step.val
+  temp_number2.val+=temp_offset.val
+  sys0=temp_number2.val
+  sys1=temp_step.val
+  call format_tenths
+  target_low.txt=home.tenths_txt.txt+temp_unit.txt
+
+on target_low.up:
+  active_slider.val=2
+
+on climateslider.up:
+  temp_number0.val=climateslider.val*temp_step.val
+  temp_number0.val+=temp_offset.val
+  sys0=temp_number0.val
+  sys1=temp_step.val
+  call format_tenths
+  target_high.txt=home.tenths_txt.txt+temp_unit.txt
+  active_slider.val=0
+  timer0.en=1
+
+on climateslider.slide:
+  temp_number0.val=climateslider.val*temp_step.val
+  temp_number0.val+=temp_offset.val
+  sys0=temp_number0.val
+  sys1=temp_step.val
+  call format_tenths
+  target_high.txt=home.tenths_txt.txt+temp_unit.txt
+
+on timer1.timer:
+  timer1.en=0
+  covx temp_number1.val,va2.txt,0,0
+  climatesetting.txt="climate,target_temp_high,"+va2.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints climatesetting.txt,0
+  printh 00
+  printh FF FF FF
+
+on timer2.timer:
+  timer2.en=0
+  covx temp_number2.val,va2.txt,0,0
+  climatesetting.txt="climate,target_temp_low,"+va2.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints climatesetting.txt,0
+  printh 00
+  printh FF FF FF
+
+on preset_button.down:
+  preset_button.pco=31

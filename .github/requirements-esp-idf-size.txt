@@ -1,0 +1,14 @@
+# .github/requirements-esp-idf-size.txt
+#
+# esp-idf-size pin for CI, installed via pip in the ESPHome build jobs to break
+# the flash usage of each build down by archive and file, from its linker map.
+# Pinned here so Dependabot can track and propose version updates (picked up by
+# the `pip` ecosystem in .github/dependabot.yml).
+#
+# Kept apart from .github/requirements.txt so an esp-idf-size update only
+# affects the size breakdown, which never fails a build.
+#
+# Used by:
+#   - .github/scripts/esphome_size_breakdown.py (from .github/workflows/esphome_build.yml)
+
+esp-idf-size==2.3.2

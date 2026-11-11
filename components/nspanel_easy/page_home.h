@@ -73,6 +73,28 @@ bool home_vis_set(const char *component, bool visible);
 
 void home_vis_resend();
 
+/**
+ * @brief Load the vis_home mask stored by home_vis_set() into home_vis_mask.
+ *
+ * The Blueprint sends the home page visibility only at boot, so a panel
+ * booting while Home Assistant is unreachable would show an empty home page,
+ * without the indoor temperature that opens the embedded thermostat (#735).
+ * Without a stored mask, only the indoor temperature is shown until the
+ * Blueprint sends the configured one. Called once, early in the boot; the
+ * display gets the mask from home_vis_resend() on the resync after its setup.
+ */
+void home_vis_restore();
+
+/**
+ * @brief Apply to the live home page the visibility bits changed while it was not current.
+ *
+ * home_vis_set() writes the vis_home mask, which home's Preinitialize applies on
+ * entry. A change sent after the page command, but before the display reports
+ * the new page, misses both Preinitialize and the live write. Called on entry
+ * to home, this applies only those bits, so it usually sends nothing.
+ */
+void home_vis_apply_pending();
+
 /// @brief Number of value slots on the home page (value01..value04).
 static constexpr uint8_t HOME_VALUE_COUNT = 4;
 

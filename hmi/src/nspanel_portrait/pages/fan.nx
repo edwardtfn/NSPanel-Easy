@@ -1,0 +1,273 @@
+on fan.load:
+  if(api==0)
+  {
+    page home_page_id
+  }
+  // Optional fan controls hidden by default
+  vis bt_oscillate,0
+  vis mode_button,0
+  vis fan_value,0
+  vis fanslider,0
+  vis button_up,0
+  vis button_down,0
+  vis mode_bt1,0
+  vis mode_bt2,0
+  vis mode_bt3,0
+  vis mode_bt4,0
+  vis mode_bt5,0
+  // Light mode only: override HMI defaults (which target dark theme).
+  // Dark theme uses the component defaults directly, so no else branch.
+  if(theme==1)
+  {
+    fan.pic=pic_background_main
+    button_back.font=button_back_font
+    button_back.picc=pic_background_main
+    button_back.picc2=pic_background_main
+    button_back.pco=color_pco_navigation
+    icon_state.picc=pic_background_main
+    icon_state.pco=color_pco_main
+    page_label.picc=pic_background_main
+    page_label.pco=color_pco_main
+    fan_value.picc=pic_background_main
+    fan_value.pco=color_pco_main
+    button_up.picc=pic_background_main
+    button_up.picc2=pic_background_main
+    button_up.pco=color_pco_secondary
+    button_down.picc=pic_background_main
+    button_down.picc2=pic_background_main
+    button_down.pco=color_pco_secondary
+    power_button.picc=pic_background_main
+    power_button.pco=color_pco_secondary
+    bt_oscillate.picc=pic_background_main
+    bt_oscillate.pco=color_pco_secondary
+    mode_button.picc=pic_background_main
+    mode_button.pco=color_pco_secondary
+  }
+  dim=brightness
+  sendme
+
+on fanslider.up:
+  sys0=100*fanslider.val/fanslider.maxval
+  covx sys0,va0.txt,0,0
+  fan_value.txt=va0.txt
+  fan_value.txt+=home.units_sep.txt
+  fan_value.txt+="%"
+  if(fanslider.val>fanslider.minval)
+  {
+    button_down.pco=59164
+  }else
+  {
+    button_down.pco=10597
+  }
+  if(fanslider.val<fanslider.maxval)
+  {
+    button_up.pco=59164
+  }else
+  {
+    button_up.pco=10597
+  }
+  timer0.en=1
+
+on fanslider.slide:
+  sys0=100*fanslider.val/fanslider.maxval
+  covx sys0,va0.txt,0,0
+  fan_value.txt=va0.txt
+  fan_value.txt+=home.units_sep.txt
+  fan_value.txt+="%"
+  if(fanslider.val>fanslider.minval)
+  {
+    button_down.pco=59164
+  }else
+  {
+    button_down.pco=10597
+  }
+  if(fanslider.val<fanslider.maxval)
+  {
+    button_up.pco=59164
+  }else
+  {
+    button_up.pco=10597
+  }
+
+on swipe.down:
+  swipestore.en=1 // Start swipestore timer
+
+on swipe.up:
+  swipestore.en=0
+  // Touch has ended, x
+  if(tch0==0)
+  {
+    swipec=swipex-tch2
+    // From Left to Right
+    if(swipec>swipedx)
+    {
+      //page
+    }
+    // Right to Left
+    swipec2=0-swipedx
+    if(swipec<swipec2)
+    {
+      //page
+    }
+  }
+  // Touch has ended, y
+  if(tch1==0)
+  {
+    swipec=swipey-tch3
+    // From Up to Down
+    if(swipec>100)
+    {
+      //page
+    }
+    // Down to Up
+    swipec2=0-swipedy
+    if(swipec<-100)
+    {
+      //page
+    }
+  }
+
+on swipestore.timer:
+  swipex=tch0
+  swipey=tch1
+
+on button_up.down:
+  if(fanslider.val<fanslider.maxval)
+  {
+    fanslider.val++
+    sys0=100*fanslider.val/fanslider.maxval
+    covx sys0,va0.txt,0,0
+    fan_value.txt=va0.txt
+    fan_value.txt+=home.units_sep.txt
+    fan_value.txt+="%"
+  }
+  if(fanslider.val>fanslider.minval)
+  {
+    button_down.pco=59164
+  }else
+  {
+    button_down.pco=10597
+  }
+  if(fanslider.val<fanslider.maxval)
+  {
+    button_up.pco=59164
+  }else
+  {
+    button_up.pco=10597
+  }
+
+on button_up.up:
+  timer0.en=1
+
+on button_down.down:
+  if(fanslider.val>fanslider.minval)
+  {
+    fanslider.val--
+    sys0=100*fanslider.val/fanslider.maxval
+    covx sys0,va0.txt,0,0
+    fan_value.txt=va0.txt
+    fan_value.txt+=home.units_sep.txt
+    fan_value.txt+="%"
+  }
+  if(fanslider.val>fanslider.minval)
+  {
+    button_down.pco=59164
+  }else
+  {
+    button_down.pco=10597
+  }
+  if(fanslider.val<fanslider.maxval)
+  {
+    button_up.pco=59164
+  }else
+  {
+    button_up.pco=10597
+  }
+
+on button_down.up:
+  timer0.en=1
+
+on timer0.timer:
+  timer0.en=0
+  sys0=100*fanslider.val/fanslider.maxval
+  covx sys0,va0.txt,0,0
+  fan_value.txt=va0.txt+"%"
+  fansetting.txt="fan,percentage,"+va0.txt
+  printh 92
+  prints "localevent",0
+  printh 00
+  prints fansetting.txt,0
+  printh 00
+  printh FF FF FF
+
+on button_back.down:
+  page back_page_id
+
+on bt_oscillate.up:
+  bt_oscillate.pco=color_pco_highlight
+
+on power_button.up:
+  power_button.pco=31
+
+on mode_button.down:
+  mode_button.pco=31
+
+on mode_bt1.up:
+  if(mode_bt1.val==0)
+  {
+    // Was already the confirmed button: restore it; nothing is pending
+    mode_bt1.val=1
+  }else
+  {
+    // Background stays on the confirmed state; the glyph marks the pending request
+    mode_bt1.val=0
+    mode_bt1.pco=color_pco_highlight
+  }
+
+on mode_bt2.up:
+  if(mode_bt2.val==0)
+  {
+    // Was already the confirmed button: restore it; nothing is pending
+    mode_bt2.val=1
+  }else
+  {
+    // Background stays on the confirmed state; the glyph marks the pending request
+    mode_bt2.val=0
+    mode_bt2.pco=color_pco_highlight
+  }
+
+on mode_bt3.up:
+  if(mode_bt3.val==0)
+  {
+    // Was already the confirmed button: restore it; nothing is pending
+    mode_bt3.val=1
+  }else
+  {
+    // Background stays on the confirmed state; the glyph marks the pending request
+    mode_bt3.val=0
+    mode_bt3.pco=color_pco_highlight
+  }
+
+on mode_bt4.up:
+  if(mode_bt4.val==0)
+  {
+    // Was already the confirmed button: restore it; nothing is pending
+    mode_bt4.val=1
+  }else
+  {
+    // Background stays on the confirmed state; the glyph marks the pending request
+    mode_bt4.val=0
+    mode_bt4.pco=color_pco_highlight
+  }
+
+on mode_bt5.up:
+  if(mode_bt5.val==0)
+  {
+    // Was already the confirmed button: restore it; nothing is pending
+    mode_bt5.val=1
+  }else
+  {
+    // Background stays on the confirmed state; the glyph marks the pending request
+    mode_bt5.val=0
+    mode_bt5.pco=color_pco_highlight
+  }

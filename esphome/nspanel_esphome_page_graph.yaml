@@ -195,11 +195,13 @@ script:
           disp1->send_command_printf("click %s,1", hmi::graph::DRAW_FRAME.name);
           const size_t count = graph_values.size();
           if (count == 0 or graph_last_slot == 0) return;
+          // The waveform flows right to left: the newest point is on the right edge, so a shorter graph is right-aligned
+          const size_t offset = (count < GRAPH_POINTS) ? GRAPH_POINTS - count : 0;
           for (size_t idx = 0; idx < count; ++idx) {
             const time_t slot = static_cast<time_t>(graph_last_slot) - static_cast<time_t>((count - 1 - idx) * GRAPH_SLOT_SECONDS);
             const ESPTime local = ESPTime::from_epoch_local(slot);
             if (local.minute != 0 or local.hour % GRAPH_TICK_HOURS != 0) continue;
-            disp1->send_command_printf("%s.val=%u", hmi::graph::TICK_X.name, static_cast<unsigned>(idx));
+            disp1->send_command_printf("%s.val=%u", hmi::graph::TICK_X.name, static_cast<unsigned>(offset + idx));
             disp1->send_command_printf("%s.txt=\"%02u\"", hmi::graph::TICK_TEXT.name, static_cast<unsigned>(local.hour));
             disp1->send_command_printf("click %s,1", hmi::graph::DRAW_TICK.name);
           }  // for (idx)
@@ -219,8 +221,8 @@ script:
                   {"page", "graph"},
                   {"component", "graph"},
                   {"event", "refresh"},
-                  {"value", std::to_string(graph_last_slot)},
-                  {"entity", detailed_entity->state}
+                  {"value", std::to_string(graph_last_slot).c_str()},
+                  {"entity", detailed_entity->state.c_str()}
                 });
 
   - id: !extend stop_page_constructors

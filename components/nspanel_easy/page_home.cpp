@@ -8,7 +8,9 @@
 #include <cinttypes>
 
 #include "esphome/components/nextion/nextion.h"
+#include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
+#include "esphome/core/preferences.h"
 
 #include "base.h"
 #include "nextion_components.h"
@@ -16,8 +18,6 @@
 #ifdef NSPANEL_EASY_SUBSCRIBE
 
 #include <cstdio>
-
-#include "esphome/core/helpers.h"
 
 #include "text.h"
 
@@ -46,6 +46,21 @@ uint8_t parse_home_button_index(const char *component) {
 
 uint32_t home_vis_mask = 0;
 
+/// @brief Bits changed while home was not the current page, re-applied live on entry.
+static uint32_t home_vis_pending = 0;
+
+/// @brief Mask used when none is stored: the indoor temperature only (bit 0, see HOME_VIS_BITS).
+static constexpr uint32_t HOME_VIS_DEFAULT = 1U << 0;
+
+/**
+ * @brief Preference handle for the persisted vis_home mask.
+ *
+ * @return Preference object for the mask.
+ */
+static ESPPreferenceObject home_vis_pref() {
+  return global_preferences->make_preference<uint32_t>(fnv1_hash("nspanel_easy_home_vis_mask"));
+}
+
 bool home_vis_set(const char *component, bool visible) {
   if (nextion_display == nullptr) {
     return false;  // Boot has not handed the display over yet
@@ -62,12 +77,33 @@ bool home_vis_set(const char *component, bool visible) {
       return false;  // Nothing changed; avoid a redundant Nextion write
     }
     home_vis_mask = updated;
+    // Only the cache is written here; flash is written on the preferences flush, and only on change
+    if (!home_vis_pref().save(&home_vis_mask)) {
+      ESP_LOGW(TAG, "Home visibility not stored");
+    }
     nextion_display->send_command_printf("vis_home=%" PRIu32, home_vis_mask);
+    if (!is_home_page()) {
+      // The page may already be loading, with Preinitialize applying the previous mask
+      home_vis_pending |= bit;
+    }  // if (!is_home_page())
     return true;
   }  // for each known home component
 
   ESP_LOGW(TAG, "'%s' has no visibility bit", component);
   return false;
+}
+
+void home_vis_restore() {
+  uint32_t stored = 0;
+  if (!home_vis_pref().load(&stored)) {
+    // Nothing stored yet, e.g. the first boot after an update: show the indoor temperature, which the panel
+    // fills from its own sensor and which opens the climate page, until the Blueprint sends the configured mask
+    home_vis_mask = HOME_VIS_DEFAULT;
+    ESP_LOGD(TAG, "No stored home visibility, using the default: 0x%05" PRIX32, home_vis_mask);
+    return;
+  }
+  home_vis_mask = stored;
+  ESP_LOGD(TAG, "Home visibility restored: 0x%05" PRIX32, home_vis_mask);
 }
 
 void home_vis_resend() {
@@ -91,6 +127,32 @@ void home_vis_resend() {
     const bool visible = ((home_vis_mask >> entry.bit) & 1U) != 0;
     nextion_display->set_component_visibility(entry.component, visible);
   }
+  home_vis_pending = 0;  // Every bit was just applied live
+}
+
+void home_vis_apply_pending() {
+  if (home_vis_pending == 0) {
+    return;  // Nothing changed while away
+  }
+  if (nextion_display == nullptr) {
+    ESP_LOGE(TAG, "Missing Nextion display pointer");
+    return;
+  }
+  if (!is_home_page()) {
+    return;  // Keep the bits for the next entry
+  }
+
+  // A bit that changed after the page command was sent reached the display
+  // after Preinitialize had walked the mask, so the page may show its previous
+  // state. Only the changed bits are applied, companions included.
+  for (const auto &entry : HOME_VIS_BITS) {
+    if (((home_vis_pending >> entry.bit) & 1U) == 0) {
+      continue;
+    }
+    const bool visible = ((home_vis_mask >> entry.bit) & 1U) != 0;
+    nextion_display->set_component_visibility(entry.component, visible);
+  }  // for each known home component
+  home_vis_pending = 0;
 }
 
 /// @brief Blueprint default colour of the home values and their icons (RGB 200, 204, 200).
@@ -236,11 +298,10 @@ static void home_button_render(const SubBinding &binding, const SubRuntime &rt, 
   const char *icon = active ? rt.icon_on : rt.icon_off;
   uint16_t color = active ? rt.color_on : rt.color_off;
 
-  // An icon pushed by the blueprint wins; otherwise resolve from the domain and
-  // state, which is what the multi-state domains rely on.
+  // An icon pushed by the blueprint (override, or the entity's own icon) wins;
+  // otherwise resolve from the domain, device class and state.
   if (icon[0] == '\0') {
-    const SubAppearance look = resolve_sub_appearance(static_cast<SubDomain>(binding.domain), binding.device_class,
-                                                      state, rt.color_on, rt.color_off);
+    const SubAppearance look = resolve_binding_appearance(binding, state, rt.color_on, rt.color_off);
     if (look.icon != nullptr) {
       icon = look.icon;
       color = look.color;

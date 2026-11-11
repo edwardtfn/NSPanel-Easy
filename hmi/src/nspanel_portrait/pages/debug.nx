@@ -1,0 +1,69 @@
+on debug.load:
+  global_vars.txt+="\r- home_page_id: "
+  covx home_page_id,aux.txt,0,0
+  global_vars.txt+=aux.txt
+  global_vars.txt+="\r- back_page_id: "
+  covx back_page_id,aux.txt,0,0
+  global_vars.txt+=aux.txt
+  global_vars.txt+="\r- wakeup_page_id: "
+  covx wakeup_page_id,aux.txt,0,0
+  global_vars.txt+=aux.txt
+  global_vars.txt+="\r- api: "
+  covx api,aux.txt,0,0
+  global_vars.txt+=aux.txt
+  global_vars.txt+="\r- brightness: "
+  covx brightness,aux.txt,0,0
+  global_vars.txt+=aux.txt
+  global_vars.txt+="\r- brightness_dim: "
+  covx brightness_dim,aux.txt,0,0
+  global_vars.txt+=aux.txt
+  global_vars.txt+="\r- brightness_sleep: "
+  covx brightness_sleep,aux.txt,0,0
+  global_vars.txt+=aux.txt
+  global_vars.txt+="\r- display_mode: "
+  covx display_mode,aux.txt,0,0
+  global_vars.txt+=aux.txt
+  global_vars.txt+="\r- climate_embedded: "
+  covx climate_embedded,aux.txt,0,0
+  global_vars.txt+=aux.txt
+  global_vars.txt+="\r- vis_home: "
+  covx vis_home,aux.txt,0,0
+  global_vars.txt+=aux.txt
+  pages_flags.txt+="\r- is_buttonpage01: "
+  covx is_buttonpage01,aux.txt,0,0
+  pages_flags.txt+=aux.txt
+  pages_flags.txt+="\r- is_buttonpage02: "
+  covx is_buttonpage02,aux.txt,0,0
+  pages_flags.txt+=aux.txt
+  pages_flags.txt+="\r- is_buttonpage03: "
+  covx is_buttonpage03,aux.txt,0,0
+  pages_flags.txt+=aux.txt
+  pages_flags.txt+="\r- is_buttonpage04: "
+  covx is_buttonpage04,aux.txt,0,0
+  pages_flags.txt+=aux.txt
+  pages_flags.txt+="\r- is_entitypage01: "
+  covx is_entitypage01,aux.txt,0,0
+  pages_flags.txt+=aux.txt
+  pages_flags.txt+="\r- is_entitypage02: "
+  covx is_entitypage02,aux.txt,0,0
+  pages_flags.txt+=aux.txt
+  pages_flags.txt+="\r- is_entitypage03: "
+  covx is_entitypage03,aux.txt,0,0
+  pages_flags.txt+=aux.txt
+  pages_flags.txt+="\r- is_entitypage04: "
+  covx is_entitypage04,aux.txt,0,0
+  pages_flags.txt+=aux.txt
+  system_vars.txt+="\r- bauds: "
+  covx baud,aux.txt,0,0
+  system_vars.txt+=aux.txt
+  system_vars.txt+="\r- recmod: "
+  covx recmod,aux.txt,0,0
+  system_vars.txt+=aux.txt
+  system_vars.txt+="\r- dim: "
+  covx dim,aux.txt,0,0
+  system_vars.txt+=aux.txt
+  button_back.font=button_back_font
+  sendme
+
+on button_back.down:
+  page home_page_id

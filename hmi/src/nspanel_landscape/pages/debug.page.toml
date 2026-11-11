@@ -1,0 +1,94 @@
+[page]
+name = "debug"
+type = "page"
+x = 0
+y = 0
+w = 480
+h = 320
+sta = 2
+bco = "#000000"
+pic = "picture-0000"
+
+[[component]]
+name = "aux"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 385
+y = 0
+w = 95
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0033"
+bco = "#000000"
+picc2 = "picture-0033"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "title"
+type = "text"
+x = 10
+y = 5
+w = 250
+h = 30
+sta = 0
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = "NSPanel Easy"
+txt_maxl = 12
+
+[[component]]
+name = "global_vars"
+type = "text"
+x = 10
+y = 40
+w = 200
+h = 180
+sta = 0
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+ycen = 0
+txt = "Global vars:"
+txt_maxl = 300
+
+[[component]]
+name = "pages_flags"
+type = "text"
+x = 225
+y = 40
+w = 200
+h = 260
+sta = 0
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+ycen = 0
+txt = "Pages flags:"
+txt_maxl = 300
+
+[[component]]
+name = "system_vars"
+type = "text"
+x = 10
+y = 230
+w = 200
+h = 70
+sta = 0
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+ycen = 0
+txt = "System vars:"
+txt_maxl = 300

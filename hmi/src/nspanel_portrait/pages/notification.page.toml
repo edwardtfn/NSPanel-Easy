@@ -1,0 +1,119 @@
+[page]
+name = "notification"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 320
+h = 480
+sta = 2
+bco = "#000000"
+pic = "picture-0000"
+
+[[component]]
+name = "notifi_text01"
+type = "text"
+sendkey = 3
+x = 15
+y = 60
+w = 291
+h = 300
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 512
+isbr = 1
+
+[[component]]
+name = "notifi_label"
+type = "text"
+sendkey = 3
+x = 10
+y = 7
+w = 249
+h = 42
+sta = 0
+font = "font-03"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#c6c3c6"
+xcen = 0
+ycen = 2
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "swipe"
+type = "touch-capture"
+
+[[component]]
+name = "swipestore"
+type = "timer"
+tim = 50
+en = 0
+
+[[component]]
+name = "lastclick"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 100
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 260
+y = 0
+w = 60
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_accept"
+type = "button"
+sendkey = 3
+x = 15
+y = 365
+w = 90
+h = 79
+sta = 0
+style = 0
+font = "font-10"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+pco = "#00ff42"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_clear"
+type = "button"
+sendkey = 3
+x = 209
+y = 365
+w = 90
+h = 79
+sta = 0
+style = 0
+font = "font-10"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#ffc7c6"
+pco = "#ff0000"
+txt = ""
+txt_maxl = 3

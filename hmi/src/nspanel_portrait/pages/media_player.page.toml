@@ -1,0 +1,314 @@
+[page]
+name = "media_player"
+type = "page"
+sendkey = 3
+x = 0
+y = 0
+w = 320
+h = 480
+sta = 2
+bco = "#000000"
+pic = "picture-0000"
+
+[[component]]
+name = "page_label"
+type = "text"
+sendkey = 3
+x = 48
+y = 8
+w = 213
+h = 30
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+txt = "Media Player"
+txt_maxl = 100
+
+[[component]]
+name = "icon_state"
+type = "text"
+sendkey = 3
+x = 12
+y = 8
+w = 30
+h = 30
+sta = 0
+font = "SarasaGothicSC-Regular"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 1
+x = 260
+y = 0
+w = 60
+h = 47
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0000"
+bco = "#000000"
+picc2 = "picture-0000"
+bco2 = "#000000"
+pco = "#848284"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "vol_slider"
+type = "slider"
+sendkey = 3
+x = 75
+y = 373
+w = 170
+h = 25
+wid = 5
+bco = "#292c29"
+bco1 = "#840042"
+pco = "#ffffff"
+val = 0
+
+[[component]]
+name = "vol_text"
+type = "text"
+sendkey = 3
+x = 75
+y = 342
+w = 170
+h = 30
+sta = 0
+picc = "picture-0000"
+pco = "#ffffff"
+ycen = 2
+txt = ""
+txt_maxl = 5
+
+[[component]]
+name = "bt_vol_down"
+type = "text"
+sendkey = 3
+x = 0
+y = 370
+w = 65
+h = 35
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_vol_up"
+type = "text"
+sendkey = 3
+x = 255
+y = 370
+w = 65
+h = 35
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_mute"
+type = "text"
+sendkey = 3
+x = 0
+y = 430
+w = 65
+h = 35
+sta = 0
+font = "font-08"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "time_progress"
+type = "progress-bar"
+sendkey = 3
+x = 15
+y = 303
+w = 290
+h = 10
+val = 0
+bco = "#420042"
+pco = "#840042"
+
+[[component]]
+name = "time_current"
+type = "text"
+sendkey = 3
+x = 17
+y = 271
+w = 60
+h = 30
+sta = 0
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+ycen = 2
+txt = ""
+
+[[component]]
+name = "time_total"
+type = "text"
+sendkey = 3
+x = 243
+y = 271
+w = 60
+h = 30
+sta = 0
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 2
+ycen = 2
+txt = ""
+
+[[component]]
+name = "track"
+type = "text"
+sendkey = 3
+x = 15
+y = 46
+w = 290
+h = 130
+sta = 0
+font = "font-04"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+ycen = 2
+txt = ""
+txt_maxl = 255
+
+[[component]]
+name = "artist"
+type = "text"
+sendkey = 3
+x = 15
+y = 181
+w = 290
+h = 80
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#ffffff"
+xcen = 0
+ycen = 0
+txt = ""
+txt_maxl = 150
+
+[[component]]
+name = "bt_prev"
+type = "text"
+sendkey = 3
+x = 78
+y = 255
+w = 50
+h = 50
+sta = 0
+font = "font-08"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_play_pause"
+type = "text"
+sendkey = 3
+x = 135
+y = 255
+w = 50
+h = 50
+sta = 0
+font = "font-08"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_next"
+type = "text"
+sendkey = 3
+x = 192
+y = 255
+w = 50
+h = 50
+sta = 0
+font = "font-08"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "bt_on_off"
+type = "text"
+sendkey = 3
+x = 255
+y = 430
+w = 65
+h = 35
+sta = 0
+font = "font-08"
+picc = "picture-0000"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "lastclick"
+type = "variable"
+sta = 1
+txt = ""
+txt_maxl = 255
+
+[[component]]
+name = "timer0"
+type = "timer"
+tim = 1000
+en = 0
+
+[[component]]
+name = "va0"
+type = "variable"
+sta = 1
+txt = ""
+
+[[component]]
+name = "is_muted"
+type = "variable"
+
+[[component]]
+name = "prg_timer"
+type = "timer"
+tim = 1000
+en = 0
+
+[[component]]
+name = "prg_current"
+type = "variable"
+
+[[component]]
+name = "prg_total"
+type = "variable"

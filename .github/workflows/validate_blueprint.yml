@@ -33,6 +33,8 @@ jobs:
             .github/scripts/test_*.py
             .github/workflows/validate_blueprint.yml
             .github/requirements.txt
+            components/nspanel_easy/icon_rules.h
+            components/nspanel_easy/all_icons.h
 
       - name: Set up Python
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
@@ -48,8 +50,12 @@ jobs:
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
         run: yamllint -c "./.rules/yamllint.yml" nspanel_easy_blueprint.yaml
 
-      # Informative only: the metrics go to the job summary, compared with the target branch on pull requests
+      # The metrics go to the job summary, compared with the target branch on pull requests. They are informative,
+      # except the number of distinct templates: above --max-distinct the step fails, keeping a margin below Spook's
+      # template cache of 1,024 entries, which the Blueprint shares with the rest of the installation (issue #636).
+      # Set close to the current count, so the reductions do not slip back; raise it only as a deliberate decision.
       - name: Blueprint metrics
+        id: metrics
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
         env:
           BASE_REF: ${{ github.base_ref }}
@@ -58,8 +64,51 @@ jobs:
           if [[ -n "$BASE_REF" ]] && git show "origin/$BASE_REF:nspanel_easy_blueprint.yaml" > "$RUNNER_TEMP/base_blueprint.yaml"; then
             base_args=(--base "$RUNNER_TEMP/base_blueprint.yaml")
           fi  # if a base Blueprint is available
+          status=0
           python3 .github/scripts/blueprint_metrics.py nspanel_easy_blueprint.yaml "${base_args[@]}" \
-            --markdown --output "$GITHUB_STEP_SUMMARY"
+            --markdown --output "$RUNNER_TEMP/blueprint_metrics.md" --max-distinct 700 || status=$?
+          # The report is also written when the limit fails the step, so it always reaches the summary
+          if [[ -f "$RUNNER_TEMP/blueprint_metrics.md" ]]; then
+            cat "$RUNNER_TEMP/blueprint_metrics.md" >> "$GITHUB_STEP_SUMMARY"
+          fi  # if the report was written
+          exit "$status"
+
+      # The PR comment is posted by pr_metrics_comment.yml (workflow_run), which has the write permission that
+      # this workflow lacks on PRs from forks. Only the PR number, a flag and the report are passed on, as an artifact.
+      # It also runs when the Blueprint is unchanged, so that an existing comment is updated when a PR reverts it.
+      - name: Prepare metrics for the PR comment
+        id: comment_data
+        if: >-
+          !cancelled()
+          && github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          comment_dir="$RUNNER_TEMP/blueprint_metrics_comment"
+          mkdir -p "$comment_dir"
+          echo "$PR_NUMBER" > "$comment_dir/pr_number"
+          # The checkout is the merge commit, so this diff holds only the changes of this PR
+          if git diff --quiet "origin/$BASE_REF" HEAD -- nspanel_easy_blueprint.yaml; then
+            echo "false" > "$comment_dir/blueprint_changed"
+          else
+            echo "true" > "$comment_dir/blueprint_changed"
+          fi  # if the Blueprint is unchanged
+          if [[ -f "$RUNNER_TEMP/blueprint_metrics.md" ]]; then
+            cp "$RUNNER_TEMP/blueprint_metrics.md" "$comment_dir/report.md"
+          fi  # if the report was written
+          echo "dir=$comment_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Upload metrics for the PR comment
+        if: >-
+          !cancelled()
+          && steps.comment_data.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: blueprint-metrics
+          path: ${{ steps.comment_data.outputs.dir }}
+          retention-days: 1
+          if-no-files-found: error
 
       # Equivalence tests: each .github/scripts/test_*.py renders part of the Blueprint in this PR and in the target branch
       # and fails when what the panel receives differs. For an intended change, add the label 'Blueprint: behavior change'.

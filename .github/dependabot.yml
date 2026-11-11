@@ -33,6 +33,8 @@ updates:
   # ---------------------------------------------------------------------------
   - package-ecosystem: "github-actions"
     directory: "/"
+    # PRs into main trigger a release; dev batches them with the next one
+    target-branch: "dev"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -75,14 +77,16 @@ updates:
   # ---------------------------------------------------------------------------
   # Python (pip)
   # Tracks pinned Python tooling versions.
-  # Covers every requirements*.txt file in /.github (requirements.txt and
-  # requirements-clang-format.txt).
+  # Covers every requirements*.txt file in /.github (requirements.txt,
+  # requirements-clang-format.txt and requirements-esp-idf-size.txt).
   #
   # ESPHome is intentionally excluded: latest/dev tracks are resolved
   # dynamically in the workflow and should not be pinned here.
   # ---------------------------------------------------------------------------
   - package-ecosystem: "pip"
     directory: "/.github"
+    # PRs into main trigger a release; dev batches them with the next one
+    target-branch: "dev"
     schedule:
       interval: "weekly"
       day: "monday"

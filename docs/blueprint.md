@@ -167,6 +167,9 @@ See [Temperature source](addon_climate.md#temperature-source) for when it falls 
 
 On the blueprint settings, you will also find settings for sensors and custom buttons to be shown on all the climate pages.
 
+> [!NOTE]
+> The panel follows the custom buttons' entities through [API subscriptions](api_subscribe.md), so changing which entity a custom button uses restarts the panel once.
+
 When a climate entity supports preset modes (like `eco`, `comfort` or `away`), its climate page shows a preset button that opens a list with the available presets.
 The button shows the icon of the active preset and is highlighted while a preset is active. Custom presets use the generic preset icon.
 

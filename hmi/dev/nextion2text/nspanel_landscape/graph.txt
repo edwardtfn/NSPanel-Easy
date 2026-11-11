@@ -204,7 +204,7 @@ Waveform wave
         Effect Priority         : 0
         Effect Time             : 300
         Fill                    : crop image
-        Flow Direction          : left->right
+        Flow Direction          : right->left
         Channel count           : 1
         Cropped Back. Picture ID: 65535
         Grid Color              : 1024

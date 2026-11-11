@@ -12,194 +12,47 @@
 ---
 substitutions:
   BUTTON_LONG_PRESS_DELAY: 800ms
-  BUTTON_RENDER_QUEUE_TIMEOUT: 25ms  # Max wait for the Nextion queue to drain before rendering a button
   TAG_PAGE_BUTTONS: nspanel.page.buttons
-  THEME_PAGE_BUTTONS_DARK_PIC_BUTTON: 46
-  THEME_PAGE_BUTTONS_DARK_PIC_PRESSED: 47
-  THEME_PAGE_BUTTONS_LIGHT_PIC_BUTTON: 79
-  THEME_PAGE_BUTTONS_LIGHT_PIC_PRESSED: 80
 
 api:
   actions:
-    # Dynamically configures button properties on a specified page,
-    # enhancing UI interactivity by allowing updates to button appearance and behavior based on given parameters.
-    - action: button
+    # Settings of one button page, sent by the Blueprint once per session. With subscriptions, the
+    # button pages are drawn by the panel itself, from these settings and the bound entities.
+    - action: buttons_setup
       variables:
-        page: string          # Identifier of the page where the button is located.
-        id: string            # Unique identifier for the button.
-        state: bool           # Determines the button's state, influencing background and other visual aspects.
-        icon: string          # Icon codepoint from HASwitchPlate Material Design Icons. Example: "\uE6E8" for mdi:lightbulb-on-outline.
-        icon_color: int[]     # RGB color array for the icon.
-        icon_font: int        # Nextion font identifier for the icon, default is 8.
-        bri: string           # Brightness level or other dynamic info to be displayed close to the icon.
-        label: string         # Main text label for the button.
-        is_page_render: bool  # Set to true when called from a full page render, or false for a single button refresh
-        icon_only: bool       # True for single-component buttons (climate custom buttons), which have no `pic`/`bri`/`text` siblings.
-        available: bool       # False when the bound entity reports unavailable; rendering follows the `unavailable_behavior` setting.
+        page: string               # Button page, e.g. "buttonpage01"
+        page_label: string         # Page title
+        labels: string[]           # Button labels, in button order
+        state_values: string[]     # State Values, in button order; empty for the default on/off logic
+        confirm: int               # Bit mask of the buttons asking for a confirmation (bit 0 = button01)
+        icon_font: int             # Nextion font of the button icons
+        temperature_unit: string   # Unit shown after a climate's current temperature
       then:
         - lambda: |-
-            const uint16_t icon_color_rgb565 = rgbTo565(icon_color);
-
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "Action `button` triggered:");
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  page: %s", page.c_str());
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  id: %s", id.c_str());
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  state: %s", ONOFF(state));
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  icon_color: %" PRIu16, icon_color_rgb565);
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  icon_font: %" PRId32, icon_font);
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  bri: %s", bri.c_str());
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  label: %s", label.c_str());
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  is_page_render: %s", YESNO(is_page_render));
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  icon_only: %s", YESNO(icon_only));
-            ESP_LOGV("${TAG_PAGE_BUTTONS}", "  available: %s", YESNO(available));
-
-            const uint8_t page_id = get_page_id(page.c_str());
-            if (current_page_id != page_id) {
-              ESP_LOGW("${TAG_PAGE_BUTTONS}", "Skipping button render: page '%s' not active (current: '%s')",
-                                      page.c_str(), page_names[current_page_id]);
-              return;
-            }
-
-            action_button->execute(
-              page_id,
-              id.c_str(),
-              state,
-              icon.c_str(),
-              icon_color_rgb565,
-              static_cast<uint8_t>(icon_font),
-              bri.c_str(),
-              label.c_str(),
-              is_page_render,
-              icon_only,
-              available
-            );
+            #ifdef NSPANEL_EASY_SUBSCRIBE
+            buttons_setup(page, page_label, labels, state_values, confirm, icon_font, temperature_unit,
+                          ${LANG_BYTES_PER_CHAR});
+            #endif  // NSPANEL_EASY_SUBSCRIBE
 
 esphome:
   build_flags:
     - -D NSPANEL_EASY_PAGE_BUTTONS
 
 script:
-  - id: action_button
-    mode: queued
-    max_runs: 24
-    parameters:
-      page_id: uint8_t      # Identifier of the page where the button is located
-      button_id: string     # Unique identifier for the button
-      state: bool           # Determines the button's state, influencing background and other visual aspects
-      icon: string          # Icon codepoint from HASwitchPlate Material Design Icons. Example: "\uE6E8" for mdi:lightbulb-on-outline
-      icon_color: uint16_t  # RGB color (RGB565) for the icon
-      icon_font: uint8_t    # Nextion font identifier for the icon, default is 8
-      bri: string           # Brightness level or other dynamic info to be displayed close to the icon
-      label: string         # Main text label for the button
-      is_page_render: bool  # When true, skips picc calls for off-state buttons (Preinitialize already set them)
-      icon_only: bool       # When true, the button is a single text component holding the glyph (climate custom buttons)
-      available: bool       # When false, the bound entity is unavailable; `unavailable_behavior` decides what that looks like
+  ##### Subscription-driven button pages: draws the pending updates #####
+  - id: !extend page_change
     then:
-      # Wait for the Nextion queue to drain before rendering this button.
-      # Workaround for esphome/esphome#19018: with `command_spacing`, a command sent
-      # directly while spacing-deferred entries are still waiting is queued behind
-      # them, and its ack removes an entry that was never sent, so one component
-      # keeps its previous appearance. The timeout keeps a stuck entry from
-      # blocking the render, and a page change ends the wait right away, as the
-      # render below is skipped anyway and the queue may already hold the new
-      # page's commands.
-      - wait_until:
-          condition:
-            lambda: return (current_page_id != page_id) or (disp1->queue_size() == 0);
-          timeout: ${BUTTON_RENDER_QUEUE_TIMEOUT}
       - lambda: |-
-          if (current_page_id != page_id) return;
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          buttons_page_open(current_page_id);
+          #endif  // NSPANEL_EASY_SUBSCRIBE
 
-          // Timeout reached without draining the queue: render anyway, but make it visible
-          const size_t queue_size = disp1->queue_size();
-          if (queue_size > 0)
-            ESP_LOGD("${TAG_PAGE_BUTTONS}", "Render queue wait timed out (%zu queued), id: %s", queue_size, button_id.c_str());
-
-          // Availability is resolved once, here, for every button surface that
-          // routes through this script. `indicate` forces the off appearance and
-          // greys the glyph; `hide` suppresses the components entirely.
-          const bool indicate = (!available && unavailable_behavior == UnavailableBehavior::INDICATE);
-          const bool hide = (!available && unavailable_behavior == UnavailableBehavior::HIDE);
-          const bool effective_state = state && !indicate;
-          const uint16_t effective_icon_color = indicate ? Colors::RGB565_GRAY_DARK : icon_color;
-
-          // Icon-only buttons (climate page custom buttons) are a single Nextion text
-          // component holding the glyph. There are no `pic`/`bri`/`text` siblings to
-          // address, and no on/off background, so only the glyph, its color and the
-          // visibility are written. Routing them through this script keeps every
-          // per-entity button on a single render path, so behaviour added here cannot
-          // silently miss one of the surfaces.
-          if (icon_only) {
-            disp1->set_component_visibility(button_id.c_str(), !hide);
-            if (hide) return;
-            disp1->set_component_text(button_id.c_str(), icon.c_str());
-            disp1->set_component_font_color(button_id.c_str(), effective_icon_color);
-            return;
-          }  // if (icon_only)
-
-          const uint8_t button_pic_id = (current_theme == ThemeMode::LIGHT) ?
-                                        ${THEME_PAGE_BUTTONS_LIGHT_PIC_BUTTON} :
-                                        ${THEME_PAGE_BUTTONS_DARK_PIC_BUTTON};
-          const uint8_t button_pressed_pic_id = (current_theme == ThemeMode::LIGHT) ?
-                                                ${THEME_PAGE_BUTTONS_LIGHT_PIC_PRESSED} :
-                                                ${THEME_PAGE_BUTTONS_DARK_PIC_PRESSED};
-          const uint16_t pic_id = effective_state ? button_pressed_pic_id : button_pic_id;
-          const uint16_t fg_color = effective_state ? Colors::RGB565_BLUE_INDIGO : Colors::RGB565_WHITE;
-
-          // Pre-build component name strings on the stack
-          // Nextion object name limit: 14 chars + NUL = 15
-          // Longest case: "button07" (8) + "icon"/"text" (4) = 12 chars — within limit
-          const char *btn = button_id.c_str();
-          if (button_id.size() > 10) {
-            ESP_LOGE("${TAG_PAGE_BUTTONS}", "button_id '%s' exceeds 10 chars, skipping render", btn);
-            return;
-          }
-
-          char comp_pic[15];
-          char comp_bri[15];
-          char comp_text[15];
-          char comp_icon[15];
-          snprintf(comp_pic, sizeof(comp_pic), "%spic", btn);
-          snprintf(comp_bri, sizeof(comp_bri), "%sbri", btn);
-          snprintf(comp_text, sizeof(comp_text), "%stext", btn);
-          snprintf(comp_icon, sizeof(comp_icon), "%sicon", btn);
-
-          // Visibility is only ever written when hiding is enabled, or right after
-          // leaving it, so users on the other two behaviours pay nothing for it.
-          // `vis` resets to the TFT default on page entry, so a page render only
-          // needs the hide direction, while a single button refresh must also be
-          // able to bring the button back.
-          if ((unavailable_behavior == UnavailableBehavior::HIDE || unavailable_unhide_pending) &&
-              (hide || !is_page_render)) {
-            disp1->set_component_visibility(comp_pic, !hide);
-            disp1->set_component_visibility(comp_bri, !hide);
-            disp1->set_component_visibility(comp_text, !hide);
-            disp1->set_component_visibility(comp_icon, !hide);
-          }  // if (HIDE || unhide pending)
-          if (hide) return;
-
-          // Background images - skip for off-state buttons during page render
-          // as Preinitialize already set the correct picc
-          if (!is_page_render || effective_state) {
-            disp1->set_component_picc(comp_pic, pic_id);
-            disp1->set_component_picc(comp_bri, pic_id);
-            disp1->set_component_picc(comp_text, pic_id);
-            disp1->set_component_picc(comp_icon, pic_id);
-          }
-
-          // Foreground colors
-          if (current_page_id != page_id) return;
-          disp1->set_component_foreground_color(comp_bri, fg_color);
-          disp1->set_component_foreground_color(comp_text, fg_color);
-          disp1->set_component_font_color(comp_icon, effective_icon_color);
-          disp1->set_component_font(comp_icon, icon_font);
-
-          // Text content
-          if (current_page_id != page_id) return;
-          disp1->set_component_text(comp_icon, icon.c_str());
-          disp1->set_component_text(comp_bri, (strcmp(bri.c_str(), "0") == 0) ? " " : bri.c_str());
-
-          // Button text is set on page render only; pass empty label on state updates to skip
-          if (is_page_render) {
-            disp1->set_component_text(comp_text, wrapText(label.c_str(), 10, ${LANG_BYTES_PER_CHAR}).c_str());
-          }
+interval:
+  - id: buttons_render
+    interval: 50ms
+    then:
+      - lambda: |-
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          buttons_loop();
+          #endif  // NSPANEL_EASY_SUBSCRIBE
 ...

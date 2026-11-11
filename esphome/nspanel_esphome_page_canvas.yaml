@@ -13,18 +13,4 @@ substitutions:
 esphome:
   build_flags:
     - -D NSPANEL_EASY_PAGE_CANVAS
-
-script:
-  - id: !extend page_change
-    then:
-      - lambda: |-
-          if (new_page_id == get_page_id("canvas")) page_canvas->execute();
-
-  - id: page_canvas
-    mode: single
-    then:
-
-  - id: !extend stop_page_constructors
-    then:
-      - lambda: page_canvas->stop();
 ...

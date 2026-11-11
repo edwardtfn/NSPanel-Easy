@@ -10,7 +10,7 @@ NSPanel Easy is an open-source integration of the Sonoff NSPanel with Home Assis
 | --- | --- | --- |
 | ESPHome firmware | `nspanel_esphome*.yaml`, `esphome/`, `components/nspanel_easy/` | YAML, C++, Python (codegen) |
 | Home Assistant Blueprint | `nspanel_easy_blueprint.yaml` | YAML, Jinja2 |
-| Nextion display (HMI/TFT) | `hmi/` | Nextion Editor project files |
+| Nextion display (HMI/TFT) | `hmi/src/` | nxwright source; `.hmi`/`.tft` are built from it |
 
 Supported display models: EU (landscape), US portrait, and US landscape.
 
@@ -21,12 +21,15 @@ Supported display models: EU (landscape), US portrait, and US landscape.
 - `components/nspanel_easy/` - External component (C++ sources and `__init__.py`).
   Page-specific code is gated by `NSPANEL_EASY_PAGE_*` build flags defined in the matching `esphome/nspanel_esphome_page_*.yaml`.
 - `nspanel_easy_blueprint.yaml` - Single Blueprint file (very large; edit surgically).
-- `hmi/` - `.hmi` sources and compiled `.tft` files. `hmi/dev/` holds developer tooling, fonts, images and the `nextion2text` output.
+- `hmi/` - `src/` holds the display source (nxwright format), the source of truth.
+  The `.hmi` and `.tft` files beside it are built from it, and committed to `dev` by CI after each merge that changes the source.
+  `hmi/dev/` holds developer tooling, the fonts, the firmware reference and images.
 - `docs/` - User documentation. Update it whenever user-visible behavior changes.
 - `.test/` - ESPHome configurations used by the CI build matrix.
 - `prebuilt/` - Prebuilt firmware configuration and binaries (experimental).
 - `versioning/` - Version files managed by CI. Do not edit.
-- `.github/` - Workflows, issue templates, CI scripts and pinned Python tooling (`requirements.txt`).
+- `.github/` - Workflows, issue templates, CI scripts and pinned Python tooling (`requirements*.txt`: `requirements.txt` for the
+  validation scripts, and one file per tool installed by a single workflow, such as clang-format and esp-idf-size).
 - `.rules/` - Linter configurations (yamllint, markdownlint, markdown link check).
 
 ## Build and validation
@@ -163,8 +166,11 @@ Inputs always have a value, and variables set earlier in the same run are always
 
 ## Nextion HMI (hmi/)
 
-- `.hmi` and `.tft` files are binary. Do not attempt to edit them directly.
-  Propose Nextion event code as text for the maintainer to apply in Nextion Editor, and review changes through the generated text in `hmi/dev/nextion2text/`.
+- Edit the source in `hmi/src/<project>/`: page code in `pages/*.nx`, components in `pages/*.page.toml`, macros in `macros.nx`, global code in `program.nx`.
+  Code is strict Nextion syntax; do not switch a project to nxlang.
+- `.hmi` and `.tft` files are build outputs. Do not edit or commit them; CI builds them from the source (`hmi/dev/scripts/hmi_build.sh`) and commits them to `dev` after the merge.
+  Pull requests only attach them to the "Build HMI" workflow run, for testing.
+- Landscape and portrait are separate projects. A change to shared page code usually belongs in both.
 - `if` conditions and commands such as `fill` and `cirs` do not accept inline arithmetic. Pre-compute values into scratch variables (`sys0`..`sys2`, `sya0`..`sya1`) first.
 - Array indexes must also be pre-computed: `sys2=sys0+11` then `vis b[sys2],0`, never `vis b[sys0+11],0`.
 - Variable names are limited to 14 characters.
@@ -186,7 +192,8 @@ Inputs always have a value, and variables set earlier in the same run are always
 ## Things agents must not do
 
 - Edit files under `versioning/` or bump versions manually.
-- Edit generated files (`all_icons.h`, `all_icons.json`, the Blueprint's `all_icon_names` / `special_icons` lines, `hmi/dev/nextion2text/`) instead of their sources.
+- Change the Blueprint version on `dev` (`9999.99.9`, a development marker set by the versioning workflow) in a pull request; the release sets the real version.
+- Edit generated files (`all_icons.h`, `all_icons.json`, the Blueprint's `all_icon_names` / `special_icons` lines, `hmi/*.hmi`, `hmi/*.tft`) instead of their sources.
 - Commit compiled binaries (`.tft`, `.bin`) unless explicitly asked.
 - Reformat or restructure unrelated code in the same change.
 - Remove comments, docs or existing opt-in guards without being asked.

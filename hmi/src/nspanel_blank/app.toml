@@ -1,0 +1,16 @@
+format = 1
+name = "nspanel_blank"
+language = "nextion_do_not_change_manually"  # use `nxwright language <source-folder> nxlang` to change
+screen = "NX4832F035"
+rotation = 270
+encoding = "utf-8"
+pages = [
+    "blank",
+]
+pictures = [
+    "picture-0000",
+]
+fonts = [
+    "CourierNew16",
+    "ubuntu26_language",
+]

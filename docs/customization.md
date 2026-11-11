@@ -301,6 +301,7 @@ substitutions:
 ### SNTP (time) server
 
 By default, the panel takes its time from Home Assistant.
+Until it has a time, for example after a power loss while Home Assistant is unavailable, the panel shows `--:--` instead of the time, and no date.
 You can add Network Time (SNTP) servers as a second time source with the `sntp_servers` substitution (up to 3, separated by `;`).
 
 Network Time servers only need Wi-Fi, so after a power loss, when the panel has no time, they bring it back without waiting for Home Assistant:

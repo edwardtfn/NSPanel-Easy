@@ -187,21 +187,29 @@ interval:
   - interval: 1s
     then:
       - lambda: |-
+          // The relays restore their state after a reboot, which the cycle does not know about. So the first
+          // update drives them once regardless of a change, e.g. to switch off a relay restored on without demand.
+          static bool applied_since_boot = false;
           const float period_s = pid_tuning_pwm_period->state;
           const float min_on_s = pid_tuning_min_on_time->state;
           const float min_off_s = pid_tuning_min_off_time->state;
           if (std::isnan(period_s) || period_s < 60.0f) return;
           if (std::isnan(min_on_s) || min_on_s < 0.0f) return;
           if (std::isnan(min_off_s) || min_off_s < 0.0f) return;
-          if (nspanel_easy::pid_pwm_cycle.update(millis(), static_cast<uint32_t>(period_s * 1000.0f),
-                                                 static_cast<uint32_t>(min_on_s * 1000.0f),
-                                                 static_cast<uint32_t>(min_off_s * 1000.0f))) {
+          const bool changed = nspanel_easy::pid_pwm_cycle.update(millis(), static_cast<uint32_t>(period_s * 1000.0f),
+                                                                  static_cast<uint32_t>(min_on_s * 1000.0f),
+                                                                  static_cast<uint32_t>(min_off_s * 1000.0f));
+          if (changed || !applied_since_boot) {
+            applied_since_boot = true;
             pid_pwm_apply->execute();
-          }
+          }  // if (changed || !applied_since_boot)
 
   # Saves the integral term of each running controller, so a reboot continues from it.
   # Every 30 minutes, to keep flash writes low; a slow system's integral changes little in that time.
+  # Not right after boot: ESPHome runs an interval's first iteration within seconds of the start, before
+  # pid_integral_track has restored the stored value, which would overwrite it with the controller's initial 0.
   - interval: 30min
+    startup_delay: 30min
     then:
       - lambda: |-
           if (pid_heat_embedded->mode != climate::CLIMATE_MODE_OFF) {

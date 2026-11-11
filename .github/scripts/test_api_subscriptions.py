@@ -11,6 +11,8 @@ The cases cover the weather, outdoor and indoor temperature inputs (empty, singl
 not), the temperature calibration reference (empty, sensor, climate, the panel's own entities, with and without
 the embedded thermostat), the wake-up sensors (none, a single entity or a list with gaps), and the chips and
 custom buttons (missing, empty, invalid and valid entities, with and without icon and color).
+The button pages are checked separately, against fixed expectations: the entity's binding and the optional
+value, colour, State Indicator Entity and icon attribute bindings.
 
 Usage:
   test_api_subscriptions.py REFERENCE_BLUEPRINT [BLUEPRINT]
@@ -105,6 +107,8 @@ def run(hass, variables, home_page, case):
         "nspaneltemp": NSPANEL_TEMP,
         "thermostat_embedded": THERMOSTAT_EMBEDDED,
         "home_page": render(hass, resolve(home_page, case["inputs"]), {}),
+        # Global variable; the button pages are checked by button_checks(), so the random cases leave them empty
+        "buttons_pages": {"labels": {}, "buttons": case.get("buttons", [])},
     }
     for name, value in variables:
         context[name] = render(hass, resolve(value, case["inputs"]), context)
@@ -144,6 +148,51 @@ def cases():
         yield {"inputs": inputs, "db": db}
 
 
+def button(component, entity, **fields):
+    """A button of buttonpage01 as the `buttons_pages` global variable holds it."""
+    item = {"entity": entity, "name": "", "icon": "", "icon_color_rgb": [], "confirm": False, "state_entity": "",
+            "state_value": "", "page": "buttonpage01", "component": component}
+    item.update(fields)
+    return item
+
+
+def button_checks(hass, version):
+    """Check the button page bindings of the tested version against fixed expectations; return the failures."""
+    inputs = next(cases())["inputs"]
+    inputs.update({f"chip{index:02d}": None for index in range(1, 8)})
+    inputs.update({f"home_custom_button{index:02d}": None for index in range(1, 8)})
+    inputs.update({"weather_entity": "", "outdoortemp": "", "indoortemp": "", "wake_up_sensors": [],
+                   "temp_calibration_reference": ""})
+    db = {
+        "light.desk": MockState("light.desk", "on", {"icon": "mdi:lamp"}),
+        "switch.fan": MockState("switch.fan", "off", {}),
+        "script.night": MockState("script.night", "off", {}),
+        "input_select.mode": MockState("input_select.mode", "Movie", {}),
+    }
+    buttons = [
+        button("button01", "light.desk"),                                         # value, colour and icon attribute
+        button("button02", "light.desk", icon="mdi:lightbulb"),                   # icon override: no icon attribute
+        button("button03", "switch.fan", state_entity="input_select.mode"),       # State Indicator Entity
+        button("button04", "script.night", state_entity="script.night"),          # same entity: no :s
+        button("button05", "invalid"),                                            # not an entity_id
+        button("button06", []),                                                   # unset
+    ]
+    expected = [
+        ("light.desk", "button01", None), ("light.desk", "button01:v", "brightness"),
+        ("light.desk", "button01:c", "rgb_color"), ("light.desk", "button01:i", "icon"),
+        ("light.desk", "button02", None), ("light.desk", "button02:v", "brightness"),
+        ("light.desk", "button02:c", "rgb_color"),
+        ("switch.fan", "button03", None), ("input_select.mode", "button03:s", None),
+        ("script.night", "button04", None), ("script.night", "button04:v", "last_triggered"),
+    ]
+    result = run_safely(hass, version, {"inputs": inputs, "db": db, "buttons": buttons})
+    if isinstance(result, str):
+        return [result]
+    actual = [(item["entity"], item["component"], item.get("attribute")) for item in result
+              if item.get("page") == "buttonpage01"]
+    return [] if actual == expected else [f"button bindings: expected {expected}, got {actual}"]
+
+
 def run_safely(hass, version, case):
     """Run one version; an error becomes a comparable result, so the same error in both versions is no difference."""
     try:
@@ -173,7 +222,12 @@ def main():
                 print(f"DIFF inputs={case['inputs']} db={sorted(case['db'])}\n  reference: {expected}\n"
                       f"  tested:    {actual}")
     print(f"{total} cases, {differences} differences")
-    return 1 if differences else 0
+
+    failures = button_checks(hass, candidate)
+    for failure in failures:
+        print(f"FAIL {failure}")
+    print(f"Button page bindings: {'FAIL' if failures else 'OK'}")
+    return 1 if differences or failures else 0
 
 
 if __name__ == "__main__":

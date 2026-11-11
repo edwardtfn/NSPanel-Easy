@@ -135,6 +135,8 @@ By default, the thermostat uses the panel's own temperature sensor, including th
 That sensor reads high because the panel heats itself up.
 Select a [calibration reference](blueprint.md#nspanel-temperature-sensor---calibration-reference-optional) in the Blueprint to correct it automatically.
 The thermostat keeps regulating on the panel's own sensor, so it keeps working fully on its own while Home Assistant is unavailable.
+The climate page stays reachable by tapping the indoor temperature on the home page, also after a reboot without Home Assistant,
+as the panel keeps the home page layout last sent by the Blueprint ([#735](https://github.com/edwardtfn/NSPanel-Easy/issues/735)).
 
 If the reference is placed elsewhere in the room and you want the thermostat to follow it,
 enable **Climate entity** > **Embedded Thermostat - Regulate on the Calibration Reference** in the Blueprint.
@@ -157,6 +159,11 @@ It switches back to the reference as soon as it can be trusted again.
 The climate page shows only the HVAC modes supported by the thermostat, based on its configuration.
 With the default configuration, the `heat` add-on offers `Heat` and `Off`, the `cool` add-on offers `Cool` and `Off`, and the `dual` add-on offers `Heat/Cool`, `Heat`, `Cool` and `Off`.
 If you customize `thermostat_embedded` to support more modes (e.g. `auto_mode`, `dry_action` or `fan_only_action`), the matching buttons are shown automatically.
+
+The icon on the climate page shows what the thermostat is doing: colored while it is heating, cooling, drying or running the fan,
+otherwise the mode in gray (e.g. a gray fire while idle in `Heat`), and no icon while off.
+The climate chip on the home page shows the same icon, depending on **Main Climate - Chip Visibility** in the Blueprint:
+only while active (default), always, or never.
 
 ## Presets
 
@@ -305,6 +312,9 @@ How it works:
 > When cooling through the floor, surfaces below the dew point collect condensation, which can damage the floor and building.
 > The PID packages do not monitor the dew point: the controllers, and the boost of the single package, open the valve regardless of humidity.
 > Cooling requires dew-point protection on the heating system side, e.g. in the heat pump or at the manifold.
+> Do not cool through the floor in humid rooms, e.g. bathrooms or kitchens: that protection measures humidity at one point only,
+> and rooms more humid than that point can still collect condensation.
+> In humid climates, the risk of condensation is higher and the protection limits the cooling capacity, so floor cooling is not recommended there.
 
 ### PID configuration
 

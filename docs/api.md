@@ -8,13 +8,16 @@ This document provides details on custom actions designed for integration with H
   - [API Subscribe Action (`api_subscribe`)](#api-subscribe-actions-api_subscribe-api_subscribe_end):
     Binds a Home Assistant entity directly to a panel component, so state changes render without an automation run.
   - [API Subscribe End Action (`api_subscribe_end`)](#api-subscribe-actions-api_subscribe-api_subscribe_end): Closes a binding push and states how many bindings were sent.
-  - [Button Action (`button`)](#button-action-button): Configures properties and state of buttons on a specified button page.
-  - [Command Action (`command`) - DEPRECATED](#command-action-command): Sends a custom command directly to the display.
+  - [API Subscribe Icon Names Action (`api_subscribe_icon_names`)](api_subscribe.md#api_subscribe_icon_names):
+    Sends the MDI icon names, so the panel resolves icons given by name.
+  - [Buttons Setup Action (`buttons_setup`)](api_subscribe.md#button-pages): Sends the settings of a button page that the panel draws itself.
   - [Component Color Action (`component_color`)](#component-color-action-component_color): Changes the foreground color of a specified component on the display.
   - [Component Text List Action (`component_text_list`)](#component-text-list-action-component_text_list): Updates the text of a specified component on the display using a list of values.
   - [Component Value Action (`component_val`)](#component-value-action-component_val): Updates the value of a specified component on the display.
   - [Components Visibility Action (`components_visibility`)](#components-visibility-action-components_visibility): Hides or shows a specified component on the display.
   - [Entity Details Show Action (`entity_details_show`)](#entity-details-show-action-entity_details_show): Displays detailed information for a specific entity.
+  - [Entity Snapshot Action (`entity_snapshot`)](#entity-snapshot-action-entity_snapshot):
+    Sends the state and attributes of the entities on an entity details page, for the panel to render.
   - [Hardware Button State Indication Action (`hw_button_state`)](#hardware-button-state-indication-action-hw_button_state):
     Updates the visual state (on/off) of the left and right hardware button indicators on the panel.
   - [Icon Action (`icon`)](#icon-action-icon): Updates a chip or custom button's icon, color, and visibility.
@@ -27,8 +30,6 @@ This document provides details on custom actions designed for integration with H
   - [Value Action (`value`)](#value-action-value): Updates an entity to display specific values.
   - [Wake Up Action (`wake_up`)](#wake-up-action-wake_up): Activates the display from a screensaver or low-brightness state. Opt-in.
   - [Alarm Settings Page Action (`page_alarm`)](#alarm-settings-page-action-page_alarm): Updates the Alarm page with current state information.
-  - [Climate Page Action (`page_climate`)](#climate-page-action-page_climate): Updates the Climate page with current state information.
-  - [Media Player Page Action (`page_media_player`)](#media-player-page-action-page_media_player): Updates the Media Player page with current state information.
 - [Screen Components](#screen-components)
   - [Chips](#chips)
     - [User-defined Chips](#user-defined-chips)
@@ -66,20 +67,19 @@ You can look up the action names available on your Home Assistant instance under
 | --------- | ----------- | ----------- |
 | [`api_subscribe`](#api-subscribe-actions-api_subscribe-api_subscribe_end) | [API Subscribe Action](#api-subscribe-actions-api_subscribe-api_subscribe_end) | Binds a Home Assistant entity directly to a panel component, so state changes render without an automation run. |
 | [`api_subscribe_end`](#api-subscribe-actions-api_subscribe-api_subscribe_end) | [API Subscribe End Action](#api-subscribe-actions-api_subscribe-api_subscribe_end) | Closes a binding push and states how many bindings were sent. |
-| [`button`](#button-action-button) | [Button Action](#button-action-button) | Configures properties and state of buttons on a specified button page. |
-| [`command`](#command-action-command) | [Command Action](#command-action-command) | Sends a custom command directly to the display. |
+| [`api_subscribe_icon_names`](api_subscribe.md#api_subscribe_icon_names) | [API Subscribe Icon Names Action](api_subscribe.md#api_subscribe_icon_names) | Sends the MDI icon names, so the panel resolves icons given by name. |
+| [`buttons_setup`](api_subscribe.md#button-pages) | [Buttons Setup Action](api_subscribe.md#button-pages) | Sends the settings of a button page that the panel draws itself. |
 | [`component_color`](#component-color-action-component_color) | [Component Color Action](#component-color-action-component_color) | Changes the foreground color of a specified component on the display. |
 | [`component_text_list`](#component-text-list-action-component_text_list) | [Component Text List Action](#component-text-list-action-component_text_list) | Updates the text of a specified component on the display using a list of values. |
 | [`component_val`](#component-value-action-component_val) | [Component Value Action](#component-value-action-component_val) | Updates the value of a specified component on the display. |
 | [`components_visibility`](#components-visibility-action-components_visibility) | [Components Visibility Action](#components-visibility-action-components_visibility) | Hides or shows a specified component on the display. |
 | [`entity_details_show`](#entity-details-show-action-entity_details_show) | [Entity Details Show Action](#entity-details-show-action-entity_details_show) | Displays detailed information for a specific entity. |
+| [`entity_snapshot`](#entity-snapshot-action-entity_snapshot) | [Entity Snapshot Action](#entity-snapshot-action-entity_snapshot) | Sends the state and attributes of the entities on an entity details page, for the panel to render. |
 | [`hw_button_state`](#hardware-button-state-indication-action-hw_button_state) | [Hardware Button State Indication Action](#hardware-button-state-indication-action-hw_button_state) | Updates the visual state (on/off) of the left and right hardware button indicators on the panel. |
 | [`icon`](#icon-action-icon) | [Icon Action](#icon-action-icon) | Updates a chip or custom button's icon, color, and visibility. |
 | [`notification_clear`](#notification-clear-action-notification_clear) | [Notification Clear Action](#notification-clear-action-notification_clear) | Clears the current notification from the screen. |
 | [`notification_show`](#notification-show-action-notification_show) | [Notification Show Action](#notification-show-action-notification_show) | Displays a notification-message on the screen. |
 | [`page_alarm`](#alarm-settings-page-action-page_alarm) | [Alarm Settings Page Action](#alarm-settings-page-action-page_alarm) | Updates the Alarm page with current state information. |
-| [`page_climate`](#climate-page-action-page_climate) | [Climate Page Action](#climate-page-action-page_climate) | Updates the Climate page with current state information. |
-| [`page_media_player`](#media-player-page-action-page_media_player) | [Media Player Page Action](#media-player-page-action-page_media_player) | Updates the Media Player page with current state information. |
 | [`qrcode`](#qr-code-action-qrcode) | [QR Code Action](#qr-code-action-qrcode) | Displays a QR code on the panel or updates the QR code information for local control. |
 | [`rtttl_play`](#rtttl-play-action-rtttl_play) | [RTTTL Play Action](#rtttl-play-action-rtttl_play) | Plays melodies encoded in the RTTTL format. |
 | [`upload_tft`](#tft-file-update-action-upload_tft) | [Upload TFT Action](#tft-file-update-action-upload_tft) | Enables TFT file updates from a URL, requiring the "Upload TFT" add-on. Opt-in. |
@@ -90,7 +90,7 @@ You can look up the action names available on your Home Assistant instance under
 
 ### API Subscribe Actions: `api_subscribe`, `api_subscribe_end`
 
-These two actions register bindings between Home Assistant entities and panel components. Once
+These two actions, with `api_subscribe_icon_names` and `buttons_setup`, register bindings between Home Assistant entities and panel components. Once
 bound, Home Assistant streams state changes straight to the panel over the API connection and the
 panel renders them locally — no automation runs per state change.
 
@@ -101,79 +101,6 @@ entity requires a restart to take effect.
 
 See [API Subscriptions](api_subscribe.md) for the full documentation, including parameters, state
 classification, on-device appearance resolution, and troubleshooting.
-
-### Button Action: `button`
-
-Configures the properties and state of buttons on a specified button page, allowing for dynamic updates to button appearance and behavior based on specified parameters.
-
-**Usage:**
-This action is designed for dynamic user interface adjustments, enabling the customization of button states, icons, colors, and labels.
-It's particularly useful for reflecting changes in device states or user interactions within the UI.
-
-**Parameters:**
-
-- `page` (string): The page identifier where the button is located.
-- `id` (string): The button's unique identifier.
-- `state` (bool): The state of the button, which can affect its background picture and other visual elements.
-- `icon` (string): Icon codepoint from
-  [HASwitchPlate Material Design Icons](https://htmlpreview.github.io/?https://github.com/jobr99/Generate-HASP-Fonts/blob/master/cheatsheet.html).
-Example: "\uE6E8" for `mdi:lightbulb-on-outline`.
-- `icon_color` (int[]): The RGB color array for the icon.
-- `icon_font` (int): The Nextion font identifier for the icon (default is 8).
-- `bri` (string): Brightness level or other dynamic information to display on the button close to the icon.
-- `label` (string): The main text label displayed on the button.
-- `is_page_render` (bool): When `true`, skips the background picture (`picc`) update for buttons in the off state,
-  as the button page Preinitialize event already set the correct background during page load.
-  Set to `false` (default) for individual button state updates triggered by entity state changes.
-
-**Home Assistant Example:**
-
-```yaml
-action: esphome.<your_panel_name>_button
-data:
-  page: "buttonpage01"
-  id: "button08"
-  state: true
-  icon: "\uE6E8"           # Example for mdi:lightbulb-on-outline
-  icon_color: [255, 0, 0]  # Red
-  icon_font: 2
-  bri: "75%"
-  label: "Living Room"
-  is_page_render: false    # Set to true when called from a full page render
-```
-
-> [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
-> This action dynamically updates the specified button's properties to match the provided parameters.
-
-### Command Action: `command`
-
-> [!IMPORTANT]
-> This command is deprecated and will be removed soon.
-
-Sends a custom command directly to the display, enabling direct interaction and dynamic content updates.
-
-**Usage:**
-This action is particularly useful for advanced customizations and direct display manipulations,
-such as showing messages, updating statuses, or any other display-centric commands.
-
-**Parameters:**
-
-- `cmd` (string): The command string to be sent to the display.
-Please refer to [The Nextion Instruction Set](https://nextion.tech/instruction-set/) for a comprehensive list of commands supported.
-
-**Home Assistant Example:**
-
-```yaml
-action: esphome.<your_panel_name>_command
-data:
-  cmd: "page home"  # Go to page "Home"
-```
-
-> [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
->
-> Ensure the command string (`cmd`) is properly formatted according to your display's command processing capabilities.
 
 ### Component Color Action: `component_color`
 
@@ -263,7 +190,8 @@ Also used by page modules that store list-shaped data in memory (e.g. the option
 > Some `mem` targets are provided by the core packages and are therefore always available:
 >
 > - `command` — sends each non-empty element of `txt_list` to the display as a raw Nextion command,
->   in the order given (provided by `nspanel_esphome_hw_display.yaml`, part of `nspanel_esphome_core.yaml`)
+>   in the order given (provided by `nspanel_esphome_hw_display.yaml`, part of `nspanel_esphome_core.yaml`).
+>   This replaces the former `command` action, e.g. `txt_list: ["page home"]` opens the home page.
 > - `details_overlap` — sets the title and icon of the next entity details page opened with
 >   [`entity_details_show`](#entity-details-show-action-entity_details_show).
 >   `txt_list` is `[entity, title, icon]`, where `entity` must match the entity passed to `entity_details_show`,
@@ -467,6 +395,43 @@ data:
 > This setup provides a direct and user-friendly way to access and return from detailed entity information, enhancing the interface's usability.
 <!-- markdownlint-enable MD028 -->
 
+### Entity Snapshot Action: `entity_snapshot`
+
+Sends the state and attributes of the entities shown on an entity details page, and the panel renders the page from them.
+The NSPanel Easy Blueprint uses it for the alarm, button, climate, cover, fan, light, media player, select, switch, timer, vacuum / lawn mower and water heater (also humidifier) pages;
+the other entity details pages still receive each text and value from the Blueprint.
+
+**Usage:**
+Meant for the Blueprint, which sends a snapshot when an entity details page opens and whenever one of its entities changes.
+
+**Parameters:**
+
+- `snapshot` (string): JSON with the page and its entities:
+  - `page` (string): page the snapshot is for, e.g. `select`.
+  - `constructor` (boolean): `true` for the first snapshot after the page opens, which also sets the parts that do not change while it is open.
+  - `compact_unit_display` (boolean, optional): units follow values without a space, e.g. `50%` instead of `50 %`.
+  - `settled` (boolean, optional): the snapshot is sent after the entity went quiet, so pending presses on the page are cleared.
+  - `entities` (list): one object per entity, with:
+    - `role` (string): role of the entity on the page; `main` for the entity the page shows, `battery` for the device's battery sensor on the vacuum page.
+    - `entity_id` (string), `exists` (boolean), `state` (string) and `name` (string, the entity's friendly name).
+    - `attributes` (object): the attributes the page needs, e.g. `options` for the select page, or `supported_features`,
+      `brightness` and the colour temperature range for the light page; `icon` and `device_class` for the title icon.
+
+  Snapshots larger than 8 KB are ignored, and so are snapshots for a page that is no longer shown.
+
+**Home Assistant Example:**
+
+```yaml
+action: esphome.<your_panel_name>_entity_snapshot
+data:
+  snapshot: >-
+    {"page": "select", "constructor": true, "entities": [{"role": "main", "entity_id": "input_select.mode",
+    "exists": true, "state": "Auto", "name": "Mode", "attributes": {"options": ["Auto", "Manual"]}}]}
+```
+
+> [!NOTE]
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+
 ### Hardware Button State Indication Action: `hw_button_state`
 
 This action dynamically updates the on-screen indication bars for the hardware buttons, reflecting the current state of the entities they control.
@@ -623,142 +588,6 @@ data:
 - TRIGGER = 8
 - ARM_CUSTOM_BYPASS = 16
 - ARM_VACATION = 32
-
-### Climate Page Action: `page_climate`
-
-Updates the climate page with the current state information, seamlessly integrating with the panel's interface to display the latest climate settings and statuses.
-
-**Usage:**
-Designed to dynamically update the climate page, this action ensures users have instant access to climate control settings and information.
-It's crucial for maintaining a responsive and informative interface for efficient climate management.
-
-**Parameters:**
-
-- `current_temp` (float): The current temperature.
-- `supported_features` (int): Bitmask indicating the climate device's supported features.
-These features determine the available climate controls and settings on the device.
-The bitmask values correspond to features such as temperature control, mode setting, fan speed adjustment, etc.,
-as defined in Home Assistant's climate component constants.
-For detailed descriptions of each feature and its corresponding bitmask value, refer to the
-[Home Assistant Climate Component Constants](#supported-features-of-the-climate-entity).
-- `target_temp` (float): The set target temperature.
-- `target_temp_high` (float): The high end of the target temperature range, for devices that support temperature ranges.
-- `target_temp_low` (float): The low end of the target temperature range.
-- `temp_step` (int): The minimum temperature granularity (step size) supported by the device when setting a new temperature,
-    encoded as the step in degrees (Celsius or Fahrenheit) multiplied by 10 and rounded to the nearest integer.
-    This value is used to scale the temperature selector on the display.
-    For example, a 0.5°C step is sent as `5`, while a 1.0°C step is sent as `10`.
-- `total_steps` (int): Total number of steps for temperature adjustment, calculated as ((temp_max - temp_min) / temp_step).
-- `temp_offset` (int): Offset applied to the temperature reading for calibration.
-- `climate_icon` (string): Icon representing the current climate status,
-selected from [HASwitchPlate Material Design Icons](https://htmlpreview.github.io/?https://github.com/jobr99/Generate-HASP-Fonts/blob/master/cheatsheet.html).
-- `entity` (string): Entity ID for the climate device. Use the special value "embedded_climate" to control the panel's built-in climate add-on.
-
-**Home Assistant Example:**
-
-```yaml
-action: esphome.<your_panel_name>_page_climate
-data:
-  current_temp: 22.5
-  supported_features: 5      # Example bitmask: 1 (temp control) + 4 (fan mode)
-  target_temp: 24.0
-  target_temp_high: 25.0
-  target_temp_low: 19.0
-  temp_step: 5               # Adjust in 0.5°C increments (if your firmware uses 0.5°C steps)
-  total_steps: 56            # Calculated based on the device's temperature range and step.
-  temp_offset: 70            # Applied as a calibration offset.
-  climate_icon: "\uE392"     # mdi:thermostat
-  entity: "climate.living_room"
-```
-
-> [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
-> This action ensures the climate page reflects the latest in climate control settings, enhancing the user experience by providing up-to-date information.
-
-#### Supported features of the climate entity
-
-- TARGET_TEMPERATURE = 1
-- TARGET_TEMPERATURE_RANGE = 2
-- TARGET_HUMIDITY = 4
-- FAN_MODE = 8
-- PRESET_MODE = 16
-- SWING_MODE = 32
-- AUX_HEAT = 64
-- TURN_OFF = 128
-- TURN_ON = 256
-
-### Media Player Page Action: `page_media_player`
-
-Updates the media player page with current configuration and state information,
-integrating seamlessly with the panel's interface to display the latest media playback status and controls.
-
-**Usage:**
-The `page_media_player` action is specifically tailored to dynamically update the media player page,
-ensuring users have immediate access to media playback controls and information.
-This action is essential for providing a responsive and user-friendly interface for media management,
-allowing real-time interaction with the media player directly from the panel.
-
-**Parameters:**
-
-- `entity` (string): The entity ID of the media player.
-- `state` (string): The current state of the media player (e.g., playing, paused, stopped).
-- `is_volume_muted` (bool): Indicates whether the volume is currently muted.
-- `volume_level` (int): The current volume level of the media player.
-- `media_title` (string): The title of the currently playing media.
-- `media_artist` (string): The artist of the currently playing media.
-- `media_duration` (float): The total duration of the currently playing media in seconds.
-- `media_position` (float): The current playback position within the media in seconds.
-- `media_position_delta` (float): The amount of time in seconds since the last update of the media position.
-- `supported_features` (int): A bitmask indicating the features supported by the media player, such as play/pause, next/previous track, volume control, etc.
-The bitmask values correspond to the
-[Home Assistant Media Player Supported Features](#supported-features-of-the-media-player-entity).
-
-**Home Assistant Example:**
-
-```yaml
-action: esphome.<your_panel_name>_page_media_player
-data:
-  entity: "media_player.living_room"
-  state: "playing"
-  is_volume_muted: false
-  volume_level: 40
-  media_title: "Favorite Song"
-  media_artist: "Famous Artist"
-  media_duration: 180
-  media_position: 30
-  media_position_delta: 0.5
-  supported_features: 84  # Example: Play, Pause, Next, Previous
-```
-
-> [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
-> This action ensures the media player page reflects the latest in media playback settings and status,
-> enhancing the user experience by providing up-to-date information.
-
-#### Supported features of the media player entity
-
-- PAUSE = 1
-- SEEK = 2
-- VOLUME_SET = 4
-- VOLUME_MUTE = 8
-- PREVIOUS_TRACK = 16
-- NEXT_TRACK = 32
-
-- TURN_ON = 128
-- TURN_OFF = 256
-- PLAY_MEDIA = 512
-- VOLUME_STEP = 1024
-- SELECT_SOURCE = 2048
-- STOP = 4096
-- CLEAR_PLAYLIST = 8192
-- PLAY = 16384
-- SHUFFLE_SET = 32768
-- SELECT_SOUND_MODE = 65536
-- BROWSE_MEDIA = 131072
-- REPEAT_SET = 262144
-- GROUPING = 524288
-- MEDIA_ANNOUNCE = 1048576
-- MEDIA_ENQUEUE = 2097152
 
 ### QR Code Action: `qrcode`
 

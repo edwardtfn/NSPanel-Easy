@@ -1,0 +1,120 @@
+on screensaver.load:
+  // restore chips
+  for(sys0=6;sys0<=15;sys0++)
+  {
+    b[sys0].bco=screensaver.bco
+    b[sys0].font=chip_font
+  }
+  if(chips_screensaver==1)
+  {
+    chip_relay1.txt=home.chip_relay1.txt
+    chip_relay1.pco=home.chip_relay1.pco
+    chip_relay2.txt=home.chip_relay2.txt
+    chip_relay2.pco=home.chip_relay2.pco
+    chip_climate.txt=home.chip_climate.txt
+    chip_climate.pco=home.chip_climate.pco
+    chip01.txt=home.chip01.txt
+    chip01.pco=home.chip01.pco
+    chip02.txt=home.chip02.txt
+    chip02.pco=home.chip02.pco
+    chip03.txt=home.chip03.txt
+    chip03.pco=home.chip03.pco
+    chip04.txt=home.chip04.txt
+    chip04.pco=home.chip04.pco
+    chip05.txt=home.chip05.txt
+    chip05.pco=home.chip05.pco
+    chip06.txt=home.chip06.txt
+    chip06.pco=home.chip06.pco
+    chip07.txt=home.chip07.txt
+    chip07.pco=home.chip07.pco
+  }
+  sendme
+
+on screensaver.up:
+  page wakeup_page_id
+
+on wakeup.up:
+  page wakeup_page_id
+
+on swipe.down:
+  swipestore.en=1 // Start swipestore timer
+
+on swipe.up:
+  swipestore.en=0
+  // Touch has ended, x
+  if(tch0==0)
+  {
+    swipec=swipex-tch2
+    // From Left to Right
+    if(swipec>swipedx&&api==1)
+    {
+      page buttonpage04
+    }
+    // Right to Left
+    swipec2=0-swipedx
+    if(swipec<swipec2&&api==1)
+    {
+      page buttonpage01
+    }
+  }
+  // Touch has ended, y
+  if(tch1==0)
+  {
+    swipec=swipey-tch3
+    // From Up to Down
+    if(swipec>100&&api==1)
+    {
+      page buttonpage02
+    }
+    // Down to Up
+    swipec2=0-swipedy
+    if(swipec<-100&&api==1)
+    {
+      page buttonpage03
+    }
+  }
+
+on swipestore.timer:
+  swipex=tch0
+  swipey=tch1
+
+on text.up:
+  page wakeup_page_id
+
+on apply_settings.timer:
+  apply_settings.en=0
+  dim=brightness_sleep
+  screensaver.bco=screensaver_bco
+  text.bco=screensaver_bco
+  text.font=screensaver_font
+  text.pco=screensaver_pco
+
+on chip_relay1.up:
+  page wakeup_page_id
+
+on chip_relay2.up:
+  page wakeup_page_id
+
+on chip_climate.up:
+  page wakeup_page_id
+
+on chip01.up:
+  page wakeup_page_id
+
+on chip02.up:
+  page wakeup_page_id
+
+on chip03.up:
+  page wakeup_page_id
+
+on chip04.up:
+  page wakeup_page_id
+
+on chip05.up:
+  page wakeup_page_id
+
+on chip06.up:
+  page wakeup_page_id
+
+on chip07.up:
+  page wakeup_page_id

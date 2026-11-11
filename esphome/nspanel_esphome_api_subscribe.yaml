@@ -39,13 +39,14 @@ api:
         page: string          # Target page, e.g. "chips"
         component: string     # Target component, e.g. "chip01"
         entity: string        # Home Assistant entity_id
-        device_class: string  # HA device_class; only consulted for the cover domain
+        device_class: string  # HA device_class, for the icon by domain, device class and state
         attribute: string     # HA entity's attribute to subscribe to
         icon_on: string       # Icon for the active state; empty to resolve on-device
         icon_off: string      # Icon for the inactive state; empty to resolve on-device
         color_on: int[]       # RGB array for the active state
         color_off: int[]      # RGB array for the inactive state
         inverted: bool        # Render as visible while the entity is inactive
+        icon_name: string     # Icon by name (e.g. "mdi:lamp") when icon_on is empty; empty for none
       then:
         - lambda: |-
             blueprint_setting_received();
@@ -59,10 +60,22 @@ api:
               icon_on.c_str(),
               icon_off.c_str(),
               color_on.size() == 3 ? rgbTo565(color_on) : 0,
-              color_off.size() == 3 ? rgbTo565(color_off) : 0, inverted
+              color_off.size() == 3 ? rgbTo565(color_off) : 0, inverted,
+              icon_name.c_str()
             );
             api_subscribe_debounce->execute();
             api_subscribe_watchdog->execute();
+
+    ##### Icon names: the Blueprint's all_icon_names, sent in chunks once per session. #####
+    # The names are in codepoint order (U+E000 + position), so only the names travel and the panel works out
+    # every codepoint. Kept in PSRAM, never persisted, so no restart follows.
+    - action: api_subscribe_icon_names
+      variables:
+        start: int         # Position of the first name of the chunk; 0 starts a new list
+        names: string      # Comma-separated names, without "mdi:"
+      then:
+        - lambda: |-
+            sub_icon_names_add(static_cast<uint16_t>(start), names);
 
     ##### End marker. Sent after every binding, carrying how many were sent. #####
     - action: api_subscribe_end
@@ -138,4 +151,13 @@ script:
     then:
       - lambda: |-
           sub_dump_config();
+
+interval:
+  # Traffic of the subscriptions: updates received from Home Assistant, logged once a minute (nothing when
+  # none arrived), to see whether any bound entity is chatty enough to matter
+  - id: api_subscribe_stats
+    interval: 60s
+    then:
+      - lambda: |-
+          sub_log_stats(60);
 ...

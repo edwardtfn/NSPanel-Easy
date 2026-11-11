@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "all_icons.h"
 #include "nextion_constants.h"
@@ -43,7 +44,7 @@ enum class Visibility : uint8_t {
 };
 
 /// @brief Persisted format version. Bump whenever SubBinding's layout changes.
-static constexpr uint8_t SUB_FORMAT_VERSION = 4;  // 4: SubHeader gained entity_len
+static constexpr uint8_t SUB_FORMAT_VERSION = 6;  // 6: SUB_DEVICE_CLASS_LEN fits every device class
 
 /// @brief Upper bound on bindings; storage is allocated to the configured count, not this.
 #ifndef NSPANEL_EASY_SUB_MAX
@@ -84,10 +85,10 @@ static constexpr uint16_t SUB_CHUNK_COUNT = (SUB_MAX + SUB_CHUNK_SIZE - 1) / SUB
 
 static constexpr uint8_t SUB_ATTR_LEN = 24;                             ///< Longest stored attribute name
 static constexpr uint8_t SUB_COMPONENT_LEN = 16;                        ///< Longest stored component name
-static constexpr uint8_t SUB_DEVICE_CLASS_LEN = 16;                     ///< Longest device_class in use ("garage_door")
+static constexpr uint8_t SUB_DEVICE_CLASS_LEN = 40;                     ///< Longest device_class, null included
 static constexpr uint8_t SUB_ENTITY_LEN = NSPANEL_EASY_SUB_ENTITY_LEN;  ///< entity_id buffer, null included
-static constexpr uint8_t SUB_PAGE_LEN = 12;                             ///< Longest stored page name ("screensaver")
-static constexpr uint8_t SUB_STATE_LEN = 24;                            ///< Longest state ("armed_custom_bypass" is 19)
+static constexpr uint8_t SUB_PAGE_LEN = 13;                             ///< Longest stored page name ("buttonpage01")
+static constexpr uint8_t SUB_STATE_LEN = 64;  ///< Longest state or attribute ("mdi:..." names)
 
 // Held in a uint8_t in SubHeader, so the contract check cannot represent more.
 // The lower bound is the shortest buffer that still fits a realistic entity_id.
@@ -166,7 +167,7 @@ struct SubBinding {
   char entity[SUB_ENTITY_LEN];              ///< entity_id; empty means the slot is unused
   char page[SUB_PAGE_LEN];                  ///< Target page, e.g. "chips"
   char component[SUB_COMPONENT_LEN];        ///< Target component, e.g. "chip01"
-  char device_class[SUB_DEVICE_CLASS_LEN];  ///< HA device_class; cover only, empty when unset
+  char device_class[SUB_DEVICE_CLASS_LEN];  ///< HA device_class, empty when unset
   char attribute[SUB_ATTR_LEN];             ///< Attribute to read instead of the state; empty to use the state
   uint8_t domain;                           ///< SubDomain, derived from entity at bind time
   bool inverted;                            ///< Show while the entity is inactive
@@ -192,6 +193,7 @@ struct SubRuntime {
   uint16_t color_off;          ///< Blueprint-supplied colour for the inactive state
   SubEntityState last_state;   ///< Classification of the effective state
   bool has_appearance;         ///< Blueprint has pushed appearance in this session
+  uint16_t received;           ///< Updates received in the current statistics window (see sub_log_stats())
 };
 
 /**
@@ -630,10 +632,106 @@ void sub_subscribe_all();
  * @param color_on RGB565 colour for the active state.
  * @param color_off RGB565 colour for the inactive state.
  * @param inverted Show while the entity is inactive.
+ * @param icon_name Icon by name, e.g. "mdi:lamp", resolved with the icon names when icon_on is empty; empty for
+ *                  none.
  */
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
-                      uint16_t color_on, uint16_t color_off, bool inverted);
+                      uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name);
+
+/// @brief Longest icon rule key, null included ("sensor.volatile_organic_compounds_parts" is 40).
+static constexpr uint8_t SUB_ICON_KEY_LEN = 48;
+
+/**
+ * @brief Resolve the icon and colour of a binding in its current state.
+ *
+ * The multi-state domains are resolved by resolve_sub_appearance(). The others
+ * use the icon rules (ICON_RULES, icon_rules.h): the device class icon for the
+ * state (the exact state first, then "on"/"off" by how the state classifies),
+ * then the domain default (for the state first, e.g. the sun at night). Used
+ * when the Blueprint pushed no icon (no override, no `icon` attribute).
+ *
+ * @param binding The binding.
+ * @param state Effective state string; hvac_action for climate when usable.
+ * @param color_on Colour for active states.
+ * @param color_off Colour for inactive states.
+ * @return Icon codepoint and RGB565 colour; a null icon when nothing matches.
+ */
+SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *state, uint16_t color_on,
+                                         uint16_t color_off);
+
+/// @brief Bytes reserved for the icon names (all_icon_names is about 121 KB).
+static constexpr uint32_t SUB_ICON_NAMES_CAPACITY = 160 * 1024;
+
+/**
+ * @brief Add a run of MDI icon names, sent by the Blueprint in chunks once per session.
+ *
+ * The names are the Blueprint's all_icon_names, in codepoint order: the name at
+ * position i (0-based) is U+E000 + i, so only the names travel and every
+ * codepoint is worked out on the panel. Kept in PSRAM, never persisted.
+ *
+ * @param start Position of the first name of the chunk; 0 starts a new list. A chunk that does not
+ *              continue the list is ignored.
+ * @param names Comma-separated names, without "mdi:".
+ */
+void sub_icon_names_add(uint16_t start, const std::string &names);
+
+/**
+ * @brief Codepoint of an MDI icon name.
+ *
+ * Resolved with the icon names the Blueprint sent in this session, plus the
+ * names the Blueprint maps outside the font order (blank, void, unknown,
+ * unavailable).
+ *
+ * @param name Icon name, with or without "mdi:", e.g. "mdi:lightbulb".
+ * @param glyph Receives the codepoint (null-terminated, 3 bytes).
+ * @param size Size of glyph; at least 4.
+ * @return false when the name is unknown, or the names have not arrived yet.
+ */
+bool sub_icon_lookup(const char *name, char *glyph, size_t size);
+
+/**
+ * @brief Icon of an icon rule key (icon_rules.h), e.g. "cover.garage-open".
+ *
+ * @param key Rule key.
+ * @return The codepoint, or nullptr when there is no rule for the key.
+ */
+const char *sub_icon_rule(const char *key);
+
+/**
+ * @brief Icon of an entity, resolved on the panel in the same order as the Blueprint's Variable Entity.
+ *
+ * For the entities the panel has no binding for, e.g. on the entity details pages:
+ *   1. @p icon_override, the icon set on the button that opened the page;
+ *   2. for alarms, climates, locks and water heaters, the icon for the state;
+ *   3. @p icon_attribute, the entity's own icon;
+ *   4. for covers, the icon for the device class and state;
+ *   5. the icon rules (icon_rules.h): device class icon for the state, then the domain default;
+ *   6. mdi:alert-circle.
+ *
+ * Icon names are resolved with sub_icon_lookup(), so they need the icon names of this session.
+ *
+ * @param entity_id Entity id.
+ * @param device_class Device class; empty when unset.
+ * @param state State string.
+ * @param icon_override Icon name ("mdi:<name>"); empty for none.
+ * @param icon_attribute The entity's `icon` attribute ("mdi:<name>"); empty for none.
+ * @return The icon codepoint.
+ */
+std::string resolve_entity_icon(const char *entity_id, const char *device_class, const char *state,
+                                const char *icon_override, const char *icon_attribute);
+
+/**
+ * @brief Replace the icon of a live binding, for both states.
+ *
+ * Used when a bound entity's own `icon` attribute changes. Appearance is not
+ * persisted, so this never schedules a restart.
+ *
+ * @param page Target page.
+ * @param component Target component.
+ * @param icon Icon codepoint.
+ */
+void sub_set_icon(const char *page, const char *component, const char *icon);
 
 /**
  * @brief Close the blueprint's push.
@@ -689,6 +787,27 @@ bool sub_persist(bool verified);
 
 /// @brief Re-render every binding from its last known state.
 void sub_render_all();
+
+/**
+ * @brief Re-render the bindings of one page from their last known state, e.g. when the page opens.
+ *
+ * @param page Target page of the bindings, e.g. "climate".
+ */
+void sub_render_page(const char *page);
+
+/// @brief Bindings named in the statistics log line, by updates received.
+static constexpr uint8_t SUB_STATS_TOP = 5;
+
+/**
+ * @brief Log the subscription updates received since the previous call, then reset the counters.
+ *
+ * Called periodically, to show how much traffic the subscriptions cost: how
+ * many updates Home Assistant sent, how many changed a value, and which
+ * bindings received the most. Logs nothing when no update arrived.
+ *
+ * @param window_s Length of the window, in seconds, for the log line.
+ */
+void sub_log_stats(uint32_t window_s);
 
 /// @brief Log the loaded bindings during dump_config.
 void sub_dump_config();
