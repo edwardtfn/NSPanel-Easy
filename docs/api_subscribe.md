@@ -525,6 +525,13 @@ Three consecutive pushes arrived without an end marker. Verify that the automati
 `api_subscribe_end` after the last binding. The panel keeps running its last good set until this is
 resolved.
 
+### `failed the integrity check` in the log
+
+The bindings stored on the panel were incomplete or did not match their checksum, for example after a
+power loss while they were being written. The panel discards them all, instead of using a mixed set,
+and starts without bindings. The Blueprint sends them again once Home Assistant connects, and the
+panel then stores them and restarts once.
+
 ### `Could not persist` in the log
 
 The bindings could not be written to NVS, so the panel is still running the set it loaded at boot

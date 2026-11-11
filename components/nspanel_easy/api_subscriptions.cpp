@@ -56,11 +56,35 @@ uint16_t sub_count = 0;
  * explicit discard-and-repush instead of a run of "chunk missing" warnings.
  */
 struct SubHeader {
-  uint8_t version;     ///< SUB_FORMAT_VERSION at the time of writing
-  uint8_t entity_len;  ///< SUB_ENTITY_LEN at the time of writing
-  uint16_t count;      ///< Number of persisted bindings
-  uint8_t unverified;  ///< Consecutive commits that never received an end marker
+  uint8_t version;      ///< SUB_FORMAT_VERSION at the time of writing
+  uint8_t entity_len;   ///< SUB_ENTITY_LEN at the time of writing
+  uint16_t count;       ///< Number of persisted bindings
+  uint32_t checksum;    ///< sub_checksum() of the persisted bindings, in order
+  uint8_t unverified;   ///< Consecutive commits that never received an end marker
+  uint8_t reserved[3];  ///< Explicit padding, kept at zero so the stored bytes are deterministic
 };
+static_assert(sizeof(SubHeader) == 12, "SubHeader must have no implicit padding");
+
+/// @brief Starting value of sub_checksum() (FNV-1a offset basis).
+static constexpr uint32_t SUB_CHECKSUM_INIT = 2166136261U;
+
+/**
+ * @brief Extend a checksum (FNV-1a, 32 bits) with one binding, as it is persisted.
+ *
+ * Detects chunks that do not belong to the set described by the header: left from an
+ * older set, missing, or damaged. It is not a protection against deliberate changes.
+ *
+ * @param checksum Checksum so far; SUB_CHECKSUM_INIT for the first binding.
+ * @param binding Binding to add.
+ * @return The extended checksum.
+ */
+static uint32_t sub_checksum(uint32_t checksum, const SubBinding &binding) {
+  const auto *bytes = reinterpret_cast<const uint8_t *>(&binding);
+  for (size_t i = 0; i < sizeof(SubBinding); ++i) {
+    checksum = (checksum ^ bytes[i]) * 16777619U;  // FNV-1a prime
+  }  // for each byte
+  return checksum;
+}
 
 /// @brief Staging buffer, allocated for the duration of a push only.
 static SubBinding *sub_staging = nullptr;
@@ -361,13 +385,17 @@ uint16_t sub_load() {
   }
 
   const uint16_t chunks = (header.count + SUB_CHUNK_SIZE - 1) / SUB_CHUNK_SIZE;
+  uint32_t checksum = SUB_CHECKSUM_INIT;
+  bool complete = true;
   for (uint16_t chunk = 0; chunk < chunks; ++chunk) {
     SubChunk data{};
     if (!sub_chunk_pref(chunk).load(&data)) {
-      ESP_LOGW(TAG, "Chunk %" PRIu16 " missing; loaded %" PRIu16 " binding(s)", chunk, sub_count);
+      ESP_LOGW(TAG, "Chunk %" PRIu16 " of %" PRIu16 " missing", chunk, chunks);
+      complete = false;
       break;
     }
     for (uint16_t slot = 0; slot < SUB_CHUNK_SIZE && sub_count < header.count; ++slot) {
+      checksum = sub_checksum(checksum, data.bindings[slot]);  // As persisted, before the domain is re-derived
       sub_bindings[sub_count] = data.bindings[slot];
       // The domain is a pure function of the entity_id, so re-derive it rather
       // than trusting the persisted value: bindings stored by an older firmware
@@ -380,6 +408,23 @@ uint16_t sub_load() {
       ++sub_count;
     }
   }  // for each chunk
+
+  // The set is used complete or not at all: a missing chunk, or chunks that do not match the header
+  // (e.g. left from an older set after an interrupted write), must never give a mixed set (#374)
+  if (!complete || checksum != header.checksum) {
+    ESP_LOGW(TAG,
+             "Persisted bindings failed the integrity check (%" PRIu16 " of %" PRIu16 " loaded, checksum %08" PRIX32
+             ", expected %08" PRIX32 "); discarding them until the Blueprint sends them again",
+             sub_count, header.count, checksum, header.checksum);
+    free(sub_bindings);
+    free(sub_runtime);
+    free(sub_renderers);
+    sub_bindings = nullptr;
+    sub_runtime = nullptr;
+    sub_renderers = nullptr;
+    sub_count = 0;
+    return 0;
+  }  // if integrity check failed
 
   ESP_LOGCONFIG(TAG, "Loaded %" PRIu16 " binding(s)", sub_count);
   return sub_count;
@@ -806,45 +851,59 @@ bool sub_persist(bool verified) {
   // described the old set -- a reboot would then load a mixture. Publishing an
   // empty header first means any later failure leaves the panel with no
   // bindings: visibly wrong, but never silently inconsistent.
-  const SubHeader invalid{SUB_FORMAT_VERSION, SUB_ENTITY_LEN, 0, sub_unverified};
+  //
+  // save() only queues a write, and sync() writes every queued item on its own:
+  // one item can fail while the others are written. So each phase is flushed
+  // before the next one starts, or the real header could reach NVS while a
+  // chunk did not (#374).
+  const SubHeader invalid{SUB_FORMAT_VERSION, SUB_ENTITY_LEN, 0, 0, sub_unverified, {0, 0, 0}};
   if (!sub_header_pref().save(&invalid) || !global_preferences->sync()) {
     ESP_LOGE(TAG, "Could not invalidate the stored header; leaving the saved set untouched");
     return false;  // Nothing was written, so the previous set is still coherent
   }
 
   const uint16_t chunks = (sub_staged + SUB_CHUNK_SIZE - 1) / SUB_CHUNK_SIZE;
-  bool ok = true;
+  bool ok = false;
+  uint32_t checksum = SUB_CHECKSUM_INIT;
 
-  for (uint16_t chunk = 0; chunk < chunks; ++chunk) {
-    SubChunk data{};
-    for (uint16_t slot = 0; slot < SUB_CHUNK_SIZE; ++slot) {
-      const uint16_t idx = (chunk * SUB_CHUNK_SIZE) + slot;
-      if (idx < sub_staged) {
-        data.bindings[slot] = sub_staging[idx];
+  // Written twice at most: a first sync writes what fits, which can release the
+  // space that the rewrite of an existing key needs before its old copy can be
+  // dropped. Chunks already written are then found unchanged and skipped.
+  for (uint8_t attempt = 0; attempt < 2 && !ok; ++attempt) {
+    ok = true;
+    checksum = SUB_CHECKSUM_INIT;
+    for (uint16_t chunk = 0; chunk < chunks; ++chunk) {
+      SubChunk data{};
+      for (uint16_t slot = 0; slot < SUB_CHUNK_SIZE; ++slot) {
+        const uint16_t idx = (chunk * SUB_CHUNK_SIZE) + slot;
+        if (idx < sub_staged) {
+          data.bindings[slot] = sub_staging[idx];
+          checksum = sub_checksum(checksum, data.bindings[slot]);
+        }
       }
-    }
-    if (!sub_chunk_pref(chunk).save(&data)) {
-      ESP_LOGW(TAG, "Chunk %" PRIu16 " failed to save; retrying after a sync", chunk);
-      // A sync flushes pending writes, which can release space that a rewrite
-      // of an existing key needs before the old copy can be dropped.
-      global_preferences->sync();
       if (!sub_chunk_pref(chunk).save(&data)) {
         ok = false;
-        break;  // The header stays empty, so the partial set is never loaded
+        break;
       }
+    }  // for each chunk
+    // Every chunk must reach NVS before the header describes them
+    if (!global_preferences->sync()) {
+      ok = false;
     }
-  }  // for each chunk
+    if (!ok && attempt == 0) {
+      ESP_LOGW(TAG, "The binding chunks failed to save; retrying once");
+    }
+  }  // for each attempt
 
   uint8_t committed_unverified = sub_unverified;
   if (ok) {
+    // The header stays empty until here, so a partial set is never loaded
     committed_unverified = verified ? 0 : static_cast<uint8_t>(sub_unverified + 1);
-    const SubHeader header{SUB_FORMAT_VERSION, SUB_ENTITY_LEN, sub_staged, committed_unverified};
-    ok = sub_header_pref().save(&header);
+    const SubHeader header{SUB_FORMAT_VERSION, SUB_ENTITY_LEN, sub_staged, checksum, committed_unverified, {0, 0, 0}};
+    ok = sub_header_pref().save(&header) && global_preferences->sync();
   }
 
-  if (!global_preferences->sync()) {
-    ok = false;
-  } else if (ok) {
+  if (ok) {
     // Only once the header has actually reached NVS: a counter advanced for a
     // commit that never landed would eventually trip SUB_MAX_UNVERIFIED_COMMITS
     // and start refusing valid pushes.
