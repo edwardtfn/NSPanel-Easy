@@ -84,27 +84,13 @@ on bt_reboot.up:
   }
 
 on tm_esphome.timer:
+  // Only waits for ESPHome, which asks for the display settings when it connects (macro
+  // report_display) and then stops this timer. Without ESPHome for a minute, the display restarts.
   counter.val++
   if(counter.val>60)
   {
     rest
   }
-  printh 92
-  prints "localevent",0
-  printh 00
-  prints "boot,params,",0
-  covx display_mode,va0.txt,0,0
-  prints va0.txt,0
-  prints ",",0
-  covx hard_coded_display_mode,va0.txt,0,0
-  prints va0.txt,0
-  prints ",",0
-  prints version.txt,0
-  prints ",",0
-  covx magic_flag_found_at_boot,va0.txt,0,0
-  prints va0.txt,0
-  printh 00
-  printh FF FF FF
 
 on tm_display_ack.timer:
   if(display_ack>0)

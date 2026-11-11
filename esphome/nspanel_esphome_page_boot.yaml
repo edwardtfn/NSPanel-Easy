@@ -16,12 +16,41 @@ substitutions:
 display:
   - id: !extend disp1
     start_up_page: ${PAGE_BOOT_ID}
+    on_setup:
+      then:
+        # Ask the display for its settings (model, TFT version), instead of waiting for it to send them
+        - script.execute: display_report_request
+    # The display settings, sent one by one by the TFT's `report_display` macro when ESPHome asks for them
+    # (see `display_report_request`). "display_report" closes the report.
+    on_custom_sensor:
+      then:
+        - lambda: |-
+            // Display modes and flags are small positive numbers; anything else is taken as not received
+            const uint8_t number = (value > 0 and value <= UINT8_MAX) ? static_cast<uint8_t>(value) : 0;
+            if (key == "display_mode") {
+              display_report.display_mode = number;
+            } else if (key == "hard_coded_mode") {
+              display_report.hard_coded_mode = number;
+            } else if (key == "magic_flag") {
+              display_report.magic_flag = number;
+            }  // if (key)
+    on_custom_text_sensor:
+      then:
+        - lambda: |-
+            if (key == "tft_version") display_report.tft_version = value.str();
     on_custom_binary_sensor:
       then:
         - lambda: |-
+            if (key == "display_report") {
+              display_params_apply->execute(display_report.display_mode, display_report.hard_coded_mode,
+                                            display_report.tft_version, display_report.magic_flag);
+              display_report.reset();
+              return;
+            }  // if (display_report)
             if (key != "display_ack") return;
             ESP_LOGI("${TAG_PAGE_BOOT}", "Nextion display acknowledged. Requesting update from the blueprint...");
             disp1->send_command("display_ack=1");
+            display_report_request->execute();  // The display (re)started, so its settings may have changed
             if (disp1->is_setup()) {
               // The display (re)started with the brightness values from its Program.s, also after a restart
               // in the middle of a run, which `on_setup` does not see. Send the configured values again and
@@ -70,10 +99,12 @@ script:
     then:
       - lambda: |-
           if ((params[0] == "blank" || params[0] == "boot") && params[1] == "params") {
+            // Pushed by the timers of TFTs older than 22.6, and by the blank TFT. A newer TFT sends nothing by
+            // itself: ESPHome asks for its settings (see `display_report_request`).
             // Protocol versions:
             // CSV Format v0:      boot,params,<display_mode>,<charset>,<version>
             // CSV Format v1:      boot,params,<display_mode>,<version>
-            // CSV Format v2(new): boot,params,<display_mode>,<hard_coded_mode>,<version>,<magic_flag_found_at_boot>
+            // CSV Format v2:      boot,params,<display_mode>,<hard_coded_mode>,<version>,<magic_flag_found_at_boot>
             // params[0] = "boot"
             // params[1] = "params"
             // params[2] = display_mode               // EEPROM-backed or hard_coded
@@ -149,32 +180,10 @@ script:
                   ESP_LOGW("${TAG_PAGE_BOOT}", "  Invalid display_mode: %" PRIu8, display_mode_from_tft);
                 }
                 break;
-              case 2: {  // v2026.4.10+: boot,params,<display_mode>,<hard_coded_mode>,<version>,<magic_flag_found_at_boot>
-                const uint8_t hard_coded_mode          = parse_uint8_strict(params[3]);
-                const uint8_t magic_flag_found_at_boot = parse_uint8_strict(params[5]);
-                ESP_LOGI("${TAG_PAGE_BOOT}", "  Hard-coded:    %" PRIu8, hard_coded_mode);
-                ESP_LOGI("${TAG_PAGE_BOOT}", "  Magic flag:    %" PRIu8, magic_flag_found_at_boot);
-
-                if (magic_flag_found_at_boot == 0) {
-                  ESP_LOGW("${TAG_PAGE_BOOT}", "  EEPROM was uninitialized at boot — using hard-coded default");
-                  if (hard_coded_mode > 0 && hard_coded_mode <= ${DISPLAY_MODES.BLANK.ID}) {
-                    auto call = display_model->make_call();
-                    call.set_index(hard_coded_mode - 1);
-                    call.perform();
-                  } else {
-                    ESP_LOGW("${TAG_PAGE_BOOT}", "  Invalid hard_coded_mode: %" PRIu8, hard_coded_mode);
-                  }
-                } else {
-                  if (valid_display_mode_from_tft) {
-                    auto call = display_model->make_call();
-                    call.set_index(display_mode_from_tft - 1);
-                    call.perform();
-                  } else {
-                    ESP_LOGW("${TAG_PAGE_BOOT}", "  Invalid display_mode: %" PRIu8, display_mode_from_tft);
-                  }
-                }
-                break;
-              }
+              case 2:  // v2026.4.10+: boot,params,<display_mode>,<hard_coded_mode>,<version>,<magic_flag_found_at_boot>
+                display_params_apply->execute(display_mode_from_tft, parse_uint8_strict(params[3]), params[4],
+                                              parse_uint8_strict(params[5]));
+                return;
             }
 
             // Version position depends on contract
@@ -193,6 +202,74 @@ script:
 
             system_flags.display_settings_received = tft_ver_valid && display_valid;
           }
+
+  # Asks the TFT for its display settings (model, TFT version). The TFT answers with its `report_display`
+  # macro, which sends each value on its own (see `on_custom_sensor`), so it works on any page and also
+  # when ESPHome restarts while the display keeps running. A TFT older than 22.6 has no such macro and
+  # ignores this: it pushes the settings by itself (see `event_from_display`).
+  # The request is repeated a few times while there is no answer, as nothing else would ask again.
+  - id: display_report_request
+    mode: restart
+    then:
+      - repeat:
+          count: 5
+          then:
+            - lambda: |-
+                if (iteration > 0 and system_flags.display_settings_received) {
+                  display_report_request->stop();
+                  return;
+                }  // if (already answered)
+                display_report.reset();
+                disp1->send_command("call report_display");
+            - delay: 3s
+
+  # Applies the display settings reported by the TFT: the display model, from the mode stored on the display
+  # or from the default of its TFT file, and the TFT version.
+  - id: display_params_apply
+    mode: queued
+    max_runs: 2
+    parameters:
+      display_mode: uint8_t      # Stored on the display (EEPROM), or the default of the TFT file
+      hard_coded_mode: uint8_t   # Default display mode of the TFT file
+      tft_version: string        # Version of the TFT file
+      magic_flag: uint8_t        # 1 when the display's EEPROM was already initialized when it started
+    then:
+      - lambda: |-
+          system_flags.display_settings_received = false;
+          // Stop the timer of the boot page that waits for ESPHome
+          disp1->send_command("tm_esphome.en=0");
+
+          ESP_LOGI("${TAG_PAGE_BOOT}", "Display params:");
+          ESP_LOGI("${TAG_PAGE_BOOT}", "  Mode:          %" PRIu8, display_mode);
+          ESP_LOGI("${TAG_PAGE_BOOT}", "  Hard-coded:    %" PRIu8, hard_coded_mode);
+          ESP_LOGI("${TAG_PAGE_BOOT}", "  Magic flag:    %" PRIu8, magic_flag);
+
+          // The display model: from the default of the TFT file when the display's EEPROM was not
+          // initialized, else from the mode stored on the display
+          const uint8_t mode = (magic_flag == 0) ? hard_coded_mode : display_mode;
+          if (magic_flag == 0) {
+            ESP_LOGW("${TAG_PAGE_BOOT}", "  EEPROM was uninitialized at boot — using hard-coded default");
+          }  // if (magic_flag == 0)
+          if (mode > 0 && mode <= ${DISPLAY_MODES.BLANK.ID}) {
+            auto call = display_model->make_call();
+            call.set_index(mode - 1);
+            call.perform();
+          } else {
+            ESP_LOGW("${TAG_PAGE_BOOT}", "  Invalid display mode: %" PRIu8, mode);
+          }  // if (valid mode)
+
+          const size_t dot = tft_version.find('.');
+          const bool tft_ver_valid =
+              !tft_version.empty() &&
+              tft_version.find_first_not_of("0123456789.") == std::string::npos &&  // digits and dot only
+              (dot == std::string::npos ||                                          // bare integer, no dot
+              (dot != 0 &&                                                          // dot not at start
+                dot != tft_version.size() - 1 &&                                    // dot not at end
+                tft_version.find('.', dot + 1) == std::string::npos));              // no second dot
+          version_tft->publish_state(tft_ver_valid ? tft_version : "");
+          ESP_LOGI("${TAG_PAGE_BOOT}", "  TFT version:   %s%s", tft_version.c_str(), tft_ver_valid ? "" : " (INVALID)");
+
+          system_flags.display_settings_received = tft_ver_valid && display_valid;
 
   - id: page_boot
     mode: single

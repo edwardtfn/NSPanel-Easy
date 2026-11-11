@@ -154,8 +154,11 @@ Use a macro for code repeated across components or pages, so it is changed in on
 Macros are in `macros.nx` in each project's source folder.
 
 Macros only reach global data: the system variables (`sys0` to `sys3`), the variables declared in `Program.s`
-and global-scope components on the `home` page. Pass inputs in system variables, return results in a global-scope
-`home` variable, and document both, plus any system variable the macro changes, at the top of the macro.
+and global-scope components, given with the name of their page (most of them are on the `home` page).
+Pass inputs in system variables, return results in a global-scope `home` variable, and document both,
+plus any system variable the macro changes, at the top of the macro.
+
+ESPHome can also run a macro, by sending `call <name>` to the display.
 
 #### `format_tenths`
 
@@ -172,6 +175,26 @@ sys1=temp_step.val
 call format_tenths
 target.txt=home.tenths_txt.txt+temp_unit.txt
 ```
+
+#### `report_display`
+
+Reports the display settings to ESPHome: the display mode, the default display mode of the TFT file,
+whether the display's EEPROM was already initialized, and the TFT version.
+
+The display sends nothing by itself. ESPHome asks for the report with `call report_display` when it connects to the display
+and when the display tells that it restarted (`display_report_request` in `esphome/nspanel_esphome_page_boot.yaml`),
+so it also works when ESPHome restarts while the display keeps running, on any page.
+
+- Inputs: none
+- Output: each value on its own, with the Nextion custom protocol (see [Reporting to ESPHome](#reporting-to-esphome)):
+  the custom sensors `display_mode`, `hard_coded_mode` and `magic_flag`, the custom text sensor `tft_version`,
+  and then the custom binary sensor `display_report`, which tells that the report is complete.
+- Also uses: `boot.version`, a global-scope variable of the `boot` page
+
+To report another value, add it to the macro before `display_report` and handle its key in `on_custom_sensor`
+(or `on_custom_text_sensor`) in the same ESPHome package.
+A custom sensor carries a number as four bytes, so do not report this way a number whose bytes contain
+three `FF` in a row (for example -256 to -1, or 16777215), as three `FF` end a message.
 
 ### Interface used by external tools
 
