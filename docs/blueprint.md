@@ -222,6 +222,24 @@ The labels are not visible on the US landscape model.
 Normally, the internal relays of the NSPanels are triggered via HA.
 If the NSPanel loses Wi-Fi connection or HA is down, the hardware button can then switch the corresponding relay directly.
 
+### Activate Relay x local Control (Optional)
+
+When the entity selected for a hardware button is the panel's own relay, a short press toggles the relay on the panel itself:
+immediately, and also when Home Assistant or the Blueprint automation is not available.
+This is activated automatically when the relay has its default entity ID (ending with `_relay_1` for the left button, or `_relay_2` for the right button).
+
+The Blueprint cannot recognize the relay under another entity ID. Activate this option in these cases:
+
+- The entity ID of the relay was renamed.
+- The button uses an entity created from the relay, like a light created with **Show as** in Home Assistant.
+
+With this option, the left button always toggles relay 1 (and the right button always toggles relay 2) with a short press,
+and the Blueprint does not toggle the entity selected for the button, as the panel already did it.
+The entity is still used for the bar and the label color of the button.
+
+> [!NOTE]
+> This is different from the local fallback above, which only acts while the panel is not connected to Home Assistant.
+
 ### Left/Right Hardware Button - Entity (Optional)
 
 The entity that should be switched with the left/right hardware button.

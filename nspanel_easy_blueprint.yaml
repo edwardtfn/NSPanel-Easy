@@ -1573,6 +1573,20 @@ blueprint:
             *When left button is using the entity related to relay 1 the processing will always be local, even if fallback is disabled.*
           selector:
             boolean:
+        relay_1_local_control:
+          name: Activate relay 1 local control - Enable/Disable
+          default: false
+          description: >
+            Activate this to always toggle relay 1 on the panel itself with a short press of the left button:
+            immediately, and also when Home Assistant or this automation is not available.
+            The entity selected for the button is then not toggled by this automation, as the panel already did it.
+
+            *Not needed when the entity selected for the left button is the panel's relay 1 with its default entity ID
+            (ending with `_relay_1`): local control is then activated automatically.
+            Use it when that entity ID was renamed, or when the button uses an entity created from the relay,
+            like a light created with "Show as".*
+          selector:
+            boolean:
         left_button_entity:
           name: Left hardware button - Entity
           description: *description_button_entity
@@ -1700,6 +1714,20 @@ blueprint:
             Activate this to use right button to toggle relay 2 if the panel is offline.
 
             *When right button is using the entity related to relay 2 the processing will always be local, even if fallback is disabled.*
+          selector:
+            boolean:
+        relay_2_local_control:
+          name: Activate relay 2 local control - Enable/Disable
+          default: false
+          description: >
+            Activate this to always toggle relay 2 on the panel itself with a short press of the right button:
+            immediately, and also when Home Assistant or this automation is not available.
+            The entity selected for the button is then not toggled by this automation, as the panel already did it.
+
+            *Not needed when the entity selected for the right button is the panel's relay 2 with its default entity ID
+            (ending with `_relay_2`): local control is then activated automatically.
+            Use it when that entity ID was renamed, or when the button uses an entity created from the relay,
+            like a light created with "Show as".*
           selector:
             boolean:
         right_button_entity:
@@ -5191,11 +5219,16 @@ trigger_variables:
       }}
     {%- endif %}
 
+  # The panel's relays are recognized only by their default `_relay_1` and `_relay_2` suffixes, also with the
+  # number Home Assistant appends to a duplicated entity ID (`_relay_1_2`). A relay with another entity ID is
+  # not recognized: the "Activate relay x local control" inputs cover that case (#640).
   relay01_entity: >-
     {%- set m = nspanel_entities | select("search", "^switch\\..+_relay_1$") | list %}
+    {%- set m = m if m | count > 0 else nspanel_entities | select("search", "^switch\\..+_relay_1_\\d+$") | list %}
     {{ m[0] if m | count > 0 else "switch." ~ entity_prefix ~ "_relay_1" }}
   relay02_entity: >-
     {%- set m = nspanel_entities | select("search", "^switch\\..+_relay_2$") | list %}
+    {%- set m = m if m | count > 0 else nspanel_entities | select("search", "^switch\\..+_relay_2_\\d+$") | list %}
     {{ m[0] if m | count > 0 else "switch." ~ entity_prefix ~ "_relay_2" }}
 
   currentpage: >-
@@ -7907,11 +7940,16 @@ actions:
                           hw_button_left_state_entity: !input left_button_state_entity
                           hw_button_right_entity: !input right_button_entity
                           hw_button_right_state_entity: !input right_button_state_entity
+                          hw_button_left_local_control: !input relay_1_local_control
+                          hw_button_right_local_control: !input relay_2_local_control
                           hardware:
                             buttons:
                               left:
                                 entity: '{{ hw_button_left_entity }}'
                                 entity_is_valid: '{{ hw_button_left_entity is string and hw_button_left_entity.split(".") | count == 2 }}'
+                                # A short press toggles relay 1 on the panel itself, so it is not handled here: when
+                                # the entity is the panel's relay 1, or when the user says so (#577, #640)
+                                local_control: '{{ hw_button_left_local_control or hw_button_left_entity == relay01_entity }}'
                                 state_entity: '{{ hw_button_left_state_entity }}'
                                 state_entity_is_valid: >
                                   {{ hw_button_left_state_entity is string and hw_button_left_state_entity.split(".") | count == 2 }}
@@ -7923,6 +7961,8 @@ actions:
                               right:
                                 entity: '{{ hw_button_right_entity }}'
                                 entity_is_valid: '{{ hw_button_right_entity is string and hw_button_right_entity.split(".") | count == 2 }}'
+                                # As for the left button, with relay 2
+                                local_control: '{{ hw_button_right_local_control or hw_button_right_entity == relay02_entity }}'
                                 state_entity: '{{ hw_button_right_state_entity }}'
                                 state_entity_is_valid: >
                                   {{ hw_button_right_state_entity is string and hw_button_right_state_entity.split(".") | count == 2 }}
@@ -8510,9 +8550,9 @@ actions:
                           - variables:
                               relay1_icon: !input relay01_icon
                               relay2_icon: !input relay02_icon
-                              relay1_local_control: '{{ hardware.buttons.left.entity == relay01_entity }}'
+                              relay1_local_control: '{{ hardware.buttons.left.local_control }}'
                               relay1_fallback: !input relay_1_local_fallback
-                              relay2_local_control: '{{ hardware.buttons.right.entity == relay02_entity }}'
+                              relay2_local_control: '{{ hardware.buttons.right.local_control }}'
                               relay2_fallback: !input relay_2_local_fallback
 
                           - action: 'esphome.{{ action_prefix }}_component_text_list'
@@ -10932,8 +10972,9 @@ actions:
                                   - condition: '{{ last_click_button.entity is defined }}'
                                   - condition: '{{ last_click_button.entity is string }}'
                                   - condition: '{{ last_click_button.entity | length > 2 }}'
-                                  - condition: '{{ nspanel_event.component != "hw_bt_left" or hardware.buttons.left.entity != relay01_entity }}'
-                                  - condition: '{{ nspanel_event.component != "hw_bt_right" or hardware.buttons.right.entity != relay02_entity }}'
+                                  # A relay under local control was already toggled by the panel
+                                  - condition: '{{ nspanel_event.component != "hw_bt_left" or not hardware.buttons.left.local_control }}'
+                                  - condition: '{{ nspanel_event.component != "hw_bt_right" or not hardware.buttons.right.local_control }}'
                                   - &short_press_action_call
                                     alias: "short_press_action_call"
                                     sequence:
