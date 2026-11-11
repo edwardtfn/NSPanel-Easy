@@ -222,23 +222,13 @@ The labels are not visible on the US landscape model.
 Normally, the internal relays of the NSPanels are triggered via HA.
 If the NSPanel loses Wi-Fi connection or HA is down, the hardware button can then switch the corresponding relay directly.
 
-### Activate Relay x local Control (Optional)
+This is not needed when the entity selected for the hardware button is the panel's own relay (relay 1 for the left button, relay 2 for the right button).
+A short press then always toggles the relay on the panel itself: immediately, and also when Home Assistant or the Blueprint automation is not available.
 
-When the entity selected for a hardware button is the panel's own relay, a short press toggles the relay on the panel itself:
-immediately, and also when Home Assistant or the Blueprint automation is not available.
-This is activated automatically when the relay has its default entity ID (ending with `_relay_1` for the left button, or `_relay_2` for the right button).
-
-The Blueprint cannot recognize the relay under another entity ID. Activate this option in these cases:
-
-- The entity ID of the relay was renamed.
-- The button uses an entity created from the relay, like a light created with **Show as** in Home Assistant.
-
-With this option, the left button always toggles relay 1 (and the right button always toggles relay 2) with a short press,
-and the Blueprint does not toggle the entity selected for the button, as the panel already did it.
-The entity is still used for the bar and the label color of the button.
-
-> [!NOTE]
-> This is different from the local fallback above, which only acts while the panel is not connected to Home Assistant.
+The Blueprint recognizes the panel's relay by its entity ID (ending with `_relay_1` or `_relay_2`) or by its name (`Relay 1` or `Relay 2`).
+If you rename the relay in Home Assistant, keep one of them, so it is still recognized.
+A relay with both renamed, or an entity created from the relay (like a light created with **Show as**), is handled as any other entity:
+it is toggled by Home Assistant, so activate the local fallback to keep the button working while Home Assistant is not connected.
 
 ### Left/Right Hardware Button - Entity (Optional)
 
