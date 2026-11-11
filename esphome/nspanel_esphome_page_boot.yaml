@@ -50,7 +50,6 @@ display:
             if (key != "display_ack") return;
             ESP_LOGI("${TAG_PAGE_BOOT}", "Nextion display acknowledged. Requesting update from the blueprint...");
             disp1->send_command("display_ack=1");
-            display_report_request->execute();  // The display (re)started, so its settings may have changed
             if (disp1->is_setup()) {
               // The display (re)started with the brightness values from its Program.s, also after a restart
               // in the middle of a run, which `on_setup` does not see. Send the configured values again and
@@ -66,6 +65,7 @@ display:
             }  // if (disp1->is_setup())
             system_flags.display_resync_pending = true;
             boot_request_blueprint_settings->execute("display_ack");
+            display_report_request->execute();  // The display (re)started, so its settings may have changed
 
     on_touch:
       then:
