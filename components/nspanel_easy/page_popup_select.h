@@ -42,6 +42,19 @@ uint8_t popup_select_page_count();
  */
 uint8_t popup_select_selected_page();
 
+/**
+ * @brief Options for the picker, which pages through up to POPUP_SELECT_MAX_OPTIONS of them.
+ *
+ * With more options than that, the first ones are shown, and the current option replaces the last
+ * of them when it would otherwise be left out.
+ *
+ * @param options All options of the entity.
+ * @param current Option currently selected ("" for none).
+ * @return Options to show, in order.
+ */
+std::vector<std::string> popup_select_visible_options(const std::vector<std::string> &options,
+                                                      const std::string &current);
+
 }  // namespace esphome::nspanel_easy
 
 #endif  // NSPANEL_EASY_PAGE_POPUP_SELECT

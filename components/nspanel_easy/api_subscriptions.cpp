@@ -34,6 +34,9 @@
 #ifdef NSPANEL_EASY_PAGE_BUTTONS
 #include "page_buttons.h"
 #endif  // NSPANEL_EASY_PAGE_BUTTONS
+#ifdef NSPANEL_EASY_PAGE_CLIMATE
+#include "page_climate.h"
+#endif  // NSPANEL_EASY_PAGE_CLIMATE
 
 namespace esphome::nspanel_easy {
 
@@ -279,6 +282,9 @@ SubRenderFn sub_resolve_renderer(const char *page) {
       {"buttonpage03", &buttons_sub_render},
       {"buttonpage04", &buttons_sub_render},
 #endif  // NSPANEL_EASY_PAGE_BUTTONS
+#ifdef NSPANEL_EASY_PAGE_CLIMATE
+      {"climate", &climate_sub_render},  // Custom buttons
+#endif                                   // NSPANEL_EASY_PAGE_CLIMATE
   };
   for (const PageEntry &entry : PAGES) {
     if (strcmp(page, entry.page) == 0) {
@@ -996,6 +1002,14 @@ void sub_render_all() {
   for (uint16_t idx = 0; idx < sub_count; ++idx) {
     sub_apply(idx);
   }
+}
+
+void sub_render_page(const char *page) {
+  for (uint16_t idx = 0; idx < sub_count; ++idx) {
+    if (strcmp(sub_bindings[idx].page, page) == 0) {
+      sub_apply(idx);
+    }  // if (binding on the page)
+  }  // for each binding
 }
 
 void sub_log_stats(uint32_t window_s) {

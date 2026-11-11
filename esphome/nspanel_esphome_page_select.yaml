@@ -31,7 +31,7 @@ script:
           const std::string current = select_current_option(entity->state);
           if (entity_snapshot.constructor) {
             const std::vector<std::string> *options = entity->list("options");
-            const std::vector<std::string> shown = select_picker_options(
+            const std::vector<std::string> shown = popup_select_visible_options(
                 options != nullptr ? *options : std::vector<std::string>{}, current);
             blueprint_setting_received();
             action_component_text_list->execute("mem", "popup_select_context", std::vector<std::string>{"select_option"});

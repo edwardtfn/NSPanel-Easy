@@ -19,18 +19,6 @@ namespace esphome::nspanel_easy {
 std::string select_current_option(const std::string &state);
 
 /**
- * @brief Options for the picker, which pages through up to POPUP_SELECT_MAX_OPTIONS of them.
- *
- * With more options than that, the first ones are shown, and the current option replaces the last
- * of them when it would otherwise be left out.
- *
- * @param options All options of the entity.
- * @param current Option currently selected ("" for none).
- * @return Options to show, in order.
- */
-std::vector<std::string> select_picker_options(const std::vector<std::string> &options, const std::string &current);
-
-/**
  * @brief Title of the picker.
  * @param entity Main entity of the snapshot.
  * @param overlap_entity Entity the configured title belongs to (details overlap).
