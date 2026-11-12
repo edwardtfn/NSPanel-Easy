@@ -23,6 +23,7 @@ int chip_font=7
 int chips_screensaver=1
 // Boot flag
 int display_ack=0
+int esphome=0 // 0 = ESPHome did not connect to the display since it started, 1 = connected
 int api=0 // 0 = disconnected from HA, 1 = connected to HA
 int brightness=100,brightness_dim=40,brightness_sleep=0
 // screensaver components
@@ -62,4 +63,7 @@ if(display_mode==1)
 {
   lcd_dev fffb 0002 0000 0020// Fix touch offset for EU Version
 }
-page boot //Power on start page boot
+// The display starts on the screensaver, dark, where it waits for ESPHome (see its Preinitialize event).
+// The boot page is only shown when ESPHome does not connect.
+dim=brightness_sleep
+page screensaver

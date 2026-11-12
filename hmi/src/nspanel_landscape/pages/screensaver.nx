@@ -1,4 +1,12 @@
 on screensaver.load:
+  if(esphome==0)
+  {
+    // Power on: ESPHome did not connect yet, so nothing can be used. The touch is off and
+    // boot_wait watches for ESPHome, which opens the wake-up page when it connects.
+    tsw 255,0
+    boot_count.val=0
+    boot_wait.en=1
+  }
   // restore chips
   for(sys0=6;sys0<=15;sys0++)
   {
@@ -118,3 +126,19 @@ on chip06.up:
 
 on chip07.up:
   page wakeup_page_id
+
+on boot_wait.timer:
+  // Runs only after power on, until ESPHome connects (esphome=1) and takes over.
+  // Without ESPHome for too long, the boot page tells what is wrong.
+  if(esphome==1)
+  {
+    boot_wait.en=0
+    tsw 255,1
+  }else
+  {
+    boot_count.val++
+    if(boot_count.val>20)
+    {
+      page boot
+    }
+  }
