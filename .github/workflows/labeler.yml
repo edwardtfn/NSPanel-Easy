@@ -1,0 +1,40 @@
+---
+name: Label pull requests
+
+# Adds to each pull request the labels of the areas it changes ("Area: Blueprint", "Area: Firmware", "Area: TFT",
+# "Area: Documentation", "Area: CI" and "Area: Tests"), as set in .github/labeler.yml.
+#
+# It runs on pull_request_target, so its token can label pull requests from forks too. That is safe here:
+# the job does not check out or run anything from the pull request. The action only reads the list of
+# changed files through the API, and this workflow and its configuration are the ones of the base branch.
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions: {}
+
+concurrency:
+  group: labeler-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  labeler:
+    name: Label by changed files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read        # Read .github/labeler.yml
+      pull-requests: write  # Add and remove the labels
+    steps:
+      # https://github.com/actions/labeler
+      - name: Label by changed files
+        uses: actions/labeler@v7.0.0
+        with:
+          # Also remove a label when the pull request no longer changes its area
+          sync-labels: true
+...
