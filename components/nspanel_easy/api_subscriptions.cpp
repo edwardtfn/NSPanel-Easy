@@ -444,6 +444,9 @@ uint16_t sub_load() {
     sub_runtime = nullptr;
     sub_renderers = nullptr;
     sub_count = 0;
+    // The count of unverified commits belonged to the discarded set. Kept, it could already be at its limit,
+    // which would refuse the push that brings the bindings back when it has no end marker.
+    sub_unverified = 0;
     return 0;
   }  // if integrity check failed
 
