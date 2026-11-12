@@ -170,6 +170,7 @@ Inputs always have a value, and variables set earlier in the same run are always
   Code is strict Nextion syntax; do not switch a project to nxlang.
 - `.hmi` and `.tft` files are build outputs. Do not edit or commit them; CI builds them from the source (`hmi/dev/scripts/hmi_build.sh`) and commits them to `dev` after the merge.
   Pull requests only attach them to the "Build HMI" workflow run, for testing.
+  A branch named `test/...` (pull requests combined to be tested together, never merged) also gets them committed by CI, so a panel can download its TFT file from that branch.
 - Landscape and portrait are separate projects. A change to shared page code usually belongs in both.
 - `if` conditions and commands such as `fill` and `cirs` do not accept inline arithmetic. Pre-compute values into scratch variables (`sys0`..`sys2`, `sya0`..`sya1`) first.
 - Array indexes must also be pre-computed: `sys2=sys0+11` then `vis b[sys2],0`, never `vis b[sys0+11],0`.

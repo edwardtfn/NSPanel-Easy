@@ -141,6 +141,9 @@ What CI does with the built files (workflow "Build HMI"):
   `display-files` artifact. They are not committed. To test a pull request on a panel, download the artifact,
   host the TFT file where the panel can reach it (e.g. the `www` folder of Home Assistant), and upload it from there.
 - **`dev`:** after a merge that changes the source, the HMI and TFT files are built and committed to `dev`.
+- **`test/...` branches:** the same as `dev`. Such a branch combines pull requests to try them together and is never merged.
+  A panel built from it can download its TFT file from the branch, with this substitution (the branch name in place of `test/my-branch`):
+  `nextion_update_base_url: "https://raw.githubusercontent.com/edwardtfn/NSPanel-Easy/test/my-branch/hmi"`.
 
 Working in the Nextion Editor is still supported: open the `.hmi` file from `dev` (Nextion Editor v1.68.2 or later,
 since the projects use macros), make the change, save, and commit the `.hmi` file to your pull request.

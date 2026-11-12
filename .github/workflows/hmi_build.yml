@@ -9,6 +9,10 @@ name: Build HMI
 #   attached to the run for testing, but not committed.
 # - dev: after a merge that changes the source, the HMI and TFT files are built
 #   and committed, so dev always carries the files its source builds.
+# - test/** branches: the same as dev. A test branch combines pull requests to
+#   try them together on a panel, which downloads its TFT file from the branch,
+#   so the branch has to carry the files its source builds. These branches are
+#   never merged.
 
 # yamllint disable-line rule:truthy
 on:
@@ -23,7 +27,11 @@ on:
   push:
     branches:
       - dev
+      - 'test/**'
     paths:
+      # The built files too: a branch rebuilt from pull requests comes without them
+      - 'hmi/*.hmi'
+      - 'hmi/*.tft'
       - 'hmi/src/**'
       - 'hmi/dev/firmware/**'
       - 'hmi/dev/fonts/*.zi'
@@ -236,29 +244,29 @@ jobs:
           exit 1
 
   # ===========================================================================
-  # dev: commit the HMI and TFT files built from the merged source. Never
-  # executes pull request code, so it may hold write access.
+  # dev and test/** branches: commit the HMI and TFT files built from the source
+  # of the branch. Never executes pull request code, so it may hold write access.
   # ===========================================================================
   commit-build:
-    name: Commit built files to dev
+    name: Commit built files to the branch
     needs: build
     if: >-
       needs.build.outputs.files_changed == 'true' &&
       github.event_name != 'pull_request' &&
-      github.ref == 'refs/heads/dev'
+      (github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/test/'))
     permissions:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - name: Check out dev
+      - name: Check out the branch
         uses: actions/checkout@v7
         with:
           fetch-depth: '1'
-          ref: dev
+          ref: ${{ github.ref_name }}
 
-      # dev may have moved since the build. When its display source changed,
+      # The branch may have moved since the build. When its display source changed,
       # the run for that push builds it instead, so nothing older is committed.
-      - name: Check that dev still has the built source
+      - name: Check that the branch still has the built source
         id: current
         env:
           BUILT_SHA: ${{ github.sha }}
@@ -268,7 +276,7 @@ jobs:
             echo "current=true" >> "$GITHUB_OUTPUT"
           else
             echo "current=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::The display source on dev changed after this build; its own run commits the files."
+            echo "::notice::The display source on the branch changed after this build; its own run commits the files."
           fi  # source unchanged
 
       - name: Download the display files
