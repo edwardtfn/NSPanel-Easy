@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cinttypes>
 
+#include <esp_attr.h>
 #include <esp_heap_caps.h>
 #include <nvs.h>
 
@@ -193,6 +194,61 @@ static ESPPreferenceObject sub_header_pref() {
  * @param chunk Chunk index.
  * @return Preference object for SubChunk.
  */
+// Opt-in erase of the stored preferences when the bindings cannot be stored
+// (api_subscribe_wipe_nvs_on_failure); off unless the build sets it.
+#ifndef NSPANEL_EASY_SUB_WIPE_NVS_ON_FAILURE
+#define NSPANEL_EASY_SUB_WIPE_NVS_ON_FAILURE false
+#endif  // NSPANEL_EASY_SUB_WIPE_NVS_ON_FAILURE
+
+/// @brief Whether the stored preferences are erased, once, when the bindings cannot be stored.
+static constexpr bool SUB_WIPE_NVS_ON_FAILURE = NSPANEL_EASY_SUB_WIPE_NVS_ON_FAILURE;
+
+/// @brief Value of sub_wipe_marker after the preferences were erased ("NVSW").
+static constexpr uint32_t SUB_WIPE_MAGIC = 0x4E565357;
+
+/**
+ * @brief Tells that the preferences were already erased since the panel was powered on.
+ *
+ * Kept in RTC memory, which survives a restart but not a power cycle, as it cannot be kept in the
+ * storage that was just erased. Holds SUB_WIPE_MAGIC after an erase, and anything else otherwise
+ * (it is not initialized at power on).
+ */
+static RTC_NOINIT_ATTR uint32_t sub_wipe_marker;
+
+/**
+ * @brief Handle a failure to store the bindings: report the storage usage and, when enabled, erase it.
+ *
+ * With `api_subscribe_wipe_nvs_on_failure`, every stored preference is erased, as a factory reset
+ * does, and the panel restarts, so the bindings can be stored in the space that is freed. This is
+ * done only once since the panel was powered on: when they still do not fit, erasing again would
+ * be a restart loop.
+ *
+ * @param count Number of bindings that could not be stored.
+ * @return true when the preferences were erased and the panel is restarting.
+ */
+static bool sub_persist_failed(uint16_t count) {
+  // How full the storage is, as the usual cause is a small or fragmented NVS partition
+  nvs_stats_t nvs{};
+  if (nvs_get_stats(nullptr, &nvs) == ESP_OK) {
+    ESP_LOGE(TAG, "NVS entries: %zu used, %zu free of %zu", nvs.used_entries, nvs.free_entries, nvs.total_entries);
+  }  // if (NVS statistics available)
+  if (!SUB_WIPE_NVS_ON_FAILURE) {
+    return false;
+  }  // if (not enabled)
+  if (sub_wipe_marker == SUB_WIPE_MAGIC) {
+    ESP_LOGE(TAG, "The preferences were already erased since the panel was powered on; not erasing them again");
+    return false;
+  }  // if (already erased)
+  ESP_LOGE(TAG,
+           "Could not persist %" PRIu16 " binding(s); erasing every stored preference and restarting, "
+           "as api_subscribe_wipe_nvs_on_failure is enabled",
+           count);
+  sub_wipe_marker = SUB_WIPE_MAGIC;
+  global_preferences->reset();
+  App.safe_reboot();
+  return true;
+}
+
 static ESPPreferenceObject sub_chunk_pref(uint16_t chunk) {
   return global_preferences->make_preference<SubChunk>(fnv1_hash("nspanel_easy_sub_chunk") + chunk);
 }
@@ -894,6 +950,9 @@ bool sub_persist(bool verified) {
   sub_header_pref().save(&invalid);
   global_preferences->sync();
   if (!sub_header_stored(invalid)) {
+    if (sub_persist_failed(sub_staged)) {
+      return false;  // The preferences were erased and the panel is restarting
+    }  // if (erased)
     ESP_LOGE(TAG, "Could not invalidate the stored header; leaving the saved set untouched");
     return false;  // The header was not written, so the previous set is still coherent
   }
@@ -954,7 +1013,12 @@ bool sub_persist(bool verified) {
     sub_unverified = committed_unverified;
   }
 
-  if (!ok) {
+  if (ok) {
+    sub_wipe_marker = 0;  // The bindings fit: a later failure may erase the preferences again
+  } else {
+    if (sub_persist_failed(sub_staged)) {
+      return false;  // The preferences were erased and the panel is restarting
+    }  // if (erased)
     // Never schedule a restart here. A restart on a write that cannot succeed
     // is an unrecoverable boot loop. The panel keeps running the previously
     // loaded bindings instead, until its next reboot: wrong, but stable and
