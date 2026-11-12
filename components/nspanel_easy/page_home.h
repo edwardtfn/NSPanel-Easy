@@ -196,10 +196,48 @@ void home_sub_render(const SubBinding &binding, const SubRuntime &rt, const char
  * @brief Repaint every bound home component from its shadow state.
  *
  * Called when the home page is entered, since the Nextion side does not retain
- * what was drawn on a page that has been left. Covers the custom buttons and
- * both temperatures; the weather picture is repainted by home_weather_resolve().
+ * what was drawn on a page that has been left. Covers the custom buttons, both
+ * temperatures and the values; the weather picture is repainted by home_weather_resolve().
  */
 void home_button_repaint();
+
+/// @brief Number of decimals of a home value when the Blueprint could not tell it.
+static constexpr uint8_t HOME_VALUE_DECIMALS_UNKNOWN = UINT8_MAX;
+
+/// @brief Most decimals a home value is shown with.
+static constexpr uint8_t HOME_VALUE_DECIMALS_MAX = 6;
+
+/**
+ * @brief Set the number of decimals a home value is shown with.
+ *
+ * Sent by the Blueprint with its settings, from how Home Assistant rounds the entity's state
+ * (its display precision). It cannot tell it while the entity has no value, so it then sends
+ * HOME_VALUE_DECIMALS_UNKNOWN, and the panel asks for it again when the first number arrives
+ * (event `home_value_format`). Until then the number is shown as received.
+ *
+ * @param idx Zero-based slot index (value01 is 0).
+ * @param decimals Number of decimals, or HOME_VALUE_DECIMALS_UNKNOWN.
+ */
+void home_value_decimals_set(uint8_t idx, uint8_t decimals);
+
+/**
+ * @brief Set whether a home value that rounds to zero is hidden, with its icon.
+ *
+ * @param hide true to hide values that round to zero.
+ */
+void home_values_hide_zero_set(bool hide);
+
+/**
+ * @brief Set the texts shown for the states the panel can translate by itself.
+ *
+ * Any other text state is shown as Home Assistant reports it.
+ *
+ * @param unavailable Text for `unavailable`.
+ * @param unknown Text for `unknown`.
+ * @param on Text for `on`.
+ * @param off Text for `off`.
+ */
+void home_value_texts_set(const char *unavailable, const char *unknown, const char *on, const char *off);
 
 #ifdef NSPANEL_EASY_USE_WEATHER
 

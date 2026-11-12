@@ -817,15 +817,12 @@ blueprint:
           default: [255, 255, 255]
           selector: *color_selector
         home_page_background_update:
-          name: Home page - Update in the background
+          name: Home page - Update in the background (no longer used)
           description: >
-            Applies only to the Home page entity states (*Entity State 01* to *04*).
+            This setting has no effect anymore and will be removed in a future version.
 
-            When enabled, these values are updated even when the Home page is not visible or while the panel is sleeping, so they are already current when the page opens.
-
-            When disabled (default), their changes are ignored while the Home page is not visible, and the values are updated right after the page opens, so an outdated value may show for a moment.
-
-            Everything else on the Home page (chips, custom buttons, weather, temperatures and climate) is always kept up to date, regardless of this setting.
+            The Home page entity states (*Entity State 01* to *04*) are now drawn by the panel itself,
+            straight from the Home Assistant states, so they are always up to date, also while another page is shown or the panel is sleeping.
           default: false
           selector:
             boolean:
@@ -5240,7 +5237,7 @@ variables:
   # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
   # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
   # While it is 'next' (development builds), the minimum firmware check is skipped.
-  min_esphome_version: 2026.11.16
+  min_esphome_version: next
 
   # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
@@ -5408,8 +5405,6 @@ variables:
       - timer
       - vacuum
       - water_heater
-
-  home_page_background_update: !input home_page_background_update
 
   indoor_temperature_sensor_input: !input indoortemp
   indoor_temperature_sensor: >
@@ -6006,8 +6001,8 @@ conditions:
     {{
       trigger.id in ["automation_reloaded", "ha_started", "nspanel_event"] or has_value(device_name_sensor)
     }}
-  - >  # Update page Home only when visible or home_page_background_update is enabled
-    {{ trigger.id not in ["home_values_state"] or home_page_background_update or pages.current in [pages.home, pages.graph] }}
+  - >  # The panel draws the home page values itself: their triggers are only needed for the graph page
+    {{ trigger.id not in ["home_values_state"] or pages.current == pages.graph }}
   - >  # Do not update values when page utilities is not visible
     {{ trigger.id != "utilities_page" or pages.current == pages.utilities }}
   - >  # Do not update values when page entities is not visible
@@ -7762,11 +7757,25 @@ actions:
                                           attribute="icon", component=button.component ~ ":i")] -%}
                                   {%- endif -%}
                                 {%- endfor -%}
+                                {#- Home page values, drawn by the panel: the entity's state, and its unit (:u).
+                                    The number of decimals is sent with the home page settings (home_values_decimals) -#}
+                                {%- set ns_values = namespace(items=[]) -%}
+                                {%- for value in home_page.entity_value
+                                      | selectattr("entity", "defined")
+                                      | selectattr("entity", "string")
+                                      | selectattr("entity", "search", "^[^.]+\\.[^.]+$") -%}
+                                  {%- set ns_values.items = ns_values.items + [
+                                        {"entity": value.entity, "page": "home", "component": value.component,
+                                         "icon": value.icon, "icon_color_rgb": value.icon_color_rgb},
+                                        {"entity": value.entity, "attribute": "unit_of_measurement",
+                                         "page": "home", "component": value.component ~ ":u"}] -%}
+                                {%- endfor -%}
                                 {{
                                   (
                                     (subs_chips | map("combine", {"page": "chips"}) | list)
                                     + ns_buttons.items
                                     + weather
+                                    + ns_values.items
                                     + (home_page.custom_buttons | map("combine", {"page": "home"}) | list)
                                     + (climate_custom_buttons | map("combine", {"page": "climate"}) | list)
                                     + (ns.wakeup | map("combine", {"page": "wakeup"}) | list)
@@ -8234,6 +8243,46 @@ actions:
                               page: home
                               id: indr_temp
                               color: !input home_indoor_temp_label_color
+                            continue_on_error: true
+                          - *delay_boot
+
+                      # The panel draws the home page values itself, from its subscriptions. A number is shown with
+                      # the decimals Home Assistant rounds it to (the entity's display precision), which the panel
+                      # cannot see, so they are sent here. An entity without a value now gets 255 (unknown), and the
+                      # panel asks again when its first number arrives (event "home_value_format").
+                      - &home_values_decimals
+                        alias: Home page - Values - Decimals
+                        repeat:
+                          for_each: >-
+                            {{
+                              home_page.entity_value
+                              | selectattr("entity", "defined")
+                              | selectattr("entity", "string")
+                              | selectattr("entity", "search", "^[^.]+\\.[^.]+$")
+                              | list
+                            }}
+                          sequence:
+                            - action: 'esphome.{{ action_prefix }}_component_val'
+                              data:
+                                page: mem
+                                id: 'home_{{ repeat.item.component }}_decimals'
+                                val: >-
+                                  {%- set rounded = states(repeat.item.entity, rounded=true) | string -%}
+                                  {{
+                                    ((rounded.split(".")[1] | length) if "." in rounded else 0)
+                                    if is_number(rounded)
+                                    else 255
+                                  }}
+                              continue_on_error: true
+                            - *delay_boot
+
+                      - alias: Home page - Values - Hide when zero
+                        sequence:
+                          - action: 'esphome.{{ action_prefix }}_component_val'
+                            data:
+                              page: mem
+                              id: home_values_hide_zero
+                              val: '{{ 1 if hide_if_zero else 0 }}'
                             continue_on_error: true
                           - *delay_boot
 
@@ -8865,6 +8914,12 @@ actions:
                               txt_list: '{{ txt_list_payload }}'
                             continue_on_error: true
                           - *delay_boot
+
+              # The first number of a home page value whose entity had no value when the settings were sent
+              - alias: Home page value format request
+                conditions: '{{ nspanel_event.type == "home_value_format" }}'
+                sequence:
+                  - *home_values_decimals
 
               - alias: Lawn mower start/pause toggle
                 conditions:
@@ -10545,7 +10600,8 @@ actions:
                                   {%- if repeat.index > 1 -%}
                                     {%- set page_entities = [] -%}
                                   {%- elif current_page_from_sensor == pages.home -%}
-                                    {%- set page_entities = home_page.entity_value -%}
+                                    {#- The home page values are drawn by the panel, from its subscriptions -#}
+                                    {%- set page_entities = [] -%}
                                   {%- elif
                                         current_page_from_sensor == pages.climate and
                                         (
@@ -12113,7 +12169,8 @@ actions:
               for_each: >
                 {%- set detailed_entity_domain = states(detailed_entity).split(".")[0] -%}
                 {%- if trigger.id == "home_values_state" -%}
-                  {%- set page_entities = home_page.entity_value -%}
+                  {#- The home page values are drawn by the panel; this trigger is only for the graph page -#}
+                  {%- set page_entities = [] -%}
                 {%- elif trigger.id == "trigger_climatepage_value_state" and pages.current == pages.climate -%}
                   {%- set page_entities = climate_page_entities -%}
                 {#- The water heater page also shows humidifiers, so the page's entity selects the values -#}
