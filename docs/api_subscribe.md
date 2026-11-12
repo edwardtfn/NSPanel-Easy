@@ -128,7 +128,7 @@ The package enables `api: homeassistant_states: true` automatically, which is re
 | `api_subscribe_entity_len` | `96` | Buffer size for an `entity_id`, null terminator included (`32` to `255`). A longer `entity_id` is not bound; the log reports the size to set. |
 | `api_subscribe_debounce` | `10s` | Quiet period after the last binding before a restart is applied. |
 | `api_subscribe_timeout` | `120s` | Time without an end marker before the push is committed unverified. |
-| `api_subscribe_wipe_nvs_on_failure` | `false` | Erase every stored preference and restart when the bindings cannot be stored. See [`Could not persist` in the log](#could-not-persist-in-the-log) before enabling it. |
+| `api_subscribe_wipe_nvs_on_failure` | `false` | Erase every stored preference and restart when the bindings cannot be stored. Read [this](#clearing-the-storage-automatically) first. |
 
 Lowering `api_subscribe_max` reduces the size of the staging buffer used during a push. It does not
 reduce steady-state memory, which scales with the number of bindings actually configured.
@@ -558,6 +558,10 @@ It is off by default because it erases **every** preference stored on the panel,
 the temperature calibration, the settings changed from Home Assistant (such as brightness and timeouts),
 the last state of the relays, and the Wi-Fi credentials when they were set through the fallback hotspot
 instead of the YAML. Take note of your settings before enabling it.
+
+Enable it only with [API encryption](https://esphome.io/components/api/#configuration-variables).
+Without it, any device on your network can send bindings to the panel, and so could also cause this erase;
+the panel logs a warning at boot in that case.
 
 It is done at most once since the panel was powered on. If the bindings still do not fit in the
 erased storage, the panel logs it and keeps running without erasing again, so it cannot restart in a loop;

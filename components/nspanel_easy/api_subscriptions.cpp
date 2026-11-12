@@ -1255,6 +1255,13 @@ void sub_dump_config() {
     ESP_LOGCONFIG(TAG, "  NVS entries: %zu used, %zu free of %zu", nvs.used_entries, nvs.free_entries,
                   nvs.total_entries);
   }
+  if (SUB_WIPE_NVS_ON_FAILURE) {
+    ESP_LOGCONFIG(TAG, "  Erase the preferences when the bindings cannot be stored: YES");
+#ifndef USE_API_NOISE
+    // Any client of an API without encryption can push bindings, so it could also cause the erase
+    ESP_LOGW(TAG, "  api_subscribe_wipe_nvs_on_failure is enabled without API encryption");
+#endif  // USE_API_NOISE
+  }  // if (SUB_WIPE_NVS_ON_FAILURE)
 }
 
 }  // namespace esphome::nspanel_easy
