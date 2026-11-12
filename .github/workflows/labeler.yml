@@ -1,12 +1,16 @@
 ---
 name: Label pull requests
 
-# Adds to each pull request the labels of the areas it changes ("Area: Blueprint", "Area: Firmware", "Area: TFT",
-# "Area: Documentation", "Area: CI" and "Area: Tests"), as set in .github/labeler.yml.
+# Labels each pull request by what it changes:
+# - By area: the labels of the areas its files belong to ("Area: Blueprint", "Area: Firmware", "Area: TFT",
+#   "Area: Documentation", "Area: CI" and "Area: Tests"), as set in .github/labeler.yml.
+# - By type: the label of the prefix of its title (`fix:` -> Bug, `feat:` -> Enhancement, ...), which decides
+#   the section of the release notes it is listed in (.github/release.yml).
 #
 # It runs on pull_request_target, so its token can label pull requests from forks too. That is safe here:
-# the job does not check out or run anything from the pull request. The action only reads the list of
-# changed files through the API, and this workflow and its configuration are the ones of the base branch.
+# no job checks out or runs anything from the pull request. The first one only reads the list of changed
+# files through the API, the second one only reads the title, passed as an environment variable and never
+# as part of a command, and this workflow and its configuration are the ones of the base branch.
 
 # yamllint disable-line rule:truthy
 on:
@@ -14,7 +18,8 @@ on:
     types:
       - opened
       - reopened
-      - synchronize
+      - synchronize  # New commits: the files may have changed
+      - edited       # The title may have changed
 
 permissions: {}
 
@@ -25,6 +30,8 @@ concurrency:
 jobs:
   labeler:
     name: Label by changed files
+    # An edit of the title or the description does not change the files
+    if: github.event.action != 'edited'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -37,4 +44,61 @@ jobs:
         with:
           # Also remove a label when the pull request no longer changes its area
           sync-labels: true
+
+  type:
+    name: Label by title
+    # New commits do not change the title
+    if: github.event.action != 'synchronize'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write  # Add and remove the labels
+    steps:
+      - name: Label by the type in the title
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          # The prefixes of the pull request titles (see validate_pr_title.yml and CONTRIBUTING.md)
+          # and the label of each one, as used by the release notes (.github/release.yml)
+          declare -A TYPE_LABELS=(
+            [fix]="Bug"
+            [feat]="Enhancement"
+            [improve]="Improvement"
+            [ci]="ci"
+            [docs]="Documentation"
+            [style]="Style"
+            [build]="Build"
+            [refactor]="Refactor"
+            [test]="Test"
+            [chore]="Chore"
+          )
+
+          # The title is untrusted text: only a prefix made of lowercase letters is looked up
+          wanted=""
+          if [[ "${PR_TITLE}" =~ ^([a-z]+):\  ]]; then
+            wanted="${TYPE_LABELS[${BASH_REMATCH[1]}]:-}"
+          fi  # if the title has a prefix
+          if [[ -z "${wanted}" ]]; then
+            echo "The title has none of the known prefixes; labels left as they are."
+            exit 0
+          fi  # if no known prefix
+          echo "Type label for this title: ${wanted}"
+
+          labels_url="repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/labels"
+          current="$(gh api "${labels_url}" --paginate --jq '.[].name')"
+
+          # A pull request has one type: remove the label of any other one, e.g. after the title was changed
+          for label in "${TYPE_LABELS[@]}"; do
+            if [[ "${label}" != "${wanted}" ]] && grep -qxF -- "${label}" <<< "${current}"; then
+              echo "Removing: ${label}"
+              gh api --method DELETE "${labels_url}/${label}" > /dev/null
+            fi  # if another type label is set
+          done  # for each type label
+
+          if ! grep -qxF -- "${wanted}" <<< "${current}"; then
+            echo "Adding: ${wanted}"
+            gh api --method POST "${labels_url}" -f "labels[]=${wanted}" > /dev/null
+          fi  # if the label is missing
 ...
