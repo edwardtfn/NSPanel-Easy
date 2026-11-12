@@ -142,6 +142,8 @@ What CI does with the built files (workflow "Build HMI"):
   host the TFT file where the panel can reach it (e.g. the `www` folder of Home Assistant), and upload it from there.
 - **`dev`:** after a merge that changes the source, the HMI and TFT files are built and committed to `dev`.
 - **`test/...` branches:** the same as `dev`. Such a branch combines pull requests to try them together and is never merged.
+  Its workflows run with write access, as on `dev`, so only merge into it what was reviewed: never a pull request
+  from a fork that changes workflows or build scripts.
   A panel built from it can download its TFT file from the branch, with this substitution (the branch name in place of `test/my-branch`):
   `nextion_update_base_url: "https://raw.githubusercontent.com/edwardtfn/NSPanel-Easy/test/my-branch/hmi"`.
 

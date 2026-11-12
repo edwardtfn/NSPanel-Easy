@@ -13,6 +13,10 @@ name: Build HMI
 #   try them together on a panel, which downloads its TFT file from the branch,
 #   so the branch has to carry the files its source builds. These branches are
 #   never merged.
+#   A push runs the workflows of the pushed branch, and the job that commits the
+#   files has write access. So a test branch must only hold what could be merged
+#   into dev: never merge into it a pull request whose workflow or script changes
+#   were not reviewed, as from a fork.
 
 # yamllint disable-line rule:truthy
 on:
@@ -35,9 +39,7 @@ on:
       - 'hmi/src/**'
       - 'hmi/dev/firmware/**'
       - 'hmi/dev/fonts/*.zi'
-      - 'hmi/dev/scripts/hmi_build.sh'
-      - 'hmi/dev/scripts/nxwright_env.sh'
-      - 'hmi/dev/scripts/tft_firmware_check.py'
+      - 'hmi/dev/scripts/**'
       - '.github/workflows/hmi_build.yml'
   workflow_dispatch:
 
@@ -264,19 +266,22 @@ jobs:
           fetch-depth: '1'
           ref: ${{ github.ref_name }}
 
-      # The branch may have moved since the build. When its display source changed,
-      # the run for that push builds it instead, so nothing older is committed.
+      # The branch may have moved since the build. When what the build depends on changed
+      # (the display source, the fonts, the firmware reference, the build scripts with the
+      # compiler pin, or this workflow), the run for that push builds it instead, so nothing
+      # built with older inputs is committed.
       - name: Check that the branch still has the built source
         id: current
         env:
           BUILT_SHA: ${{ github.sha }}
         run: |
           git fetch --no-tags --depth=1 origin "${BUILT_SHA}"
-          if git diff --quiet "${BUILT_SHA}" HEAD -- hmi/src hmi/dev/firmware 'hmi/dev/fonts/*.zi'; then
+          if git diff --quiet "${BUILT_SHA}" HEAD -- hmi/src hmi/dev/firmware 'hmi/dev/fonts/*.zi' \
+              hmi/dev/scripts .github/workflows/hmi_build.yml; then
             echo "current=true" >> "$GITHUB_OUTPUT"
           else
             echo "current=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::The display source on the branch changed after this build; its own run commits the files."
+            echo "::notice::The inputs of the build changed on the branch after this build; its own run commits the files."
           fi  # source unchanged
 
       - name: Download the display files

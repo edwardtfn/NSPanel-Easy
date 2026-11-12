@@ -22,7 +22,8 @@ Supported display models: EU (landscape), US portrait, and US landscape.
   Page-specific code is gated by `NSPANEL_EASY_PAGE_*` build flags defined in the matching `esphome/nspanel_esphome_page_*.yaml`.
 - `nspanel_easy_blueprint.yaml` - Single Blueprint file (very large; edit surgically).
 - `hmi/` - `src/` holds the display source (nxwright format), the source of truth.
-  The `.hmi` and `.tft` files beside it are built from it, and committed to `dev` by CI after each merge that changes the source.
+  The `.hmi` and `.tft` files beside it are built from it, and committed by CI to `dev` after each merge that changes the source
+  (and to `test/...` branches, which combine pull requests for testing and are never merged).
   `hmi/dev/` holds developer tooling, the fonts, the firmware reference and images.
 - `docs/` - User documentation. Update it whenever user-visible behavior changes.
 - `.test/` - ESPHome configurations used by the CI build matrix.
