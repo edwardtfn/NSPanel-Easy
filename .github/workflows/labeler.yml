@@ -7,14 +7,17 @@ name: Label pull requests
 # - By type: the label of the prefix of its title (`fix:` -> Bug, `feat:` -> Enhancement, ...), which decides
 #   the section of the release notes it is listed in (.github/release.yml).
 #
-# It runs on pull_request_target, so its token can label pull requests from forks too. That is safe here:
-# no job checks out or runs anything from the pull request. The first one only reads the list of changed
-# files through the API, the second one only reads the title, passed as an environment variable and never
-# as part of a command, and this workflow and its configuration are the ones of the base branch.
+# It runs on pull_request, with the workflow of the pull request itself, so it works for pull requests to any
+# branch as soon as they have this file. GitHub evaluates pull_request_target workflows only from the default
+# branch (`main`) and may block that event by default on public repositories, so it is not used here.
+#
+# The token of a pull request from a fork is read-only and cannot change labels, so the jobs are skipped for
+# those, and their labels are set by hand. The title is untrusted text: it is passed as an environment
+# variable and never as part of a command.
 
 # yamllint disable-line rule:truthy
 on:
-  pull_request_target:
+  pull_request:
     types:
       - opened
       - reopened
@@ -23,15 +26,18 @@ on:
 
 permissions: {}
 
+# Per kind of event, so new commits and an edit of the title at the same time do not cancel each other
 concurrency:
-  group: labeler-${{ github.event.pull_request.number }}
+  group: labeler-${{ github.event.pull_request.number }}-${{ github.event.action }}
   cancel-in-progress: true
 
 jobs:
   labeler:
     name: Label by changed files
-    # An edit of the title or the description does not change the files
-    if: github.event.action != 'edited'
+    # Not for forks (read-only token). An edit of the title or the description does not change the files.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.action != 'edited'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -47,8 +53,10 @@ jobs:
 
   type:
     name: Label by title
-    # New commits do not change the title
-    if: github.event.action != 'synchronize'
+    # Not for forks (read-only token). New commits do not change the title.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.action != 'synchronize'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
