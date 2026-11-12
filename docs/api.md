@@ -817,9 +817,17 @@ where `value01_icon` to `value04_icon` supports the icons.
 
 A value slot that has no entity selected in the Blueprint ("Home page - Entity State") is not managed by it,
 so an automation can write its text, its icon and the icon color.
+Such a slot is hidden, so it also has to be shown.
 For example, to show the next waste collection in the first slot:
 
 ```yaml
+# Show the slot (its text and its icon)
+- action: esphome.<your_panel_name>_components_visibility
+  data:
+    page: home
+    ids: [ "value01", "value01_icon" ]
+    visible: true
+
 # Text
 - action: esphome.<your_panel_name>_component_text_list
   data:
@@ -838,28 +846,39 @@ For example, to show the next waste collection in the first slot:
     visible: true
 ```
 
-To show nothing, send an empty text to both components:
+To show nothing, hide the slot:
 
 ```yaml
-- action: esphome.<your_panel_name>_component_text_list
+- action: esphome.<your_panel_name>_components_visibility
   data:
     page: home
-    id: value01
-    txt_list:
-      - ""
-- action: esphome.<your_panel_name>_component_text_list
-  data:
-    page: home
-    id: value01_icon
-    txt_list:
-      - ""
+    ids: [ "value01", "value01_icon" ]
+    visible: false
 ```
 
 The color of the text can be changed with the [`component_color`](#component-color-action-component_color) action (`page: home`, `id: value01`).
 
+Send the actions of a slot from a single automation or script, with `mode: queued`.
+They are separate actions, so two runs at the same time could leave the text of one with the icon of the other.
+
 > [!NOTE]
-> The panel does not keep these values: they are cleared when the panel restarts and when the Blueprint automation is saved or reloaded.
-> Make your automation send them again in those cases, for example with a trigger for when the panel becomes available.
+> The panel does not keep the text and the icon: they are cleared when the panel restarts and when the Blueprint automation is saved or reloaded.
+> Make your automation send them again in both cases. A reload does not make the panel unavailable, so it needs a trigger of its own,
+> and a delay, as the Blueprint clears the slot a little after the reload:
+>
+> ```yaml
+> triggers:
+>   # The panel is back, e.g. after a restart (any entity of the panel)
+>   - trigger: state
+>     entity_id: sensor.<your_panel_name>_device_name
+>     from: unavailable
+>   # The automations were reloaded, e.g. after saving the Blueprint automation
+>   - trigger: event
+>     event_type: automation_reloaded
+> actions:
+>   - delay: "00:01:00"
+>   # ... the actions above
+> ```
 
 ### Entities Pages - Values
 
