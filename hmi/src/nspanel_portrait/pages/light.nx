@@ -265,18 +265,35 @@ on light_button.down:
   vis colorwheel,0
 
 on temp_button.down:
-  // Hide brightness controls
-  light_button.val=0
-  vis lightslider,0
-  vis light_value,0
-  // Show temperature controls
-  temp_button.val=1
-  vis tempslider,1
-  vis temp_value,1
-  vis temp_value_2,1
-  // Hide color controls
-  color_button.val=0
-  vis colorwheel,0
+  sys0=light_features_mask&16
+  if(sys0>0)
+  {
+    // White without colour temperature: there is no slider to show, so the
+    // button sets the light to white, keeping the tab shown and its brightness
+    temp_button.val=0
+    covx lightslider.val,va1.txt,0,0
+    lightsetting.txt="light,white,"+va1.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints lightsetting.txt,0
+    printh 00
+    printh FF FF FF
+  }else
+  {
+    // Hide brightness controls
+    light_button.val=0
+    vis lightslider,0
+    vis light_value,0
+    // Show temperature controls
+    temp_button.val=1
+    vis tempslider,1
+    vis temp_value,1
+    vis temp_value_2,1
+    // Hide color controls
+    color_button.val=0
+    vis colorwheel,0
+  }
 
 on color_button.down:
   // Hide brightness controls
@@ -512,7 +529,7 @@ on features.timer:
   if(light_features_mask>0)
   {
     features.en=0
-    // Feature mask: bit0=brightness, bit1=temp, bit2=color, bit3=effects
+    // Feature mask: bit0=brightness, bit1=temp, bit2=color, bit3=effects, bit4=white (without temp)
     // Show tab buttons for supported features only; activate highest-priority tab
     sys0=light_features_mask&1
     sys1=0
@@ -552,5 +569,11 @@ on features.timer:
     if(sys0>0)
     {
       vis effect_button,1
+    }
+    sys0=light_features_mask&16
+    if(sys0>0)
+    {
+      // The temperature button sets the light to white (see temp_button)
+      vis temp_button,1
     }
   }

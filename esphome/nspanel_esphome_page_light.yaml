@@ -47,6 +47,7 @@ script:
             // light,brightness_pct,<value>
             // light,color_temp_kelvin,<value>
             // light,rgb_color,<red>,<green>,<blue>
+            // light,white,<brightness_pct>
             // light,<component>,<event>,<value>
 
             if (params_count < 3) {
@@ -68,6 +69,24 @@ script:
                 {"action", "light.turn_on"},
                 {"key", params[1].c_str()},
                 {"value", params[2].c_str()},
+                {"entity", detailed_entity->state.c_str()}
+              });
+
+            } else if (params[1] == "white") {
+              // White button of a light with a white mode and no colour temperature (#767):
+              // light,white,<brightness_pct>, with the brightness shown on the page
+              if (params_count != 3) {
+                ESP_LOGW("${TAG_PAGE_LIGHT}", "Need 3 params");
+                return;
+              }
+              // `white` takes the brightness (0 to 255); a light that is off or at 0% goes to full brightness
+              const int brightness_pct = atoi(params[2].c_str());
+              const int white = (brightness_pct > 0 and brightness_pct <= 100) ? (brightness_pct * 255 + 50) / 100 : 255;
+              ESP_LOGV("${TAG_PAGE_LIGHT}", "White: %d", white);
+              fire_ha_event("action_call", {
+                {"action", "light.turn_on"},
+                {"key", "white"},
+                {"value", to_string(white).c_str()},
                 {"entity", detailed_entity->state.c_str()}
               });
 
@@ -172,7 +191,7 @@ script:
           }  // if (effects)
 
           if (entity_snapshot.constructor) {
-            // Bit 0 brightness, bit 1 temperature, bit 2 colour, bit 3 effects
+            // Bit 0 brightness, bit 1 temperature, bit 2 colour, bit 3 effects, bit 4 white without temperature
             disp1->send_command_printf("light_features_mask=%d", features.mask());
             disp1->send_command("features.en=1");
           }  // if (page opened)
