@@ -539,10 +539,25 @@ The bindings could not be written to NVS, so the panel is still running the set 
 and your changes have not taken effect. That set is no longer stored: after the next reboot the panel
 starts without bindings, until the Blueprint sends them again and they can be stored.
 
-The NVS partition can be full or fragmented; a factory reset of the panel clears it.
+The NVS partition can be full or fragmented. To clear it, add this button to your panel's YAML,
+install the firmware, and press **Restart with Factory Default Settings** on the panel's device page:
+
+```yaml
+button:
+  - platform: factory_reset
+    name: Restart with Factory Default Settings
+```
+
+It erases every setting stored on the panel, not only the bindings: take note of your temperature
+calibration and the settings changed from Home Assistant (such as brightness and timeouts) first.
+The Blueprint sends the bindings again after the restart. You can remove the button afterwards.
+
+When it happens again after the reset, the partition is too small. Panels first installed with much older
+firmware, or with other firmware such as Tasmota, can have a small NVS partition (`0x5000` in the partition
+table that the log shows at boot), and an update over the air never changes it.
+Those panels need to be flashed once over USB, which writes the current partition table.
 The log line `NVS entries: ... used, ... free of ...`, written with the error and in `dump_config`,
-shows whether the partition is genuinely too small, which happens on panels first flashed with much
-older firmware — those need to be flashed over USB once.
+shows how full the partition is.
 
 #### Clearing the storage automatically
 
