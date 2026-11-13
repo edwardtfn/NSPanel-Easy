@@ -6,7 +6,7 @@ name: PR metrics comments
 # - RAM and flash usage of the ESPHome builds (ESPHome latest), from esphome_build.yml
 #
 # It runs on workflow_run, so its token can write to PRs from forks too. It never checks out or runs code from the PR
-# (only the scripts of the default branch): artifacts and job logs of the triggering run are untrusted data, and the
+# (only the scripts of the default branch): the artifacts of the triggering run are untrusted data, and the
 # PR number from the artifact is only used when that PR's head is the commit of the triggering run.
 # Note: workflow_run only uses the version of this file on the default branch.
 
@@ -124,30 +124,34 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
-      # Only the builds with ESPHome latest, from the logs of the jobs that built (succeeded or failed)
+      # The sizes each build with ESPHome latest measured from its own output (esphome_size_guard.py).
+      # They used to be read from the job logs, whose download failed for the jobs of the triggering run (#763).
+      - name: Download build sizes
+        id: sizes
+        if: steps.download.outcome == 'success'
+        uses: actions/download-artifact@v8
+        # No artifacts when no build reached its size check
+        continue-on-error: true
+        with:
+          pattern: esphome-build-size-*
+          path: ${{ runner.temp }}/sizes
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      # Only the builds with ESPHome latest: the jobs that built (succeeded or failed), with the sizes they uploaded
       - name: Collect build sizes
         if: steps.download.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
-          logs_dir="$RUNNER_TEMP/logs"
-          mkdir -p "$logs_dir"
-          : > "$RUNNER_TEMP/index.tsv"
+          mkdir -p "$RUNNER_TEMP/sizes"
           gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
             --jq '.jobs[]
               | select((.name | endswith("(latest)")) and (.conclusion == "success" or .conclusion == "failure"))
-              | [.id, .conclusion, .name] | @tsv' > "$RUNNER_TEMP/jobs.tsv"
-          while IFS=$'\t' read -r job_id conclusion name; do
-            [[ "$job_id" =~ ^[0-9]+$ ]] || continue
-            log_file="$logs_dir/$job_id.log"
-            if ! gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$job_id/logs" > "$log_file"; then
-              echo "::warning::Log of job $job_id is not available"
-              : > "$log_file"
-            fi  # if the log could not be downloaded
-            printf '%s\t%s\t%s\n' "$log_file" "$conclusion" "$name" >> "$RUNNER_TEMP/index.tsv"
-          done < "$RUNNER_TEMP/jobs.tsv"
-          python3 .github/scripts/esphome_size_report.py "$RUNNER_TEMP/index.tsv" --output "$RUNNER_TEMP/report.md"
+              | [.conclusion, .name] | @tsv' > "$RUNNER_TEMP/jobs.tsv"
+          python3 .github/scripts/esphome_size_report.py "$RUNNER_TEMP/jobs.tsv" "$RUNNER_TEMP/sizes" \
+            --output "$RUNNER_TEMP/report.md"
           cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Post or update the comment
@@ -159,7 +163,7 @@ jobs:
           body_file="$RUNNER_TEMP/comment_body.md"
           update_args=()
           # Without builds (no relevant changes): update an existing comment, never create one
-          if [[ ! -s "$RUNNER_TEMP/index.tsv" ]]; then
+          if [[ ! -s "$RUNNER_TEMP/jobs.tsv" ]]; then
             update_args=(--update-only)
           fi  # if no build ran
           {

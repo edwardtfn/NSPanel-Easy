@@ -114,6 +114,15 @@ display:
     on_page:
       then:
         - lambda: |-
+            // The display can report anything while its TFT is being replaced, or with a TFT of another version.
+            // Past this check, current_page_id is always a page of this firmware.
+            if (x >= PAGE_COUNT) {
+              ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown page id %" PRIu8 " from the display, ignored", x);
+              // The display answered, so a pending page change is over: the boot page must not wait for a
+              // report that may never come. current_page_id keeps the last valid page.
+              id(page_change_pending) = false;
+              return;
+            }  // if (x >= PAGE_COUNT)
             ESP_LOGI("${TAG_HW_DISPLAY}", "Page changed: '%s'->'%s'", page_names[current_page_id], page_names[x]);
             ESP_LOGW_IF("${TAG_HW_DISPLAY}", (x == current_page_id), "Same page");
             page_change->execute(x);
@@ -235,6 +244,11 @@ script:
           disp1->send_command_printf("button_back_font=%i", id(button_back_font));
           disp1->send_command_printf("home_page_id=%" PRIu8, home_page_id);
           wakeup_page_id = get_page_id(wakeup_page_name->current_option().c_str());
+          if (wakeup_page_id >= PAGE_COUNT) {
+            // Not the name of a page: keep a valid id, as it is used to look up the name of the page
+            ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown wake-up page, using home");
+            wakeup_page_id = get_page_id("home");
+          }  // if (wakeup_page_id >= PAGE_COUNT)
           wakeup_page_update->execute();
 
 
@@ -341,6 +355,11 @@ script:
       page_id: uint8_t
     then:
       - lambda: |-
+          // get_page_id() returns UINT8_MAX for a page name it does not know
+          if (page_id >= PAGE_COUNT) {
+            ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown page id %" PRIu8 ", not opened", page_id);
+            return;
+          }  // if (page_id >= PAGE_COUNT)
           ESP_LOGV("${TAG_HW_DISPLAY}", "Go to page '%s' (id: %" PRIu8 ")", page_names[page_id], page_id);
           if (page_id == current_page_id) {
             ESP_LOGW("${TAG_HW_DISPLAY}", "Already the current page");
@@ -808,6 +827,11 @@ select:
       then:
         - lambda: |-
             wakeup_page_id = get_page_id(x.c_str());
+            if (wakeup_page_id >= PAGE_COUNT) {
+              // Not the name of a page (e.g. an option of a customization): keep a page the display can open
+              ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown wake-up page '%s', using home", x.c_str());
+              wakeup_page_id = get_page_id("home");
+            }  // if (wakeup_page_id >= PAGE_COUNT)
             wakeup_page_update->execute();
             wait_to_be_ready->execute();
         - script.wait: wait_to_be_ready
