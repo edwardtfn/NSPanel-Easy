@@ -9,6 +9,7 @@ All participants are expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md
 ## Table of Contents
 
 - [PR Title Format](#pr-title-format)
+- [Labels](#labels)
 - [Commit Messages](#commit-messages)
 - [Code Style](#code-style)
 - [Branching](#branching)
@@ -64,6 +65,47 @@ break those integrations.
 
 A required CI check enforces this format on every PR. The check runs on
 `.github/workflows/validate_pr_title.yml`.
+
+---
+
+## Labels
+
+You do not need to label your pull request: a workflow (`.github/workflows/labeler.yml`) does it,
+and keeps the labels up to date when the title or the files change.
+
+**By type**, from the prefix of the title. These labels decide the section of the release notes
+a pull request is listed in (`.github/release.yml`):
+
+| Prefix | Label | Section of the release notes |
+| --- | --- | --- |
+| `fix:` | `Bug` | Bug Fixes |
+| `feat:` | `Enhancement` | New Features |
+| `improve:` | `Improvement` | Improvements |
+| `docs:` | `Documentation` | Documentation |
+| `ci:` | `ci` | CI & Automation |
+| `style:` | `Style` | Style & Formatting |
+| `build:` | `Build` | Build System |
+| `refactor:` | `Refactor` | Refactoring |
+| `test:` | `Test` | Tests |
+| `chore:` | `Chore` | Chores |
+
+**By area**, from the files changed (rules in `.github/labeler.yml`). A pull request gets one label
+for each area it touches:
+
+| Label | Files |
+| --- | --- |
+| `Area: Blueprint` | `nspanel_easy_blueprint.yaml` |
+| `Area: Firmware` | `esphome/`, `components/`, `nspanel_esphome*.yaml` |
+| `Area: TFT` | `hmi/src/` |
+| `Area: Documentation` | any `*.md` |
+| `Area: CI` | `.github/`, `.rules/`, `hmi/dev/scripts/` |
+| `Area: Tests` | `.test/` |
+
+The two sets are separate on purpose: a feature that also updates the documentation is labelled
+`Enhancement` and `Area: Documentation`, not `Documentation`.
+
+The workflow cannot label a pull request from a fork, as its token is read-only there.
+A maintainer adds those labels by hand.
 
 ---
 
