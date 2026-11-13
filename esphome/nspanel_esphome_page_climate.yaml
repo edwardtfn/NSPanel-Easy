@@ -125,6 +125,23 @@ script:
 
             const std::string& key = params[1];
             const std::string& value = params[2];
+            if (key == "slot") {
+              // A button of the mode row: an HVAC mode, or a preset of a Home Assistant climate (#609)
+              const ClimateSlotAction action = climate_slot_action(static_cast<uint8_t>(atoi(value.c_str()) - 1));
+              if (action.kind == ClimateSlotKind::MODE) {
+                change_climate_state->execute("hvac_mode", action.value.c_str());
+              } else if (action.kind == ClimateSlotKind::PRESET and !climate_embedded_visible) {
+                ESP_LOGD("${TAG_PAGE_CLIMATE}", "Dispatch: climate.set_preset_mode entity='%s' preset_mode='%s'",
+                         detailed_entity->state.c_str(), action.value.c_str());
+                fire_ha_event("action_call", {
+                  {"action", "climate.set_preset_mode"},
+                  {"entity", detailed_entity->state.c_str()},
+                  {"key", "preset_mode"},
+                  {"value", action.value.c_str()}
+                });
+              }  // if (mode or preset)
+              return;
+            }  // if (slot)
             change_climate_state->execute(key.c_str(), value.c_str());
           }
 
@@ -234,6 +251,7 @@ script:
       - lambda: |-
           if (new_page_id != get_page_id("climate")) return;
           display_entity_keep = true;
+          climate_slots_reset();  // Each HVAC mode on its own button, until a Home Assistant climate is rendered
 
   - id: set_climate
     mode: restart
