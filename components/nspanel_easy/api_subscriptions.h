@@ -44,7 +44,7 @@ enum class Visibility : uint8_t {
 };
 
 /// @brief Persisted format version. Bump whenever SubBinding's layout changes.
-static constexpr uint8_t SUB_FORMAT_VERSION = 6;  // 6: SUB_DEVICE_CLASS_LEN fits every device class
+static constexpr uint8_t SUB_FORMAT_VERSION = 7;  // 7: The header carries a checksum of the bindings (#374)
 
 /// @brief Upper bound on bindings; storage is allocated to the configured count, not this.
 #ifndef NSPANEL_EASY_SUB_MAX
@@ -594,6 +594,9 @@ SubRenderFn sub_resolve_renderer(const char *page);
  *
  * Call once from boot_early_routines, before the API connects.
  *
+ * The set is loaded complete or not at all: when a chunk is missing, or the chunks do not match
+ * the checksum stored in the header, every binding is discarded and the Blueprint pushes them again.
+ *
  * @return Number of bindings loaded.
  */
 uint16_t sub_load();
@@ -775,10 +778,17 @@ bool sub_push_timeout();
 /**
  * @brief Persist the staged set.
  *
- * Written in three phases -- empty header, chunks, real header -- so that a
- * failure part-way through leaves the stored set empty rather than a mixture of
- * old and new chunks. The unverified-commit counter only advances once the
- * header has reached NVS.
+ * Written in three phases -- empty header, chunks, real header -- each one
+ * flushed to NVS before the next starts, so that a failure part-way through
+ * leaves the stored set empty rather than a mixture of old and new chunks.
+ * The real header carries a checksum of the bindings, which sub_load() verifies.
+ * The unverified-commit counter only advances once the header has reached NVS.
+ *
+ * Interrupted-write contract (#374), for each point where a write can fail or the power can be lost:
+ * - Before the empty header reaches NVS: nothing changed, the previous set stays.
+ * - Between the empty header and the real header: the stored set is empty, whatever chunks were written.
+ * - After the real header reached NVS: the new set is complete.
+ * Chunks changed by any other means fail the checksum and the whole set is discarded at boot.
  *
  * @param verified Whether the push was confirmed by a matching end marker.
  * @return true when every chunk and the header reached NVS.
