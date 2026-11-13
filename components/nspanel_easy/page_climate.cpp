@@ -46,6 +46,10 @@ static bool climate_preset_buttons = false;
 static std::vector<std::string> climate_preset_modes;
 /// @brief Its active preset; empty when none.
 static std::string climate_preset_mode;
+/// @brief Fan modes of the Home Assistant climate shown on the page, for the picker.
+static std::vector<std::string> climate_fan_modes;
+/// @brief Its active fan mode; empty when unknown.
+static std::string climate_fan_mode;
 
 /**
  * @brief Numeric attribute.
@@ -305,6 +309,68 @@ bool climate_presets_to_picker(const std::string &entity_id) {
       popup_select_cache_mask = (1u << idx);
       break;
     }  // if (active preset)
+  }  // for each option
+  return true;
+#else   // NSPANEL_EASY_PAGE_POPUP_SELECT
+  (void) entity_id;
+  return false;
+#endif  // NSPANEL_EASY_PAGE_POPUP_SELECT
+}
+
+void climate_fan_modes_render(const SnapshotEntity &entity) {
+  const optional<uint32_t> features = parse_number<uint32_t>(entity.attribute("supported_features"));
+  const std::vector<std::string> *modes = entity.list("fan_modes");
+  const bool supported = (features.value_or(0) & 8) != 0 && modes != nullptr && !modes->empty();  // FAN_MODE
+  climate_fan_modes = supported ? *modes : std::vector<std::string>{};
+  climate_fan_mode = climate_unusable(entity.attribute("fan_mode")) ? "" : entity.attribute("fan_mode");
+  if (nextion_display == nullptr) {
+    return;
+  }  // if (no display)
+  if (!supported) {
+    nextion_display->hide_component(hmi::climate::FAN_BUTTON.name);
+    return;
+  }  // if (no fan modes)
+
+  // The common fan modes get their own icon; any other mode, the generic one.
+  // Not the plain fan icon, which the page uses for the "fan only" HVAC mode.
+  struct FanModeIcon {
+    const char *mode;  ///< Fan mode, as Home Assistant names it
+    const char *icon;  ///< Icon shown on the fan mode button
+  };
+  static constexpr FanModeIcon FAN_MODE_ICONS[] = {{"auto", Icons::MDI_FAN_AUTO},
+                                                   {"off", Icons::MDI_FAN_OFF},
+                                                   {"low", Icons::MDI_FAN_SPEED_1},
+                                                   {"medium", Icons::MDI_FAN_SPEED_2},
+                                                   {"high", Icons::MDI_FAN_SPEED_3}};
+  const char *icon = Icons::MDI_FAN_CHEVRON_UP;
+  for (const FanModeIcon &entry : FAN_MODE_ICONS) {
+    if (str_equals_case_insensitive(climate_fan_mode, entry.mode)) {
+      icon = entry.icon;
+      break;
+    }  // if (common fan mode)
+  }  // for each common fan mode
+  nextion_display->set_component_text(hmi::climate::FAN_BUTTON.name, icon);
+  // Theme color from the display, so the button follows the light and dark themes
+  nextion_display->send_command_printf("climate.%s.pco=color_pco_secondary", hmi::climate::FAN_BUTTON.name);
+  nextion_display->show_component(hmi::climate::FAN_BUTTON.name);
+}
+
+bool climate_fan_modes_to_picker(const std::string &entity_id) {
+#ifdef NSPANEL_EASY_PAGE_POPUP_SELECT
+  if (climate_fan_modes.empty()) {
+    ESP_LOGW(TAG, "%s has no fan modes", entity_id.c_str());
+    return false;
+  }  // if (no fan modes)
+  popup_select_cache_entity = entity_id;
+  popup_select_cache_context = CLIMATE_FAN_MODE_CONTEXT;
+  popup_select_cache_mode = POPUP_SELECT_MODE_SINGLE;
+  popup_select_cache_options = popup_select_visible_options(climate_fan_modes, climate_fan_mode);
+  popup_select_cache_mask = 0;
+  for (size_t idx = 0; idx < popup_select_cache_options.size(); ++idx) {
+    if (popup_select_cache_options[idx] == climate_fan_mode) {
+      popup_select_cache_mask = (1u << idx);
+      break;
+    }  // if (active fan mode)
   }  // for each option
   return true;
 #else   // NSPANEL_EASY_PAGE_POPUP_SELECT

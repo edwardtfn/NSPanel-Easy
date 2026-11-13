@@ -21,6 +21,10 @@ on climate.load:
   vis preset_button,0
   preset_button.font=button_font.val
   preset_button.pco=color_pco_secondary
+  // Fan mode button: hidden until ESPHome confirms fan modes
+  vis fan_button,0
+  fan_button.font=button_font.val
+  fan_button.pco=color_pco_secondary
   // button08 and button09: set fonts
   button08.font=button_font.val
   button09.font=button_font.val
@@ -52,6 +56,7 @@ on climate.load:
     target_high.picc=climate.pic
     // Preset mode button: secondary color
     preset_button.picc=climate.pic
+    fan_button.picc=climate.pic
     // Sliders use picc1 for the track background
     slider_high.picc1=climate.pic
     slider_low.picc1=climate.pic
@@ -488,3 +493,6 @@ on timer2.timer:
 
 on preset_button.down:
   preset_button.pco=31
+
+on fan_button.down:
+  fan_button.pco=31

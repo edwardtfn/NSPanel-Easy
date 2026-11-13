@@ -22,12 +22,12 @@ namespace esphome::nspanel_easy {
  * such as settings, home, weather information, and more.
  */
 constexpr const char *const page_names[] = {
-    "boot",         "home",         "screensaver",  "alarm",        "button",    "buttonpage01", "buttonpage02",
-    "buttonpage03", "buttonpage04", "canvas",       "climate",      "confirm",   "cover",        "debug",
-    "entitypage01", "entitypage02", "entitypage03", "entitypage04", "fan",       "keyb_num",     "light",
-    "media_player", "notification", "popup_select", "qrcode",       "select",    "settings",     "switch",
-    "timer",        "utilities",    "vacuum",       "water_heater", "weather01", "weather02",    "weather03",
-    "weather04",    "weather05",    "graph"};
+    "boot",         "home",         "screensaver",  "alarm",        "button",       "buttonpage01", "buttonpage02",
+    "buttonpage03", "buttonpage04", "canvas",       "climate",      "confirm",      "cover",        "debug",
+    "entitypage01", "entitypage02", "entitypage03", "entitypage04", "fan",          "graph",        "keyb_num",
+    "light",        "media_player", "notification", "popup_select", "qrcode",       "select",       "settings",
+    "switch",       "timer",        "utilities",    "vacuum",       "water_heater", "weather01",    "weather02",
+    "weather03",    "weather04",    "weather05"};
 
 constexpr size_t PAGE_COUNT = sizeof(page_names) / sizeof(page_names[0]);
 static_assert(PAGE_COUNT <= UINT8_MAX, "PAGE_COUNT exceeds uint8_t range");
@@ -203,7 +203,8 @@ bool is_page_offline_capable(uint8_t page_id);
  * @return Page id to wake up to.
  */
 inline uint8_t wakeup_page_resolve(bool api_connected, bool climate_embedded) {
-  if (api_connected || is_page_offline_capable(wakeup_page_id, climate_embedded)) {
+  // An id that is not a page (never expected, as it is validated where it is set) falls back to home
+  if (wakeup_page_id < PAGE_COUNT && (api_connected || is_page_offline_capable(wakeup_page_id, climate_embedded))) {
     return wakeup_page_id;
   }
   return home_page_id;

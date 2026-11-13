@@ -30,6 +30,9 @@ extern bool climate_embedded_visible;
 /// Popup select context used by the climate page preset picker.
 constexpr const char *CLIMATE_PRESET_MODE_CONTEXT = "climate_preset_mode";
 
+/// Popup select context used by the climate page fan mode picker.
+constexpr const char *CLIMATE_FAN_MODE_CONTEXT = "climate_fan_mode";
+
 namespace hmi::climate {
 
 /**
@@ -42,6 +45,7 @@ namespace hmi::climate {
  */
 
 constexpr HMIComponent PRESET_BUTTON = {"preset_button", 51};  ///< Preset mode button (3 chars max)
+constexpr HMIComponent FAN_BUTTON = {"fan_button", 52};        ///< Fan mode button (3 chars max)
 
 }  // namespace hmi::climate
 
@@ -259,6 +263,24 @@ void climate_presets_render(const SnapshotEntity &entity);
  * @return false when the climate has no presets.
  */
 bool climate_presets_to_picker(const std::string &entity_id);
+
+/**
+ * @brief Keep the fan modes of a Home Assistant climate for the picker, and draw the fan mode button.
+ *
+ * The button is shown only when the climate supports fan modes; its icon shows the active mode
+ * for the common ones (auto, off, low, medium, high), and the generic fan mode icon otherwise.
+ *
+ * @param entity The climate, from the snapshot.
+ */
+void climate_fan_modes_render(const SnapshotEntity &entity);
+
+/**
+ * @brief Fill the picker with the fan modes of the Home Assistant climate shown on the page.
+ *
+ * @param entity_id The climate, which the picker reports with the selected fan mode.
+ * @return false when the climate has no fan modes.
+ */
+bool climate_fan_modes_to_picker(const std::string &entity_id);
 
 #ifdef NSPANEL_EASY_SUBSCRIBE
 /**
