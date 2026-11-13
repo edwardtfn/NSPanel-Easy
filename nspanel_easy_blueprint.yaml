@@ -1032,6 +1032,21 @@ blueprint:
               multiple: *selector_entity_single_multiple
               filter:
                 domain: climate
+        thermostat_embedded_entity:
+          name: Embedded thermostat - Entity override (Optional)
+          description: >
+            Leave it empty to recognize the panel's own thermostat (Climate add-on) automatically,
+            by its default entity ID (ending with `_thermostat`).
+
+            Select an entity **only** if the panel's thermostat is not recognized, because its entity ID was renamed in Home Assistant.
+            Select the panel's own thermostat, the same entity selected as the main climate entity,
+            so it keeps being controlled on the panel itself, also when Home Assistant is not available.
+          default: *selector_entity_single_default_empty
+          selector:
+            entity:
+              multiple: *selector_entity_single_multiple
+              filter:
+                domain: climate
         climate_chip_visibility:
           name: Main Climate - Chip Visibility
           description: >-
@@ -1573,6 +1588,19 @@ blueprint:
             *When left button is using the entity related to relay 1 the processing will always be local, even if fallback is disabled.*
           selector:
             boolean:
+        relay_1_entity:
+          name: Relay 1 - Entity override (Optional)
+          description: >
+            Leave it empty to recognize the panel's relay 1 automatically, by its default entity ID (ending with `_relay_1`).
+
+            Select an entity **only** if the relay is not recognized: its entity ID was renamed in Home Assistant,
+            or you use an entity created from it, like a light created with "Show as".
+            Select the entity that represents relay 1, the same one selected for the left hardware button,
+            so the button keeps toggling the relay on the panel itself.
+          default: *selector_entity_single_default_empty
+          selector:
+            entity:
+              multiple: *selector_entity_single_multiple
         left_button_entity:
           name: Left hardware button - Entity
           description: *description_button_entity
@@ -1702,6 +1730,19 @@ blueprint:
             *When right button is using the entity related to relay 2 the processing will always be local, even if fallback is disabled.*
           selector:
             boolean:
+        relay_2_entity:
+          name: Relay 2 - Entity override (Optional)
+          description: >
+            Leave it empty to recognize the panel's relay 2 automatically, by its default entity ID (ending with `_relay_2`).
+
+            Select an entity **only** if the relay is not recognized: its entity ID was renamed in Home Assistant,
+            or you use an entity created from it, like a light created with "Show as".
+            Select the entity that represents relay 2, the same one selected for the right hardware button,
+            so the button keeps toggling the relay on the panel itself.
+          default: *selector_entity_single_default_empty
+          selector:
+            entity:
+              multiple: *selector_entity_single_multiple
         right_button_entity:
           name: Right hardware button - Entity
           description: *description_button_entity
@@ -5191,12 +5232,25 @@ trigger_variables:
       }}
     {%- endif %}
 
+  # The panel's relays are recognized by their default `_relay_1` and `_relay_2` suffixes. A relay with another
+  # entity ID, or an entity created from it, is selected by the user in the "Relay x - Entity override" inputs,
+  # which then replace the detection (#577, #640).
+  relay01_entity_override: !input relay_1_entity
   relay01_entity: >-
-    {%- set m = nspanel_entities | select("search", "^switch\\..+_relay_1$") | list %}
-    {{ m[0] if m | count > 0 else "switch." ~ entity_prefix ~ "_relay_1" }}
+    {%- if relay01_entity_override is string and relay01_entity_override | length > 0 -%}
+      {{ relay01_entity_override }}
+    {%- else -%}
+      {%- set m = nspanel_entities | select("search", "^switch\\..+_relay_1$") | list -%}
+      {{ m[0] if m | count > 0 else "switch." ~ entity_prefix ~ "_relay_1" }}
+    {%- endif %}
+  relay02_entity_override: !input relay_2_entity
   relay02_entity: >-
-    {%- set m = nspanel_entities | select("search", "^switch\\..+_relay_2$") | list %}
-    {{ m[0] if m | count > 0 else "switch." ~ entity_prefix ~ "_relay_2" }}
+    {%- if relay02_entity_override is string and relay02_entity_override | length > 0 -%}
+      {{ relay02_entity_override }}
+    {%- else -%}
+      {%- set m = nspanel_entities | select("search", "^switch\\..+_relay_2$") | list -%}
+      {{ m[0] if m | count > 0 else "switch." ~ entity_prefix ~ "_relay_2" }}
+    {%- endif %}
 
   currentpage: >-
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_current_page$") | list %}
@@ -5210,11 +5264,17 @@ trigger_variables:
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_temperature$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_temperature" }}
 
-  # The embedded thermostat is recognized only by its default `_thermostat` suffix. A renamed or
-  # localized entity_id is handled as an external climate entity (#640).
+  # The embedded thermostat is recognized by its default `_thermostat` suffix. With a renamed or localized
+  # entity_id, it is selected by the user in the "Embedded thermostat - Entity override" input, which then
+  # replaces the detection. Otherwise it is handled as an external climate entity (#640).
+  thermostat_embedded_override: !input thermostat_embedded_entity
   thermostat_embedded: >-
-    {%- set m = nspanel_entities | select("search", "^climate\\..+_thermostat$") | list %}
-    {{ m[0] if m | count > 0 else "climate." ~ entity_prefix ~ "_thermostat" }}
+    {%- if thermostat_embedded_override is string and thermostat_embedded_override | length > 0 -%}
+      {{ thermostat_embedded_override }}
+    {%- else -%}
+      {%- set m = nspanel_entities | select("search", "^climate\\..+_thermostat$") | list -%}
+      {{ m[0] if m | count > 0 else "climate." ~ entity_prefix ~ "_thermostat" }}
+    {%- endif %}
 
   detailed_entity: >-
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_detailed_entity$") | list %}
