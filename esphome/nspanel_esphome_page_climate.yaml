@@ -30,6 +30,11 @@ display:
               climate_preset_open->execute();
               return;
             }
+            if (page_id == get_page_id("climate") and           // Page `climate`
+                component_id == hmi::climate::FAN_BUTTON.id) {  // Fan mode button
+              climate_fan_mode_open->execute();
+              return;
+            }
 
 esphome:
   build_flags:
@@ -92,6 +97,20 @@ script:
             std::string("${LOCALIZATION[LANG].climate.select_preset_mode}")
           );
 
+  # Opens the fan mode picker for the Home Assistant climate shown on the page (#292).
+  # The options come with the entity snapshot. The embedded thermostat has no fan modes.
+  - id: climate_fan_mode_open
+    mode: single
+    then:
+      - lambda: |-
+          ESP_LOGV("${TAG_PAGE_CLIMATE}", "Script: climate_fan_mode_open");
+          if (climate_embedded_visible) return;
+          if (!climate_fan_modes_to_picker(detailed_entity->state)) return;
+          popup_select_open->execute(
+            get_page_id("climate"),
+            std::string("${LOCALIZATION[LANG].select.please_select}")
+          );
+
   - id: !extend event_from_display  # Defined by hw_display
     then:
       - lambda: |-
@@ -145,6 +164,7 @@ script:
                                static_cast<uint16_t>(view.total_steps), view.temp_offset, std::string(view.icon));
           climate_mode_buttons_render(*entity);
           climate_presets_render(*entity);
+          climate_fan_modes_render(*entity);
 
   - id: !extend localization_units_separator_update
     then:
@@ -178,6 +198,18 @@ script:
   - id: !extend picker_selected  # Defined by page_popup_select
     then:
       - lambda: |-
+          if (context == CLIMATE_FAN_MODE_CONTEXT) {
+            if (mask == 0) return;  // A climate always has a fan mode, so a deselect tap is a no-op
+            ESP_LOGD("${TAG_PAGE_CLIMATE}", "Dispatch: climate.set_fan_mode entity='%s' fan_mode='%s'", entity.c_str(),
+                                                                                                      value.c_str());
+            fire_ha_event("action_call", {
+              {"action", "climate.set_fan_mode"},
+              {"entity", entity.c_str()},
+              {"key", "fan_mode"},
+              {"value", value.c_str()}
+            });
+            return;
+          }  // if (fan mode)
           if (context != CLIMATE_PRESET_MODE_CONTEXT) return;
           if (entity == "${CLIMATE_EMBEDDED_SENTINEL}") return;  // Handled by the climate add-on
 

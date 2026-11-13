@@ -173,6 +173,9 @@ On the blueprint settings, you will also find settings for sensors and custom bu
 When a climate entity supports preset modes (like `eco`, `comfort` or `away`), its climate page shows a preset button that opens a list with the available presets.
 The button shows the icon of the active preset and is highlighted while a preset is active. Custom presets use the generic preset icon.
 
+When a climate entity supports fan modes (like `auto`, `low` or `high`), its climate page also shows a fan mode button, which opens a list with the available fan modes.
+The button shows an icon for the active fan mode (`auto`, `off`, `low`, `medium` and `high`), and a generic fan mode icon for any other mode.
+
 ## QR Code
 
 ### Activate QR Code (Optional)
