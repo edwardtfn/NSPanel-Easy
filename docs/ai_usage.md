@@ -9,7 +9,7 @@ This page describes how, so you know what to expect.
   automatically review pull requests. Their comments are suggestions; they do not approve or merge anything.
 
 - **First-pass issue triage:** when a new issue is opened, an AI agent (Claude) reads it together with the documentation and the other issues.
-  It may add labels, flag missing information, point to possibly related issues, and post one comment with a first hint.
+  It may add labels, flag missing information, mark the issue as a possible duplicate of an existing one (without closing it), and post one comment with a first hint.
   That comment is not reviewed before it is posted, and it says so. The agent itself has read-only access:
   a separate script checks its answer and applies it, and it cannot close, edit, or change anything else.
 
@@ -24,7 +24,7 @@ Nothing else is triggered automatically. No bot replies to discussions or pull r
 - Proposing a fix for an issue: when I add the `claude-fix` label to an issue, the AI agent prepares a change on a `claude/...` branch.
   It never opens or merges a pull request by itself.
 
-In all cases, the work is started manually by the maintainer. Each answer is reviewed, and often edited,
+Everything in this section is started manually by the maintainer. Each answer is reviewed, and often edited,
 before it is posted. Each code change is reviewed and tested before it is merged.
 
 ## Identifying AI Posts

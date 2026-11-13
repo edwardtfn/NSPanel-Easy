@@ -7,7 +7,9 @@ The AI agent never gets a tool that writes to GitHub. This script does what it c
          issues) into a folder of the checkout, and decides whether the agent runs at all
          (rate limits against issue floods).
   apply  Validates the agent's structured answer and applies it to the issue: labels from
-         an allowlist only, links to possible duplicates, and one sanitized comment.
+         an allowlist only, possible duplicates (linked and labeled, never closed), and
+         one sanitized comment. Nothing is applied when the issue was edited or closed
+         since it was analyzed.
 
 Everything the agent returns is treated as untrusted: issue text is written by the public
 and may try to steer the agent (prompt injection). Whatever it answers, the worst outcome
@@ -15,21 +17,23 @@ is a wrong label or a misleading (but link-free and mention-free) comment on tha
 
 Usage:
   claude_issue_triage.py fetch --issue N --out DIR
-  claude_issue_triage.py apply --issue N [--dry-run]
+  claude_issue_triage.py apply --issue N [--digest HASH] [--dry-run]
 
 Environment:
   GH_TOKEN             token with issues: read (fetch) or issues: write (apply)
   GITHUB_REPOSITORY    owner/repo (set by GitHub Actions)
-  GITHUB_OUTPUT        step outputs file (fetch writes run_agent and skip_reason)
+  GITHUB_OUTPUT        step outputs file (fetch writes run_agent, skip_reason and digest)
   TRIAGE_RESULT        the agent's structured answer, as JSON (apply)
 """
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -37,8 +41,9 @@ import urllib.request
 API = "https://api.github.com"
 
 # -----------------------------------------------------------------------------
-# Labels the agent may apply. Everything else (stale, wontfix, duplicate, invalid,
-# Effort: *, ...) stays a maintainer decision.
+# Labels the agent may choose. Everything else (stale, wontfix, invalid, Effort: *, ...)
+# stays a maintainer decision. The duplicate label is not a choice either: the script
+# adds it when the agent points to at least one existing issue.
 # -----------------------------------------------------------------------------
 LABEL_PREFIXES = ("Add-on: ", "Area: ", "Core: ", "Hardware: ", "HW: ", "Page: ")
 LABEL_EXACT = {
@@ -63,11 +68,16 @@ LABEL_EXACT = {
 }
 IMPACT_LABELS = {"low": "Impact: low", "medium": "Impact: medium", "high": "Impact: high"}
 MISSING_INFO_LABEL = "\U0001F440 Missing information"
+DUPLICATE_LABEL = "duplicate"
 MAX_TOPIC_LABELS = 6
 MAX_DUPLICATES = 3
+MAX_DUPLICATE_CANDIDATES = 6  # Candidates checked against the repository (one API call each)
 
 # -----------------------------------------------------------------------------
 # Rate limits: the agent is skipped (the issue is left for manual triage) above these.
+# They protect the AI usage quota from issue floods and are approximate by design:
+# runs for issues opened at the same moment do not see each other, and only the
+# most recently updated issues (MAX_ISSUE_PAGES) are counted.
 # -----------------------------------------------------------------------------
 MAX_ISSUES_PER_AUTHOR_24H = 3
 MAX_ISSUES_REPO_24H = 15
@@ -100,6 +110,8 @@ ALLOWED_HOSTS = {
     "developers.home-assistant.io",
     "nextion.tech",
 }
+MD_LINK_DEST_RE = re.compile(r"\]\([ \t]*<?([^)\s>]*)")                       # [text](destination
+MD_LINK_DEFINITION_RE = re.compile(r"(?m)^[ \t]{0,3}\[[^\]\n]+\]:[ \t]*<?(\S*).*$")  # [label]: destination
 LINK_RE = re.compile(r"(?i)\b(?:[a-z][a-z0-9+.-]*://|www\.)[^\s<>()\[\]`\"']+")
 SECRET_RES = (
     re.compile(r"sk-ant-[A-Za-z0-9_-]{8,}"),
@@ -107,20 +119,47 @@ SECRET_RES = (
     re.compile(r"github_pat_[A-Za-z0-9_]{20,}"),
     re.compile(r"[A-Za-z0-9+/=_-]{80,}"),  # Long opaque blobs (encoded data)
 )
+RETRY_STATUSES = {500, 502, 503, 504}
+RETRY_ATTEMPTS = 3
 
 
-def api(method, path, token, payload=None):
-    """Call the GitHub REST API and return the decoded JSON answer."""
+def api(method, path, token, payload=None, retry=True):
+    """Call the GitHub REST API and return the decoded JSON answer.
+
+    Transient failures are retried. Pass retry=False for calls that are not idempotent.
+    """
     data = json.dumps(payload).encode() if payload is not None else None
-    request = urllib.request.Request(API + path, data=data, method=method)
-    request.add_header("Authorization", f"Bearer {token}")
-    request.add_header("Accept", "application/vnd.github+json")
-    request.add_header("X-GitHub-Api-Version", "2022-11-28")
-    if data is not None:
-        request.add_header("Content-Type", "application/json")
-    with urllib.request.urlopen(request, timeout=30) as response:
-        body = response.read()
-    return json.loads(body) if body else None
+    attempts = RETRY_ATTEMPTS if retry else 1
+    for attempt in range(1, attempts + 1):
+        request = urllib.request.Request(API + path, data=data, method=method)
+        request.add_header("Authorization", f"Bearer {token}")
+        request.add_header("Accept", "application/vnd.github+json")
+        request.add_header("X-GitHub-Api-Version", "2022-11-28")
+        if data is not None:
+            request.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                body = response.read()
+            return json.loads(body) if body else None
+        except urllib.error.HTTPError as error:
+            if error.code not in RETRY_STATUSES or attempt == attempts:
+                raise
+        except urllib.error.URLError:
+            if attempt == attempts:
+                raise
+        time.sleep(2 * attempt)
+    return None  # Not reached: the last attempt returns or raises
+
+
+def issue_digest(issue):
+    """Hash of what the agent analyzes, to detect an issue edited since then."""
+    content = (issue.get("title") or "") + "\0" + (issue.get("body") or "")
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def parse_time(value):
+    """Parse a GitHub timestamp."""
+    return datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
 def is_allowed_label(name):
@@ -169,8 +208,7 @@ def fetch(repo, token, number, out_dir):
         for item in batch:
             if "pull_request" in item or item["number"] == number:
                 continue
-            created = datetime.datetime.fromisoformat(item["created_at"].replace("Z", "+00:00"))
-            if (now - created).total_seconds() < 86400:
+            if (now - parse_time(item["created_at"])).total_seconds() < 86400:
                 recent_total += 1
                 if item["user"]["login"] == author:
                     recent_author += 1
@@ -183,8 +221,7 @@ def fetch(repo, token, number, out_dir):
             if item["state"] == "open":
                 entry["body_excerpt"] = (item.get("body") or "")[:OTHER_BODY_LIMIT]
             else:
-                updated = datetime.datetime.fromisoformat(item["updated_at"].replace("Z", "+00:00"))
-                if (now - updated).days > CLOSED_ISSUES_MAX_AGE_DAYS:
+                if (now - parse_time(item["updated_at"])).days > CLOSED_ISSUES_MAX_AGE_DAYS:
                     continue
                 entry["state_reason"] = item.get("state_reason")
             others.append(entry)
@@ -209,11 +246,14 @@ def fetch(repo, token, number, out_dir):
     with open(os.path.join(out_dir, "other_issues.json"), "w", encoding="utf-8") as handle:
         json.dump(others, handle, indent=1, ensure_ascii=False)
 
-    # The triaged issue itself counts towards both limits
-    if recent_author + 1 > MAX_ISSUES_PER_AUTHOR_24H:
+    set_output("digest", issue_digest(issue))
+
+    # The triaged issue counts towards both limits when it is recent too (a manual run can target an old one)
+    own = 1 if (now - parse_time(issue["created_at"])).total_seconds() < 86400 else 0
+    if recent_author + own > MAX_ISSUES_PER_AUTHOR_24H:
         set_output("run_agent", "false")
         set_output("skip_reason", "too many issues from this author in 24 h")
-    elif recent_total + 1 > MAX_ISSUES_REPO_24H:
+    elif recent_total + own > MAX_ISSUES_REPO_24H:
         set_output("run_agent", "false")
         set_output("skip_reason", "too many issues in the repository in 24 h")
     else:
@@ -243,6 +283,15 @@ def link_is_allowed(link):
     return host in ALLOWED_HOSTS
 
 
+def destination_is_allowed(destination):
+    """Whether a Markdown link destination may stay: only full, allowlisted links.
+
+    Relative, protocol-relative ("//host") and other-scheme destinations are refused,
+    as GitHub would resolve them to places the allowlist does not cover.
+    """
+    return destination.lower().startswith(("https://", "github://")) and link_is_allowed(destination)
+
+
 def sanitize_comment(text):
     """Make the agent's comment safe to post: no foreign links, mentions, HTML or secrets."""
     text = text.replace("\r\n", "\n").strip()[:COMMENT_LIMIT]
@@ -251,12 +300,15 @@ def sanitize_comment(text):
     text = text.replace("![", "[")                           # No embedded images
     for pattern in SECRET_RES:
         text = pattern.sub("[removed]", text)
+    # Markdown links: a refused destination is detached from its text, so it is no longer a link
+    text = MD_LINK_DEFINITION_RE.sub(lambda match: match.group(0) if destination_is_allowed(match.group(1)) else "", text)
+    text = MD_LINK_DEST_RE.sub(lambda match: match.group(0) if destination_is_allowed(match.group(1)) else "] ([link removed]", text)
     text = LINK_RE.sub(lambda match: match.group(0) if link_is_allowed(match.group(0).rstrip(".,;:!?")) else "[link removed]", text)
     text = re.sub(r"(?<![\w/])@(?=[A-Za-z0-9])", "@\u200b", text)  # No user or team mentions
     return text.strip()
 
 
-def apply(repo, token, number, result, dry_run):
+def apply(repo, token, number, result, digest, dry_run):
     """Validate the agent's answer and apply it to the issue."""
     if not isinstance(result, dict):
         sys.exit("The triage result is not a JSON object")
@@ -264,6 +316,10 @@ def apply(repo, token, number, result, dry_run):
     issue = api("GET", f"/repos/{repo}/issues/{number}", token)
     if "pull_request" in issue or issue["state"] != "open":
         print("Not an open issue, nothing to do")
+        return
+    if digest and digest != issue_digest(issue):
+        # The answer is about a text that no longer exists (e.g. the reporter added the missing details)
+        print("The issue was edited since it was analyzed, nothing applied")
         return
 
     # -------------------------------------------------------------------------
@@ -291,20 +347,26 @@ def apply(repo, token, number, result, dry_run):
         labels.append(MISSING_INFO_LABEL)
 
     # -------------------------------------------------------------------------
-    # Possible duplicates: only real issues of this repository
+    # Possible duplicates: only real issues of this repository. The issue gets the
+    # duplicate label and links to them, and stays open: closing is a maintainer decision.
     # -------------------------------------------------------------------------
     duplicates = []
-    for candidate in result.get("duplicates") or []:
+    candidates = result.get("duplicates")
+    for candidate in (candidates if isinstance(candidates, list) else [])[:MAX_DUPLICATE_CANDIDATES]:
         if isinstance(candidate, bool) or not isinstance(candidate, int) or candidate == number or candidate in duplicates:
             continue
         try:
             other = api("GET", f"/repos/{repo}/issues/{candidate}", token)
-        except urllib.error.HTTPError:
-            continue
+        except urllib.error.HTTPError as error:
+            if error.code in (404, 410):  # No such issue, or deleted
+                continue
+            raise
         if "pull_request" not in other:
             duplicates.append(candidate)
         if len(duplicates) >= MAX_DUPLICATES:
             break
+    if duplicates and DUPLICATE_LABEL in existing:
+        labels.append(DUPLICATE_LABEL)
 
     # -------------------------------------------------------------------------
     # Comment: none on the maintainers' own issues, or when there is nothing to say
@@ -319,7 +381,10 @@ def apply(repo, token, number, result, dry_run):
             "who reads every issue. Take this as a first hint, not as the final answer.",
         ]
         if duplicates:
-            parts.append("**Possibly related:** " + ", ".join(f"#{item}" for item in duplicates) + ". Please check whether one of them describes the same thing.")
+            parts.append(
+                "**Possible duplicate of:** " + ", ".join(f"#{item}" for item in duplicates) + ". Please check whether it describes the same thing. "
+                "This issue stays open until the maintainer confirms."
+            )
         if text:
             parts.append(text)
         parts.append(f"---\n*Generated by AI and not reviewed before posting. See [How AI Is Used in This Project]({AI_USAGE_URL}).*")
@@ -332,6 +397,7 @@ def apply(repo, token, number, result, dry_run):
         print("Dry run: nothing was changed")
         return
 
+    # Both writes can be repeated: if one fails, re-running the job completes the triage
     if labels:
         api("POST", f"/repos/{repo}/issues/{number}/labels", token, {"labels": labels})
     if body:
@@ -347,7 +413,7 @@ def apply(repo, token, number, result, dry_run):
         if previous:
             api("PATCH", f"/repos/{repo}/issues/comments/{previous['id']}", token, {"body": body})
         else:
-            api("POST", f"/repos/{repo}/issues/{number}/comments", token, {"body": body})
+            api("POST", f"/repos/{repo}/issues/{number}/comments", token, {"body": body}, retry=False)
 
 
 def main():
@@ -359,6 +425,7 @@ def main():
     fetch_parser.add_argument("--out", required=True)
     apply_parser = commands.add_parser("apply")
     apply_parser.add_argument("--issue", type=int, required=True)
+    apply_parser.add_argument("--digest", default="", help="digest written by fetch; nothing is applied if the issue changed since")
     apply_parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -371,7 +438,7 @@ def main():
             result = json.loads(os.environ.get("TRIAGE_RESULT") or "")
         except json.JSONDecodeError:
             sys.exit("TRIAGE_RESULT is not valid JSON")
-        apply(repo, token, args.issue, result, args.dry_run)
+        apply(repo, token, args.issue, result, args.digest, args.dry_run)
 
 
 if __name__ == "__main__":
