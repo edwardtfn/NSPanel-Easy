@@ -192,6 +192,19 @@ bool home_value_color_store(const char *component, uint16_t color) {
   return false;
 }
 
+bool home_value_color_get(uint8_t idx, bool icon, uint16_t &color) {
+  if (idx >= HOME_VALUE_COUNT) {
+    return false;
+  }  // if (not a slot)
+  // HOME_VALUE_TARGETS holds each value followed by its icon
+  const uint16_t stored = home_value_colors[idx * 2 + (icon ? 1 : 0)];
+  if (stored == HOME_VALUE_COLOR_DEFAULT) {
+    return false;
+  }  // if (default colour)
+  color = stored;
+  return true;
+}
+
 void home_values_paint() {
   if (nextion_display == nullptr) {
     return;  // Boot has not handed the display over yet
