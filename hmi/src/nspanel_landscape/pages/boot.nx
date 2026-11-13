@@ -1,5 +1,4 @@
 on boot.load:
-  dim=brightness_dim
   covx baud,tmp_baudrate.txt,0,0
   sys_baudrate.txt="Baud rate: "
   sys_baudrate.txt+=tmp_baudrate.txt
