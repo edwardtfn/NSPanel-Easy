@@ -46,6 +46,7 @@ struct GraphConfig {
 extern std::array<std::string, HOME_VALUE_COUNT> graph_entities;  ///< Entity with a graph per Home page value
 extern GraphConfig graph_config;                                  ///< Settings of the graph shown
 extern uint32_t graph_last_slot;                                  ///< Start (epoch) of the newest slot, 0 if none
+extern uint8_t graph_value_idx;                                   ///< Home page value the graph was opened from
 
 /// @brief Values of the graph shown, oldest first, at most GRAPH_POINTS. NAN marks a period without data.
 extern std::vector<float, ExternalRAMAllocator<float>> graph_values;

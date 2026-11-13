@@ -32,6 +32,7 @@ display:
             }  // if (component_id)
             if (value_idx == UINT8_MAX or graph_entities[value_idx].empty()) return;  // No graph for this value
             ESP_LOGD("${TAG_PAGE_GRAPH}", "Open graph of %s", graph_entities[value_idx].c_str());
+            graph_value_idx = value_idx;  // The same entity can be on two values, with different colors
             detailed_entity->publish_state(graph_entities[value_idx]);  // Reported to the Blueprint in page_changed
             disp1->send_command_printf("back_page_id=%" PRIu8, current_page_id);
             goto_page->execute(get_page_id("graph"));
@@ -146,15 +147,23 @@ script:
           disp1->set_component_text(hmi::graph::VALUE_MAX.name, "");
           // The current value and the icon keep the colours chosen for this value on the Home page (#786).
           // The page sets its theme colours when it loads, which stay for a colour left at its default.
-          for (uint8_t idx = 0; idx < HOME_VALUE_COUNT; ++idx) {
-            if (graph_entities[idx].empty() or graph_entities[idx] != detailed_entity->state) continue;
-            uint16_t color = 0;
-            if (home_value_color_get(idx, false, color))
-              disp1->set_component_font_color(hmi::graph::VALUE_NOW.name, color);
-            if (home_value_color_get(idx, true, color))
-              disp1->set_component_font_color(hmi::graph::ICON_STATE.name, color);
-            break;
-          }  // for each home value
+          // The value that was tapped, when it is the one of the graph shown; else the first one with this entity
+          uint8_t slot = UINT8_MAX;
+          if (graph_value_idx < HOME_VALUE_COUNT and !detailed_entity->state.empty() and
+              graph_entities[graph_value_idx] == detailed_entity->state) {
+            slot = graph_value_idx;
+          } else {
+            for (uint8_t idx = 0; idx < HOME_VALUE_COUNT; ++idx) {
+              if (graph_entities[idx].empty() or graph_entities[idx] != detailed_entity->state) continue;
+              slot = idx;
+              break;
+            }  // for each home value
+          }  // if (tapped value)
+          uint16_t color = 0;
+          if (home_value_color_get(slot, false, color))
+            disp1->set_component_font_color(hmi::graph::VALUE_NOW.name, color);
+          if (home_value_color_get(slot, true, color))
+            disp1->set_component_font_color(hmi::graph::ICON_STATE.name, color);
 
   - id: page_graph_draw
     mode: restart
