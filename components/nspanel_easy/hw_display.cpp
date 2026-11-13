@@ -25,6 +25,7 @@ bool display_entity_keep = false;
 uint8_t display_mode_eeprom = UINT8_MAX;  // Populated from boot report, UINT8_MAX = unknown
 bool display_portrait = false;
 bool display_valid = false;
+DisplayReport display_report;
 
 DetailsOverlap details_overlap;  ///< Override for the entity details page
 
