@@ -174,8 +174,16 @@ On the blueprint settings, you will also find settings for sensors and custom bu
 > [!NOTE]
 > The panel follows the custom buttons' entities through [API subscriptions](api_subscribe.md), so changing which entity a custom button uses restarts the panel once.
 
+A climate entity with up to five presets (not counting `none`) shows them as buttons in the row of the HVAC mode buttons, when they fit there:
+the HVAC modes on the left and the presets on the right, with the active preset highlighted.
+One tap selects a preset, and a tap on the active preset leaves it (it selects `none`, when the entity has it).
+With more presets, or for the embedded thermostat, the page has a preset button instead, as described next.
+
 When a climate entity supports preset modes (like `eco`, `comfort` or `away`), its climate page shows a preset button that opens a list with the available presets.
 The button shows the icon of the active preset and is highlighted while a preset is active. Custom presets use the generic preset icon.
+
+When a climate entity supports fan modes (like `auto`, `low` or `high`), its climate page also shows a fan mode button, which opens a list with the available fan modes.
+The button shows an icon for the active fan mode (`auto`, `off`, `low`, `medium` and `high`), and a generic fan mode icon for any other mode.
 
 ## QR Code
 
@@ -225,6 +233,24 @@ The labels are not visible on the US landscape model.
 
 Normally, the internal relays of the NSPanels are triggered via HA.
 If the NSPanel loses Wi-Fi connection or HA is down, the hardware button can then switch the corresponding relay directly.
+
+### Relay x - Entity override (Optional)
+
+When the entity selected for a hardware button is the panel's own relay (relay 1 for the left button, relay 2 for the right button),
+a short press toggles the relay on the panel itself: immediately, and also when Home Assistant or the Blueprint automation is not available.
+
+The Blueprint recognizes the panel's relay by its default entity ID, ending with `_relay_1` or `_relay_2`.
+Leave this input empty to keep that automatic detection.
+
+Select an entity only when the relay is not recognized:
+
+- The entity ID of the relay was renamed in Home Assistant.
+- You use an entity created from the relay, like a light created with **Show as**.
+
+Select the entity that represents the relay, the same one selected for the hardware button.
+
+> [!NOTE]
+> This is different from the local fallback above, which only acts while the panel is not connected to Home Assistant.
 
 ### Left/Right Hardware Button - Entity (Optional)
 
@@ -287,6 +313,9 @@ The buttons are numbered as follows:
 When the respective button is pressed, a toggle action is executed or the corresponding page is automatically opened, e.g.
 the cover control for covers, etc.
 For 2 state buttons (where toggle is the default action), a long press in the button will open it's corresponding page, when supported.
+
+The light page shows the active effect under its effect button, and the fan page shows the active preset mode under its mode button, so the current mode is visible without opening the list.
+A fan with up to five preset modes and no speed control shows its preset modes as buttons instead, with the active one highlighted.
 
 For each button an own name can be specified optionally.
 

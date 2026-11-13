@@ -288,6 +288,9 @@ While Home Assistant is disconnected, the panel does not open pages that need it
 
 The pages that work without Home Assistant are the home page, settings, QR code, and the climate page when it shows the embedded thermostat.
 
+After a restart without Home Assistant, the panel waits about a minute for it and then completes its boot on its own, with the settings it has stored.
+Once Home Assistant is connected, it asks the Blueprint for its settings again, within about 90 seconds.
+
 You can also play a tone when this happens. It is disabled by default:
 
 ```yaml
@@ -469,6 +472,11 @@ With `wakeup_with_button_press_dimmed` enabled, the display is held at the dimme
 wake-up, including on page changes. Further hardware button presses on a dimmed display only reset the timers, without
 raising the brightness. A touch on the screen restores the regular brightness, and the hold is released when the display
 goes back to sleep.
+
+Without this option, the regular "Display Brightness" only returns on an action of yours: a touch on the screen, a hardware button,
+a wake-up asked by a sensor or through the `wake_up` action, or a page opened by Home Assistant (such as a notification).
+What the panel does on its own keeps a dimmed display at "Display Brightness Dimdown":
+the return to the home page after the page timeout, and the wake-up page shown after a restart, also after a power outage in the middle of the night.
 
 ### Set display as a light
 
