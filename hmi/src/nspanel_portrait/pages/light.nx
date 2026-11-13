@@ -25,6 +25,7 @@ on light.load:
   temp_value.pco=color_pco_main
   temp_value_2.pco=color_pco_main
   effect_button.pco=color_pco_secondary
+  effect_label.pco=color_pco_secondary
   power_button.pco=color_pco_secondary
   // Back button (shown on all pages)
   button_back.font=button_back_font
@@ -58,6 +59,7 @@ on light.load:
     colorwheel.pic=@pic(picture-0070)
     // Effect button
     effect_button.picc=pic_background_main
+    effect_label.picc=pic_background_main
     // Power button
     power_button.picc=pic_background_main
     // Back button (two picc slots: released / pressed)

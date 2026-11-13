@@ -289,3 +289,18 @@ pic2 = "picture-0130"
 pco = "#ffffff"
 txt = ""
 txt_maxl = 20
+
+[[component]]
+name = "mode_label"
+type = "text"
+x = 2
+y = 262
+w = 95
+h = 20
+sta = 0
+font = "font-02"
+bco = "#000000"
+picc = "picture-0000"
+pco = "#e7e7e7"
+txt = ""
+txt_maxl = 40
