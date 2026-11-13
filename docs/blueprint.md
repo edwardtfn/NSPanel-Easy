@@ -284,6 +284,9 @@ When the respective button is pressed, a toggle action is executed or the corres
 the cover control for covers, etc.
 For 2 state buttons (where toggle is the default action), a long press in the button will open it's corresponding page, when supported.
 
+The light page shows the active effect under its effect button, and the fan page shows the active preset mode under its mode button, so the current mode is visible without opening the list.
+A fan with up to five preset modes and no speed control shows its preset modes as buttons instead, with the active one highlighted.
+
 For each button an own name can be specified optionally.
 
 All buttons offer the possibility to optionally confirm the execution of the action.
