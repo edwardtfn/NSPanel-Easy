@@ -400,6 +400,9 @@ The options are:
   landscape position, with buttons at the right side of the screen.
 - **NSPanel US Landscape (buttons on the left):** Select this when using a Sonoff NSPanel US model
   installed in landscape position the other way around, with buttons at the left side of the screen.
+
+After changing the display model, press **Update TFT display** on the panel's device page,
+so the panel downloads the TFT file of the new model.
 - **NSPanel Blank:** A minimal TFT file that displays a QR code linking to the setup
   instructions. Useful for first-time installations to clear the Nextion Active Reparse Mode
   left by Sonoff's original firmware or other custom implementations before uploading the
