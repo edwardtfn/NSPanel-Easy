@@ -120,7 +120,7 @@ script:
 
             const uint8_t display_mode_from_tft = parse_uint8_strict(params[2]);
             const bool valid_display_mode_from_tft = display_mode_from_tft > 0
-                                                  && display_mode_from_tft <= ${DISPLAY_MODES.BLANK.ID};
+                                                  && display_mode_from_tft <= ${DISPLAY_MODES.US_LAND_LEFT.ID};
             ESP_LOGI("${TAG_PAGE_BOOT}", "Display params:");
             ESP_LOGI("${TAG_PAGE_BOOT}", "  Contract ver:  %" PRIu8, protocol_version);
             ESP_LOGI("${TAG_PAGE_BOOT}", "  Mode:          %" PRIu8, display_mode_from_tft);
@@ -156,7 +156,7 @@ script:
 
                 if (magic_flag_found_at_boot == 0) {
                   ESP_LOGW("${TAG_PAGE_BOOT}", "  EEPROM was uninitialized at boot — using hard-coded default");
-                  if (hard_coded_mode > 0 && hard_coded_mode <= ${DISPLAY_MODES.BLANK.ID}) {
+                  if (hard_coded_mode > 0 && hard_coded_mode <= ${DISPLAY_MODES.US_LAND_LEFT.ID}) {
                     auto call = display_model->make_call();
                     call.set_index(hard_coded_mode - 1);
                     call.perform();

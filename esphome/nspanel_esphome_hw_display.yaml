@@ -57,6 +57,12 @@ substitutions:
       ID: 4
       IDX: 3
       TEXT: "NSPanel Blank"
+    # The landscape TFT rotated by 180 degrees. After Blank, as the IDs are stored on the displays.
+    US_LAND_LEFT:
+      FILE: "landscape_left"
+      ID: 5
+      IDX: 4
+      TEXT: "NSPanel US Landscape (buttons on the left)"
 
   TAG_HW_DISPLAY: nspanel.hw.display
   include_action_wake_up: false

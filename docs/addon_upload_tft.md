@@ -172,6 +172,7 @@ models defined in the base firmware:
 | NSPanel US | `nspanel_portrait.tft` | Standard US hardware (portrait) |
 | NSPanel US Landscape | `nspanel_landscape.tft` | US hardware mounted in landscape |
 | NSPanel Blank | `nspanel_blank.tft` | First-time installation only. See [NSPanel Blank](nspanel_blank.md) |
+| NSPanel US Landscape (buttons on the left) | `nspanel_landscape_left.tft` | US hardware mounted in landscape, rotated to have the buttons on the left |
 
 ### Example: Automatic updates with a longer wait time
 
