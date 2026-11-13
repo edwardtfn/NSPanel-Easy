@@ -102,12 +102,11 @@ script:
       - script.wait: boot_wrap_up
 
       - lambda: |-
-          // Set before the wake-up, so its timers (`timer_dim`) and the page change apply the
-          // regular brightness instead of keeping the display dimmed as during the boot (#485)
           system_flags.boot_completed = true;
-          disp1->send_command_printf("brightness=%i", int(display_brightness->state));  // Dimmed value while booting
-          set_brightness->execute(display_brightness->state);
           boot_log->execute("Boot", "Jump to wake-up page");
+          // Not a user action: the display stays dimmed as during the boot (#485), unless it was touched
+          // meanwhile, and only returns to the regular brightness on a user action (#656)
+          brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));
           wakeup->execute(true);
 
   - id: boot_critical_components
@@ -145,12 +144,7 @@ script:
           if (!disp1->is_setup()) boot_nextion->stop();
           // Display settings
           boot_log->execute("Boot", "Sending display settings");
-          // While booting, the TFT's regular brightness holds the dimmed value, as pages apply it on touch or load
-          // (`dim=brightness`). The regular value is sent when the boot completes (#485).
-          // `resync_display` also runs this after the boot, so the regular value must be kept from then on (#682)
-          disp1->send_command_printf("brightness=%i", static_cast<int>(system_flags.boot_completed ?
-                                                                       display_brightness->state :
-                                                                       display_dim_brightness->state));
+          disp1->send_command_printf("brightness=%i",       int(display_brightness->state));
           disp1->send_command_printf("brightness_dim=%i",   int(display_dim_brightness->state));
           disp1->send_command_printf("brightness_sleep=%i", int(display_sleep_brightness->state));
           disp1->send_command_printf("wakeup_page_id=%" PRIu8, get_page_id(wakeup_page_name->current_option()));
