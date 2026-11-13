@@ -1032,6 +1032,21 @@ blueprint:
               multiple: *selector_entity_single_multiple
               filter:
                 domain: climate
+        thermostat_embedded_entity:
+          name: Embedded thermostat - Entity override (Optional)
+          description: >
+            Leave it empty to recognize the panel's own thermostat (Climate add-on) automatically,
+            by its default entity ID (ending with `_thermostat`).
+
+            Select an entity **only** if the panel's thermostat is not recognized, because its entity ID was renamed in Home Assistant.
+            Select the panel's own thermostat, the same entity selected as the main climate entity,
+            so it keeps being controlled on the panel itself, also when Home Assistant is not available.
+          default: *selector_entity_single_default_empty
+          selector:
+            entity:
+              multiple: *selector_entity_single_multiple
+              filter:
+                domain: climate
         climate_chip_visibility:
           name: Main Climate - Chip Visibility
           description: >-
@@ -5249,11 +5264,17 @@ trigger_variables:
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_temperature$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_temperature" }}
 
-  # The embedded thermostat is recognized only by its default `_thermostat` suffix. A renamed or
-  # localized entity_id is handled as an external climate entity (#640).
+  # The embedded thermostat is recognized by its default `_thermostat` suffix. With a renamed or localized
+  # entity_id, it is selected by the user in the "Embedded thermostat - Entity override" input, which then
+  # replaces the detection. Otherwise it is handled as an external climate entity (#640).
+  thermostat_embedded_override: !input thermostat_embedded_entity
   thermostat_embedded: >-
-    {%- set m = nspanel_entities | select("search", "^climate\\..+_thermostat$") | list %}
-    {{ m[0] if m | count > 0 else "climate." ~ entity_prefix ~ "_thermostat" }}
+    {%- if thermostat_embedded_override is string and thermostat_embedded_override | length > 0 -%}
+      {{ thermostat_embedded_override }}
+    {%- else -%}
+      {%- set m = nspanel_entities | select("search", "^climate\\..+_thermostat$") | list -%}
+      {{ m[0] if m | count > 0 else "climate." ~ entity_prefix ~ "_thermostat" }}
+    {%- endif %}
 
   detailed_entity: >-
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_detailed_entity$") | list %}

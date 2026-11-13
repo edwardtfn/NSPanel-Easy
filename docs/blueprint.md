@@ -157,6 +157,10 @@ You will find more details about this on the Add-on Climate documentation.
 If you are using the climate add-on, it will create a climate entity in your panel's device page.
 You still have to select that entity on this field in the blueprint settings to have it used as your main climate.
 
+The Blueprint recognizes the panel's own thermostat by its default entity ID, ending with `_thermostat`.
+If you renamed it in Home Assistant, select it also in **Embedded thermostat - Entity override**, so it keeps being controlled on the panel itself.
+Leave that input empty otherwise.
+
 Additional climate entities can be assigned to buttons and will be explained later in this document.
 
 ### Embedded Thermostat - Regulate on the Calibration Reference (Optional)
