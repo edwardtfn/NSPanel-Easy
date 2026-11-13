@@ -179,19 +179,13 @@ script:
 
             // Version position depends on contract
             const std::string &ver_str = (protocol_version == 1) ? params[3] : params[4];
-            const size_t dot = ver_str.find('.');
-            const bool tft_ver_valid =
-                !ver_str.empty() &&
-                ver_str.find_first_not_of("0123456789.") == std::string::npos &&  // digits and dot only
-                (dot == std::string::npos ||                                      // bare integer, no dot
-                (dot != 0 &&                                                      // dot not at start
-                  dot != ver_str.size() - 1 &&                                    // dot not at end
-                  ver_str.find('.', dot + 1) == std::string::npos));              // no second dot
-            version_tft->publish_state(tft_ver_valid ? ver_str : "");
+            // CalVer (YYYY.M.seq, the release version) or legacy (major.minor) from older TFT files
+            const bool ver_valid = tft_ver_valid(ver_str);
+            version_tft->publish_state(ver_valid ? ver_str : "");
 
-            ESP_LOGI("${TAG_PAGE_BOOT}", "  TFT version:   %s%s", ver_str.c_str(), tft_ver_valid ? "" : " (INVALID)");
+            ESP_LOGI("${TAG_PAGE_BOOT}", "  TFT version:   %s%s", ver_str.c_str(), ver_valid ? "" : " (INVALID)");
 
-            system_flags.display_settings_received = tft_ver_valid && display_valid;
+            system_flags.display_settings_received = ver_valid && display_valid;
           }
 
   - id: page_boot

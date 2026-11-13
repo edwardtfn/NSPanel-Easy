@@ -15,7 +15,7 @@ substitutions:
   # Select '${version}' (or 'next') when you change the "contract" between ESPHome and Blueprint
   # Versioning workflow will replace this by the new version being generated
   # Prefer '${version}': it is a valid version in development builds, while 'next' fails the firmware's version check
-  min_blueprint_version: 2026.11.16
+  min_blueprint_version: ${version}
 
   # API version (MAJOR.MINOR) provided by this firmware, reported to the Blueprint in every event
   # Keep it quoted: unquoted, YAML reads 1.10 as the number 1.1
@@ -26,8 +26,17 @@ substitutions:
   api_version: "3.0"
 
   # Minimum required TFT version for compatibility
-  # Must be manually updated with Nextion Editor
+  # The TFT carries the release version (YYYY.M.seq), set by the versioning workflow on each release.
+  # Raise this only when the firmware needs the new TFT (a change that breaks nothing if the TFT is not updated
+  # keeps the minimum). Select '${version}' (or 'next') to require the TFT of the release being created; the
+  # versioning workflow replaces it by the new version.
+  # Prefer '${version}': it is a valid version in development builds, while 'next' fails the firmware's version check
+  # A legacy TFT version (major.minor, e.g. 22.3) is older than any release version, so it is still a valid minimum.
   min_tft_version: 22.3
+
+  # TFT version carried by the HMI source on dev, set by the versioning workflow after each release.
+  # A TFT with this version is never replaced by the automatic TFT update.
+  TFT_VERSION_DEV: 9999.99.9
 
   # Minimum required ESPHome compiler to run this
   # Versioning workflow will take care of raising this (it never lowers it),

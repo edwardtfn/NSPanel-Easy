@@ -20,7 +20,9 @@ and transferring it to the display over serial.
 ### How it works
 
 When the device boots and connects to Home Assistant, a version check compares
-the current TFT version on the display with the expected version from the firmware.
+the current TFT version on the display with the firmware version.
+The TFT files of each release carry the same version as the firmware and the Blueprint,
+so any difference means the TFT does not belong to the firmware running on the panel.
 Depending on your configuration, the add-on will either:
 
 1. **Automatically upload** the matching TFT file after a configurable wait period, or
@@ -281,10 +283,21 @@ When `upload_tft_automatically` is set to `true` (the default), the device will:
 
 1. Boot and connect to Home Assistant.
 2. Receive the current TFT version from the display.
-3. Compare it with the expected version from the firmware.
-4. If a mismatch is detected, wait for the configured delay
+3. Compare it with the firmware version.
+4. If the versions differ, wait for the configured delay
    (`upload_tft_wait_ms_after_setup`) after display setup completes.
 5. Automatically start the TFT upload.
+
+A TFT older than the minimum version required by the firmware is always updated.
+A TFT that only differs from the firmware version, but still meets that minimum,
+is updated at most 3 times for each firmware version, and not again after a successful
+upload for that firmware version. This keeps a TFT that never matches the firmware
+(e.g. a custom TFT set with `nextion_update_url`, or one uploaded manually) from
+being uploaded on every boot. Updating the firmware starts the count again, and the
+"Update TFT display" button always uploads, whatever the count.
+
+A TFT built from the `dev` branch carries the development version `9999.99.9` and is never
+replaced automatically.
 
 > [!NOTE]
 > The wait period exists to prevent the TFT upload from starting before the boot process

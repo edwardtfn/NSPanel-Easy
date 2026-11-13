@@ -70,7 +70,9 @@ When a change affects a feature that is only included by specific packages (clim
   - `min_blueprint_version`, `min_tft_version` and `min_esphome_compiler_version` in `esphome/nspanel_esphome_version.yaml`.
   - `min_version` (Home Assistant) in the Blueprint header.
   - `min_esphome_version` in the Blueprint variables, when the Blueprint needs a newer ESPHome firmware (e.g. a new API action or a new field in an existing one).
-  - To require the release being created, set `min_blueprint_version` to `${version}` and `min_esphome_version` to `next`; the versioning workflow resolves both.
+  - To require the release being created, set `min_blueprint_version` or `min_tft_version` to `${version}` and `min_esphome_version` to `next`; the versioning workflow resolves them.
+  - The TFT carries the release version, set in `hmi/src/` by the versioning workflow; never edit the TFT `version` variable, which is `9999.99.9` on `dev`.
+    Raise `min_tft_version` only when the firmware needs the new TFT: the TFT is already updated automatically whenever its version differs from the firmware's.
     Do not use `next` for `min_blueprint_version`: the firmware's version check cannot compare it, so development builds would report a false Blueprint mismatch.
 - API actions are versioned as `api_version`:
   `"MAJOR.MINOR"` in `esphome/nspanel_esphome_version.yaml` (provided by the firmware) and `[MAJOR, MINOR]` in the Blueprint variables (used by the Blueprint):

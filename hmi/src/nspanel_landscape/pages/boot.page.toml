@@ -82,8 +82,8 @@ txt_maxl = 25
 name = "version"
 type = "variable"
 sta = 1
-txt = "22.5"
-txt_maxl = 5
+txt = "9999.99.9"
+txt_maxl = 12
 
 [[component]]
 name = "ver_firmware"
