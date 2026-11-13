@@ -85,6 +85,11 @@ script:
             - "page canvas"
 ```
 
+> [!NOTE]
+> A page's numeric ID is its position in the TFT's page list, so it can change with a TFT update.
+> Since TFT 22.6, `graph` is page 19, and the pages from `keyb_num` to `weather05` moved up by one.
+> If you use numeric IDs in your customizations, check them after updating the TFT.
+
 ## Step 2 — Draw content from a Home Assistant automation
 
 Create an automation triggered by the `sensor.<panel_name>_current_page` sensor changing to
