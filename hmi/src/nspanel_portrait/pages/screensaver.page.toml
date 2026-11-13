@@ -180,13 +180,3 @@ picc = "picture-0000"
 pco = "#cecfce"
 txt = ""
 txt_maxl = 3
-
-[[component]]
-name = "boot_wait"
-type = "timer"
-tim = 1000
-en = 0
-
-[[component]]
-name = "boot_count"
-type = "variable"
