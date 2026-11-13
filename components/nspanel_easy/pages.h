@@ -81,6 +81,19 @@ constexpr bool page_names_equal(const char *a, const char *b) {
 }
 
 /**
+ * @brief Name of a page, safe for any page id.
+ *
+ * A page id can come from outside the firmware: from the display (which may report anything while
+ * its TFT is being replaced, or with a TFT of another version) and from get_page_id(), which
+ * returns UINT8_MAX for a name it does not know. Indexing page_names with such an id reads past
+ * the table, and using the result as a string crashes the panel.
+ *
+ * @param page_id The page id.
+ * @return The name of the page, or "unknown" when the id is not one of the pages.
+ */
+constexpr const char *page_name_of(uint8_t page_id) { return page_id < PAGE_COUNT ? page_names[page_id] : "unknown"; }
+
+/**
  * Retrieves the index of a given page name within the page_names array.
  * When called with a string literal, this is resolved entirely at compile time.
  *

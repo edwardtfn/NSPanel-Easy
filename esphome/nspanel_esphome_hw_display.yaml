@@ -114,6 +114,12 @@ display:
     on_page:
       then:
         - lambda: |-
+            // The display can report anything while its TFT is being replaced, or with a TFT of another version.
+            // Past this check, current_page_id is always a page of this firmware.
+            if (x >= PAGE_COUNT) {
+              ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown page id %" PRIu8 " from the display, ignored", x);
+              return;
+            }  // if (x >= PAGE_COUNT)
             ESP_LOGI("${TAG_HW_DISPLAY}", "Page changed: '%s'->'%s'", page_names[current_page_id], page_names[x]);
             ESP_LOGW_IF("${TAG_HW_DISPLAY}", (x == current_page_id), "Same page");
             page_change->execute(x);
@@ -268,7 +274,7 @@ script:
 
       # Report wake-up page
       - lambda: |-
-          ESP_LOGCONFIG("${TAG_HW_DISPLAY}", "Wake-up page: %s", page_names[wakeup_page_id]);
+          ESP_LOGCONFIG("${TAG_HW_DISPLAY}", "Wake-up page: %s", page_name_of(wakeup_page_id));
 
   - id: event_from_display
     mode: restart
@@ -341,6 +347,11 @@ script:
       page_id: uint8_t
     then:
       - lambda: |-
+          // get_page_id() returns UINT8_MAX for a page name it does not know
+          if (page_id >= PAGE_COUNT) {
+            ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown page id %" PRIu8 ", not opened", page_id);
+            return;
+          }  // if (page_id >= PAGE_COUNT)
           ESP_LOGV("${TAG_HW_DISPLAY}", "Go to page '%s' (id: %" PRIu8 ")", page_names[page_id], page_id);
           if (page_id == current_page_id) {
             ESP_LOGW("${TAG_HW_DISPLAY}", "Already the current page");
@@ -698,14 +709,14 @@ script:
       - lambda: |-
           const uint8_t target_page_id = wakeup_page_resolve(api_server->is_connected_with_state_subscription(),
                                                              id(is_embedded_thermostat));
-          ESP_LOGV("${TAG_HW_DISPLAY}", "Wake-up (%s->%s)", page_names[current_page_id], page_names[target_page_id]);
+          ESP_LOGV("${TAG_HW_DISPLAY}", "Wake-up (%s->%s)", page_names[current_page_id], page_name_of(target_page_id));
           ESP_LOGV("${TAG_HW_DISPLAY}", "  reset timer: %s", YESNO(reset_timer));
           if (version_tft->state.empty()) {
             ESP_LOGE("${TAG_HW_DISPLAY}", "TFT version invalid");
             return;
           }
           if (current_page_id == get_page_id("screensaver") or current_page_id == get_page_id("boot")) {
-            ESP_LOGD("${TAG_HW_DISPLAY}", "Wake-up on page %s", page_names[target_page_id]);
+            ESP_LOGD("${TAG_HW_DISPLAY}", "Wake-up on page %s", page_name_of(target_page_id));
             #ifdef NSPANEL_EASY_PAGE_CLIMATE
             if (target_page_id == get_page_id("climate")) {
               detailed_entity->publish_state((id(is_embedded_thermostat)) ? "embedded_climate" : "");
