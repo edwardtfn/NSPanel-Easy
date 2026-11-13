@@ -203,7 +203,8 @@ bool is_page_offline_capable(uint8_t page_id);
  * @return Page id to wake up to.
  */
 inline uint8_t wakeup_page_resolve(bool api_connected, bool climate_embedded) {
-  if (api_connected || is_page_offline_capable(wakeup_page_id, climate_embedded)) {
+  // An id that is not a page (never expected, as it is validated where it is set) falls back to home
+  if (wakeup_page_id < PAGE_COUNT && (api_connected || is_page_offline_capable(wakeup_page_id, climate_embedded))) {
     return wakeup_page_id;
   }
   return home_page_id;

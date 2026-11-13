@@ -118,6 +118,9 @@ display:
             // Past this check, current_page_id is always a page of this firmware.
             if (x >= PAGE_COUNT) {
               ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown page id %" PRIu8 " from the display, ignored", x);
+              // The display answered, so a pending page change is over: the boot page must not wait for a
+              // report that may never come. current_page_id keeps the last valid page.
+              id(page_change_pending) = false;
               return;
             }  // if (x >= PAGE_COUNT)
             ESP_LOGI("${TAG_HW_DISPLAY}", "Page changed: '%s'->'%s'", page_names[current_page_id], page_names[x]);
@@ -824,6 +827,11 @@ select:
       then:
         - lambda: |-
             wakeup_page_id = get_page_id(x.c_str());
+            if (wakeup_page_id >= PAGE_COUNT) {
+              // Not the name of a page (e.g. an option of a customization): keep a page the display can open
+              ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown wake-up page '%s', using home", x.c_str());
+              wakeup_page_id = get_page_id("home");
+            }  // if (wakeup_page_id >= PAGE_COUNT)
             wakeup_page_update->execute();
             wait_to_be_ready->execute();
         - script.wait: wait_to_be_ready
