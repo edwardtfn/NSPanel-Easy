@@ -132,6 +132,9 @@ constexpr const char *climate_preset_icons[CLIMATE_PRESET_NAMES_COUNT] = {
  * Each button selects one HVAC mode. The button is shown only when the climate supports
  * that mode (the embedded thermostat's traits, or a Home Assistant climate's `hvac_modes`),
  * so the page matches the device. Both use the same colors.
+ *
+ * The buttons are also the seven slots of the row (see `ClimateSlot`): by default each mode
+ * is on its own button, and the HMI shows each button with the icon of its mode.
  */
 struct ClimateModeButton {
   const char *name;             ///< Component name, without page prefix (`vis` does not accept one)
@@ -140,23 +143,68 @@ struct ClimateModeButton {
   const char *hvac_mode;        ///< The same mode, as Home Assistant names it
   uint16_t color_active;        ///< Font color when the mode is active
   uint16_t color_inactive;      ///< Font color when the mode is supported but not active
+  const char *icon;             ///< Icon of the mode, the same the HMI gives to the button
 };
 
 /**
  * @brief HVAC mode buttons on the climate page, in display order.
  *
- * Components and modes match the `climate,hvac_mode,<mode>` events sent by the HMI.
+ * The HMI reports a tap as `climate,slot,<n>`, with n from 1 to 7 in this order.
  */
 constexpr ClimateModeButton CLIMATE_MODE_BUTTONS[] = {
-    {"button01", "climate.button01", CLIMATE_MODE_AUTO, "auto", Colors::RGB565_GREEN, Colors::RGB565_GRAY_LIGHT},
+    {"button01", "climate.button01", CLIMATE_MODE_AUTO, "auto", Colors::RGB565_GREEN, Colors::RGB565_GRAY_LIGHT,
+     Icons::MDI_CALENDAR_SYNC},
     {"button02", "climate.button02", CLIMATE_MODE_HEAT_COOL, "heat_cool", Colors::RGB565_WHITE,
-     Colors::RGB565_GRAY_LIGHT},
-    {"button03", "climate.button03", CLIMATE_MODE_HEAT, "heat", Colors::RGB565_DEEP_ORANGE, Colors::RGB565_GRAY_LIGHT},
-    {"button04", "climate.button04", CLIMATE_MODE_COOL, "cool", Colors::RGB565_BLUE, Colors::RGB565_GRAY_LIGHT},
-    {"button05", "climate.button05", CLIMATE_MODE_DRY, "dry", Colors::RGB565_ORANGE, Colors::RGB565_GRAY_LIGHT},
-    {"button06", "climate.button06", CLIMATE_MODE_FAN_ONLY, "fan_only", Colors::RGB565_CYAN, Colors::RGB565_GRAY_LIGHT},
-    {"button07", "climate.button07", CLIMATE_MODE_OFF, "off", Colors::RGB565_BLUE_INDIGO, Colors::RGB565_GRAY},
+     Colors::RGB565_GRAY_LIGHT, Icons::MDI_AUTORENEW},
+    {"button03", "climate.button03", CLIMATE_MODE_HEAT, "heat", Colors::RGB565_DEEP_ORANGE, Colors::RGB565_GRAY_LIGHT,
+     Icons::MDI_FIRE},
+    {"button04", "climate.button04", CLIMATE_MODE_COOL, "cool", Colors::RGB565_BLUE, Colors::RGB565_GRAY_LIGHT,
+     Icons::MDI_SNOWFLAKE},
+    {"button05", "climate.button05", CLIMATE_MODE_DRY, "dry", Colors::RGB565_ORANGE, Colors::RGB565_GRAY_LIGHT,
+     Icons::MDI_WATER_PERCENT},
+    {"button06", "climate.button06", CLIMATE_MODE_FAN_ONLY, "fan_only", Colors::RGB565_CYAN, Colors::RGB565_GRAY_LIGHT,
+     Icons::MDI_FAN},
+    {"button07", "climate.button07", CLIMATE_MODE_OFF, "off", Colors::RGB565_BLUE_INDIGO, Colors::RGB565_GRAY,
+     Icons::MDI_POWER},
 };
+
+/// @brief Number of slots in the mode row of the climate page.
+constexpr uint8_t CLIMATE_SLOTS = sizeof(CLIMATE_MODE_BUTTONS) / sizeof(CLIMATE_MODE_BUTTONS[0]);
+
+/// @brief Most presets shown as buttons; a climate with more keeps the preset picker.
+constexpr uint8_t CLIMATE_PRESET_BUTTONS_MAX = 5;
+
+/// @brief What a slot of the mode row does.
+enum class ClimateSlotKind : uint8_t {
+  NONE,    ///< Not used, its button is hidden
+  MODE,    ///< Selects an HVAC mode
+  PRESET,  ///< Selects a preset
+};
+
+/// @brief What a tap on a slot of the mode row asks for.
+struct ClimateSlotAction {
+  ClimateSlotKind kind{ClimateSlotKind::NONE};  ///< Mode, preset, or nothing
+  std::string value;                            ///< The HVAC mode or the preset, as Home Assistant names it
+};
+
+/**
+ * @brief Put each HVAC mode back on its own button.
+ *
+ * The default layout, used by the embedded thermostat and until a Home Assistant climate is rendered.
+ * Called when the climate page opens.
+ */
+void climate_slots_reset();
+
+/**
+ * @brief Resolve a tap on a slot of the mode row.
+ *
+ * A tap on the preset that is active selects `none`, when the climate has it, so a preset can
+ * be left without a button for `none`.
+ *
+ * @param slot Slot index, from 0 to CLIMATE_SLOTS - 1.
+ * @return The HVAC mode or preset to select; `NONE` for a slot that is not used.
+ */
+ClimateSlotAction climate_slot_action(uint8_t slot);
 
 // =============================================================================
 // Home Assistant Climates
@@ -189,6 +237,14 @@ ClimateView climate_view(const SnapshotEntity &entity);
  * @param entity The climate, from the snapshot.
  */
 void climate_mode_buttons_render(const SnapshotEntity &entity);
+
+/**
+ * @brief Whether the last climate rendered shows its presets as buttons in the mode row.
+ *
+ * True for a Home Assistant climate with 1 to CLIMATE_PRESET_BUTTONS_MAX presets (not counting
+ * `none`) that fit in the row together with its HVAC modes. The preset picker button is then hidden.
+ */
+bool climate_presets_as_buttons();
 
 /**
  * @brief Keep the presets of a Home Assistant climate for the picker, and draw the preset button.
