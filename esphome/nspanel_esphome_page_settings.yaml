@@ -87,7 +87,7 @@ script:
     then:
       - lambda: |-
           if (current_page_id != get_page_id("settings")) return;
-          // The TFT fills the slider from its `brightness` variable, which holds the dimmed value while booting (#485)
+          // The TFT fills the slider from its `brightness` variable; sent again here, in case it was not received yet
           disp1->set_component_value("brightslider", static_cast<int>(display_brightness->state));
           disp1->set_component_text_printf("bright_text", "%i%%", static_cast<int>(display_brightness->state));
           disp1->set_component_text("lbl_bright", "${LOCALIZATION[LANG].settings.bright}");

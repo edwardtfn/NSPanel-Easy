@@ -319,7 +319,8 @@ script:
               "${DISPLAY_MODES.EU.FILE}",            // 0: NSPanel EU
               "${DISPLAY_MODES.US.FILE}",            // 1: NSPanel US
               "${DISPLAY_MODES.US_LAND.FILE}",       // 2: NSPanel US Landscape
-              "${DISPLAY_MODES.BLANK.FILE}",         // 3: NSPanel Blank
+              "${DISPLAY_MODES.US_LAND_LEFT.FILE}",  // 3: NSPanel US Landscape (buttons on the left)
+              "${DISPLAY_MODES.BLANK.FILE}",         // 4: NSPanel Blank
             };
             static const size_t FILENAMES_COUNT = sizeof(FILENAMES) / sizeof(FILENAMES[0]);
 

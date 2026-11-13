@@ -128,6 +128,7 @@ The package enables `api: homeassistant_states: true` automatically, which is re
 | `api_subscribe_entity_len` | `96` | Buffer size for an `entity_id`, null terminator included (`32` to `255`). A longer `entity_id` is not bound; the log reports the size to set. |
 | `api_subscribe_debounce` | `10s` | Quiet period after the last binding before a restart is applied. |
 | `api_subscribe_timeout` | `120s` | Time without an end marker before the push is committed unverified. |
+| `api_subscribe_wipe_nvs_on_failure` | `false` | Erase every stored preference and restart when the bindings cannot be stored. Read [this](#clearing-the-storage-automatically) first. |
 
 Lowering `api_subscribe_max` reduces the size of the staging buffer used during a push. It does not
 reduce steady-state memory, which scales with the number of bindings actually configured.
@@ -541,10 +542,58 @@ Three consecutive pushes arrived without an end marker. Verify that the automati
 `api_subscribe_end` after the last binding. The panel keeps running its last good set until this is
 resolved.
 
+### `failed the integrity check` in the log
+
+The bindings stored on the panel were incomplete or did not match their checksum, for example after a
+power loss while they were being written. The panel discards them all, instead of using a mixed set,
+and starts without bindings. The Blueprint sends them again once Home Assistant connects, and the
+panel then stores them and restarts once.
+
 ### `Could not persist` in the log
 
 The bindings could not be written to NVS, so the panel is still running the set it loaded at boot
-and your changes have not taken effect. The NVS partition can be full or fragmented; a factory reset of
-the panel clears it. The entry counts in `dump_config` show whether the partition is genuinely too
-small, which happens on panels first flashed with much older firmware — those need to be flashed
-over USB once.
+and your changes have not taken effect. That set is no longer stored: after the next reboot the panel
+starts without bindings, until the Blueprint sends them again and they can be stored.
+
+The NVS partition can be full or fragmented. To clear it, add this button to your panel's YAML,
+install the firmware, and press **Restart with Factory Default Settings** on the panel's device page:
+
+```yaml
+button:
+  - platform: factory_reset
+    name: Restart with Factory Default Settings
+```
+
+It erases every setting stored on the panel, not only the bindings: take note of your temperature
+calibration and the settings changed from Home Assistant (such as brightness and timeouts) first.
+The Blueprint sends the bindings again after the restart. You can remove the button afterwards.
+
+When it happens again after the reset, the partition is too small. Panels first installed with much older
+firmware, or with other firmware such as Tasmota, can have a small NVS partition (`0x5000` in the partition
+table that the log shows at boot), and an update over the air never changes it.
+Those panels need to be flashed once over USB, which writes the current partition table.
+The log line `NVS entries: ... used, ... free of ...`, written with the error and in `dump_config`,
+shows how full the partition is.
+
+#### Clearing the storage automatically
+
+With this substitution, the panel does that factory reset by itself when the bindings cannot be stored,
+and restarts:
+
+```yaml
+substitutions:
+  api_subscribe_wipe_nvs_on_failure: 'true'
+```
+
+It is off by default because it erases **every** preference stored on the panel, not only the bindings:
+the temperature calibration, the settings changed from Home Assistant (such as brightness and timeouts),
+the last state of the relays, and the Wi-Fi credentials when they were set through the fallback hotspot
+instead of the YAML. Take note of your settings before enabling it.
+
+Enable it only with [API encryption](https://esphome.io/components/api/#configuration-variables).
+Without it, any device on your network can send bindings to the panel, and so could also cause this erase;
+the panel logs a warning at boot in that case.
+
+It is done at most once since the panel was powered on. If the bindings still do not fit in the
+erased storage, the panel logs it and keeps running without erasing again, so it cannot restart in a loop;
+the partition is then too small, and the panel has to be flashed over USB.

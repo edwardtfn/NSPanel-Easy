@@ -199,7 +199,8 @@ script:
             if (was_shown and not is_shown) {
               // Repaint the page background over the bar areas, keeping anything else drawn on the page
               const uint8_t display_mode_index = display_model->active_index().value_or(UINT8_MAX);
-              if (display_mode_index >= 3) return;
+              if (display_mode_index >= HW_BUTTON_BAR_MODELS) return;
+              if (!HW_BUTTON_BAR_AREAS[display_mode_index][0].is_shown()) return;  // A model without bars
               const char *page_name = page_names[current_page_id];
               // The fill type is static in the HMI: these pages use a solid color (or no background) and
               // all the others a picture, which may change at runtime (e.g. theme)
@@ -347,8 +348,9 @@ script:
           }
           const uint8_t display_mode_index = display_model->active_index().value_or(UINT8_MAX);
           if (display_mode_index == UINT8_MAX) return;
-          const uint8_t display_mode_idx = display_mode_index + 1;
-          if (display_mode_idx < 1 or display_mode_idx > 3) return;
+          if (display_mode_index >= HW_BUTTON_BAR_MODELS) return;
+          const HwButtonBarArea *bar_areas = HW_BUTTON_BAR_AREAS[display_mode_index];
+          if (!bar_areas[0].is_shown()) return;  // A model without bars
           // Draws a bar with rounded ends inside its area
           auto draw_bar = [](const HwButtonBarArea &area, uint16_t color) {
             if (area.is_vertical()) {
@@ -365,7 +367,7 @@ script:
             const uint16_t button_bar_left_color = id(hardware_settings).button_left_state
                                                   ? id(buttons_color_on)
                                                   : id(buttons_color_off);
-            draw_bar(HW_BUTTON_BAR_AREAS[display_mode_idx - 1][0], button_bar_left_color);
+            draw_bar(bar_areas[0], button_bar_left_color);
           }
 
           // Right button
@@ -373,7 +375,7 @@ script:
             const uint16_t button_bar_right_color = id(hardware_settings).button_right_state
                                                   ? id(buttons_color_on)
                                                   : id(buttons_color_off);
-            draw_bar(HW_BUTTON_BAR_AREAS[display_mode_idx - 1][1], button_bar_right_color);
+            draw_bar(bar_areas[1], button_bar_right_color);
           }
 
   # Draws the hardware buttons labels directly on the screen (no Nextion components), as this
@@ -394,7 +396,7 @@ script:
           if (display_mode_index == UINT8_MAX) return;
           const uint8_t display_mode_idx = display_mode_index + 1;
           const bool is_eu = (display_mode_idx == 1);
-          if (display_mode_idx != 1 and display_mode_idx != 2) return;  // Not shown on US Landscape
+          if (display_mode_idx != 1 and display_mode_idx != 2) return;  // Not shown on the US Landscape models
 
           // Page background: the label area is repainted with it before the text is drawn
           static constexpr uint8_t XSTR_FILL_CROP_IMAGE = 0;

@@ -30,6 +30,11 @@ display:
               climate_preset_open->execute();
               return;
             }
+            if (page_id == get_page_id("climate") and           // Page `climate`
+                component_id == hmi::climate::FAN_BUTTON.id) {  // Fan mode button
+              climate_fan_mode_open->execute();
+              return;
+            }
 
 esphome:
   build_flags:
@@ -92,6 +97,20 @@ script:
             std::string("${LOCALIZATION[LANG].climate.select_preset_mode}")
           );
 
+  # Opens the fan mode picker for the Home Assistant climate shown on the page (#292).
+  # The options come with the entity snapshot. The embedded thermostat has no fan modes.
+  - id: climate_fan_mode_open
+    mode: single
+    then:
+      - lambda: |-
+          ESP_LOGV("${TAG_PAGE_CLIMATE}", "Script: climate_fan_mode_open");
+          if (climate_embedded_visible) return;
+          if (!climate_fan_modes_to_picker(detailed_entity->state)) return;
+          popup_select_open->execute(
+            get_page_id("climate"),
+            std::string("${LOCALIZATION[LANG].select.please_select}")
+          );
+
   - id: !extend event_from_display  # Defined by hw_display
     then:
       - lambda: |-
@@ -106,6 +125,23 @@ script:
 
             const std::string& key = params[1];
             const std::string& value = params[2];
+            if (key == "slot") {
+              // A button of the mode row: an HVAC mode, or a preset of a Home Assistant climate (#609)
+              const ClimateSlotAction action = climate_slot_action(static_cast<uint8_t>(atoi(value.c_str()) - 1));
+              if (action.kind == ClimateSlotKind::MODE) {
+                change_climate_state->execute("hvac_mode", action.value.c_str());
+              } else if (action.kind == ClimateSlotKind::PRESET and !climate_embedded_visible) {
+                ESP_LOGD("${TAG_PAGE_CLIMATE}", "Dispatch: climate.set_preset_mode entity='%s' preset_mode='%s'",
+                         detailed_entity->state.c_str(), action.value.c_str());
+                fire_ha_event("action_call", {
+                  {"action", "climate.set_preset_mode"},
+                  {"entity", detailed_entity->state.c_str()},
+                  {"key", "preset_mode"},
+                  {"value", action.value.c_str()}
+                });
+              }  // if (mode or preset)
+              return;
+            }  // if (slot)
             change_climate_state->execute(key.c_str(), value.c_str());
           }
 
@@ -145,6 +181,7 @@ script:
                                static_cast<uint16_t>(view.total_steps), view.temp_offset, std::string(view.icon));
           climate_mode_buttons_render(*entity);
           climate_presets_render(*entity);
+          climate_fan_modes_render(*entity);
 
   - id: !extend localization_units_separator_update
     then:
@@ -178,6 +215,18 @@ script:
   - id: !extend picker_selected  # Defined by page_popup_select
     then:
       - lambda: |-
+          if (context == CLIMATE_FAN_MODE_CONTEXT) {
+            if (mask == 0) return;  // A climate always has a fan mode, so a deselect tap is a no-op
+            ESP_LOGD("${TAG_PAGE_CLIMATE}", "Dispatch: climate.set_fan_mode entity='%s' fan_mode='%s'", entity.c_str(),
+                                                                                                      value.c_str());
+            fire_ha_event("action_call", {
+              {"action", "climate.set_fan_mode"},
+              {"entity", entity.c_str()},
+              {"key", "fan_mode"},
+              {"value", value.c_str()}
+            });
+            return;
+          }  // if (fan mode)
           if (context != CLIMATE_PRESET_MODE_CONTEXT) return;
           if (entity == "${CLIMATE_EMBEDDED_SENTINEL}") return;  // Handled by the climate add-on
 
@@ -202,6 +251,7 @@ script:
       - lambda: |-
           if (new_page_id != get_page_id("climate")) return;
           display_entity_keep = true;
+          climate_slots_reset();  // Each HVAC mode on its own button, until a Home Assistant climate is rendered
 
   - id: set_climate
     mode: restart
