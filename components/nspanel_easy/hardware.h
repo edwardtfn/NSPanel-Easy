@@ -118,8 +118,8 @@ struct HwButtonBarArea {
 /**
  * @brief Hardware button bar areas, indexed by [display model][button]
  *
- * Display model (display_mode - 1): 0 = EU, 1 = US Portrait, 2 = US Landscape, 3 = Blank (no bars),
- * 4 = US Landscape with the buttons on the left.
+ * Display model, by the position of its option in the "Display model" selector: 0 = EU, 1 = US Portrait,
+ * 2 = US Landscape, 3 = US Landscape with the buttons on the left, 4 = Blank (no bars).
  * Button: 0 = left, 1 = right.
  *
  * The last model is the US Landscape one rotated by 180 degrees, so its bars are the same ones
@@ -130,8 +130,8 @@ constexpr HwButtonBarArea HW_BUTTON_BAR_AREAS[HW_BUTTON_BAR_MODELS][2] = {
     {{47, 312, 120, 3}, {288, 312, 120, 3}},  // EU
     {{16, 471, 120, 3}, {183, 471, 120, 3}},  // US Portrait
     {{467, 173, 3, 120}, {467, 27, 3, 120}},  // US Landscape
-    {{0, 0, 0, 0}, {0, 0, 0, 0}},             // Blank
     {{10, 27, 3, 120}, {10, 173, 3, 120}},    // US Landscape, buttons on the left
+    {{0, 0, 0, 0}, {0, 0, 0, 0}},             // Blank
 };
 
 }  // namespace esphome::nspanel_easy
