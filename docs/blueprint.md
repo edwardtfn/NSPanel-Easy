@@ -122,6 +122,7 @@ Calibration pauses and keeps the current correction when:
 
 When enabled, tapping the value (or its icon) on the Home page opens a page with a graph of the entity over the last 24 hours, one point per 5 minutes.
 The page also shows the current value, the lower and upper bounds of the scale (with a line at each bound) and the local time every 6 hours below the graph.
+The current value and the icon use the text and icon colors chosen for that value on the Home page; with the default colors, they use the colors of the theme.
 While the page is open, a new point is added every 5 minutes.
 
 The graph is drawn from the 5-minute means that Home Assistant keeps in the recorder statistics, so:

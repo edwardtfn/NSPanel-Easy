@@ -144,6 +144,17 @@ script:
           disp1->set_component_text(hmi::graph::VALUE_NOW.name, "");
           disp1->set_component_text(hmi::graph::VALUE_MIN.name, "");
           disp1->set_component_text(hmi::graph::VALUE_MAX.name, "");
+          // The current value and the icon keep the colours chosen for this value on the Home page (#786).
+          // The page sets its theme colours when it loads, which stay for a colour left at its default.
+          for (uint8_t idx = 0; idx < HOME_VALUE_COUNT; ++idx) {
+            if (graph_entities[idx].empty() or graph_entities[idx] != detailed_entity->state) continue;
+            uint16_t color = 0;
+            if (home_value_color_get(idx, false, color))
+              disp1->set_component_font_color(hmi::graph::VALUE_NOW.name, color);
+            if (home_value_color_get(idx, true, color))
+              disp1->set_component_font_color(hmi::graph::ICON_STATE.name, color);
+            break;
+          }  // for each home value
 
   - id: page_graph_draw
     mode: restart

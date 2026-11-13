@@ -112,6 +112,19 @@ static constexpr uint8_t HOME_VALUE_COUNT = 4;
 bool home_value_color_store(const char *component, uint16_t color);
 
 /**
+ * @brief Get the colour chosen in the Blueprint for a home value or its icon.
+ *
+ * For the pages that show the same value elsewhere, as the graph page, so it keeps its colour there.
+ *
+ * @param idx Zero-based slot index (value01 is 0).
+ * @param icon true for the colour of the icon, false for the colour of the text.
+ * @param color Receives the RGB565 colour, when one was chosen.
+ * @return false when the slot does not exist or its colour is the default one, which the
+ *         Blueprint does not push; the caller then keeps the colour of its own page.
+ */
+bool home_value_color_get(uint8_t idx, bool icon, uint16_t &color);
+
+/**
  * @brief Paint the home values and their icons.
  *
  * Grey while api_stale is set, the shadowed colours otherwise. Called when the
