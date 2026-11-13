@@ -90,6 +90,43 @@ inline void brightness_user_action() {
 }
 extern bool display_entity_keep;
 extern uint8_t display_mode_eeprom;
+
+/**
+ * @brief ID of each display model, by the position of its option in the "Display model" selector.
+ *
+ * The ID is what the display stores (EEPROM) and reports. It was the position plus one until the
+ * model with the buttons on the left was added: that one is listed next to the US Landscape model,
+ * but its ID comes after Blank's, as the IDs already stored on the displays cannot change.
+ *
+ * Positions: EU, US, US Landscape, US Landscape (buttons on the left), Blank.
+ */
+constexpr uint8_t DISPLAY_MODE_IDS[] = {1, 2, 3, 5, 4};
+
+/// @brief Number of display models.
+constexpr uint8_t DISPLAY_MODE_COUNT = sizeof(DISPLAY_MODE_IDS) / sizeof(DISPLAY_MODE_IDS[0]);
+
+/**
+ * @brief ID of the display model at a position of the "Display model" selector.
+ *
+ * @param index Position of the option.
+ * @return The ID stored on the display, or 0 when the position is not a display model.
+ */
+constexpr uint8_t display_mode_id_of(size_t index) { return index < DISPLAY_MODE_COUNT ? DISPLAY_MODE_IDS[index] : 0; }
+
+/**
+ * @brief Position in the "Display model" selector of the display model with an ID.
+ *
+ * @param mode_id The ID stored on the display.
+ * @return The position of the option, or UINT8_MAX when the ID is not a display model.
+ */
+constexpr uint8_t display_mode_index_of(uint8_t mode_id) {
+  for (uint8_t index = 0; index < DISPLAY_MODE_COUNT; ++index) {
+    if (DISPLAY_MODE_IDS[index] == mode_id) {
+      return index;
+    }  // if (found)
+  }  // for each display model
+  return UINT8_MAX;
+}
 extern bool display_portrait;
 extern bool display_valid;
 
