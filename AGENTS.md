@@ -85,6 +85,9 @@ When a change affects a feature that is only included by specific packages (clim
 - Title format (enforced by `validate_pr_title.yml`): `<prefix>: <Description starting with a capital letter>`, lowercase prefix, no trailing period.
 - Allowed prefixes: `fix`, `feat`, `improve`, `ci`, `docs`, `style`, `build`, `refactor`, `test`, `chore`. Use `improve` when behavior is unchanged but the implementation is better.
 - PR titles become release titles verbatim; write them for end users.
+- Do not label pull requests by hand: `labeler.yml` sets the type label from the title prefix (it decides the section of the release notes)
+  and the `Area: ...` labels from the files changed. A new area or prefix needs its rule in `.github/labeler.yml` or in that workflow,
+  and its label in the repository. See [CONTRIBUTING.md](CONTRIBUTING.md#labels).
 - Reference related issues in the description (`Closes #N` when resolved; a plain `#N` reference otherwise).
 - Do not hard-wrap text in PR descriptions, issues or release notes.
 - Keep PRs scoped to one logical change. Unrelated fixes go in separate PRs.
