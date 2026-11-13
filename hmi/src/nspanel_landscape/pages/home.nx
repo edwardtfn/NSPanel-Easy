@@ -73,12 +73,11 @@ on home.load:
     }
   }
   // HW Button's labels
-  if(display_mode==3)
+  if(display_mode==3||display_mode==5)
   {
     vis left_bt_text,0
     vis right_bt_text,0
   }
-  dim=brightness
   sendme
 
 on swipe.down:

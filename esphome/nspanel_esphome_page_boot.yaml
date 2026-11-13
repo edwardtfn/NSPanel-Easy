@@ -23,17 +23,16 @@ display:
             ESP_LOGI("${TAG_PAGE_BOOT}", "Nextion display acknowledged. Requesting update from the blueprint...");
             disp1->send_command("display_ack=1");
             if (disp1->is_setup()) {
-              // The display (re)started with the brightness values from its Program.s, also after a restart
-              // in the middle of a run, which `on_setup` does not see. Send the configured values again and
-              // apply the brightness the panel should have, as the firmware's cached value no longer matches.
-              // While booting, the regular brightness holds the dimmed value (#485).
-              const float regular = system_flags.boot_completed ? display_brightness->state :
-                                                                  display_dim_brightness->state;
-              disp1->send_command_printf("brightness=%i", static_cast<int>(regular));
+              // The display (re)started dimmed, with the brightness values from its Program.s, also after a
+              // restart in the middle of a run, which `on_setup` does not see. Send the configured values again
+              // and apply the brightness the panel should have, as the firmware's cached value no longer matches.
+              // While booting, or held dimmed, the display stays dimmed (#485, #656).
+              disp1->send_command_printf("brightness=%i", static_cast<int>(display_brightness->state));
               disp1->send_command_printf("brightness_dim=%i", static_cast<int>(display_dim_brightness->state));
               disp1->send_command_printf("brightness_sleep=%i", static_cast<int>(display_sleep_brightness->state));
               brightness_current = UINT8_MAX;
-              set_brightness->execute(regular);
+              set_brightness->execute((brightness_dim_hold or brightness_auto_hold) ?
+                                      display_dim_brightness->state : display_brightness->state);
             }  // if (disp1->is_setup())
             system_flags.display_resync_pending = true;
             boot_request_blueprint_settings->execute("display_ack");
@@ -120,8 +119,7 @@ script:
             };
 
             const uint8_t display_mode_from_tft = parse_uint8_strict(params[2]);
-            const bool valid_display_mode_from_tft = display_mode_from_tft > 0
-                                                  && display_mode_from_tft <= ${DISPLAY_MODES.BLANK.ID};
+            const bool valid_display_mode_from_tft = display_mode_index_of(display_mode_from_tft) != UINT8_MAX;
             ESP_LOGI("${TAG_PAGE_BOOT}", "Display params:");
             ESP_LOGI("${TAG_PAGE_BOOT}", "  Contract ver:  %" PRIu8, protocol_version);
             ESP_LOGI("${TAG_PAGE_BOOT}", "  Mode:          %" PRIu8, display_mode_from_tft);
@@ -132,7 +130,7 @@ script:
                 if (valid_display_mode_from_tft) {
                   display_mode_eeprom = display_mode_from_tft;
                   auto call = display_model->make_call();
-                  call.set_index(display_mode_from_tft - 1);
+                  call.set_index(display_mode_index_of(display_mode_from_tft));
                   call.perform();
                 } else {
                   ESP_LOGW("${TAG_PAGE_BOOT}", "  Invalid display_mode: %" PRIu8, display_mode_from_tft);
@@ -143,7 +141,7 @@ script:
                 if (valid_display_mode_from_tft) {
                   display_mode_eeprom = display_mode_from_tft;
                   auto call = display_model->make_call();
-                  call.set_index(display_mode_from_tft - 1);
+                  call.set_index(display_mode_index_of(display_mode_from_tft));
                   call.perform();
                 } else {
                   ESP_LOGW("${TAG_PAGE_BOOT}", "  Invalid display_mode: %" PRIu8, display_mode_from_tft);
@@ -157,9 +155,9 @@ script:
 
                 if (magic_flag_found_at_boot == 0) {
                   ESP_LOGW("${TAG_PAGE_BOOT}", "  EEPROM was uninitialized at boot — using hard-coded default");
-                  if (hard_coded_mode > 0 && hard_coded_mode <= ${DISPLAY_MODES.BLANK.ID}) {
+                  if (display_mode_index_of(hard_coded_mode) != UINT8_MAX) {
                     auto call = display_model->make_call();
-                    call.set_index(hard_coded_mode - 1);
+                    call.set_index(display_mode_index_of(hard_coded_mode));
                     call.perform();
                   } else {
                     ESP_LOGW("${TAG_PAGE_BOOT}", "  Invalid hard_coded_mode: %" PRIu8, hard_coded_mode);
@@ -167,7 +165,7 @@ script:
                 } else {
                   if (valid_display_mode_from_tft) {
                     auto call = display_model->make_call();
-                    call.set_index(display_mode_from_tft - 1);
+                    call.set_index(display_mode_index_of(display_mode_from_tft));
                     call.perform();
                   } else {
                     ESP_LOGW("${TAG_PAGE_BOOT}", "  Invalid display_mode: %" PRIu8, display_mode_from_tft);
@@ -219,9 +217,11 @@ script:
       - delay: ${PAGE_BOOT_DELAY_TO_EXIT}
       - script.wait: wait_for_version_tft
       - lambda: |-
-          // While the boot is not completed, the display's `on_page` keeps the wake-up page dimmed (#485)
-          if (current_page_id == get_page_id("boot"))
+          // Not a user action: the wake-up page stays dimmed, unless the boot page was touched (#485, #656)
+          if (current_page_id == get_page_id("boot")) {
+            brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));
             wakeup->execute(false);
+          }  // if (current_page_id == get_page_id("boot"))
 
   - id: page_boot_show_blueprint_version
     mode: single
@@ -277,6 +277,7 @@ script:
       - lambda: |-
           if (current_page_id != get_page_id("boot")) return;
           if (version_tft->state.empty()) return;
+          brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));  // Not a user action (#656)
           wakeup->execute(true);
 
 text_sensor:

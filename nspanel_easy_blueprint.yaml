@@ -10338,6 +10338,8 @@ actions:
                                         - max_temp
                                         - preset_modes
                                         - preset_mode
+                                        - fan_modes
+                                        - fan_mode
                                 - *send_entity_snapshot
                             - alias: Button page
                               conditions:

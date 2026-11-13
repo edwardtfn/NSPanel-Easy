@@ -562,3 +562,18 @@ picc = "picture-0037"
 pco = "#292c29"
 txt = ""
 txt_maxl = 3
+
+[[component]]
+name = "fan_button"
+type = "text"
+sendkey = 3
+x = 251
+y = 146
+w = 40
+h = 45
+sta = 0
+font = "font-08"
+picc = "picture-0037"
+pco = "#292c29"
+txt = ""
+txt_maxl = 3
