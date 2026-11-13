@@ -15,9 +15,12 @@ substitutions:
 
 display:
   - id: !extend disp1
-    start_up_page: ${PAGE_BOOT_ID}
+    # No `start_up_page`: the display is not sent to the boot page when ESPHome connects. It starts on the
+    # screensaver and waits there (#615), and it keeps its page when only ESPHome restarts.
     on_setup:
       then:
+        # The page the display is showing is not known here, so ask for it (answered through `on_page`)
+        - lambda: disp1->send_command("sendme");
         # Ask the display for its settings (model, TFT version), instead of waiting for it to send them
         - script.execute: display_report_request
     # The display settings, sent one by one by the TFT's `report_display` macro when ESPHome asks for them
@@ -42,6 +45,8 @@ display:
       then:
         - lambda: |-
             if (key == "display_report") {
+              // Tells the display that ESPHome is connected, which ends its wait on the screensaver or boot page
+              disp1->send_command("esphome=1");
               display_params_apply->execute(display_report.display_mode, display_report.hard_coded_mode,
                                             display_report.tft_version, display_report.magic_flag);
               display_report.reset();
@@ -221,6 +226,11 @@ script:
                 display_report.reset();
                 disp1->send_command("call report_display");
             - delay: 3s
+      - lambda: |-
+          if (system_flags.display_settings_received) return;
+          // No answer: a TFT older than 22.6 has no such macro, and only sends its settings from its boot page
+          ESP_LOGW("${TAG_PAGE_BOOT}", "No display report, opening the boot page for the settings of an older TFT");
+          goto_page->execute(get_page_id("boot"));
 
   # Applies the display settings reported by the TFT: the display model, from the mode stored on the display
   # or from the default of its TFT file, and the TFT version.
@@ -269,6 +279,31 @@ script:
           ESP_LOGI("${TAG_PAGE_BOOT}", "  TFT version:   %s%s", tft_version.c_str(), tft_ver_valid ? "" : " (INVALID)");
 
           system_flags.display_settings_received = tft_ver_valid && display_valid;
+
+          // A display that is ready, with a TFT this firmware can use, shows the wake-up page right away,
+          // instead of waiting on the boot page for Wi-Fi, Home Assistant and the Blueprint (#615).
+          // With an older TFT, the panel stays on the boot page until the TFT is updated.
+          if (system_flags.display_settings_received and !system_flags.boot_completed and
+              tft_ver_gte(tft_version, "${min_tft_version}")) {
+            boot_show_wakeup_page->execute();
+          }  // if (display ready while booting)
+
+  # Opens the wake-up page while the boot sequence is still running, with the settings stored on the panel.
+  # What comes from Home Assistant and from the Blueprint is shown as each one becomes available.
+  - id: boot_show_wakeup_page
+    mode: single
+    then:
+      # The settings the pages need, which are stored on the panel: brightness, wake-up page, fonts, theme
+      - script.execute: boot_nextion
+      - script.wait: boot_nextion
+      - script.execute: theme_update
+      - script.wait: theme_update
+      - lambda: |-
+          if (system_flags.boot_completed) return;
+          if (current_page_id != get_page_id("screensaver") and current_page_id != get_page_id("boot")) return;
+          ESP_LOGI("${TAG_PAGE_BOOT}", "Display ready, opening the wake-up page");
+          brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));  // Not a user action (#656)
+          wakeup->execute(false);
 
   - id: page_boot
     mode: single
