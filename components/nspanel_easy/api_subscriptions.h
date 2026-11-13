@@ -44,7 +44,7 @@ enum class Visibility : uint8_t {
 };
 
 /// @brief Persisted format version. Bump whenever SubBinding's layout changes.
-static constexpr uint8_t SUB_FORMAT_VERSION = 7;  // 7: The header carries a checksum of the bindings (#374)
+static constexpr uint8_t SUB_FORMAT_VERSION = 8;  // 8: Bindings stored packed, without the unused bytes (#790)
 
 /// @brief Upper bound on bindings; storage is allocated to the configured count, not this.
 #ifndef NSPANEL_EASY_SUB_MAX
@@ -53,18 +53,19 @@ static constexpr uint8_t SUB_FORMAT_VERSION = 7;  // 7: The header carries a che
 static constexpr uint16_t SUB_MAX = NSPANEL_EASY_SUB_MAX;
 
 /**
- * @brief Bindings per persisted NVS chunk.
+ * @brief Bytes per persisted NVS chunk of the packed bindings.
  *
- * Deliberately small. NVS stores each preference as a single blob and needs
- * room for the new copy before releasing the old, so a large blob can fail with
- * ESP_ERR_NVS_NOT_ENOUGH_SPACE on a partition that is merely fragmented rather
- * than full. At 4 bindings a chunk is under 512 bytes, which fits comfortably
- * inside one NVS page; at 16 it was roughly 1.8 KB.
+ * The bindings are stored packed: each one is a flags byte followed by its five
+ * strings, each with only its own characters and a null terminator, so a typical
+ * binding takes about a third of sizeof(SubBinding). The packed stream is then
+ * cut into chunks of this size, each stored as one NVS blob.
+ *
+ * Small on purpose: NVS needs room for the new copy of a blob before releasing
+ * the old one, so a large blob can fail with ESP_ERR_NVS_NOT_ENOUGH_SPACE on a
+ * partition that is merely fragmented. 480 bytes is 15 NVS entries, plus its
+ * headers, well inside one NVS page.
  */
-static constexpr uint16_t SUB_CHUNK_SIZE = 4;
-
-/// @brief Number of NVS chunks needed to hold SUB_MAX bindings.
-static constexpr uint16_t SUB_CHUNK_COUNT = (SUB_MAX + SUB_CHUNK_SIZE - 1) / SUB_CHUNK_SIZE;
+static constexpr uint16_t SUB_PACK_CHUNK_BYTES = 480;
 
 /**
  * @brief Size of the stored entity_id buffer, including the null terminator.
@@ -74,10 +75,11 @@ static constexpr uint16_t SUB_CHUNK_COUNT = (SUB_MAX + SUB_CHUNK_SIZE - 1) / SUB
  * an entity_id from a location or a device name can exceed any fixed default.
  * An entity_id that does not fit is not bound: the binding is cleared and a
  * warning reports the size to set. Raising this costs SUB_ENTITY_LEN bytes per live
- * binding in RAM and widens every persisted chunk by four times the increase,
- * which is why it is a per-installation knob rather than a generous constant.
+ * binding in RAM, which is why it is a per-installation knob rather than a generous
+ * constant. It does not change the storage needed, as the bindings are stored packed.
  *
- * The value takes part in the persistence contract; see SubHeader::entity_len.
+ * A stored entity_id longer than this (after lowering it) fails the integrity check
+ * at boot, and the Blueprint sends the bindings again.
  */
 #ifndef NSPANEL_EASY_SUB_ENTITY_LEN
 #define NSPANEL_EASY_SUB_ENTITY_LEN 96
@@ -173,9 +175,20 @@ struct SubBinding {
   bool inverted;                            ///< Show while the entity is inactive
 };
 
-/// @brief One persisted NVS chunk.
-struct SubChunk {
-  SubBinding bindings[SUB_CHUNK_SIZE];
+/// @brief Longest packed binding: the flags byte and the five strings at their longest, with their terminators.
+static constexpr uint16_t SUB_PACK_BINDING_MAX =
+    1 + SUB_ENTITY_LEN + SUB_PAGE_LEN + SUB_COMPONENT_LEN + SUB_DEVICE_CLASS_LEN + SUB_ATTR_LEN;
+
+/// @brief Longest packed stream, for SUB_MAX bindings.
+static constexpr uint32_t SUB_PACK_MAX_BYTES = static_cast<uint32_t>(SUB_MAX) * SUB_PACK_BINDING_MAX;
+
+/// @brief Number of NVS chunks needed for the longest packed stream.
+static constexpr uint16_t SUB_PACK_CHUNK_COUNT =
+    static_cast<uint16_t>((SUB_PACK_MAX_BYTES + SUB_PACK_CHUNK_BYTES - 1) / SUB_PACK_CHUNK_BYTES);
+
+/// @brief One persisted NVS chunk of the packed stream; the last one is padded with zeros.
+struct SubPackChunk {
+  uint8_t bytes[SUB_PACK_CHUNK_BYTES];
 };
 
 /**
