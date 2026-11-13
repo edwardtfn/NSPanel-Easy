@@ -5,9 +5,8 @@ I've seen multiple questions about the possibilities of using the US panel in Eu
 ## The differences between the EU and US models
 
 Probably the Sonoff page will be the best source of info around this, so please take a look there first:
-
-1. [Sonoff NSPanel product page](https://sonoff.tech/product/central-control-panel/nspanel/)
-1. [Sonoff NSPanel user's manual](https://sonoff.tech/wp-content/uploads/2021/11/%E8%AF%B4%E6%98%8E%E4%B9%A6-NSPanel-V1.1-20210826.pdf)
+the [Sonoff NSPanel product page](https://sonoff.tech/product/central-control-panel/nspanel/) has the specifications
+of both models and the link to the user's manual, in its "Specs & User Manual" section.
 
 ### Installing a US panel in EU
 

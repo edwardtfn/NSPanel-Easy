@@ -55,6 +55,9 @@ LightFeatures light_features(const SnapshotEntity &entity) {
   // temperature only lights (as a tuple, which the Blueprint's `is list` test never matched)
   features.color = (supported & 16) != 0 || has_mode({"hs", "xy", "rgb", "rgbw", "rgbww"});
   features.effects = (supported & 4) != 0;
+  // The `white` colour mode is a single white, selected with a button as in Home Assistant. With a colour
+  // temperature, the slider already brings the light back to white, and the button is its tab.
+  features.white = !features.color_temp && has_mode({"white"});
   return features;
 }
 

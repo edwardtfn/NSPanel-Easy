@@ -42,6 +42,52 @@ extern uint8_t brightness_current;
  * display goes to sleep.
  */
 extern bool brightness_dim_hold;
+/**
+ * @brief Holds the display at the dimmed brightness after a change the user did not ask for (#656).
+ *
+ * The regular brightness only returns on a user action. Raised by the automatic page changes (the
+ * fallback to the home page, and the wake-up after the boot or from the screensaver without a touch)
+ * when the display is not at the regular brightness, and while the panel boots. While raised,
+ * `timer_dim` restores the dimmed brightness instead of the regular one. Released by a touch on the
+ * screen, a hardware button, a wake-up asked by a sensor or through the API, a page opened through
+ * the API, or when the display goes to sleep.
+ *
+ * @see brightness_auto_hold_arm()
+ * @see brightness_user_action()
+ */
+extern bool brightness_auto_hold;
+/**
+ * @brief Marks the page change or wake-up that follows as automatic, so it keeps `brightness_auto_hold`.
+ *
+ * One-shot: consumed by the page change, or by `wakeup` when it does not change the page.
+ */
+extern bool brightness_auto_hold_armed;
+
+/**
+ * @brief Announce an automatic page change or wake-up, right before starting it.
+ *
+ * The display keeps the brightness it has: when it is not at the regular brightness (dimmed,
+ * sleeping or booting), it is held at the dimmed brightness until a user action.
+ *
+ * @param regular The regular brightness (%), as set in "Display Brightness".
+ */
+inline void brightness_auto_hold_arm(const uint8_t regular) {
+  if (brightness_current != regular) {
+    brightness_auto_hold = true;
+  }  // if (brightness_current != regular)
+  brightness_auto_hold_armed = true;
+}
+
+/**
+ * @brief Record a user action on the panel, which always restores the regular brightness.
+ *
+ * Releases both brightness holds; the caller resets the timers, which applies the brightness.
+ */
+inline void brightness_user_action() {
+  brightness_dim_hold = false;
+  brightness_auto_hold = false;
+  brightness_auto_hold_armed = false;
+}
 extern bool display_entity_keep;
 extern uint8_t display_mode_eeprom;
 

@@ -29,10 +29,27 @@ static const char *const TAG = "nspanel.page.climate";
 
 bool climate_embedded_visible = false;
 
+/// @brief What a slot of the mode row does: a kind, and an index for it.
+struct ClimateSlot {
+  ClimateSlotKind kind;  ///< Mode, preset, or not used
+  uint8_t index;         ///< Index in CLIMATE_MODE_BUTTONS (mode) or in climate_preset_modes (preset)
+};
+/// @brief The slots of the mode row, as last laid out; each mode on its own button by default.
+static ClimateSlot climate_slots[CLIMATE_SLOTS] = {
+    {ClimateSlotKind::MODE, 0}, {ClimateSlotKind::MODE, 1}, {ClimateSlotKind::MODE, 2}, {ClimateSlotKind::MODE, 3},
+    {ClimateSlotKind::MODE, 4}, {ClimateSlotKind::MODE, 5}, {ClimateSlotKind::MODE, 6},
+};
+/// @brief Whether the presets of the last climate rendered are shown as buttons in the mode row.
+static bool climate_preset_buttons = false;
+
 /// @brief Presets of the Home Assistant climate shown on the page, for the picker.
 static std::vector<std::string> climate_preset_modes;
 /// @brief Its active preset; empty when none.
 static std::string climate_preset_mode;
+/// @brief Fan modes of the Home Assistant climate shown on the page, for the picker.
+static std::vector<std::string> climate_fan_modes;
+/// @brief Its active fan mode; empty when unknown.
+static std::string climate_fan_mode;
 
 /**
  * @brief Numeric attribute.
@@ -128,50 +145,147 @@ ClimateView climate_view(const SnapshotEntity &entity) {
   return view;
 }
 
-void climate_mode_buttons_render(const SnapshotEntity &entity) {
-  if (nextion_display == nullptr) {
-    return;
-  }  // if (no display)
-  const std::vector<std::string> *modes = entity.list("hvac_modes");
-  for (const ClimateModeButton &button : CLIMATE_MODE_BUTTONS) {
-    const bool supported =
-        modes != nullptr && std::find(modes->begin(), modes->end(), button.hvac_mode) != modes->end();
-    if (supported) {
-      nextion_display->show_component(button.name);
-      nextion_display->set_component_font_color(
-          button.font_color_path, (entity.state == button.hvac_mode) ? button.color_active : button.color_inactive);
-    } else {
-      nextion_display->hide_component(button.name);
-    }  // if (supported)
-  }  // for (button : CLIMATE_MODE_BUTTONS)
-}
+/// @brief Whether a preset is the one that clears the selection.
+static bool climate_preset_is_none(const std::string &preset) { return str_equals_case_insensitive(preset, "none"); }
 
-void climate_presets_render(const SnapshotEntity &entity) {
+/// @brief Keep the presets of a Home Assistant climate, and its active preset, from the snapshot.
+static void climate_presets_update(const SnapshotEntity &entity) {
   const optional<uint32_t> features = parse_number<uint32_t>(entity.attribute("supported_features"));
   const std::vector<std::string> *modes = entity.list("preset_modes");
   const bool supported = (features.value_or(0) & 16) != 0 && modes != nullptr && !modes->empty();  // PRESET_MODE
   climate_preset_modes = supported ? *modes : std::vector<std::string>{};
   climate_preset_mode = climate_unusable(entity.attribute("preset_mode")) ? "" : entity.attribute("preset_mode");
+}
+
+/// @brief Icon of a preset: the one Home Assistant uses for a standard preset, else the generic one.
+static const char *climate_preset_icon(const std::string &preset) {
+  for (uint8_t idx = 1; idx < CLIMATE_PRESET_NAMES_COUNT; ++idx) {
+    if (str_equals_case_insensitive(preset, climate_preset_names[idx])) {
+      return climate_preset_icons[idx];
+    }  // if (standard preset)
+  }  // for each standard preset
+  return climate_preset_icons[0];
+}
+
+void climate_slots_reset() {
+  for (uint8_t slot = 0; slot < CLIMATE_SLOTS; ++slot) {
+    climate_slots[slot] = {ClimateSlotKind::MODE, slot};
+  }  // for each slot
+  climate_preset_buttons = false;
+}
+
+bool climate_presets_as_buttons() { return climate_preset_buttons; }
+
+ClimateSlotAction climate_slot_action(const uint8_t slot) {
+  ClimateSlotAction action;
+  if (slot >= CLIMATE_SLOTS) {
+    return action;
+  }  // if (not a slot)
+  const ClimateSlot &entry = climate_slots[slot];
+  if (entry.kind == ClimateSlotKind::MODE && entry.index < CLIMATE_SLOTS) {
+    action.kind = ClimateSlotKind::MODE;
+    action.value = CLIMATE_MODE_BUTTONS[entry.index].hvac_mode;
+  } else if (entry.kind == ClimateSlotKind::PRESET && entry.index < climate_preset_modes.size()) {
+    action.kind = ClimateSlotKind::PRESET;
+    action.value = climate_preset_modes[entry.index];
+    if (action.value == climate_preset_mode) {
+      // A tap on the active preset leaves it, when the climate has a preset for that
+      for (const std::string &preset : climate_preset_modes) {
+        if (climate_preset_is_none(preset)) {
+          action.value = preset;
+          break;
+        }  // if (the preset that clears the selection)
+      }  // for each preset
+    }  // if (active preset)
+  }  // if (mode or preset)
+  return action;
+}
+
+void climate_mode_buttons_render(const SnapshotEntity &entity) {
+  climate_presets_update(entity);
+
+  // The HVAC modes the climate supports, in display order, and its presets, without the one that clears them
+  uint8_t mode_list[CLIMATE_SLOTS];
+  uint8_t mode_count = 0;
+  const std::vector<std::string> *modes = entity.list("hvac_modes");
+  for (uint8_t idx = 0; idx < CLIMATE_SLOTS; ++idx) {
+    if (modes != nullptr &&
+        std::find(modes->begin(), modes->end(), CLIMATE_MODE_BUTTONS[idx].hvac_mode) != modes->end()) {
+      mode_list[mode_count++] = idx;
+    }  // if (supported)
+  }  // for each mode
+  uint8_t preset_list[CLIMATE_PRESET_BUTTONS_MAX];
+  uint8_t preset_count = 0;
+  bool presets_fit = true;
+  for (size_t idx = 0; idx < climate_preset_modes.size() && idx <= UINT8_MAX; ++idx) {
+    if (climate_preset_is_none(climate_preset_modes[idx])) {
+      continue;
+    }  // if (the preset that clears the selection)
+    if (preset_count >= CLIMATE_PRESET_BUTTONS_MAX) {
+      presets_fit = false;
+      break;
+    }  // if (too many presets)
+    preset_list[preset_count++] = static_cast<uint8_t>(idx);
+  }  // for each preset
+
+  // Layout of the row. With a few presets, they are shown as buttons (#609): the modes from the left and
+  // the presets from the right, so each group stays together. Otherwise each mode is on its own button.
+  climate_preset_buttons = presets_fit && preset_count > 0 && (mode_count + preset_count) <= CLIMATE_SLOTS;
+  for (uint8_t slot = 0; slot < CLIMATE_SLOTS; ++slot) {
+    climate_slots[slot] = {ClimateSlotKind::NONE, 0};
+  }  // for each slot
+  if (climate_preset_buttons) {
+    for (uint8_t idx = 0; idx < mode_count; ++idx) {
+      climate_slots[idx] = {ClimateSlotKind::MODE, mode_list[idx]};
+    }  // for each mode
+    for (uint8_t idx = 0; idx < preset_count; ++idx) {
+      climate_slots[CLIMATE_SLOTS - preset_count + idx] = {ClimateSlotKind::PRESET, preset_list[idx]};
+    }  // for each preset
+  } else {
+    for (uint8_t idx = 0; idx < mode_count; ++idx) {
+      climate_slots[mode_list[idx]] = {ClimateSlotKind::MODE, mode_list[idx]};
+    }  // for each mode
+  }  // if (presets as buttons)
+
   if (nextion_display == nullptr) {
     return;
   }  // if (no display)
-  if (!supported) {
+  for (uint8_t slot = 0; slot < CLIMATE_SLOTS; ++slot) {
+    const ClimateModeButton &button = CLIMATE_MODE_BUTTONS[slot];  // The component of the slot
+    const ClimateSlot &entry = climate_slots[slot];
+    if (entry.kind == ClimateSlotKind::MODE) {
+      const ClimateModeButton &mode = CLIMATE_MODE_BUTTONS[entry.index];
+      nextion_display->set_component_text(button.name, mode.icon);
+      nextion_display->set_component_font_color(
+          button.font_color_path, (entity.state == mode.hvac_mode) ? mode.color_active : mode.color_inactive);
+      nextion_display->show_component(button.name);
+    } else if (entry.kind == ClimateSlotKind::PRESET) {
+      const std::string &preset = climate_preset_modes[entry.index];
+      nextion_display->set_component_text(button.name, climate_preset_icon(preset));
+      // Theme colors from the display, so the button follows the light and dark themes
+      nextion_display->send_command_printf("%s.pco=%s", button.font_color_path,
+                                           (preset == climate_preset_mode) ? "color_pco_main" : "color_pco_secondary");
+      nextion_display->show_component(button.name);
+    } else {
+      nextion_display->hide_component(button.name);
+    }  // if (mode, preset or not used)
+  }  // for each slot
+}
+
+void climate_presets_render(const SnapshotEntity &entity) {
+  climate_presets_update(entity);
+  if (nextion_display == nullptr) {
+    return;
+  }  // if (no display)
+  if (climate_preset_modes.empty() || climate_preset_buttons) {
+    // No presets, or shown as buttons in the mode row (see climate_mode_buttons_render)
     nextion_display->hide_component(hmi::climate::PRESET_BUTTON.name);
     return;
-  }  // if (no presets)
+  }  // if (no preset picker)
 
   // Standard presets get the icon Home Assistant uses for them; none or a custom preset, the generic one
-  const char *icon = climate_preset_icons[0];
-  bool active = false;
-  if (!climate_preset_mode.empty()) {
-    active = !str_equals_case_insensitive(climate_preset_mode, "none");
-    for (uint8_t idx = 1; idx < CLIMATE_PRESET_NAMES_COUNT; ++idx) {
-      if (str_equals_case_insensitive(climate_preset_mode, climate_preset_names[idx])) {
-        icon = climate_preset_icons[idx];
-        break;
-      }  // if (standard preset)
-    }  // for each standard preset
-  }  // if (a preset is set)
+  const bool active = !climate_preset_mode.empty() && !climate_preset_is_none(climate_preset_mode);
+  const char *icon = climate_preset_icon(climate_preset_mode);
   nextion_display->set_component_text(hmi::climate::PRESET_BUTTON.name, icon);
   // Theme colors from the display, so the button follows the light and dark themes
   nextion_display->send_command_printf("climate.%s.pco=%s", hmi::climate::PRESET_BUTTON.name,
@@ -195,6 +309,68 @@ bool climate_presets_to_picker(const std::string &entity_id) {
       popup_select_cache_mask = (1u << idx);
       break;
     }  // if (active preset)
+  }  // for each option
+  return true;
+#else   // NSPANEL_EASY_PAGE_POPUP_SELECT
+  (void) entity_id;
+  return false;
+#endif  // NSPANEL_EASY_PAGE_POPUP_SELECT
+}
+
+void climate_fan_modes_render(const SnapshotEntity &entity) {
+  const optional<uint32_t> features = parse_number<uint32_t>(entity.attribute("supported_features"));
+  const std::vector<std::string> *modes = entity.list("fan_modes");
+  const bool supported = (features.value_or(0) & 8) != 0 && modes != nullptr && !modes->empty();  // FAN_MODE
+  climate_fan_modes = supported ? *modes : std::vector<std::string>{};
+  climate_fan_mode = climate_unusable(entity.attribute("fan_mode")) ? "" : entity.attribute("fan_mode");
+  if (nextion_display == nullptr) {
+    return;
+  }  // if (no display)
+  if (!supported) {
+    nextion_display->hide_component(hmi::climate::FAN_BUTTON.name);
+    return;
+  }  // if (no fan modes)
+
+  // The common fan modes get their own icon; any other mode, the generic one.
+  // Not the plain fan icon, which the page uses for the "fan only" HVAC mode.
+  struct FanModeIcon {
+    const char *mode;  ///< Fan mode, as Home Assistant names it
+    const char *icon;  ///< Icon shown on the fan mode button
+  };
+  static constexpr FanModeIcon FAN_MODE_ICONS[] = {{"auto", Icons::MDI_FAN_AUTO},
+                                                   {"off", Icons::MDI_FAN_OFF},
+                                                   {"low", Icons::MDI_FAN_SPEED_1},
+                                                   {"medium", Icons::MDI_FAN_SPEED_2},
+                                                   {"high", Icons::MDI_FAN_SPEED_3}};
+  const char *icon = Icons::MDI_FAN_CHEVRON_UP;
+  for (const FanModeIcon &entry : FAN_MODE_ICONS) {
+    if (str_equals_case_insensitive(climate_fan_mode, entry.mode)) {
+      icon = entry.icon;
+      break;
+    }  // if (common fan mode)
+  }  // for each common fan mode
+  nextion_display->set_component_text(hmi::climate::FAN_BUTTON.name, icon);
+  // Theme color from the display, so the button follows the light and dark themes
+  nextion_display->send_command_printf("climate.%s.pco=color_pco_secondary", hmi::climate::FAN_BUTTON.name);
+  nextion_display->show_component(hmi::climate::FAN_BUTTON.name);
+}
+
+bool climate_fan_modes_to_picker(const std::string &entity_id) {
+#ifdef NSPANEL_EASY_PAGE_POPUP_SELECT
+  if (climate_fan_modes.empty()) {
+    ESP_LOGW(TAG, "%s has no fan modes", entity_id.c_str());
+    return false;
+  }  // if (no fan modes)
+  popup_select_cache_entity = entity_id;
+  popup_select_cache_context = CLIMATE_FAN_MODE_CONTEXT;
+  popup_select_cache_mode = POPUP_SELECT_MODE_SINGLE;
+  popup_select_cache_options = popup_select_visible_options(climate_fan_modes, climate_fan_mode);
+  popup_select_cache_mask = 0;
+  for (size_t idx = 0; idx < popup_select_cache_options.size(); ++idx) {
+    if (popup_select_cache_options[idx] == climate_fan_mode) {
+      popup_select_cache_mask = (1u << idx);
+      break;
+    }  // if (active fan mode)
   }  // for each option
   return true;
 #else   // NSPANEL_EASY_PAGE_POPUP_SELECT

@@ -62,4 +62,5 @@ if(display_mode==1)
 {
   lcd_dev fffb 0002 0000 0020// Fix touch offset for EU Version
 }
+dim=brightness_dim // Start dimmed: only a user action brings the regular brightness, the firmware handles it
 page boot //Power on start page boot
