@@ -241,6 +241,11 @@ script:
           disp1->send_command_printf("button_back_font=%i", id(button_back_font));
           disp1->send_command_printf("home_page_id=%" PRIu8, home_page_id);
           wakeup_page_id = get_page_id(wakeup_page_name->current_option().c_str());
+          if (wakeup_page_id >= PAGE_COUNT) {
+            // Not the name of a page: keep a valid id, as it is used to look up the name of the page
+            ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown wake-up page, using home");
+            wakeup_page_id = get_page_id("home");
+          }  // if (wakeup_page_id >= PAGE_COUNT)
           wakeup_page_update->execute();
 
 
@@ -274,7 +279,7 @@ script:
 
       # Report wake-up page
       - lambda: |-
-          ESP_LOGCONFIG("${TAG_HW_DISPLAY}", "Wake-up page: %s", page_name_of(wakeup_page_id));
+          ESP_LOGCONFIG("${TAG_HW_DISPLAY}", "Wake-up page: %s", page_names[wakeup_page_id]);
 
   - id: event_from_display
     mode: restart
@@ -709,14 +714,14 @@ script:
       - lambda: |-
           const uint8_t target_page_id = wakeup_page_resolve(api_server->is_connected_with_state_subscription(),
                                                              id(is_embedded_thermostat));
-          ESP_LOGV("${TAG_HW_DISPLAY}", "Wake-up (%s->%s)", page_names[current_page_id], page_name_of(target_page_id));
+          ESP_LOGV("${TAG_HW_DISPLAY}", "Wake-up (%s->%s)", page_names[current_page_id], page_names[target_page_id]);
           ESP_LOGV("${TAG_HW_DISPLAY}", "  reset timer: %s", YESNO(reset_timer));
           if (version_tft->state.empty()) {
             ESP_LOGE("${TAG_HW_DISPLAY}", "TFT version invalid");
             return;
           }
           if (current_page_id == get_page_id("screensaver") or current_page_id == get_page_id("boot")) {
-            ESP_LOGD("${TAG_HW_DISPLAY}", "Wake-up on page %s", page_name_of(target_page_id));
+            ESP_LOGD("${TAG_HW_DISPLAY}", "Wake-up on page %s", page_names[target_page_id]);
             #ifdef NSPANEL_EASY_PAGE_CLIMATE
             if (target_page_id == get_page_id("climate")) {
               detailed_entity->publish_state((id(is_embedded_thermostat)) ? "embedded_climate" : "");
