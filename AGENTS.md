@@ -22,7 +22,8 @@ Supported display models: EU (landscape), US portrait, and US landscape.
   Page-specific code is gated by `NSPANEL_EASY_PAGE_*` build flags defined in the matching `esphome/nspanel_esphome_page_*.yaml`.
 - `nspanel_easy_blueprint.yaml` - Single Blueprint file (very large; edit surgically).
 - `hmi/` - `src/` holds the display source (nxwright format), the source of truth.
-  The `.hmi` and `.tft` files beside it are built from it, and committed to `dev` by CI after each merge that changes the source.
+  The `.hmi` and `.tft` files beside it are built from it, and committed by CI to `dev` after each merge that changes the source
+  (and to `test/...` branches, which combine pull requests for testing and are never merged).
   `hmi/dev/` holds developer tooling, the fonts, the firmware reference and images.
 - `docs/` - User documentation. Update it whenever user-visible behavior changes.
 - `.test/` - ESPHome configurations used by the CI build matrix.
@@ -86,6 +87,9 @@ When a change affects a feature that is only included by specific packages (clim
 - Title format (enforced by `validate_pr_title.yml`): `<prefix>: <Description starting with a capital letter>`, lowercase prefix, no trailing period.
 - Allowed prefixes: `fix`, `feat`, `improve`, `ci`, `docs`, `style`, `build`, `refactor`, `test`, `chore`. Use `improve` when behavior is unchanged but the implementation is better.
 - PR titles become release titles verbatim; write them for end users.
+- Do not label pull requests by hand: `labeler.yml` sets the type label from the title prefix (it decides the section of the release notes)
+  and the `Area: ...` labels from the files changed. A new area or prefix needs its rule in `.github/labeler.yml` or in that workflow,
+  and its label in the repository. See [CONTRIBUTING.md](CONTRIBUTING.md#labels).
 - Reference related issues in the description (`Closes #N` when resolved; a plain `#N` reference otherwise).
 - Do not hard-wrap text in PR descriptions, issues or release notes.
 - Keep PRs scoped to one logical change. Unrelated fixes go in separate PRs.
@@ -172,6 +176,7 @@ Inputs always have a value, and variables set earlier in the same run are always
   Code is strict Nextion syntax; do not switch a project to nxlang.
 - `.hmi` and `.tft` files are build outputs. Do not edit or commit them; CI builds them from the source (`hmi/dev/scripts/hmi_build.sh`) and commits them to `dev` after the merge.
   Pull requests only attach them to the "Build HMI" workflow run, for testing.
+  A branch named `test/...` (pull requests combined to be tested together, never merged) also gets them committed by CI, so a panel can download its TFT file from that branch.
 - Landscape and portrait are separate projects. A change to shared page code usually belongs in both.
 - `if` conditions and commands such as `fill` and `cirs` do not accept inline arithmetic. Pre-compute values into scratch variables (`sys0`..`sys2`, `sya0`..`sya1`) first.
 - Array indexes must also be pre-computed: `sys2=sys0+11` then `vis b[sys2],0`, never `vis b[sys0+11],0`.

@@ -817,15 +817,12 @@ blueprint:
           default: [255, 255, 255]
           selector: *color_selector
         home_page_background_update:
-          name: Home page - Update in the background
+          name: Home page - Update in the background (no longer used)
           description: >
-            Applies only to the Home page entity states (*Entity State 01* to *04*).
+            This setting has no effect anymore and will be removed in a future version.
 
-            When enabled, these values are updated even when the Home page is not visible or while the panel is sleeping, so they are already current when the page opens.
-
-            When disabled (default), their changes are ignored while the Home page is not visible, and the values are updated right after the page opens, so an outdated value may show for a moment.
-
-            Everything else on the Home page (chips, custom buttons, weather, temperatures and climate) is always kept up to date, regardless of this setting.
+            The Home page entity states (*Entity State 01* to *04*) are now drawn by the panel itself,
+            straight from the Home Assistant states, so they are always up to date, also while another page is shown or the panel is sleeping.
           default: false
           selector:
             boolean:
@@ -1026,6 +1023,21 @@ blueprint:
             Select your panel's own thermostat here if you use the Climate add-on to control the climate system with your panel's relays.
 
             *Only one entity may be selected.*
+          default: *selector_entity_single_default_empty
+          selector:
+            entity:
+              multiple: *selector_entity_single_multiple
+              filter:
+                domain: climate
+        thermostat_embedded_entity:
+          name: Embedded thermostat - Entity override (Optional)
+          description: >
+            Leave it empty to recognize the panel's own thermostat (Climate add-on) automatically,
+            by its default entity ID (ending with `_thermostat`).
+
+            Select an entity **only** if the panel's thermostat is not recognized, because its entity ID was renamed in Home Assistant.
+            Select the panel's own thermostat, the same entity selected as the main climate entity,
+            so it keeps being controlled on the panel itself, also when Home Assistant is not available.
           default: *selector_entity_single_default_empty
           selector:
             entity:
@@ -1573,6 +1585,19 @@ blueprint:
             *When left button is using the entity related to relay 1 the processing will always be local, even if fallback is disabled.*
           selector:
             boolean:
+        relay_1_entity:
+          name: Relay 1 - Entity override (Optional)
+          description: >
+            Leave it empty to recognize the panel's relay 1 automatically, by its default entity ID (ending with `_relay_1`).
+
+            Select an entity **only** if the relay is not recognized: its entity ID was renamed in Home Assistant,
+            or you use an entity created from it, like a light created with "Show as".
+            Select the entity that represents relay 1, the same one selected for the left hardware button,
+            so the button keeps toggling the relay on the panel itself.
+          default: *selector_entity_single_default_empty
+          selector:
+            entity:
+              multiple: *selector_entity_single_multiple
         left_button_entity:
           name: Left hardware button - Entity
           description: *description_button_entity
@@ -1702,6 +1727,19 @@ blueprint:
             *When right button is using the entity related to relay 2 the processing will always be local, even if fallback is disabled.*
           selector:
             boolean:
+        relay_2_entity:
+          name: Relay 2 - Entity override (Optional)
+          description: >
+            Leave it empty to recognize the panel's relay 2 automatically, by its default entity ID (ending with `_relay_2`).
+
+            Select an entity **only** if the relay is not recognized: its entity ID was renamed in Home Assistant,
+            or you use an entity created from it, like a light created with "Show as".
+            Select the entity that represents relay 2, the same one selected for the right hardware button,
+            so the button keeps toggling the relay on the panel itself.
+          default: *selector_entity_single_default_empty
+          selector:
+            entity:
+              multiple: *selector_entity_single_multiple
         right_button_entity:
           name: Right hardware button - Entity
           description: *description_button_entity
@@ -5191,12 +5229,25 @@ trigger_variables:
       }}
     {%- endif %}
 
+  # The panel's relays are recognized by their default `_relay_1` and `_relay_2` suffixes. A relay with another
+  # entity ID, or an entity created from it, is selected by the user in the "Relay x - Entity override" inputs,
+  # which then replace the detection (#577, #640).
+  relay01_entity_override: !input relay_1_entity
   relay01_entity: >-
-    {%- set m = nspanel_entities | select("search", "^switch\\..+_relay_1$") | list %}
-    {{ m[0] if m | count > 0 else "switch." ~ entity_prefix ~ "_relay_1" }}
+    {%- if relay01_entity_override is string and relay01_entity_override | length > 0 -%}
+      {{ relay01_entity_override }}
+    {%- else -%}
+      {%- set m = nspanel_entities | select("search", "^switch\\..+_relay_1$") | list -%}
+      {{ m[0] if m | count > 0 else "switch." ~ entity_prefix ~ "_relay_1" }}
+    {%- endif %}
+  relay02_entity_override: !input relay_2_entity
   relay02_entity: >-
-    {%- set m = nspanel_entities | select("search", "^switch\\..+_relay_2$") | list %}
-    {{ m[0] if m | count > 0 else "switch." ~ entity_prefix ~ "_relay_2" }}
+    {%- if relay02_entity_override is string and relay02_entity_override | length > 0 -%}
+      {{ relay02_entity_override }}
+    {%- else -%}
+      {%- set m = nspanel_entities | select("search", "^switch\\..+_relay_2$") | list -%}
+      {{ m[0] if m | count > 0 else "switch." ~ entity_prefix ~ "_relay_2" }}
+    {%- endif %}
 
   currentpage: >-
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_current_page$") | list %}
@@ -5210,11 +5261,17 @@ trigger_variables:
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_temperature$") | list %}
     {{ m[0] if m | count > 0 else "sensor." ~ entity_prefix ~ "_temperature" }}
 
-  # The embedded thermostat is recognized only by its default `_thermostat` suffix. A renamed or
-  # localized entity_id is handled as an external climate entity (#640).
+  # The embedded thermostat is recognized by its default `_thermostat` suffix. With a renamed or localized
+  # entity_id, it is selected by the user in the "Embedded thermostat - Entity override" input, which then
+  # replaces the detection. Otherwise it is handled as an external climate entity (#640).
+  thermostat_embedded_override: !input thermostat_embedded_entity
   thermostat_embedded: >-
-    {%- set m = nspanel_entities | select("search", "^climate\\..+_thermostat$") | list %}
-    {{ m[0] if m | count > 0 else "climate." ~ entity_prefix ~ "_thermostat" }}
+    {%- if thermostat_embedded_override is string and thermostat_embedded_override | length > 0 -%}
+      {{ thermostat_embedded_override }}
+    {%- else -%}
+      {%- set m = nspanel_entities | select("search", "^climate\\..+_thermostat$") | list -%}
+      {{ m[0] if m | count > 0 else "climate." ~ entity_prefix ~ "_thermostat" }}
+    {%- endif %}
 
   detailed_entity: >-
     {%- set m = nspanel_entities | select("search", "^sensor\\..+_detailed_entity$") | list %}
@@ -5240,7 +5297,7 @@ variables:
   # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
   # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
   # While it is 'next' (development builds), the minimum firmware check is skipped.
-  min_esphome_version: 2026.11.16
+  min_esphome_version: next
 
   # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
@@ -5408,8 +5465,6 @@ variables:
       - timer
       - vacuum
       - water_heater
-
-  home_page_background_update: !input home_page_background_update
 
   indoor_temperature_sensor_input: !input indoortemp
   indoor_temperature_sensor: >
@@ -6006,8 +6061,8 @@ conditions:
     {{
       trigger.id in ["automation_reloaded", "ha_started", "nspanel_event"] or has_value(device_name_sensor)
     }}
-  - >  # Update page Home only when visible or home_page_background_update is enabled
-    {{ trigger.id not in ["home_values_state"] or home_page_background_update or pages.current in [pages.home, pages.graph] }}
+  - >  # The panel draws the home page values itself: their triggers are only needed for the graph page
+    {{ trigger.id not in ["home_values_state"] or pages.current == pages.graph }}
   - >  # Do not update values when page utilities is not visible
     {{ trigger.id != "utilities_page" or pages.current == pages.utilities }}
   - >  # Do not update values when page entities is not visible
@@ -7762,11 +7817,25 @@ actions:
                                           attribute="icon", component=button.component ~ ":i")] -%}
                                   {%- endif -%}
                                 {%- endfor -%}
+                                {#- Home page values, drawn by the panel: the entity's state, and its unit (:u).
+                                    The number of decimals is sent with the home page settings (home_values_decimals) -#}
+                                {%- set ns_values = namespace(items=[]) -%}
+                                {%- for value in home_page.entity_value
+                                      | selectattr("entity", "defined")
+                                      | selectattr("entity", "string")
+                                      | selectattr("entity", "search", "^[^.]+\\.[^.]+$") -%}
+                                  {%- set ns_values.items = ns_values.items + [
+                                        {"entity": value.entity, "page": "home", "component": value.component,
+                                         "icon": value.icon, "icon_color_rgb": value.icon_color_rgb},
+                                        {"entity": value.entity, "attribute": "unit_of_measurement",
+                                         "page": "home", "component": value.component ~ ":u"}] -%}
+                                {%- endfor -%}
                                 {{
                                   (
                                     (subs_chips | map("combine", {"page": "chips"}) | list)
                                     + ns_buttons.items
                                     + weather
+                                    + ns_values.items
                                     + (home_page.custom_buttons | map("combine", {"page": "home"}) | list)
                                     + (climate_custom_buttons | map("combine", {"page": "climate"}) | list)
                                     + (ns.wakeup | map("combine", {"page": "wakeup"}) | list)
@@ -8234,6 +8303,46 @@ actions:
                               page: home
                               id: indr_temp
                               color: !input home_indoor_temp_label_color
+                            continue_on_error: true
+                          - *delay_boot
+
+                      # The panel draws the home page values itself, from its subscriptions. A number is shown with
+                      # the decimals Home Assistant rounds it to (the entity's display precision), which the panel
+                      # cannot see, so they are sent here. An entity without a value now gets 255 (unknown), and the
+                      # panel asks again when its first number arrives (event "home_value_format").
+                      - &home_values_decimals
+                        alias: Home page - Values - Decimals
+                        repeat:
+                          for_each: >-
+                            {{
+                              home_page.entity_value
+                              | selectattr("entity", "defined")
+                              | selectattr("entity", "string")
+                              | selectattr("entity", "search", "^[^.]+\\.[^.]+$")
+                              | list
+                            }}
+                          sequence:
+                            - action: 'esphome.{{ action_prefix }}_component_val'
+                              data:
+                                page: mem
+                                id: 'home_{{ repeat.item.component }}_decimals'
+                                val: >-
+                                  {%- set rounded = states(repeat.item.entity, rounded=true) | string -%}
+                                  {{
+                                    ((rounded.split(".")[1] | length) if "." in rounded else 0)
+                                    if is_number(rounded)
+                                    else 255
+                                  }}
+                              continue_on_error: true
+                            - *delay_boot
+
+                      - alias: Home page - Values - Hide when zero
+                        sequence:
+                          - action: 'esphome.{{ action_prefix }}_component_val'
+                            data:
+                              page: mem
+                              id: home_values_hide_zero
+                              val: '{{ 1 if hide_if_zero else 0 }}'
                             continue_on_error: true
                           - *delay_boot
 
@@ -8865,6 +8974,12 @@ actions:
                               txt_list: '{{ txt_list_payload }}'
                             continue_on_error: true
                           - *delay_boot
+
+              # The first number of a home page value whose entity had no value when the settings were sent
+              - alias: Home page value format request
+                conditions: '{{ nspanel_event.type == "home_value_format" }}'
+                sequence:
+                  - *home_values_decimals
 
               - alias: Lawn mower start/pause toggle
                 conditions:
@@ -10299,6 +10414,8 @@ actions:
                                         - max_temp
                                         - preset_modes
                                         - preset_mode
+                                        - fan_modes
+                                        - fan_mode
                                 - *send_entity_snapshot
                             - alias: Button page
                               conditions:
@@ -10545,7 +10662,8 @@ actions:
                                   {%- if repeat.index > 1 -%}
                                     {%- set page_entities = [] -%}
                                   {%- elif current_page_from_sensor == pages.home -%}
-                                    {%- set page_entities = home_page.entity_value -%}
+                                    {#- The home page values are drawn by the panel, from its subscriptions -#}
+                                    {%- set page_entities = [] -%}
                                   {%- elif
                                         current_page_from_sensor == pages.climate and
                                         (
@@ -12124,7 +12242,8 @@ actions:
               for_each: >
                 {%- set detailed_entity_domain = states(detailed_entity).split(".")[0] -%}
                 {%- if trigger.id == "home_values_state" -%}
-                  {%- set page_entities = home_page.entity_value -%}
+                  {#- The home page values are drawn by the panel; this trigger is only for the graph page -#}
+                  {%- set page_entities = [] -%}
                 {%- elif trigger.id == "trigger_climatepage_value_state" and pages.current == pages.climate -%}
                   {%- set page_entities = climate_page_entities -%}
                 {#- The water heater page also shows humidifiers, so the page's entity selects the values -#}

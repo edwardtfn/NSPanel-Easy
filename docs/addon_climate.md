@@ -32,7 +32,8 @@ and after the `remote_package` (base code), as shown below (for `heat` in this e
 >
 > The Blueprint recognizes the embedded thermostat by its `entity_id` ending in `_thermostat`.
 > If its `entity_id` no longer ends in `_thermostat` (for example after renaming or localizing it, or with the `_2` suffix above),
-> the Blueprint handles it as an external climate entity, which is slower and does not work while the panel is offline ([#640](https://github.com/edwardtfn/NSPanel-Easy/issues/640)).
+> select it in the Blueprint's **Embedded thermostat - Entity override** input, next to the main climate entity.
+> Otherwise the Blueprint handles it as an external climate entity, which is slower and does not work while the panel is offline.
 
 ```yaml
 substitutions:

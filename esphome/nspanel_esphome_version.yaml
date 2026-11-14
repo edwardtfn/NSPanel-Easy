@@ -32,7 +32,7 @@ substitutions:
   # versioning workflow replaces it by the new version.
   # Prefer '${version}': it is a valid version in development builds, while 'next' fails the firmware's version check
   # A legacy TFT version (major.minor, e.g. 22.3) is older than any release version, so it is still a valid minimum.
-  min_tft_version: 22.3
+  min_tft_version: ${version}
 
   # TFT version carried by the HMI source on dev, set by the versioning workflow after each release.
   # A TFT with this version is never replaced by the automatic TFT update.

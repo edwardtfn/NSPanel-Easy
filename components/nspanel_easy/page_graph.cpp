@@ -17,6 +17,7 @@ static const char *const TAG = "nspanel.page.graph";
 std::array<std::string, HOME_VALUE_COUNT> graph_entities{};
 GraphConfig graph_config{};
 uint32_t graph_last_slot = 0;
+uint8_t graph_value_idx = UINT8_MAX;  // None, until a Home page value is tapped
 std::vector<float, ExternalRAMAllocator<float>> graph_values;
 
 /**

@@ -9,7 +9,10 @@
 
 #include <algorithm>
 #include <cinttypes>
+#include <cstdio>
+#include <cstring>
 
+#include <esp_attr.h>
 #include <esp_heap_caps.h>
 #include <nvs.h>
 
@@ -48,19 +51,118 @@ SubRenderFn *sub_renderers = nullptr;
 uint16_t sub_count = 0;
 
 /**
- * @brief Header persisted alongside the binding chunks.
+ * @brief Persisted header of the bindings.
  *
- * version and entity_len together form the persistence contract. The chunk
- * blobs are sized from SUB_ENTITY_LEN, so a build whose entity length differs
- * from the stored one cannot read them; checking here turns that into one
- * explicit discard-and-repush instead of a run of "chunk missing" warnings.
+ * Describes the packed stream stored in the chunks. Written last, after every chunk
+ * reached NVS, so it never describes chunks that are not there (#374).
  */
 struct SubHeader {
   uint8_t version;     ///< SUB_FORMAT_VERSION at the time of writing
-  uint8_t entity_len;  ///< SUB_ENTITY_LEN at the time of writing
-  uint16_t count;      ///< Number of persisted bindings
   uint8_t unverified;  ///< Consecutive commits that never received an end marker
+  uint16_t count;      ///< Number of persisted bindings
+  uint32_t length;     ///< Bytes of the packed stream
+  uint32_t checksum;   ///< sub_checksum() of the packed stream
 };
+static_assert(sizeof(SubHeader) == 12, "SubHeader must have no implicit padding");
+
+/// @brief Starting value of sub_checksum() (FNV-1a offset basis).
+static constexpr uint32_t SUB_CHECKSUM_INIT = 2166136261U;
+
+/**
+ * @brief Extend a checksum (FNV-1a, 32 bits) with bytes of the packed stream.
+ *
+ * Detects chunks that do not belong to the set described by the header: left from an
+ * older set, missing, or damaged. It is not a protection against deliberate changes.
+ *
+ * @param checksum Checksum so far; SUB_CHECKSUM_INIT for the first bytes.
+ * @param bytes Bytes to add.
+ * @param size Number of bytes.
+ * @return The extended checksum.
+ */
+static uint32_t sub_checksum(uint32_t checksum, const uint8_t *bytes, size_t size) {
+  for (size_t i = 0; i < size; ++i) {
+    checksum = (checksum ^ bytes[i]) * 16777619U;  // FNV-1a prime
+  }  // for each byte
+  return checksum;
+}
+
+/// @brief Bit of the flags byte of a packed binding: show while the entity is inactive.
+static constexpr uint8_t SUB_PACK_FLAG_INVERTED = 0x01;
+
+/**
+ * @brief Pack bindings: for each one, the flags byte and its five strings, null-terminated.
+ *
+ * @param bindings Bindings to pack.
+ * @param count Number of bindings.
+ * @param out Destination, of at least count * SUB_PACK_BINDING_MAX bytes.
+ * @return Bytes written.
+ */
+static uint32_t sub_pack(const SubBinding *bindings, uint16_t count, uint8_t *out) {
+  uint32_t length = 0;
+  const auto put = [&](const char *text, size_t size) {
+    const size_t used = strnlen(text, size - 1);  // The fields are always terminated; this is a bound only
+    memcpy(out + length, text, used);
+    length += used;
+    out[length++] = '\0';
+  };
+  for (uint16_t idx = 0; idx < count; ++idx) {
+    const SubBinding &binding = bindings[idx];
+    out[length++] = binding.inverted ? SUB_PACK_FLAG_INVERTED : 0;
+    put(binding.entity, sizeof(binding.entity));
+    put(binding.page, sizeof(binding.page));
+    put(binding.component, sizeof(binding.component));
+    put(binding.device_class, sizeof(binding.device_class));
+    put(binding.attribute, sizeof(binding.attribute));
+  }  // for each binding
+  return length;
+}
+
+/**
+ * @brief Unpack bindings packed by sub_pack().
+ *
+ * Every string must be terminated inside the stream and fit its field, as the stream
+ * may be damaged; the domain is left at zero, as it is derived from the entity_id.
+ *
+ * @param in Packed stream.
+ * @param length Bytes of the stream.
+ * @param bindings Destination, of count bindings.
+ * @param count Number of bindings the stream must hold, exactly.
+ * @return false when the stream is not count well-formed bindings.
+ */
+static bool sub_unpack(const uint8_t *in, uint32_t length, SubBinding *bindings, uint16_t count) {
+  uint32_t pos = 0;
+  const auto get = [&](char *field, size_t size) {
+    const uint8_t *start = in + pos;
+    const void *end = memchr(start, '\0', length - pos);
+    if (end == nullptr) {
+      return false;
+    }  // if (not terminated)
+    const size_t used = static_cast<const uint8_t *>(end) - start;
+    if (used >= size) {
+      return false;
+    }  // if (does not fit)
+    memcpy(field, start, used);
+    field[used] = '\0';
+    pos += used + 1;
+    return true;
+  };
+  for (uint16_t idx = 0; idx < count; ++idx) {
+    SubBinding &binding = bindings[idx];
+    memset(&binding, 0, sizeof(binding));
+    if (pos >= length) {
+      return false;
+    }  // if (stream too short)
+    const uint8_t flags = in[pos++];
+    binding.inverted = (flags & SUB_PACK_FLAG_INVERTED) != 0;
+    if (!get(binding.entity, sizeof(binding.entity)) || !get(binding.page, sizeof(binding.page)) ||
+        !get(binding.component, sizeof(binding.component)) ||
+        !get(binding.device_class, sizeof(binding.device_class)) ||
+        !get(binding.attribute, sizeof(binding.attribute))) {
+      return false;
+    }  // if (a string is damaged)
+  }  // for each binding
+  return pos == length;
+}
 
 /// @brief Staging buffer, allocated for the duration of a push only.
 static SubBinding *sub_staging = nullptr;
@@ -161,16 +263,146 @@ static ESPPreferenceObject sub_header_pref() {
   return global_preferences->make_preference<SubHeader>(fnv1_hash("nspanel_easy_sub_header"));
 }
 
+// Opt-in erase of the stored preferences when the bindings cannot be stored
+// (api_subscribe_wipe_nvs_on_failure); off unless the build sets it.
+#ifndef NSPANEL_EASY_SUB_WIPE_NVS_ON_FAILURE
+#define NSPANEL_EASY_SUB_WIPE_NVS_ON_FAILURE false
+#endif  // NSPANEL_EASY_SUB_WIPE_NVS_ON_FAILURE
+
+/// @brief Whether the stored preferences are erased, once, when the bindings cannot be stored.
+static constexpr bool SUB_WIPE_NVS_ON_FAILURE = NSPANEL_EASY_SUB_WIPE_NVS_ON_FAILURE;
+
+/// @brief Value of sub_wipe_marker after the preferences were erased ("NVSW").
+static constexpr uint32_t SUB_WIPE_MAGIC = 0x4E565357;
+
 /**
- * @brief Preference handle for one binding chunk.
+ * @brief Tells that the preferences were already erased since the panel was powered on.
  *
- * Chunking keeps the compare-before-write copy in ESP32Preferences::is_changed()
+ * Kept in RTC memory, which survives a restart but not a power cycle, as it cannot be kept in the
+ * storage that was just erased. Holds SUB_WIPE_MAGIC after an erase, and anything else otherwise
+ * (it is not initialized at power on).
+ */
+static RTC_NOINIT_ATTR uint32_t sub_wipe_marker;
+
+/**
+ * @brief Handle a failure to store the bindings: report the storage usage and, when enabled, erase it.
+ *
+ * With `api_subscribe_wipe_nvs_on_failure`, every stored preference is erased, as a factory reset
+ * does, and the panel restarts, so the bindings can be stored in the space that is freed. This is
+ * done only once since the panel was powered on: when they still do not fit, erasing again would
+ * be a restart loop.
+ *
+ * @param count Number of bindings that could not be stored.
+ * @return true when the preferences were erased and the panel is restarting.
+ */
+static bool sub_persist_failed(uint16_t count) {
+  // How full the storage is, as the usual cause is a small or fragmented NVS partition
+  nvs_stats_t nvs{};
+  if (nvs_get_stats(nullptr, &nvs) == ESP_OK) {
+    ESP_LOGE(TAG, "NVS entries: %zu used, %zu free of %zu", nvs.used_entries, nvs.free_entries, nvs.total_entries);
+  }  // if (NVS statistics available)
+  if (!SUB_WIPE_NVS_ON_FAILURE) {
+    return false;
+  }  // if (not enabled)
+  if (sub_wipe_marker == SUB_WIPE_MAGIC) {
+    ESP_LOGE(TAG, "The preferences were already erased since the panel was powered on; not erasing them again");
+    return false;
+  }  // if (already erased)
+  ESP_LOGE(TAG,
+           "Could not persist %" PRIu16 " binding(s); erasing every stored preference and restarting, "
+           "as api_subscribe_wipe_nvs_on_failure is enabled",
+           count);
+  sub_wipe_marker = SUB_WIPE_MAGIC;
+  global_preferences->reset();
+  App.safe_reboot();
+  return true;
+}
+
+/**
+ * @brief Preference handle for one chunk of the packed stream.
+ *
+ * A key of its own, not the one of the chunks of format 7 and older, which
+ * held whole bindings; those are erased by sub_erase_legacy_chunks().
  *
  * @param chunk Chunk index.
- * @return Preference object for SubChunk.
+ * @return Preference object for SubPackChunk.
  */
 static ESPPreferenceObject sub_chunk_pref(uint16_t chunk) {
-  return global_preferences->make_preference<SubChunk>(fnv1_hash("nspanel_easy_sub_chunk") + chunk);
+  return global_preferences->make_preference<SubPackChunk>(fnv1_hash("nspanel_easy_sub_pack") + chunk);
+}
+
+/**
+ * @brief Erase stored preferences by key, straight from NVS.
+ *
+ * ESPHome's preferences have no way to delete a key, and a key that is never
+ * written again keeps its space. ESPHome stores a preference under the decimal
+ * text of its key, in the "esphome" namespace.
+ *
+ * @param base Key of the first preference.
+ * @param first Offset of the first key to erase.
+ * @param last Offset past the last key to erase.
+ * @return Number of keys that were found and erased.
+ */
+static uint16_t sub_erase_keys(uint32_t base, uint16_t first, uint16_t last) {
+  nvs_handle_t handle;
+  if (nvs_open("esphome", NVS_READWRITE, &handle) != ESP_OK) {
+    return 0;
+  }  // if (NVS not available)
+  uint16_t erased = 0;
+  for (uint16_t idx = first; idx < last; ++idx) {
+    char key[11];  // A uint32_t in decimal, null included
+    snprintf(key, sizeof(key), "%" PRIu32, static_cast<uint32_t>(base + idx));
+    if (nvs_erase_key(handle, key) == ESP_OK) {
+      ++erased;
+    }  // if (erased)
+  }  // for each key
+  if (erased > 0) {
+    nvs_commit(handle);
+  }  // if (anything erased)
+  nvs_close(handle);
+  return erased;
+}
+
+/**
+ * @brief Erase the chunks of format 7 and older, which held whole bindings.
+ *
+ * They are left in NVS by an update, as their keys are no longer written, and
+ * on a small partition they take the space the packed chunks need (#790).
+ * Erasing a key that is not there costs a lookup only.
+ */
+static void sub_erase_legacy_chunks() {
+  static constexpr uint16_t LEGACY_CHUNK_COUNT = (SUB_MAX + 3) / 4;  // 4 bindings per chunk in format 7
+  const uint16_t erased = sub_erase_keys(fnv1_hash("nspanel_easy_sub_chunk"), 0, LEGACY_CHUNK_COUNT);
+  if (erased > 0) {
+    ESP_LOGI(TAG, "Erased %" PRIu16 " chunk(s) of bindings stored by an older firmware", erased);
+  }  // if (anything erased)
+}
+
+/**
+ * @brief Whether the header stored in NVS is the given one.
+ *
+ * Read back after a sync, as its result covers every queued preference: another
+ * component's failed write does not mean that this header was not written.
+ *
+ * @param expected Header that should be stored.
+ * @return true when the stored header matches.
+ */
+static bool sub_header_stored(const SubHeader &expected) {
+  SubHeader stored{};
+  return sub_header_pref().load(&stored) && memcmp(&stored, &expected, sizeof(SubHeader)) == 0;
+}
+
+/**
+ * @brief Whether a chunk stored in NVS is the given one.
+ *
+ * @param chunk Chunk index.
+ * @param expected Chunk that should be stored.
+ * @return true when the stored chunk matches.
+ * @see sub_header_stored()
+ */
+static bool sub_chunk_stored(uint16_t chunk, const SubPackChunk &expected) {
+  SubPackChunk stored{};
+  return sub_chunk_pref(chunk).load(&stored) && memcmp(&stored, &expected, sizeof(SubPackChunk)) == 0;
 }
 
 /**
@@ -322,35 +554,35 @@ static bool sub_target_allowed(const char *page, const char *component) {
 uint16_t sub_load() {
   SubHeader header{};
   if (!sub_header_pref().load(&header)) {
+    // Also the header of format 7 and older, which had another size: their chunks are erased here
     ESP_LOGD(TAG, "No persisted bindings");
+    sub_erase_legacy_chunks();
     return 0;
   }
   if (header.version != SUB_FORMAT_VERSION) {
     ESP_LOGW(TAG, "Persisted bindings use format %" PRIu8 ", expected %" PRIu8 "; discarding", header.version,
              SUB_FORMAT_VERSION);
-    sub_unverified = 0;
-    return 0;
-  }
-  if (header.entity_len != SUB_ENTITY_LEN) {
-    // The chunk blobs are sized from SUB_ENTITY_LEN and cannot be reinterpreted.
-    ESP_LOGW(TAG, "Persisted bindings use entity length %" PRIu8 ", expected %" PRIu8 "; discarding", header.entity_len,
-             static_cast<uint8_t>(SUB_ENTITY_LEN));
+    sub_erase_legacy_chunks();
     sub_unverified = 0;
     return 0;
   }
 
   sub_unverified = header.unverified;
 
-  if (header.count == 0 || header.count > SUB_MAX) {
-    ESP_LOGW(TAG, "Persisted binding count out of range (%" PRIu16 "), ignoring", header.count);
+  if (header.count == 0 || header.count > SUB_MAX || header.length == 0 || header.length > SUB_PACK_MAX_BYTES) {
+    ESP_LOGW(TAG, "Persisted bindings out of range (%" PRIu16 " binding(s), %" PRIu32 " bytes), ignoring", header.count,
+             header.length);
     return 0;
   }
 
+  const uint16_t chunks = static_cast<uint16_t>((header.length + SUB_PACK_CHUNK_BYTES - 1) / SUB_PACK_CHUNK_BYTES);
+  auto *packed = static_cast<uint8_t *>(sub_alloc(static_cast<size_t>(chunks) * SUB_PACK_CHUNK_BYTES));
   sub_bindings = static_cast<SubBinding *>(sub_alloc(sizeof(SubBinding) * header.count));
   sub_runtime = static_cast<SubRuntime *>(sub_alloc(sizeof(SubRuntime) * header.count));
   sub_renderers = static_cast<SubRenderFn *>(sub_alloc(sizeof(SubRenderFn) * header.count));
-  if (sub_bindings == nullptr || sub_runtime == nullptr || sub_renderers == nullptr) {
+  if (packed == nullptr || sub_bindings == nullptr || sub_runtime == nullptr || sub_renderers == nullptr) {
     ESP_LOGE(TAG, "Out of memory loading %" PRIu16 " bindings", header.count);
+    free(packed);
     free(sub_bindings);
     free(sub_runtime);
     free(sub_renderers);
@@ -360,26 +592,51 @@ uint16_t sub_load() {
     return 0;
   }
 
-  const uint16_t chunks = (header.count + SUB_CHUNK_SIZE - 1) / SUB_CHUNK_SIZE;
+  bool complete = true;
   for (uint16_t chunk = 0; chunk < chunks; ++chunk) {
-    SubChunk data{};
-    if (!sub_chunk_pref(chunk).load(&data)) {
-      ESP_LOGW(TAG, "Chunk %" PRIu16 " missing; loaded %" PRIu16 " binding(s)", chunk, sub_count);
+    if (!sub_chunk_pref(chunk).load(reinterpret_cast<SubPackChunk *>(packed + chunk * SUB_PACK_CHUNK_BYTES))) {
+      ESP_LOGW(TAG, "Chunk %" PRIu16 " of %" PRIu16 " missing", chunk, chunks);
+      complete = false;
       break;
     }
-    for (uint16_t slot = 0; slot < SUB_CHUNK_SIZE && sub_count < header.count; ++slot) {
-      sub_bindings[sub_count] = data.bindings[slot];
-      // The domain is a pure function of the entity_id, so re-derive it rather
-      // than trusting the persisted value: bindings stored by an older firmware
-      // then pick up any domain reclassification without needing a new push.
-      sub_bindings[sub_count].domain = static_cast<uint8_t>(parse_sub_domain(sub_bindings[sub_count].entity));
-      sub_renderers[sub_count] = sub_resolve_renderer(sub_bindings[sub_count].page);
-      if (sub_renderers[sub_count] == nullptr) {
-        ESP_LOGW(TAG, "No renderer for page '%s'", sub_bindings[sub_count].page);
-      }
-      ++sub_count;
-    }
   }  // for each chunk
+  const uint32_t checksum = complete ? sub_checksum(SUB_CHECKSUM_INIT, packed, header.length) : 0;
+
+  // The set is used complete or not at all: a missing chunk, chunks that do not match the header
+  // (e.g. left from an older set after an interrupted write) or a damaged stream must never give a
+  // mixed set (#374). The stream is only read after the checksum matched.
+  const bool valid =
+      complete && checksum == header.checksum && sub_unpack(packed, header.length, sub_bindings, header.count);
+  free(packed);
+  if (!valid) {
+    ESP_LOGW(TAG,
+             "Persisted bindings failed the integrity check (%" PRIu16 " binding(s), checksum %08" PRIX32
+             ", expected %08" PRIX32 "); discarding them until the Blueprint sends them again",
+             header.count, checksum, header.checksum);
+    free(sub_bindings);
+    free(sub_runtime);
+    free(sub_renderers);
+    sub_bindings = nullptr;
+    sub_runtime = nullptr;
+    sub_renderers = nullptr;
+    sub_count = 0;
+    // The count of unverified commits belonged to the discarded set. Kept, it could already be at its limit,
+    // which would refuse the push that brings the bindings back when it has no end marker.
+    sub_unverified = 0;
+    return 0;
+  }  // if integrity check failed
+  sub_count = header.count;
+
+  for (uint16_t idx = 0; idx < sub_count; ++idx) {
+    // The domain is a pure function of the entity_id, so re-derive it rather
+    // than trusting the persisted value: bindings stored by an older firmware
+    // then pick up any domain reclassification without needing a new push.
+    sub_bindings[idx].domain = static_cast<uint8_t>(parse_sub_domain(sub_bindings[idx].entity));
+    sub_renderers[idx] = sub_resolve_renderer(sub_bindings[idx].page);
+    if (sub_renderers[idx] == nullptr) {
+      ESP_LOGW(TAG, "No renderer for page '%s'", sub_bindings[idx].page);
+    }
+  }  // for each verified binding
 
   ESP_LOGCONFIG(TAG, "Loaded %" PRIu16 " binding(s)", sub_count);
   return sub_count;
@@ -806,64 +1063,102 @@ bool sub_persist(bool verified) {
   // described the old set -- a reboot would then load a mixture. Publishing an
   // empty header first means any later failure leaves the panel with no
   // bindings: visibly wrong, but never silently inconsistent.
-  const SubHeader invalid{SUB_FORMAT_VERSION, SUB_ENTITY_LEN, 0, sub_unverified};
-  if (!sub_header_pref().save(&invalid) || !global_preferences->sync()) {
+  //
+  // save() only queues a write, and sync() writes every queued item on its own:
+  // one item can fail while the others are written. So each phase is flushed
+  // before the next one starts, or the real header could reach NVS while a
+  // chunk did not (#374). The result of sync() covers every queued preference,
+  // also those of other components, so each phase is confirmed by reading back
+  // what was stored.
+  const SubHeader invalid{SUB_FORMAT_VERSION, sub_unverified, 0, 0, 0};
+  sub_header_pref().save(&invalid);
+  global_preferences->sync();
+  if (!sub_header_stored(invalid)) {
+    if (sub_persist_failed(sub_staged)) {
+      return false;  // The preferences were erased and the panel is restarting
+    }  // if (erased)
     ESP_LOGE(TAG, "Could not invalidate the stored header; leaving the saved set untouched");
-    return false;  // Nothing was written, so the previous set is still coherent
+    return false;  // The header was not written, so the previous set is still coherent
   }
 
-  const uint16_t chunks = (sub_staged + SUB_CHUNK_SIZE - 1) / SUB_CHUNK_SIZE;
-  bool ok = true;
+  // The staged bindings, packed: only the characters used, in chunks of SUB_PACK_CHUNK_BYTES
+  const size_t capacity = static_cast<size_t>(sub_staged) * SUB_PACK_BINDING_MAX + SUB_PACK_CHUNK_BYTES;
+  auto *packed = static_cast<uint8_t *>(sub_alloc(capacity));
+  if (packed == nullptr) {
+    ESP_LOGE(TAG, "Out of memory packing %" PRIu16 " bindings", sub_staged);
+    return false;
+  }  // if (no memory)
+  memset(packed, 0, capacity);  // Pads the last chunk with zeros
+  const uint32_t length = sub_pack(sub_staging, sub_staged, packed);
+  const uint16_t chunks = static_cast<uint16_t>((length + SUB_PACK_CHUNK_BYTES - 1) / SUB_PACK_CHUNK_BYTES);
+  const auto chunk_at = [packed](uint16_t chunk) {
+    return reinterpret_cast<const SubPackChunk *>(packed + chunk * SUB_PACK_CHUNK_BYTES);
+  };
+  bool ok = false;
 
-  for (uint16_t chunk = 0; chunk < chunks; ++chunk) {
-    SubChunk data{};
-    for (uint16_t slot = 0; slot < SUB_CHUNK_SIZE; ++slot) {
-      const uint16_t idx = (chunk * SUB_CHUNK_SIZE) + slot;
-      if (idx < sub_staged) {
-        data.bindings[slot] = sub_staging[idx];
-      }
+  // Written twice at most: a first sync writes what fits, which can release the
+  // space that the rewrite of an existing key needs before its old copy can be
+  // dropped. Chunks already written are then found unchanged and skipped.
+  for (uint8_t attempt = 0; attempt < 2 && !ok; ++attempt) {
+    for (uint16_t chunk = 0; chunk < chunks; ++chunk) {
+      sub_chunk_pref(chunk).save(chunk_at(chunk));
+    }  // for each chunk
+    // Every chunk must reach NVS before the header describes them
+    global_preferences->sync();
+    ok = true;
+    for (uint16_t chunk = 0; chunk < chunks && ok; ++chunk) {
+      ok = sub_chunk_stored(chunk, *chunk_at(chunk));
+    }  // for each chunk read back
+    if (!ok && attempt == 0) {
+      ESP_LOGW(TAG, "The binding chunks failed to save; retrying once");
     }
-    if (!sub_chunk_pref(chunk).save(&data)) {
-      ESP_LOGW(TAG, "Chunk %" PRIu16 " failed to save; retrying after a sync", chunk);
-      // A sync flushes pending writes, which can release space that a rewrite
-      // of an existing key needs before the old copy can be dropped.
-      global_preferences->sync();
-      if (!sub_chunk_pref(chunk).save(&data)) {
-        ok = false;
-        break;  // The header stays empty, so the partial set is never loaded
-      }
-    }
-  }  // for each chunk
+  }  // for each attempt
+
+  const uint32_t checksum = sub_checksum(SUB_CHECKSUM_INIT, packed, length);
+  free(packed);
 
   uint8_t committed_unverified = sub_unverified;
   if (ok) {
+    // The header stays empty until here, so a partial set is never loaded
     committed_unverified = verified ? 0 : static_cast<uint8_t>(sub_unverified + 1);
-    const SubHeader header{SUB_FORMAT_VERSION, SUB_ENTITY_LEN, sub_staged, committed_unverified};
-    ok = sub_header_pref().save(&header);
+    const SubHeader header{SUB_FORMAT_VERSION, committed_unverified, sub_staged, length, checksum};
+    sub_header_pref().save(&header);
+    global_preferences->sync();
+    ok = sub_header_stored(header);
   }
 
-  if (!global_preferences->sync()) {
-    ok = false;
-  } else if (ok) {
+  if (ok) {
+    // Chunks of a longer set stored before are not described by the header anymore: free their space
+    sub_erase_keys(fnv1_hash("nspanel_easy_sub_pack"), chunks, SUB_PACK_CHUNK_COUNT);
+  }
+
+  if (ok) {
     // Only once the header has actually reached NVS: a counter advanced for a
     // commit that never landed would eventually trip SUB_MAX_UNVERIFIED_COMMITS
     // and start refusing valid pushes.
     sub_unverified = committed_unverified;
   }
 
-  if (!ok) {
+  if (ok) {
+    sub_wipe_marker = 0;  // The bindings fit: a later failure may erase the preferences again
+  } else {
+    if (sub_persist_failed(sub_staged)) {
+      return false;  // The preferences were erased and the panel is restarting
+    }  // if (erased)
     // Never schedule a restart here. A restart on a write that cannot succeed
-    // is an unrecoverable boot loop. The panel keeps the previously loaded
-    // bindings instead: wrong, but stable and diagnosable.
+    // is an unrecoverable boot loop. The panel keeps running the previously
+    // loaded bindings instead, until its next reboot: wrong, but stable and
+    // diagnosable.
     ESP_LOGE(TAG,
              "Could not persist %" PRIu16 " binding(s); the stored set is now empty and the panel will "
              "subscribe to nothing after the next reboot. This usually means the NVS partition is full or "
-             "fragmented; a factory reset of the panel clears it.",
+             "fragmented; see \"Could not persist\" in docs/api_subscribe.md.",
              sub_staged);
     return false;
   }
 
-  ESP_LOGI(TAG, "Persisted %" PRIu16 " binding(s)%s", sub_staged, verified ? "" : " (unverified)");
+  ESP_LOGI(TAG, "Persisted %" PRIu16 " binding(s) in %" PRIu16 " chunk(s)%s", sub_staged, chunks,
+           verified ? "" : " (unverified)");
   return true;
 }
 
@@ -1084,6 +1379,13 @@ void sub_dump_config() {
     ESP_LOGCONFIG(TAG, "  NVS entries: %zu used, %zu free of %zu", nvs.used_entries, nvs.free_entries,
                   nvs.total_entries);
   }
+  if (SUB_WIPE_NVS_ON_FAILURE) {
+    ESP_LOGCONFIG(TAG, "  Erase the preferences when the bindings cannot be stored: YES");
+#ifndef USE_API_NOISE
+    // Any client of an API without encryption can push bindings, so it could also cause the erase
+    ESP_LOGW(TAG, "  api_subscribe_wipe_nvs_on_failure is enabled without API encryption");
+#endif  // USE_API_NOISE
+  }  // if (SUB_WIPE_NVS_ON_FAILURE)
 }
 
 }  // namespace esphome::nspanel_easy
