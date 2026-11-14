@@ -118,6 +118,19 @@ Calibration pauses and keeps the current correction when:
 | Home page - Chips 01-07 (optional) | Used to display icons of HA binary entities on the home screen. The icon is displayed when the entity is on/open/true/active. Otherwise, no icon is displayed. | ![chip](pics/home_page_chips.jpg) |
 | Custom button 01-07 (Optional) | 7 custom buttons that can be assigned to different entities from your Home Assistant. The behavior of these buttons will depend on the entity's domain, such as light, media player, etc. | ![home_page_custom_buttons.jpg](pics/home_page_custom_buttons.jpg) |
 
+### Home page - Entity State 01-04 - How the value is shown
+
+The panel shows these values itself, straight from the Home Assistant states, so they are always up to date,
+also while another page is shown or the panel is sleeping.
+
+- **Numbers** are shown with the number of decimals Home Assistant uses for the entity (its display precision) and its unit of measurement.
+- **Other states** are shown as Home Assistant reports them (for example `open` or `heating`), without translation.
+  Only `on`, `off`, `unavailable` and `unknown` are shown in the language of the panel.
+- With **Values - Hide when zero** enabled, a value that rounds to zero is hidden, with its icon.
+
+The number of decimals is sent by the Blueprint when the panel starts.
+If the entity has no value at that moment, the number is shown as received until the panel gets its decimals, which it asks for when the first number arrives.
+
 ### Home page - Entity State 01-04 - Graph (Optional)
 
 When enabled, tapping the value (or its icon) on the Home page opens a page with a graph of the entity over the last 24 hours, one point per 5 minutes.

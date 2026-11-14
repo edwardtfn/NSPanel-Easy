@@ -418,6 +418,22 @@ horizon, and the active theme. Conditions the panel does not recognise, along wi
 Sun elevation is computed on the panel from coordinates supplied once by the Blueprint and stored
 across reboots. Until coordinates arrive, the panel treats 06:00 to 18:00 local time as daytime.
 
+### The home page values
+
+A home page value (`value01` to `value04`) uses two bindings of its entity: its state, on component `valueNN`,
+and its `unit_of_measurement` attribute, on component `valueNN:u`.
+
+A number is shown with a fixed number of decimals and the unit. The decimals are not part of the binding:
+the Blueprint sends them with `component_val`, as `home_valueNN_decimals` on page `mem`
+(0 to 6, or any other number when it cannot tell, and the number is then shown as received).
+When the first number arrives for a value without decimals, the panel fires the event `home_value_format`
+with its `component`, and the Blueprint sends them again.
+`home_values_hide_zero` on page `mem` (0 or 1) hides the values that round to zero, with their icons.
+
+Any other state is shown as text, as received, except `on`, `off`, `unavailable` and `unknown`,
+which the panel shows in its own language. The icon is resolved as for the custom buttons;
+its colour and the colour of the text are the ones sent with `component_color`.
+
 ### The home page temperatures
 
 Temperatures sourced from Home Assistant are rendered exactly as reported, with no unit conversion.
