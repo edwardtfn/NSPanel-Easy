@@ -100,6 +100,8 @@ script:
 substitutions:
   # Use my own local network time server
   sntp_servers: 192.168.0.1;europe.pool.ntp.org;0.pool.ntp.org
+  # Erase the stored preferences when the subscriptions cannot be stored (opt-in)
+  api_subscribe_wipe_nvs_on_failure: 'true'
 
 switch:
   # Expose relay local control switch to Home Assistant

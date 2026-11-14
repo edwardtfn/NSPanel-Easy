@@ -83,8 +83,8 @@ name = "version"
 type = "variable"
 vscope = 1
 sta = 1
-txt = "22.6"
-txt_maxl = 5
+txt = "9999.99.9"
+txt_maxl = 12
 
 [[component]]
 name = "ver_firmware"

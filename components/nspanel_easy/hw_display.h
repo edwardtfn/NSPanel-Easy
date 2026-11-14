@@ -42,8 +42,91 @@ extern uint8_t brightness_current;
  * display goes to sleep.
  */
 extern bool brightness_dim_hold;
+/**
+ * @brief Holds the display at the dimmed brightness after a change the user did not ask for (#656).
+ *
+ * The regular brightness only returns on a user action. Raised by the automatic page changes (the
+ * fallback to the home page, and the wake-up after the boot or from the screensaver without a touch)
+ * when the display is not at the regular brightness, and while the panel boots. While raised,
+ * `timer_dim` restores the dimmed brightness instead of the regular one. Released by a touch on the
+ * screen, a hardware button, a wake-up asked by a sensor or through the API, a page opened through
+ * the API, or when the display goes to sleep.
+ *
+ * @see brightness_auto_hold_arm()
+ * @see brightness_user_action()
+ */
+extern bool brightness_auto_hold;
+/**
+ * @brief Marks the page change or wake-up that follows as automatic, so it keeps `brightness_auto_hold`.
+ *
+ * One-shot: consumed by the page change, or by `wakeup` when it does not change the page.
+ */
+extern bool brightness_auto_hold_armed;
+
+/**
+ * @brief Announce an automatic page change or wake-up, right before starting it.
+ *
+ * The display keeps the brightness it has: when it is not at the regular brightness (dimmed,
+ * sleeping or booting), it is held at the dimmed brightness until a user action.
+ *
+ * @param regular The regular brightness (%), as set in "Display Brightness".
+ */
+inline void brightness_auto_hold_arm(const uint8_t regular) {
+  if (brightness_current != regular) {
+    brightness_auto_hold = true;
+  }  // if (brightness_current != regular)
+  brightness_auto_hold_armed = true;
+}
+
+/**
+ * @brief Record a user action on the panel, which always restores the regular brightness.
+ *
+ * Releases both brightness holds; the caller resets the timers, which applies the brightness.
+ */
+inline void brightness_user_action() {
+  brightness_dim_hold = false;
+  brightness_auto_hold = false;
+  brightness_auto_hold_armed = false;
+}
 extern bool display_entity_keep;
 extern uint8_t display_mode_eeprom;
+
+/**
+ * @brief ID of each display model, by the position of its option in the "Display model" selector.
+ *
+ * The ID is what the display stores (EEPROM) and reports. It was the position plus one until the
+ * model with the buttons on the left was added: that one is listed next to the US Landscape model,
+ * but its ID comes after Blank's, as the IDs already stored on the displays cannot change.
+ *
+ * Positions: EU, US, US Landscape, US Landscape (buttons on the left), Blank.
+ */
+constexpr uint8_t DISPLAY_MODE_IDS[] = {1, 2, 3, 5, 4};
+
+/// @brief Number of display models.
+constexpr uint8_t DISPLAY_MODE_COUNT = sizeof(DISPLAY_MODE_IDS) / sizeof(DISPLAY_MODE_IDS[0]);
+
+/**
+ * @brief ID of the display model at a position of the "Display model" selector.
+ *
+ * @param index Position of the option.
+ * @return The ID stored on the display, or 0 when the position is not a display model.
+ */
+constexpr uint8_t display_mode_id_of(size_t index) { return index < DISPLAY_MODE_COUNT ? DISPLAY_MODE_IDS[index] : 0; }
+
+/**
+ * @brief Position in the "Display model" selector of the display model with an ID.
+ *
+ * @param mode_id The ID stored on the display.
+ * @return The position of the option, or UINT8_MAX when the ID is not a display model.
+ */
+constexpr uint8_t display_mode_index_of(uint8_t mode_id) {
+  for (uint8_t index = 0; index < DISPLAY_MODE_COUNT; ++index) {
+    if (DISPLAY_MODE_IDS[index] == mode_id) {
+      return index;
+    }  // if (found)
+  }  // for each display model
+  return UINT8_MAX;
+}
 extern bool display_portrait;
 extern bool display_valid;
 

@@ -26,7 +26,7 @@ display:
             // Back and taps outside the card leave the page, which already resets the timers.
             if (component_id == POPUP_SELECT_ID_BTN_PREV || component_id == POPUP_SELECT_ID_BTN_NEXT ||
                 (component_id >= POPUP_SELECT_ID_OPT0 && component_id < POPUP_SELECT_ID_OPT0 + POPUP_SELECT_SLOTS)) {
-              brightness_dim_hold = false;  // A touch always restores the regular brightness
+              brightness_user_action();  // A touch always restores the regular brightness
               timer_reset_all->execute();
             }  // if (navigation or option)
 
