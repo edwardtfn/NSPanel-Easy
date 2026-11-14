@@ -1,0 +1,44 @@
+# Labels added to pull requests by the files they change (.github/workflows/labeler.yml).
+#
+# Each label names an area of the project. A pull request gets the label of every area it touches,
+# and loses it when it no longer touches that area. Labels not listed here are never changed.
+# The labels must exist in the repository, with the same name.
+#
+# These are not the labels of the release notes (.github/release.yml), such as `Documentation` or `ci`,
+# which tell the type of a change and decide the section it is listed in. A feature that also updates
+# the documentation is still a feature, so the areas have labels of their own.
+---
+'Area: Blueprint':
+  - changed-files:
+      - any-glob-to-any-file:
+          - nspanel_easy_blueprint.yaml
+
+'Area: Firmware':
+  - changed-files:
+      - any-glob-to-any-file:
+          - esphome/**
+          - components/**
+          - nspanel_esphome*.yaml
+
+'Area: TFT':
+  - changed-files:
+      - any-glob-to-any-file:
+          - hmi/src/**
+
+'Area: Documentation':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+
+'Area: CI':
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+          - .rules/**
+          - hmi/dev/scripts/**
+
+'Area: Tests':
+  - changed-files:
+      - any-glob-to-any-file:
+          - .test/**
+...

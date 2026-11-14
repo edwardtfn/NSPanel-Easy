@@ -21,8 +21,8 @@ using its relays to drive the motor to open or close a cover.
 <!-- blockquote separator - to avoid markdown lint 028 error -->
 
 > [!NOTE]
-> More details on the [Sonoff NSPanel's page](https://sonoff.tech/product/central-control-panel/nspanel/)
-> and the [product specifications document](https://sonoff.tech/wp-content/uploads/2021/11/%E4%BA%A7%E5%93%81%E5%8F%82%E6%95%B0%E8%A1%A8-NSPanel-20210831.pdf).
+> More details on the [Sonoff NSPanel's page](https://sonoff.tech/product/central-control-panel/nspanel/),
+> which has the product specifications in its "Specs & User Manual" section.
 
 ## Installation
 

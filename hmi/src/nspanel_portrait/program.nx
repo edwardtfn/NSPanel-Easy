@@ -31,7 +31,7 @@ int screensaver_bco=0
 int screensaver_font=4
 int screensaver_pco=16904
 // Model & EEPROM management
-int hard_coded_display_mode=2  // 1=EU, 2=US, 3=US Land, 4=Blank
+int hard_coded_display_mode=2  // 1=EU, 2=US, 3=US Land, 4=Blank, 5=US Land with the buttons on the left
 int display_mode=0
 int magic_flag_found_at_boot=0
 repo sys0,0  // Read magic byte from addresses 0-3
@@ -39,7 +39,7 @@ if(sys0==2037602629)  // "Easy" in ASCII little-endian
 {
   magic_flag_found_at_boot=1
   repo display_mode,4  // Read display_mode from addresses 4-7
-  if(display_mode<1||display_mode>4)
+  if(display_mode<1||display_mode>5)
   {
     display_mode=hard_coded_display_mode
     wepo hard_coded_display_mode,4

@@ -172,6 +172,21 @@ script:
             disp1->set_component_font(hmi::home::OUTDOOR_TEMP.name, static_cast<uint8_t>(val));
             return;
           }
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          if (component == "home_values_hide_zero") {  // Hide the values that round to zero
+            home_values_hide_zero_set(val != 0);
+            return;
+          }
+          // home_valueNN_decimals: decimals of a home value, or any other number when the Blueprint cannot tell
+          if (component.size() == 21 and component.compare(0, 10, "home_value") == 0 and
+              component.compare(12, 9, "_decimals") == 0 and isdigit(component[10]) and isdigit(component[11])) {
+            const uint8_t slot = static_cast<uint8_t>((component[10] - '0') * 10 + (component[11] - '0'));
+            const uint8_t decimals = (val >= 0 and val <= HOME_VALUE_DECIMALS_MAX) ? static_cast<uint8_t>(val)
+                                                                                   : HOME_VALUE_DECIMALS_UNKNOWN;
+            if (slot >= 1) home_value_decimals_set(static_cast<uint8_t>(slot - 1), decimals);
+            return;
+          }
+          #endif  // NSPANEL_EASY_SUBSCRIBE
 
   - id: !extend action_icon
     then:
@@ -273,6 +288,11 @@ script:
       - lambda: |-
           // The Blueprint sends the home page visibility only at boot, so keep the last one for a boot without it (#735)
           home_vis_restore();
+      # The states of a home value the panel translates by itself; any other text is shown as received.
+      # In a lambda of its own, without preprocessor lines, which cannot be mixed with these substitutions.
+      - lambda: |-
+          home_value_texts_set("${LOCALIZATION[LANG].unavailable}", "${LOCALIZATION[LANG].unknown}",
+                               "${LOCALIZATION[LANG].climate.states.on}", "${LOCALIZATION[LANG].climate.states.off}");
 
   - id: !extend page_change
     then:
