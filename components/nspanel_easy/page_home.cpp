@@ -18,6 +18,8 @@
 #ifdef NSPANEL_EASY_SUBSCRIBE
 
 #include <cstdio>
+#include <cstdlib>
+#include <strings.h>
 
 #include "text.h"
 
@@ -520,6 +522,266 @@ static void home_outdoor_temp_render(const char *state) {
   nextion_display->set_component_visibility(hmi::home::OUTDOOR_TEMP.name, visible);
 }
 
+// ---------------------------------------------------------------------------
+// Home values (value01 to value04)
+//
+// Each value is drawn from two bindings of its entity: its state (component
+// "valueNN") and its `unit_of_measurement` attribute (component "valueNN:u").
+// A number is shown with the decimals the Blueprint sends (the entity's display
+// precision) and the unit; any other state is shown as text.
+// ---------------------------------------------------------------------------
+
+/// @brief Longest text of a home value component, null included (txt_maxl of home.valueNN is 30).
+static constexpr size_t HOME_VALUE_TEXT_LEN = 31;
+
+/// @brief Longest unit kept for a home value, null included.
+static constexpr size_t HOME_VALUE_UNIT_LEN = 16;
+
+/// @brief What the panel knows and last drew for a home value.
+struct HomeValueState {
+  char state[SUB_STATE_LEN];       ///< Last state received; empty before the first one
+  char unit[HOME_VALUE_UNIT_LEN];  ///< Unit of measurement; empty when the entity has none
+  char text[HOME_VALUE_TEXT_LEN];  ///< Text last written to the component
+  char icon[4];                    ///< Icon last written to the component
+  uint8_t decimals;                ///< Decimals to show, or HOME_VALUE_DECIMALS_UNKNOWN
+  bool bound;                      ///< Drawn from a subscription
+  bool asked;                      ///< The number of decimals was already asked to the Blueprint
+  Visibility shown;                ///< Whether the value and its icon are shown
+};
+static_assert(sizeof(HomeValueState::icon) >= 4, "Icons are BMP private-use codepoints: 3 bytes + null");
+
+/// @brief One entry per home value slot.
+static HomeValueState home_value_states[HOME_VALUE_COUNT] = {
+    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, Visibility::UNKNOWN},
+    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, Visibility::UNKNOWN},
+    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, Visibility::UNKNOWN},
+    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, Visibility::UNKNOWN},
+};
+
+/// @brief Whether a value that rounds to zero is hidden, with its icon.
+static bool home_values_hide_zero = false;
+
+/// @brief Texts for the states the panel translates by itself; the raw state until they are set.
+static std::string home_value_text_unavailable = "unavailable";
+static std::string home_value_text_unknown = "unknown";
+static std::string home_value_text_on = "on";
+static std::string home_value_text_off = "off";
+
+/**
+ * @brief Slot index of a home value component.
+ *
+ * @param component Component of a binding: "value01" to "value04", or the same with a role suffix (":u").
+ * @param role Receives the role suffix character, or '\0' for the state binding.
+ * @return Zero-based slot index, or UINT8_MAX when the component is not a home value.
+ */
+static uint8_t parse_home_value_index(const char *component, char &role) {
+  role = '\0';
+  if (strncmp(component, "value", 5) != 0 || !isdigit(static_cast<unsigned char>(component[5])) ||
+      !isdigit(static_cast<unsigned char>(component[6]))) {
+    return UINT8_MAX;
+  }  // if (not "valueNN")
+  const uint8_t number = static_cast<uint8_t>((component[5] - '0') * 10 + (component[6] - '0'));
+  if (number < 1 || number > HOME_VALUE_COUNT) {
+    return UINT8_MAX;
+  }  // if (not a slot)
+  if (component[7] == ':' && component[8] != '\0' && component[9] == '\0') {
+    role = component[8];
+  } else if (component[7] != '\0') {
+    return UINT8_MAX;
+  }  // if (role suffix)
+  return static_cast<uint8_t>(number - 1);
+}
+
+/// @brief Whether a state or attribute holds no usable value.
+static bool home_value_unusable(const char *value) {
+  return value[0] == '\0' || strcasecmp(value, "none") == 0 || strcasecmp(value, "unknown") == 0 ||
+         strcasecmp(value, "unavailable") == 0;
+}
+
+/// @brief Show or hide a home value and its icon, which share one visibility bit.
+static void home_value_visibility(uint8_t idx, bool visible) {
+  HomeValueState &value = home_value_states[idx];
+  const Visibility wanted = visible ? Visibility::SHOWN : Visibility::HIDDEN;
+  if (value.shown == wanted) {
+    return;
+  }  // if (unchanged)
+  value.shown = wanted;
+  // The mask keeps it across page changes; the live components are written while home is showing
+  home_vis_set(HOME_VALUE_TARGETS[idx * 2].component, visible);
+  if (is_home_page()) {
+    nextion_display->set_component_visibility(HOME_VALUE_TARGETS[idx * 2].component, visible);
+    nextion_display->set_component_visibility(HOME_VALUE_TARGETS[idx * 2 + 1].component, visible);
+  }  // if (is_home_page())
+}
+
+/**
+ * @brief Build the text of a home value from its state, unit and decimals.
+ *
+ * @param value The slot.
+ * @param out Destination buffer, of HOME_VALUE_TEXT_LEN bytes.
+ * @return false when the value is a number that rounds to zero, true otherwise.
+ */
+static bool home_value_format(const HomeValueState &value, char *out) {
+  const char *state = value.state;
+  std::string text;
+  bool non_zero = true;
+  const optional<float> number = parse_number<float>(state);
+  if (strcasecmp(state, "unavailable") == 0 || state[0] == '\0') {
+    text = home_value_text_unavailable;
+  } else if (strcasecmp(state, "unknown") == 0 || strcasecmp(state, "none") == 0) {
+    text = home_value_text_unknown;
+  } else if (number.has_value()) {
+    char buffer[24];
+    if (value.decimals <= HOME_VALUE_DECIMALS_MAX) {
+      snprintf(buffer, sizeof(buffer), "%.*f", static_cast<int>(value.decimals), static_cast<double>(*number));
+      non_zero = (strtof(buffer, nullptr) != 0.0f);
+    } else {
+      // Decimals not known yet: as Home Assistant reports it
+      strncpy(buffer, state, sizeof(buffer) - 1);
+      buffer[sizeof(buffer) - 1] = '\0';
+      non_zero = (*number != 0.0f);
+    }  // if (decimals known)
+    // Guarded indexing: an empty separator would be undefined behaviour here
+    const char decimal =
+        (decimal_separator_str == nullptr || decimal_separator_str->empty()) ? '.' : (*decimal_separator_str)[0];
+    text = adjustDecimalSeparator(buffer, decimal);
+    if (value.unit[0] != '\0') {
+      text += (units_separator_str != nullptr) ? units_separator_str->c_str() : "";
+      text += value.unit;
+    }  // if (unit)
+  } else if (strcasecmp(state, "on") == 0) {
+    text = home_value_text_on;
+  } else if (strcasecmp(state, "off") == 0) {
+    text = home_value_text_off;
+  } else {
+    text = state;  // Any other text, as Home Assistant reports it
+  }  // if (kind of state)
+
+  // The component holds HOME_VALUE_TEXT_LEN - 1 bytes: cut at a character boundary, never inside a UTF-8 sequence
+  size_t length = text.size();
+  if (length > HOME_VALUE_TEXT_LEN - 1) {
+    length = HOME_VALUE_TEXT_LEN - 1;
+    while (length > 0 && (static_cast<unsigned char>(text[length]) & 0xC0) == 0x80) {
+      --length;
+    }  // while (inside a UTF-8 sequence)
+  }  // if (too long)
+  memcpy(out, text.data(), length);
+  out[length] = '\0';
+  return non_zero;
+}
+
+/**
+ * @brief Draw the text of a home value, and show or hide it.
+ *
+ * @param idx Zero-based slot index.
+ */
+static void home_value_draw(uint8_t idx) {
+  HomeValueState &value = home_value_states[idx];
+  if (!value.bound || nextion_display == nullptr) {
+    return;
+  }  // if (nothing to draw)
+  char text[HOME_VALUE_TEXT_LEN];
+  const bool non_zero = home_value_format(value, text);
+  if (home_values_hide_zero && !non_zero) {
+    home_value_visibility(idx, false);
+    return;
+  }  // if (hidden at zero)
+  if (strcmp(value.text, text) != 0) {
+    memcpy(value.text, text, sizeof(value.text));
+    // Scoped name: it persists in display RAM and reaches the live component when home is showing
+    nextion_display->set_component_text(HOME_VALUE_TARGETS[idx * 2].target, value.text);
+  }  // if (text changed)
+  home_value_visibility(idx, true);
+}
+
+/**
+ * @brief Render a subscription binding onto a home value.
+ *
+ * @param binding The binding being rendered.
+ * @param rt Runtime state, including blueprint-supplied appearance.
+ * @param state State of the entity, or its unit of measurement for the ":u" role.
+ * @param idx Zero-based slot index, already validated by the caller.
+ * @param role Role suffix of the component: '\0' for the state, 'u' for the unit.
+ */
+static void home_value_render(const SubBinding &binding, const SubRuntime &rt, const char *state, uint8_t idx,
+                              char role) {
+  HomeValueState &value = home_value_states[idx];
+  if (role == 'u') {
+    // An entity without a unit reports none; one that lost its attributes keeps the last unit
+    const char *unit = home_value_unusable(state) ? "" : state;
+    if (strcasecmp(state, "unavailable") == 0 || strcasecmp(state, "unknown") == 0) {
+      return;
+    }  // if (attribute not available now)
+    strncpy(value.unit, unit, sizeof(value.unit) - 1);
+    value.unit[sizeof(value.unit) - 1] = '\0';
+    home_value_draw(idx);
+    return;
+  }  // if (unit)
+  if (role != '\0') {
+    ESP_LOGW(TAG, "'%s' has an unknown role", binding.component);
+    return;
+  }  // if (unknown role)
+
+  value.bound = true;
+  strncpy(value.state, state, sizeof(value.state) - 1);
+  value.state[sizeof(value.state) - 1] = '\0';
+
+  // The first number of an entity that had no value when the Blueprint sent its settings: ask for its
+  // decimals, once. Before the settings arrive there is nothing to ask, as they bring the decimals.
+  if (value.decimals == HOME_VALUE_DECIMALS_UNKNOWN && !value.asked && system_flags.blueprint_ready &&
+      parse_number<float>(state).has_value()) {
+    value.asked = true;
+    fire_ha_event("home_value_format", {{"component", binding.component}});
+  }  // if (decimals needed)
+
+  // Icon: the one pushed by the Blueprint (an override), else from the domain, device class and state.
+  // Its colour is the one the Blueprint pushes for the component (see home_values_paint).
+  const bool active = (rt.last_state == SUB_STATE_ON);
+  const char *icon = rt.has_appearance ? (active ? rt.icon_on : rt.icon_off) : "";
+  if (icon[0] == '\0') {
+    const SubAppearance look = resolve_binding_appearance(binding, state, rt.color_on, rt.color_off);
+    if (look.icon != nullptr) {
+      icon = look.icon;
+    }  // if (resolved)
+  }  // if (no pushed icon)
+  if (strlen(icon) < sizeof(value.icon) && strcmp(value.icon, icon) != 0) {
+    strncpy(value.icon, icon, sizeof(value.icon) - 1);
+    value.icon[sizeof(value.icon) - 1] = '\0';
+    nextion_display->set_component_text(HOME_VALUE_TARGETS[idx * 2 + 1].target, value.icon);
+  }  // if (icon changed)
+
+  home_value_draw(idx);
+}
+
+void home_value_decimals_set(uint8_t idx, uint8_t decimals) {
+  if (idx >= HOME_VALUE_COUNT) {
+    return;
+  }  // if (not a slot)
+  HomeValueState &value = home_value_states[idx];
+  value.decimals = (decimals <= HOME_VALUE_DECIMALS_MAX) ? decimals : HOME_VALUE_DECIMALS_UNKNOWN;
+  if (value.decimals != HOME_VALUE_DECIMALS_UNKNOWN) {
+    value.asked = false;  // Known now; a later loss is asked again
+  }  // if (known)
+  home_value_draw(idx);
+}
+
+void home_values_hide_zero_set(bool hide) {
+  if (home_values_hide_zero == hide) {
+    return;
+  }  // if (unchanged)
+  home_values_hide_zero = hide;
+  for (uint8_t idx = 0; idx < HOME_VALUE_COUNT; ++idx) {
+    home_value_draw(idx);
+  }  // for each home value
+}
+
+void home_value_texts_set(const char *unavailable, const char *unknown, const char *on, const char *off) {
+  home_value_text_unavailable = unavailable;
+  home_value_text_unknown = unknown;
+  home_value_text_on = on;
+  home_value_text_off = off;
+}
+
 void home_sub_render(const SubBinding &binding, const SubRuntime &rt, const char *state, bool visible) {
   if (nextion_display == nullptr) {
     return;  // Boot has not handed the display over yet
@@ -528,6 +790,12 @@ void home_sub_render(const SubBinding &binding, const SubRuntime &rt, const char
   const uint8_t idx = parse_home_button_index(binding.component);
   if (idx != UINT8_MAX) {
     home_button_render(binding, rt, state, idx);
+    return;
+  }
+  char value_role = '\0';
+  const uint8_t value_idx = parse_home_value_index(binding.component, value_role);
+  if (value_idx != UINT8_MAX) {
+    home_value_render(binding, rt, state, value_idx, value_role);
     return;
   }
 #ifdef NSPANEL_EASY_USE_WEATHER
@@ -580,6 +848,16 @@ void home_button_repaint() {
   if (outdoor_temp_shown == Visibility::SHOWN && outdoor_temp_text[0] != '\0') {
     nextion_display->set_component_text(hmi::home::OUTDOOR_TEMP.name, outdoor_temp_text);
   }
+
+  // And the values drawn from subscriptions, with their icons
+  for (uint8_t idx = 0; idx < HOME_VALUE_COUNT; ++idx) {
+    const HomeValueState &value = home_value_states[idx];
+    if (!value.bound) {
+      continue;  // Not drawn from a subscription
+    }
+    nextion_display->set_component_text(HOME_VALUE_TARGETS[idx * 2].target, value.text);
+    nextion_display->set_component_text(HOME_VALUE_TARGETS[idx * 2 + 1].target, value.icon);
+  }  // for each home value
 }
 
 #endif  // NSPANEL_EASY_SUBSCRIBE

@@ -118,6 +118,19 @@ Calibration pauses and keeps the current correction when:
 | Home page - Chips 01-07 (optional) | Used to display icons of HA binary entities on the home screen. The icon is displayed when the entity is on/open/true/active. Otherwise, no icon is displayed. | ![chip](pics/home_page_chips.jpg) |
 | Custom button 01-07 (Optional) | 7 custom buttons that can be assigned to different entities from your Home Assistant. The behavior of these buttons will depend on the entity's domain, such as light, media player, etc. | ![home_page_custom_buttons.jpg](pics/home_page_custom_buttons.jpg) |
 
+### Home page - Entity State 01-04 - How the value is shown
+
+The panel shows these values itself, straight from the Home Assistant states, so they are always up to date,
+also while another page is shown or the panel is sleeping.
+
+- **Numbers** are shown with the number of decimals Home Assistant uses for the entity (its display precision) and its unit of measurement.
+- **Other states** are shown as Home Assistant reports them (for example `open` or `heating`), without translation.
+  Only `on`, `off`, `unavailable` and `unknown` are shown in the language of the panel.
+- With **Values - Hide when zero** enabled, a value that rounds to zero is hidden, with its icon.
+
+The number of decimals is sent by the Blueprint when the panel starts.
+If the entity has no value at that moment, the number is shown as received until the panel gets its decimals, which it asks for when the first number arrives.
+
 ### Home page - Entity State 01-04 - Graph (Optional)
 
 When enabled, tapping the value (or its icon) on the Home page opens a page with a graph of the entity over the last 24 hours, one point per 5 minutes.
@@ -158,6 +171,10 @@ You will find more details about this on the Add-on Climate documentation.
 If you are using the climate add-on, it will create a climate entity in your panel's device page.
 You still have to select that entity on this field in the blueprint settings to have it used as your main climate.
 
+The Blueprint recognizes the panel's own thermostat by its default entity ID, ending with `_thermostat`.
+If you renamed it in Home Assistant, select it also in **Embedded thermostat - Entity override**, so it keeps being controlled on the panel itself.
+Leave that input empty otherwise.
+
 Additional climate entities can be assigned to buttons and will be explained later in this document.
 
 ### Embedded Thermostat - Regulate on the Calibration Reference (Optional)
@@ -171,8 +188,16 @@ On the blueprint settings, you will also find settings for sensors and custom bu
 > [!NOTE]
 > The panel follows the custom buttons' entities through [API subscriptions](api_subscribe.md), so changing which entity a custom button uses restarts the panel once.
 
+A climate entity with up to five presets (not counting `none`) shows them as buttons in the row of the HVAC mode buttons, when they fit there:
+the HVAC modes on the left and the presets on the right, with the active preset highlighted.
+One tap selects a preset, and a tap on the active preset leaves it (it selects `none`, when the entity has it).
+With more presets, or for the embedded thermostat, the page has a preset button instead, as described next.
+
 When a climate entity supports preset modes (like `eco`, `comfort` or `away`), its climate page shows a preset button that opens a list with the available presets.
 The button shows the icon of the active preset and is highlighted while a preset is active. Custom presets use the generic preset icon.
+
+When a climate entity supports fan modes (like `auto`, `low` or `high`), its climate page also shows a fan mode button, which opens a list with the available fan modes.
+The button shows an icon for the active fan mode (`auto`, `off`, `low`, `medium` and `high`), and a generic fan mode icon for any other mode.
 
 ## QR Code
 
@@ -222,6 +247,24 @@ The labels are not visible on the US landscape model.
 
 Normally, the internal relays of the NSPanels are triggered via HA.
 If the NSPanel loses Wi-Fi connection or HA is down, the hardware button can then switch the corresponding relay directly.
+
+### Relay x - Entity override (Optional)
+
+When the entity selected for a hardware button is the panel's own relay (relay 1 for the left button, relay 2 for the right button),
+a short press toggles the relay on the panel itself: immediately, and also when Home Assistant or the Blueprint automation is not available.
+
+The Blueprint recognizes the panel's relay by its default entity ID, ending with `_relay_1` or `_relay_2`.
+Leave this input empty to keep that automatic detection.
+
+Select an entity only when the relay is not recognized:
+
+- The entity ID of the relay was renamed in Home Assistant.
+- You use an entity created from the relay, like a light created with **Show as**.
+
+Select the entity that represents the relay, the same one selected for the hardware button.
+
+> [!NOTE]
+> This is different from the local fallback above, which only acts while the panel is not connected to Home Assistant.
 
 ### Left/Right Hardware Button - Entity (Optional)
 
@@ -284,6 +327,9 @@ The buttons are numbered as follows:
 When the respective button is pressed, a toggle action is executed or the corresponding page is automatically opened, e.g.
 the cover control for covers, etc.
 For 2 state buttons (where toggle is the default action), a long press in the button will open it's corresponding page, when supported.
+
+The light page shows the active effect under its effect button, and the fan page shows the active preset mode under its mode button, so the current mode is visible without opening the list.
+A fan with up to five preset modes and no speed control shows its preset modes as buttons instead, with the active one highlighted.
 
 For each button an own name can be specified optionally.
 
