@@ -131,6 +131,23 @@ extern bool display_portrait;
 extern bool display_valid;
 
 /**
+ * @brief Display settings, as the TFT reports them when ESPHome asks (`call report_display`).
+ *
+ * The TFT sends each value on its own and then "display_report", which tells that the report is
+ * complete. The values are collected here until then.
+ */
+struct DisplayReport {
+  uint8_t display_mode{0};     ///< Display mode stored on the display, or the default of its TFT file; 0 = not received
+  uint8_t hard_coded_mode{0};  ///< Default display mode of the TFT file; 0 = not received
+  uint8_t magic_flag{0};       ///< 1 when the display's EEPROM was already initialized when it started
+  std::string tft_version;     ///< Version of the TFT file; empty = not received
+
+  /// @brief Forget the values, before a new report.
+  void reset() { *this = DisplayReport(); }
+};
+extern DisplayReport display_report;
+
+/**
  * @brief Title and icon override for the entity details page.
  *
  * Set by the Blueprint through `component_text_list` (`page: mem`, `id: details_overlap`)

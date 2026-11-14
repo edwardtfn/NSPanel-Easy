@@ -81,6 +81,7 @@ txt_maxl = 25
 [[component]]
 name = "version"
 type = "variable"
+vscope = 1
 sta = 1
 txt = "9999.99.9"
 txt_maxl = 12
