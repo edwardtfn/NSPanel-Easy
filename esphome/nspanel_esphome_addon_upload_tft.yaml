@@ -160,11 +160,19 @@ script:
       - lambda: |-
           // Automatic upload is enabled
           #if NSPANEL_EASY_ADDON_UPLOAD_TFT_AUTOMATICALLY
-            // Return if the current TFT already meets the minimum required version
-            if (tft_ver_gte(version_tft->state, "${min_tft_version}")) {
-              ESP_LOGV("${TAG_UPLOAD_TFT}", "Supported version");
-              return;
-            }
+            // The TFT is updated whenever its version differs from the firmware version, as the firmware
+            // downloads the TFT from its own release tag. Below the minimum version the update is required.
+            const bool below_min_version = !tft_ver_gte(version_tft->state, "${min_tft_version}");
+            if (!below_min_version) {
+              if (version_tft->state == "${version}") {
+                ESP_LOGV("${TAG_UPLOAD_TFT}", "TFT matches the firmware version");
+                return;
+              }
+              if (version_tft->state == "${TFT_VERSION_DEV}") {
+                ESP_LOGD("${TAG_UPLOAD_TFT}", "Development TFT kept");
+                return;
+              }
+            }  // if (!below_min_version)
 
             // Only proceed when a standard TFT is selected (indices 1+)
             if (!display_valid || display_model->current_option() == "${DISPLAY_MODES_BLANK_TEXT}") {
@@ -172,7 +180,24 @@ script:
               return;
             }
 
-            ESP_LOGI("${TAG_UPLOAD_TFT}", "Auto updating TFT from '%s' to '${min_tft_version}'", version_tft->state.c_str());
+            // check_versions runs several times during boot; one upload sequence is enough
+            if (system_flags.tft_upload_active || upload_tft->is_running()) {
+              ESP_LOGV("${TAG_UPLOAD_TFT}", "TFT upload already started");
+              return;
+            }
+
+            if (!below_min_version) {
+              // A TFT that never matches (e.g. a custom TFT or URL) must not be uploaded on every boot
+              if (!tft_auto_upload_allowed("${version}")) {
+                ESP_LOGW("${TAG_UPLOAD_TFT}", "TFT version '%s' differs from the firmware, but it was already "
+                                              "uploaded for this firmware version; press 'Update TFT display' to "
+                                              "upload it again", version_tft->state.c_str());
+                return;
+              }
+              tft_auto_upload_register("${version}", false);
+            }  // if (!below_min_version)
+
+            ESP_LOGI("${TAG_UPLOAD_TFT}", "Auto updating TFT from '%s' to '${version}'", version_tft->state.c_str());
             upload_tft->execute("");
           #else  // Automatic upload is disabled
             ESP_LOGV("${TAG_UPLOAD_TFT}", "Auto updating is disabled");
@@ -450,6 +475,9 @@ script:
           sprintf(update_msg, "Attempt #%d returned: %s", tft_upload_attempt,
                                                           tft_upload_result ? "Success!" : "FAILED");
           ESP_LOGD("${TAG_UPLOAD_TFT}", update_msg);
+          // A successful upload (automatic or manual) ends the automatic updates for this firmware version,
+          // so a TFT chosen by the user is not replaced on the next boot when its version differs
+          if (tft_upload_result) tft_auto_upload_register("${version}", true);
           ESP_LOGI("addon_upload_tft.script.upload_tft_attempt", "Restarting ESPHome");
           App.safe_reboot();
 

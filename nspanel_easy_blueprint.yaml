@@ -11660,18 +11660,8 @@ actions:
                       versions:
                         blueprint: '{{ nspanel_event.blueprint | default("") }}'
                         esphome: '{{ nspanel_event.esphome | default("") }}'
-                        tft: >
-                          {{
-                            nspanel_event.tft | float(0)
-                            if nspanel_event.tft is defined
-                            else 0
-                          }}
-                        tft_min: >
-                          {{
-                            nspanel_event.min_tft_version | float(0)
-                            if nspanel_event.min_tft_version is defined
-                            else 0
-                          }}
+                        tft: '{{ nspanel_event.tft | default("") | string }}'
+                        tft_min: '{{ nspanel_event.min_tft_version | default("") | string }}'
                         blueprint_min: >
                           {{
                             nspanel_event.min_blueprint_version | default("")
@@ -11701,6 +11691,27 @@ actions:
                           and not is_number(versions.blueprint_min)
                           else [0, 0, 0]
                         }}
+                      # Parse TFT versions into comparable lists [format, a, b, c]: a CalVer release version
+                      # (YYYY.M.seq) is [1, YYYY, M, seq] and a legacy version (major.minor, from older TFT files)
+                      # is [0, major, minor, 0], so lists compare as versions and legacy is older than any release.
+                      # An empty or invalid version is [0, 0, 0, 0]. Parsed from the event, as variables
+                      # turn a version like 22.3 into a number.
+                      tft_parts: >-
+                        {%- set version = nspanel_event.tft | default('') | string -%}
+                        {%- set segments = version.split('.') -%}
+                        {%- if version is match "[0-9]{1,9}([.][0-9]{1,9}){0,2}$" -%}
+                          {{ ([segments | count // 3] + (segments + ['0', '0'])[:3]) | map('int') | list }}
+                        {%- else -%}
+                          {{ [0, 0, 0, 0] }}
+                        {%- endif -%}
+                      tft_min_parts: >-
+                        {%- set version = nspanel_event.min_tft_version | default('') | string -%}
+                        {%- set segments = version.split('.') -%}
+                        {%- if version is match "[0-9]{1,9}([.][0-9]{1,9}){0,2}$" -%}
+                          {{ ([segments | count // 3] + (segments + ['0', '0'])[:3]) | map('int') | list }}
+                        {%- else -%}
+                          {{ [0, 0, 0, 0] }}
+                        {%- endif -%}
                       # True when blueprint_reported >= blueprint_min (compatible)
                       blueprint_compatible: >-
                         {{
@@ -11738,7 +11749,7 @@ actions:
                           # with the minimum version required by the firmware
                           - '{{ blueprint_compatible }}'
                           # TFT version is valid and compatible
-                          - '{{ versions.tft > 0 and versions.tft_min > 0 and versions.tft >= versions.tft_min }}'
+                          - '{{ tft_parts[1] > 0 and tft_min_parts[1] > 0 and tft_parts >= tft_min_parts }}'
                         sequence:
                           - action: persistent_notification.dismiss
                             data:
@@ -11824,7 +11835,7 @@ actions:
 
                       - alias: TFT is older than expected
                         conditions:
-                          - '{{ versions.tft > 0 and versions.tft_min > 0 and versions.tft_min > versions.tft }}'
+                          - '{{ tft_parts[1] > 0 and tft_min_parts[1] > 0 and tft_min_parts > tft_parts }}'
                         sequence:
                           - choose:
                               - alias: TFT Upload add-on missing
