@@ -11397,6 +11397,9 @@ actions:
                                       entity_domain not in domains_functionality.detailed_only
                                     }}
                                 sequence:
+                                  - condition: '{{ last_click_button.entity is defined }}'
+                                  - condition: '{{ last_click_button.entity is string }}'
+                                  - condition: '{{ last_click_button.entity | length > 2 }}'
                                   - *short_press_action_call
 
                       - alias: Fan page mode buttons
