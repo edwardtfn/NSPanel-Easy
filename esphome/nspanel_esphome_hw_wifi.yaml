@@ -106,7 +106,10 @@ script:
           // While booting, a missing connection is expected, so it stays neutral (Gray Moss)
           #else  // _WIFI_ICON_COLORS
           // Determine new color based on availability, neutral while booting
-          const uint16_t color_new = (system_flags.blueprint_ready or !system_flags.boot_completed) ?
+          const bool operational = wifi_component->is_connected() and
+                                   api_server->is_connected_with_state_subscription() and
+                                   system_flags.blueprint_ready;
+          const uint16_t color_new = (operational or !system_flags.boot_completed) ?
                                      Colors::RGB565_GRAY_MOSS : Colors::RGB565_RED;
           #endif  // _WIFI_ICON_COLORS
 

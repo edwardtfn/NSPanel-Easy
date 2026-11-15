@@ -46,7 +46,7 @@ substitutions:
 | Substitution | Default | Description |
 | :- | :- | :- |
 | `chips_page_screensaver` | `true` | Shows the chips on the screensaver page as well as on the home page. |
-| `wifi_icon_colors` | `true` | Colours the Wi-Fi icon by signal strength while everything is connected (green, yellow or orange), and red otherwise. When `false`, the icon stays grey, or red until the Blueprint is ready. |
+| `wifi_icon_colors` | `true` | Colours the Wi-Fi icon by signal strength while everything is connected (green, yellow or orange), and red otherwise. When `false`, the icon is grey while everything is connected, and red otherwise. In both cases it stays grey while the panel is booting. |
 <!-- markdownlint-enable MD013 -->
 
 ## Home Assistant connection
@@ -54,7 +54,7 @@ substitutions:
 <!-- markdownlint-disable MD013 -->
 | Substitution | Default | Description |
 | :- | :- | :- |
-| `api_stale_grace_period` | `30s` | Time without Home Assistant before the values on display are indicated as stale. Chips of Home Assistant entities, home custom buttons and the weather picture are then hidden (the relay and embedded thermostat chips are controlled locally and stay visible), the indoor temperature falls back to the panel's own sensor, and the outdoor temperature and the home values are greyed out. Everything recovers as soon as Home Assistant is back. |
+| `api_stale_grace_period` | `30s` | Time without Home Assistant before the values on display are indicated as stale. After a restart, they are stale until Home Assistant connects, without waiting for this period. Chips of Home Assistant entities, home custom buttons and the weather picture are then hidden (the relay and embedded thermostat chips are controlled locally and stay visible), the indoor temperature falls back to the panel's own sensor, and the outdoor temperature and the home values are greyed out. Everything recovers as soon as Home Assistant is back. |
 <!-- markdownlint-enable MD013 -->
 
 ## Hardware buttons

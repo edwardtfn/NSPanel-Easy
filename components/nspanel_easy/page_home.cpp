@@ -546,16 +546,17 @@ struct HomeValueState {
   uint8_t decimals;                ///< Decimals to show, or HOME_VALUE_DECIMALS_UNKNOWN
   bool bound;                      ///< Drawn from a subscription
   bool asked;                      ///< The number of decimals was already asked to the Blueprint
+  bool text_sent;                  ///< The text was written to the component since the start
   Visibility shown;                ///< Whether the value and its icon are shown
 };
 static_assert(sizeof(HomeValueState::icon) >= 4, "Icons are BMP private-use codepoints: 3 bytes + null");
 
 /// @brief One entry per home value slot.
 static HomeValueState home_value_states[HOME_VALUE_COUNT] = {
-    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, Visibility::UNKNOWN},
-    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, Visibility::UNKNOWN},
-    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, Visibility::UNKNOWN},
-    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, Visibility::UNKNOWN},
+    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, false, Visibility::UNKNOWN},
+    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, false, Visibility::UNKNOWN},
+    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, false, Visibility::UNKNOWN},
+    {{}, {}, {}, {}, HOME_VALUE_DECIMALS_UNKNOWN, false, false, false, Visibility::UNKNOWN},
 };
 
 /// @brief Whether a value that rounds to zero is hidden, with its icon.
@@ -688,7 +689,10 @@ static void home_value_draw(uint8_t idx) {
     home_value_visibility(idx, false);
     return;
   }  // if (hidden at zero)
-  if (strcmp(value.text, text) != 0) {
+  // Always written the first time: after a restart of ESPHome alone, the display still shows the text of
+  // before, which an empty text would otherwise match
+  if (!value.text_sent || strcmp(value.text, text) != 0) {
+    value.text_sent = true;
     memcpy(value.text, text, sizeof(value.text));
     // Scoped name: it persists in display RAM and reaches the live component when home is showing
     nextion_display->set_component_text(HOME_VALUE_TARGETS[idx * 2].target, value.text);
