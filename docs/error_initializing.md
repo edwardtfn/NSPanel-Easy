@@ -3,8 +3,9 @@
 When your panel starts, a number of different things need to be set
 and ESPHome must establish a connection to the Nextion display used by your panel
 and also to your Home Assistant, which will provide the proper settings required by your panel.
-If everything goes right, the screen stays dark for a few seconds, until ESPHome connects to the display, and then the wake-up page is shown.
-The values from Home Assistant appear on it as soon as each one is available.
+If everything goes right, the screen shows a dimmed "NSPanel Easy" for a few seconds, until ESPHome connects to the display, and then the wake-up page is shown.
+Until Home Assistant connects, the values from Home Assistant are empty or greyed out, and the connection icon is grey.
+They appear as soon as each one is available, and the connection icon turns red only if the boot completes without Home Assistant.
 
 The boot page is only shown when ESPHome does not connect to the display within about 20 seconds,
 or while the display has an older TFT file that has to be updated first.
