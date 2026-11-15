@@ -13,6 +13,11 @@ substitutions:
   ## local yaml substitutions ##
   ##############################
   invalid_cooldown: 100ms
+  # Double click: a press counts as one click while it lasts up to `multi_click_press`, and a second
+  # press has to follow within `multi_click_gap`. The single click waits for that window before it is
+  # dispatched, so both patterns end with the same `multi_click_gap`.
+  multi_click_press: 600ms
+  multi_click_gap: 350ms
   buttons_color_on: ${COLOR_CYAN_BRIGHT}
   buttons_color_off: ${COLOR_BLUE_INDIGO}
   buttons_bar_text_follow_color: false  # Labels' font color follows the bar color
@@ -29,6 +34,10 @@ binary_sensor:
     platform: gpio
     id: left_button
     pin: ${GPIO_BUTTON_LEFT_PIN}
+    filters:
+      # Bounce inside a sequence's final window cancels the pending trigger, so the double click is
+      # missed on the raw GPIO without a debounce filter
+      - delayed_on_off: 20ms
     on_multi_click:
       - timing: &long_click-timing
           - ON for at least 0.8s
@@ -39,8 +48,21 @@ binary_sensor:
               button_left_press_long->execute();
               ha_button->execute(page_names[current_page_id], "hw_bt_left", "long_click");
               ESP_LOGD("${TAG_HW_BUTTONS}", "Left button - Long click dispatched");
+      - timing: &double_click-timing
+          - ON for at most ${multi_click_press}
+          - OFF for at most ${multi_click_gap}
+          - ON for at most ${multi_click_press}
+          - OFF for at least ${multi_click_gap}
+        invalid_cooldown: ${invalid_cooldown}
+        then:
+          - lambda: |-
+              ESP_LOGV("${TAG_HW_BUTTONS}", "Left button - Double click detected");
+              button_left_press_double->execute();
+              ha_button->execute(page_names[current_page_id], "hw_bt_left", "double_click");
+              ESP_LOGD("${TAG_HW_BUTTONS}", "Left button - Double click dispatched");
       - timing: &short_click-timing
-          - ON for at most 0.8s
+          - ON for at most ${multi_click_press}
+          - OFF for at least ${multi_click_gap}
         invalid_cooldown: ${invalid_cooldown}
         then:
           - lambda: |-
@@ -56,6 +78,8 @@ binary_sensor:
     platform: gpio
     id: right_button
     pin: ${GPIO_BUTTON_RIGHT_PIN}
+    filters:
+      - delayed_on_off: 20ms
     on_multi_click:
       - timing: *long_click-timing
         invalid_cooldown: ${invalid_cooldown}
@@ -65,6 +89,14 @@ binary_sensor:
               button_right_press_long->execute();
               ha_button->execute(page_names[current_page_id], "hw_bt_right", "long_click");
               ESP_LOGD("${TAG_HW_BUTTONS}", "Right button - Long click dispatched");
+      - timing: *double_click-timing
+        invalid_cooldown: ${invalid_cooldown}
+        then:
+          - lambda: |-
+              ESP_LOGV("${TAG_HW_BUTTONS}", "Right button - Double click detected");
+              button_right_press_double->execute();
+              ha_button->execute(page_names[current_page_id], "hw_bt_right", "double_click");
+              ESP_LOGD("${TAG_HW_BUTTONS}", "Right button - Double click dispatched");
       - timing: *short_click-timing
         invalid_cooldown: ${invalid_cooldown}
         then:
@@ -294,6 +326,10 @@ script:
     mode: restart
     then:
 
+  - id: button_left_press_double
+    mode: restart
+    then:
+
   - id: button_left_release
     mode: restart
     then:
@@ -303,6 +339,10 @@ script:
     then:
 
   - id: button_right_press_short
+    mode: restart
+    then:
+
+  - id: button_right_press_double
     mode: restart
     then:
 
@@ -501,9 +541,11 @@ script:
       - lambda: |-
           button_left_press_long->stop();
           button_left_press_short->stop();
+          button_left_press_double->stop();
           button_left_release->stop();
           button_right_press_long->stop();
           button_right_press_short->stop();
+          button_right_press_double->stop();
           button_right_release->stop();
           refresh_hardware_buttons_bars->stop();
           refresh_hardware_buttons_labels->stop();

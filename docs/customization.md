@@ -31,6 +31,7 @@ Table of contents:
   - [Climate custom presets](#climate-custom-presets)
   - [Push button / Momentary switch](#push-button--momentary-switch)
   - [Hardware button scripts (v4.3.30+)](#hardware-button-scripts-v4330)
+  - [Hardware button double click](#hardware-button-double-click)
   - [Expose relay fallback switch](#expose-relay-fallback-switch)
   - [Relay Interlocking](#relay-interlocking)
 
@@ -778,9 +779,11 @@ The available scripts are:
 
 - `button_left_press_long` - Triggered when the left button is pressed and held
 - `button_left_press_short` - Triggered when the left button is pressed briefly
+- `button_left_press_double` - Triggered when the left button is clicked twice
 - `button_left_release` - Triggered when the left button is released
 - `button_right_press_long` - Triggered when the right button is pressed and held
 - `button_right_press_short` - Triggered when the right button is pressed briefly
+- `button_right_press_double` - Triggered when the right button is clicked twice
 - `button_right_release` - Triggered when the right button is released
 
 These scripts are particularly useful when you need custom behavior during network disconnections or want to implement local fallback functionality.
@@ -863,6 +866,36 @@ script:
 > [!TIP]
 > Using these dedicated scripts instead of the `ha_button` service reduces CPU load and provides more precise control over button behavior.
 > The `api.connected` condition ensures that custom actions only execute when Home Assistant is unavailable, allowing normal operation to resume once connectivity is restored.
+
+### Hardware button double click
+
+Each hardware button reports a double click as its own event, next to the single click and the hold:
+
+| Pattern | `command` of the `button_click` event | When it is sent |
+| --- | --- | --- |
+| Single click | `short_click` | one press, released before another press starts |
+| Double click | `double_click` | two presses in a row |
+| Hold | `long_click` | while the button is held, at 0.8 s |
+
+The Blueprint exposes one action per pattern and button ("custom action", "double click action" and "custom hold action"),
+so nothing has to be coded for this. On the panel, `button_left_press_double` and `button_right_press_double` run for the
+double click, like the other button scripts.
+
+A press counts as one click while it lasts up to `multi_click_press`, and a second press has to follow within
+`multi_click_gap` to make it a double click. Both are substitutions when the default timing doesn't suit you:
+
+```yaml
+substitutions:
+  multi_click_press: 500ms  # Longest press still counted as a click
+  multi_click_gap: 300ms    # Time allowed between the two presses
+```
+
+Both patterns end with the same `multi_click_gap` window, and that is what keeps a double click from also being
+reported as a single click.
+
+The cost of the detection is one window of latency on the single click: `short_click` is sent `multi_click_gap` after
+the button is released (0.35 s by default), because the panel has to wait for a possible second press. The local relay
+toggle (`button_left_press_short`, `button_right_press_short`) and the screensaver wake-up move by the same amount.
 
 ### Expose Relay Fallback Switch
 
