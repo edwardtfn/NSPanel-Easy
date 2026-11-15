@@ -308,6 +308,11 @@ script:
           ESP_LOGD("${TAG_PAGE_BOOT}", "Start screen released on page '%s'", page_names[current_page_id]);
           brightness_current = UINT8_MAX;  // Set by the display itself until now
           if (current_page_id == get_page_id("boot")) return;
+          if (current_page_id == get_page_id("screensaver")) {
+            // Still on the screensaver when the boot completes: replace the start screen by the screensaver
+            page_screensaver->execute();
+            return;
+          }  // if (screensaver)
           set_brightness->execute((brightness_dim_hold or brightness_auto_hold) ? display_dim_brightness->state :
                                                                                   display_brightness->state);
 
