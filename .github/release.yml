@@ -6,11 +6,11 @@
 # Categories are evaluated in order — the first matching label wins.
 # PRs with no matching label fall into the catch-all at the bottom.
 #
-# Label-to-prefix mapping (applied by the PR title validation workflow):
+# Label-to-prefix mapping (applied by the "Label by title" job of .github/workflows/labeler.yml):
 #   fix:       -> Bug
 #   feat:      -> Enhancement
 #   improve:   -> Improvement
-#   ci:        -> CI
+#   ci:        -> ci
 #   docs:      -> Documentation
 #   style:     -> Style
 #   build:     -> Build
@@ -20,9 +20,9 @@
 #   Dependabot -> Dependencies (applied automatically by GitHub)
 #
 # Note: GitHub matches on PR labels, not on the title prefix directly.
-# The labels above must be created in the repository and applied to PRs
-# — either manually or via a labeler workflow — for categorization to work.
-# Until a labeler is in place, all PRs will appear under "Other Changes".
+# The labels above must exist in the repository. The labeler workflow applies
+# them from the title prefix; a PR without any of them appears under "Other Changes".
+# The "Area: ..." labels, added by the same workflow, are not used here.
 
 ---
 changelog:

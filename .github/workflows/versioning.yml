@@ -3,19 +3,21 @@
 # Triggered by any push to the main branch (normally a PR merge), it automatically:
 # 1. Bumps the CalVer version (YYYY.M.seq)
 # 2. Calculates the minimum upstream version (previous month, YYYY.M.0)
-# 3. Resolves the "next" sentinel in min_blueprint_version, if set
+# 3. Resolves the "next" sentinel in min_blueprint_version and min_tft_version, if set
 # 4. Raises min_esphome_compiler_version (never lowers it) and updates blueprint homeassistant.min_version
 # 5. Updates the bug report template with current version placeholders
 # 6. Updates the blueprint version and display name, and resolves the "next" sentinel in its min_esphome_version
-# 7. Commits all version changes and pushes to main
-# 8. Builds pre-built firmware binaries in parallel (nspanel-easy, wall-display)
-# 9. Commits the compiled binaries, checksums, and manifests to main
-# 10. Creates a version tag and GitHub Release, described by the PR that triggered it
-# 11. Updates the stable and latest floating tags
-# 12. Announces the release on Discord
-# 13. Brings dev up to date with the released main, creating it if missing
-#     (runs in parallel with step 12, so a failure never blocks the announcement),
-#     then marks the Blueprint on dev with the development version 9999.99.9
+# 7. Sets the TFT version in the HMI source to the new version
+# 8. Commits all version changes and pushes to main
+# 9. Builds pre-built firmware binaries and the TFT files in parallel (nspanel-easy, wall-display, TFT)
+# 10. Commits the compiled binaries, checksums, manifests and TFT files to main
+# 11. Creates a version tag and GitHub Release, described by the PR that triggered it
+# 12. Updates the stable and latest floating tags
+# 13. Announces the release on Discord
+# 14. Brings dev up to date with the released main, creating it if missing
+#     (runs in parallel with step 13, so a failure never blocks the announcement),
+#     marks the Blueprint and the TFT source on dev with the development version 9999.99.9,
+#     and starts the HMI build on dev, so the TFT files on dev carry it too
 #
 # The workflow skips execution if the head commit message contains
 # [skip-versioning], preventing loops caused by its own version bump and
@@ -236,7 +238,7 @@ jobs:
         run: |
           yq eval '.version = strenv(NEW_VERSION)' -i ./versioning/version.yaml
 
-      - name: Resolve min_blueprint_version sentinel and update upstream versions
+      - name: Resolve min_blueprint_version and min_tft_version sentinels and update upstream versions
         if: steps.skip_check.outputs.skip == 'false'
         env:
           NEW_VERSION: ${{ steps.next_version.outputs.version }}
@@ -263,6 +265,22 @@ jobs:
             MIN_BP=$(grep "^  min_blueprint_version:" "$ESPHOME_VERSION_FILE" | awk '{print $2}')
             echo "min_blueprint_version is already set to ${MIN_BP}, no sentinel to resolve"
           fi
+
+          # The TFT carries the release version, so min_tft_version is resolved the same way:
+          # "next" or "${version}" requires the TFT built for this exact release.
+          if grep -qE '^  min_tft_version: (next|\$\{version\})$' "$ESPHOME_VERSION_FILE"; then
+            sed -i \
+              "s/^  min_tft_version: .*/  min_tft_version: ${NEW_VERSION}/" \
+              "$ESPHOME_VERSION_FILE"
+            if ! grep -q "^  min_tft_version: ${NEW_VERSION}$" "$ESPHOME_VERSION_FILE"; then
+              echo "ERROR: Failed to resolve min_tft_version sentinel in $ESPHOME_VERSION_FILE"
+              exit 1
+            fi
+            echo "Resolved min_tft_version sentinel to ${NEW_VERSION}"
+          else
+            MIN_TFT=$(grep "^  min_tft_version:" "$ESPHOME_VERSION_FILE" | awk '{print $2}')
+            echo "min_tft_version is already set to ${MIN_TFT}, no sentinel to resolve"
+          fi  # if (min_tft_version sentinel)
 
           # Raise the minimum ESPHome compiler version to the previous month, keeping the
           # upstream contract in sync with the release date. A higher value set
@@ -309,12 +327,12 @@ jobs:
         env:
           VERSION: ${{ steps.versions.outputs.version }}
           MIN_BLUEPRINT_VERSION: ${{ steps.versions.outputs.min_blueprint_version }}
-          MIN_TFT_VERSION: ${{ steps.versions.outputs.min_tft_version }}
         run: |
           # Use label-anchored Python script to avoid fragile body index references.
+          # The TFT carries the release version, so its placeholder is the release version too.
           python3 .github/scripts/update_bug_template.py \
             .github/ISSUE_TEMPLATE/bug.yml \
-            "$MIN_TFT_VERSION" \
+            "$VERSION" \
             "$VERSION" \
             "$MIN_BLUEPRINT_VERSION"
 
@@ -376,6 +394,15 @@ jobs:
             exit 1
           fi
 
+      - name: Set the TFT version in the HMI source
+        if: steps.skip_check.outputs.skip == 'false'
+        env:
+          NEW_VERSION: ${{ steps.next_version.outputs.version }}
+        run: |
+          # The TFT files are built from this source by the build-tft job, so they
+          # carry the same version as the firmware and the Blueprint.
+          python3 .github/scripts/set_tft_version.py "$NEW_VERSION"
+
       - name: Restore YAML document end markers
         if: steps.skip_check.outputs.skip == 'false'
         run: |
@@ -393,7 +420,7 @@ jobs:
           NEW_VERSION: ${{ steps.next_version.outputs.version }}
         run: |
           git add ./versioning/version.yaml .github/ISSUE_TEMPLATE/bug.yml \
-                  esphome/nspanel_esphome_version.yaml nspanel_easy_blueprint.yaml
+                  esphome/nspanel_esphome_version.yaml nspanel_easy_blueprint.yaml hmi/src
           git commit -m "Bump version to ${NEW_VERSION} [skip-versioning]"
 
       - name: Push changes to main
@@ -597,12 +624,63 @@ jobs:
           retention-days: 1
 
   # ---------------------------------------------------------------------------
-  # Collect both firmware artifacts, commit to main, tag, and release.
-  # Runs only after both build jobs succeed.
+  # Build the TFT files from the HMI source carrying the release version.
+  # Runs in parallel with the firmware builds once bump completes.
+  # ---------------------------------------------------------------------------
+  build-tft:
+    name: Build TFT files
+    needs: bump
+    if: needs.bump.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout post-bump main
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.bump.outputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Invoked through bash: the exec bit does not survive every Windows clone.
+      - name: Build HMI and TFT from source
+        run: bash hmi/dev/scripts/hmi_build.sh
+
+      - name: Verify the TFT version
+        env:
+          NEW_VERSION: ${{ needs.bump.outputs.version }}
+        run: |
+          # Every TFT reports the version it carries to the firmware at boot, so
+          # a TFT without the release version would never match the firmware.
+          ok=true
+          for tft in hmi/*.tft; do
+            if grep -a -q -F "$NEW_VERSION" "$tft"; then
+              echo "OK: ${tft} carries ${NEW_VERSION}"
+            else
+              echo "ERROR: ${tft} does not carry ${NEW_VERSION}"
+              ok=false
+            fi  # if (version found)
+          done  # for tft
+          [ "$ok" = true ] || exit 1
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: prebuilt-tft
+          path: |
+            hmi/*.hmi
+            hmi/*.tft
+          if-no-files-found: error
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Collect the firmware and TFT artifacts, commit to main, tag, and release.
+  # Runs only after all build jobs succeed.
   # ---------------------------------------------------------------------------
   commit-and-release:
     name: Commit artifacts & release
-    needs: [bump, build-nspanel, build-wall-display]
+    needs: [bump, build-nspanel, build-wall-display, build-tft]
     if: needs.bump.outputs.skip == 'false'
     runs-on: ubuntu-latest
     concurrency:
@@ -657,6 +735,12 @@ jobs:
           name: prebuilt-wall-display
           path: prebuilt/
 
+      - name: Download TFT artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: prebuilt-tft
+          path: hmi/
+
       - name: Verify pre-built artifacts
         run: |
           # Check all required files exist and are non-empty (-s: exists and size > 0).
@@ -668,7 +752,10 @@ jobs:
             prebuilt/nspanel_esphome_prebuilt.manifest.json \
             prebuilt/wall_display.bin \
             prebuilt/wall_display.bin.md5 \
-            prebuilt/wall_display.manifest.json; do
+            prebuilt/wall_display.manifest.json \
+            hmi/nspanel_blank.tft \
+            hmi/nspanel_landscape.tft \
+            hmi/nspanel_portrait.tft; do
             if [ ! -s "$f" ]; then
               echo "ERROR: missing or empty file: $f"
               ok=false
@@ -682,10 +769,13 @@ jobs:
         env:
           NEW_VERSION: ${{ needs.bump.outputs.version }}
         run: |
-          # Stage all changes under prebuilt/ including deletions of stale files.
+          # Stage all changes under prebuilt/ including deletions of stale files,
+          # and the HMI and TFT files built for this release, which the firmware
+          # downloads from the release tag.
           git add -A prebuilt/
+          git add hmi/*.hmi hmi/*.tft
           git diff --cached --quiet || \
-            git commit -m "build: pre-built firmware for v${NEW_VERSION} [skip-versioning]"
+            git commit -m "build: pre-built firmware and TFT files for v${NEW_VERSION} [skip-versioning]"
 
       - name: Push artifacts to main
         env:
@@ -813,6 +903,7 @@ jobs:
       group: sync-dev
       cancel-in-progress: false
     permissions:
+      actions: write  # Start the HMI build on dev
       contents: write
 
     steps:
@@ -864,18 +955,32 @@ jobs:
             echo "dev has diverged from main, merging ${RELEASE_SHA} into dev"
             git checkout -B dev origin/dev
             if ! git merge --no-ff "$RELEASE_SHA" -m "Merge main (v${NEW_VERSION}) into dev"; then
-              git merge --abort
-              echo "ERROR: merging main into dev conflicts; resolve it manually"
-              exit 1
-            fi
+              # The HMI and TFT files are build outputs, rebuilt on dev from its source at the end
+              # of this job, so a conflict on them is resolved by keeping dev's files.
+              # Any other conflict is left for manual resolution.
+              CONFLICTS=$(git diff --name-only --diff-filter=U)
+              if [[ -n "$CONFLICTS" ]] && ! grep -qvE '^hmi/[^/]+\.(hmi|tft)$' <<< "$CONFLICTS"; then
+                echo "Keeping dev's build outputs for: ${CONFLICTS//$'\n'/ }"
+                # shellcheck disable=SC2086  # Word splitting intended: paths without spaces
+                git checkout --ours -- $CONFLICTS
+                # shellcheck disable=SC2086
+                git add -- $CONFLICTS
+                git commit --no-edit
+              else
+                git merge --abort
+                echo "ERROR: merging main into dev conflicts; resolve it manually"
+                exit 1
+              fi  # if (only build outputs conflict)
+            fi  # if ! git merge
             # A plain push: if dev moved again meanwhile, it is rejected rather than overwritten.
             git push origin HEAD:refs/heads/dev
           fi  # if git merge-base --is-ancestor "$RELEASE_SHA" origin/dev
 
-      # A Blueprint taken from dev must never look like a release, so dev carries a development version.
-      # Only the Blueprint's name and blueprint_version are changed: versioning/version.yaml stays the real
-      # version, as the next release is calculated from it. The release bump overwrites both lines again.
-      - name: Mark the Blueprint on dev as a development version
+      # A Blueprint or a TFT taken from dev must never look like a release, so dev carries a development version.
+      # Only the Blueprint's name and blueprint_version, and the TFT version in the HMI source, are changed:
+      # versioning/version.yaml stays the real version, as the next release is calculated from it.
+      # The release bump overwrites them again.
+      - name: Mark the Blueprint and the TFT source on dev as a development version
         env:
           DEV_VERSION: "9999.99.9"
         run: |
@@ -891,11 +996,20 @@ jobs:
             echo "ERROR: Failed to set the development version in $BLUEPRINT"
             exit 1
           fi  # if (version lines not set)
+          python3 .github/scripts/set_tft_version.py "$DEV_VERSION"
           if git diff --quiet; then
-            echo "The Blueprint on dev already has the development version ${DEV_VERSION}"
+            echo "The Blueprint and the TFT source on dev already have the development version ${DEV_VERSION}"
             exit 0
           fi  # if (nothing changed)
-          git commit -am "chore: Mark the Blueprint on dev as development version ${DEV_VERSION}"
+          git commit -am "chore: Mark the Blueprint and the TFT source on dev as development version ${DEV_VERSION}"
           # A plain push: if dev moved again meanwhile, it is rejected rather than overwritten.
           git push origin HEAD:refs/heads/dev
+
+      # Pushes made with GITHUB_TOKEN do not start other workflows, but a dispatch does.
+      # The HMI build commits the TFT files built from the development source to dev,
+      # replacing the release TFT files merged from main. It commits nothing when they match.
+      - name: Build the TFT files on dev
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run hmi_build.yml --repo "${GITHUB_REPOSITORY}" --ref dev
 ...

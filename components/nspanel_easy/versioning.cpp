@@ -4,6 +4,10 @@
 
 #include "versioning.h"
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+
 namespace esphome::nspanel_easy {
 
 bool calver_gte(const std::string &version, const std::string &min_version) {
@@ -29,41 +33,73 @@ bool calver_gte(const std::string &version, const std::string &min_version) {
   return ver_s >= min_s;
 }
 
+/// Comparable form of a TFT version: {format, segment 1, segment 2, segment 3}
+using TftVersionParts = std::array<uint32_t, 4>;
+
+/// Format marker of TftVersionParts: legacy versions sort before CalVer ones
+static constexpr uint32_t TFT_VERSION_FORMAT_LEGACY = 0;
+static constexpr uint32_t TFT_VERSION_FORMAT_CALVER = 1;
+
+/// Longest accepted segment, keeping every segment within uint32_t
+static constexpr size_t TFT_VERSION_MAX_DIGITS = 9;
+
+/**
+ * @brief Parse a TFT version into its comparable form.
+ *
+ * A legacy `major[.minor]` becomes {LEGACY, major, minor, 0} and a CalVer
+ * `YYYY.M.seq` becomes {CALVER, YYYY, M, seq}, so comparing the arrays
+ * lexicographically compares the versions.
+ *
+ * @param version The version string to parse.
+ * @param parts   Receives the parsed version; left unspecified on failure.
+ * @return true if the version is valid, false otherwise.
+ */
+static bool parse_tft_version(const std::string &version, TftVersionParts &parts) {
+  std::array<uint32_t, 3> segments{};
+  size_t count = 0;   // Segments completed so far
+  size_t digits = 0;  // Digits in the current segment
+
+  for (const char c : version) {
+    if (c == '.') {
+      if (digits == 0 || count >= segments.size() - 1)
+        return false;  // Empty segment, or more than three segments
+      count++;
+      digits = 0;
+    } else if (c >= '0' && c <= '9') {
+      if (++digits > TFT_VERSION_MAX_DIGITS)
+        return false;  // Segment too long
+      segments[count] = (segments[count] * 10) + static_cast<uint32_t>(c - '0');
+    } else {
+      return false;  // Not a digit or a dot
+    }  // if (c == '.')
+  }  // for each character
+
+  if (digits == 0)
+    return false;  // Empty string, or empty last segment
+  count++;
+
+  if (count == segments.size()) {
+    parts = {TFT_VERSION_FORMAT_CALVER, segments[0], segments[1], segments[2]};
+  } else {
+    parts = {TFT_VERSION_FORMAT_LEGACY, segments[0], segments[1], 0};
+  }  // if (count == segments.size())
+  return true;
+}
+
+bool tft_ver_valid(const std::string &version) {
+  TftVersionParts parts{};
+  return parse_tft_version(version, parts);
+}
+
 bool tft_ver_gte(const std::string &version, const std::string &min_version) {
-  int ver_maj = 0, ver_min = 0;
-  int min_maj = 0, min_min = 0;
+  TftVersionParts ver{};
+  TftVersionParts min{};
 
-  // Parse both version strings — accept "major.minor" or bare "major".
-  // After parsing, reject trailing garbage by checking that sscanf consumed
-  // the entire string: re-format what was parsed and compare against input.
-  // This rejects "16.", "16x", "16.1.2", etc.
-  // NOLINT suppresses cert-err34-c; structural validation is done below.
-  const int ver_fields = sscanf(version.c_str(), "%d.%d", &ver_maj, &ver_min);      // NOLINT(cert-err34-c)
-  const int min_fields = sscanf(min_version.c_str(), "%d.%d", &min_maj, &min_min);  // NOLINT(cert-err34-c)
-
-  if (ver_fields < 1 || min_fields < 1)
+  if (!parse_tft_version(version, ver) || !parse_tft_version(min_version, min))
     return false;  // Fail conservatively on empty or unparseable input
 
-  // Reject partial matches by reconstructing the parsed value and comparing
-  // it against the original string — catches "16.", "16x", "16.1.2", etc.
-  char ver_buf[16], min_buf[16];
-  if (ver_fields == 1)
-    snprintf(ver_buf, sizeof(ver_buf), "%d", ver_maj);
-  else
-    snprintf(ver_buf, sizeof(ver_buf), "%d.%d", ver_maj, ver_min);
-  if (min_fields == 1)
-    snprintf(min_buf, sizeof(min_buf), "%d", min_maj);
-  else
-    snprintf(min_buf, sizeof(min_buf), "%d.%d", min_maj, min_min);
-
-  if (version != ver_buf || min_version != min_buf)
-    return false;  // Trailing garbage or extra segments detected
-
-  // Compare major first, then minor.
-  // Returns false conservatively on any older segment.
-  if (ver_maj != min_maj)
-    return ver_maj > min_maj;
-  return ver_min >= min_min;
+  // Lexicographic: format first (legacy < CalVer), then each segment
+  return ver >= min;
 }
 
 }  // namespace esphome::nspanel_easy

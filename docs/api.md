@@ -27,7 +27,6 @@ This document provides details on custom actions designed for integration with H
   - [RTTTL Play Action (`rtttl_play`)](#rtttl-play-action-rtttl_play): Plays melodies encoded in the RTTTL format.
   - [Upload TFT Action (`upload_tft`)](#tft-file-update-action-upload_tft): Enables TFT file updates from a URL, requiring the "Upload TFT" add-on. Opt-in.
   - [Utilities Group Refresh Action (`utilities_group_refresh`)](#utilities-group-refresh-action-utilities_group_refresh): Updates utility group display values and direction indicators.
-  - [Value Action (`value`)](#value-action-value): Updates an entity to display specific values.
   - [Wake Up Action (`wake_up`)](#wake-up-action-wake_up): Activates the display from a screensaver or low-brightness state. Opt-in.
   - [Alarm Settings Page Action (`page_alarm`)](#alarm-settings-page-action-page_alarm): Updates the Alarm page with current state information.
 - [Screen Components](#screen-components)
@@ -84,7 +83,6 @@ You can look up the action names available on your Home Assistant instance under
 | [`rtttl_play`](#rtttl-play-action-rtttl_play) | [RTTTL Play Action](#rtttl-play-action-rtttl_play) | Plays melodies encoded in the RTTTL format. |
 | [`upload_tft`](#tft-file-update-action-upload_tft) | [Upload TFT Action](#tft-file-update-action-upload_tft) | Enables TFT file updates from a URL, requiring the "Upload TFT" add-on. Opt-in. |
 | [`utilities_group_refresh`](#utilities-group-refresh-action-utilities_group_refresh) | [Utilities Group Refresh Action](#utilities-group-refresh-action-utilities_group_refresh) | Updates utility group display values and direction indicators. |
-| [`value`](#value-action-value) | [Value Action](#value-action-value) | Updates an entity to display specific values. |
 | [`wake_up`](#wake-up-action-wake_up) | [Wake Up Action](#wake-up-action-wake_up) | Activates the display from a screensaver or low-brightness state. Opt-in. |
 <!-- markdownlint-enable MD013 -->
 
@@ -721,41 +719,6 @@ data:
 
 This action updates utility group display elements with the specified values and direction indicators dynamically.
 
-### Value Action: `value`
-
-Updates an entity to display specific values, allowing for dynamic updates of icons, names, and value colors within Home Assistant.
-
-**Usage:**
-This action is intended for entities that need to display information dynamically,
-such as sensor readings or state values, with customized icons, names, and color coding for both icon and value.
-
-**Parameters:**
-
-- `id` (string): Identifier of the entity being updated. For details on entity identifiers, refer to "[Screen components](#screen-components)".
-- `icon` (string): Icon codepoint from
-  [HASwitchPlate Material Design Icons](https://htmlpreview.github.io/?https://github.com/jobr99/Generate-HASP-Fonts/blob/master/cheatsheet.html).
-Indicates the icon displayed next to the value.
-- `icon_color` (int[]): RGB color array for the icon, allowing for custom icon colors.
-- `name` (string): The display name for the entity, useful for labeling the value displayed.
-- `value` (string): The actual value to be displayed next to the icon and name.
-- `value_color` (int[]): RGB color array for the value text, enabling custom coloring of the displayed value.
-
-**Home Assistant Example:**
-
-```yaml
-action: esphome.<your_panel_name>_value
-data:
-  id: "sensor.temperature"
-  icon: "\uE50E"           # Example for mdi:thermometer
-  icon_color: [255, 0, 0]  # Red
-  name: "Temperature"
-  value: "75°F"
-  value_color: [255, 255, 0] # Yellow
-```
-
-> [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
-
 ### Wake Up Action: `wake_up`
 
 > [!IMPORTANT]
@@ -847,8 +810,75 @@ automation:
 
 ![Image](pics/Nextion_Components_Home_Values_EU.png)
 ![Image](pics/Nextion_Components_Home_Values_US.png)
-This is a multi-component system, with names `value01` to `value03` containing the state of the entity,
-where `value01_icon` to `value03_icon` supports the icons.
+This is a multi-component system, with names `value01` to `value04` containing the state of the entity,
+where `value01_icon` to `value04_icon` supports the icons.
+
+#### Driving a home page value from your own automation
+
+A value slot that has no entity selected in the Blueprint ("Home page - Entity State") is not managed by it,
+so an automation can write its text, its icon and the icon color.
+Such a slot is hidden, so it also has to be shown.
+For example, to show the next waste collection in the first slot:
+
+```yaml
+# Show the slot (its text and its icon)
+- action: esphome.<your_panel_name>_components_visibility
+  data:
+    page: home
+    ids: [ "value01", "value01_icon" ]
+    visible: true
+
+# Text
+- action: esphome.<your_panel_name>_component_text_list
+  data:
+    page: home
+    id: value01
+    txt_list:
+      - "Paper"
+
+# Icon and its color
+- action: esphome.<your_panel_name>_icon
+  data:
+    page: home
+    id: value01_icon
+    icon: "\uE394"           # mdi:newspaper
+    icon_color: [0, 120, 255]
+    visible: true
+```
+
+To show nothing, hide the slot:
+
+```yaml
+- action: esphome.<your_panel_name>_components_visibility
+  data:
+    page: home
+    ids: [ "value01", "value01_icon" ]
+    visible: false
+```
+
+The color of the text can be changed with the [`component_color`](#component-color-action-component_color) action (`page: home`, `id: value01`).
+
+Send the actions of a slot from a single automation or script, with `mode: queued`.
+They are separate actions, so two runs at the same time could leave the text of one with the icon of the other.
+
+> [!NOTE]
+> The panel does not keep the text and the icon: they are cleared when the panel restarts and when the Blueprint automation is saved or reloaded.
+> Make your automation send them again in both cases. A reload does not make the panel unavailable, so it needs a trigger of its own,
+> and a delay, as the Blueprint clears the slot a little after the reload:
+>
+> ```yaml
+> triggers:
+>   # The panel is back, e.g. after a restart (any entity of the panel)
+>   - trigger: state
+>     entity_id: sensor.<your_panel_name>_device_name
+>     from: unavailable
+>   # The automations were reloaded, e.g. after saving the Blueprint automation
+>   - trigger: event
+>     event_type: automation_reloaded
+> actions:
+>   - delay: "00:01:00"
+>   # ... the actions above
+> ```
 
 ### Entities Pages - Values
 
@@ -856,4 +886,4 @@ Just like in "[Home Page - Values](#home-page---values)", this is a multi-compon
 where `value01_icon` to `value08_icon` supports the icons and, exclusively in the Entities pages, `value01_label` to `value08_label`,
 which will contain the friendly name or some alternative label for the entities.
 
-Each of these sets are sent using the [Value Action (`value`)](#value-action-value), with up to 8 individual calls to this action for each page construction.
+The texts can be written with the [`component_text_list`](#component-text-list-action-component_text_list) action, and the icons with the [`icon`](#icon-action-icon) action.

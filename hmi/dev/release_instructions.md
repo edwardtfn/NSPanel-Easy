@@ -21,12 +21,14 @@ Follow these guidelines carefully to ensure a smooth and consistent release proc
      - **Blueprint**:
        - `nspanel_easy_blueprint.yaml`: Update the version number in both the blueprint description and the `variables` area.
      - **TFT**:
-       - For all `.hmi` files (e.g., `nspanel_xxx.hmi`), update the `version` variable on the boot page. You can use `scripts/update_nextion_version.sh <new_version>` for that.
+       - No change needed. The TFT carries the release version, set in `hmi/src/` by the versioning workflow on each release
+         (`.github/scripts/set_tft_version.py`). On `dev`, the source carries the development version `9999.99.9`.
 
 2. **Generate new TFT files**:
    - CI builds the `.hmi` and `.tft` files from `hmi/src/` and commits them to `dev` after each merge that changes the source, so they are up to date on `dev`.
-   - To build locally, run `scripts/hmi_build.sh`. If the version was updated with `update_nextion_version.sh`,
-     which changes the `.hmi` files, run `scripts/hmi_import.sh` first so the source carries the new version.
+   - On each release, the versioning workflow builds them with the release version and commits them to `main` with the pre-built firmware,
+     so each release tag carries its own TFT files.
+   - To build locally, run `scripts/hmi_build.sh`.
 
 3. **Create a new branch with the version name**:
    - After updating the version in all required files, create a new branch from the `dev` branch with the new version number prefixed with `v`:

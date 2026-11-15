@@ -22,12 +22,16 @@ substitutions:
   api_subscribe_entity_len: '96'         # Buffer size for an entity_id, including the null terminator. Raise it if a longer entity_id is truncated.
   api_subscribe_debounce: '10s'          # Seconds of quiet after the last binding before a restart is applied.
   api_subscribe_timeout: '120s'          # Seconds without an end marker before committing the push unverified.
+  # Erase every stored preference (as a factory reset) and restart, when the bindings cannot be stored.
+  # At most once since the panel was powered on. See docs/api_subscribe.md before enabling it.
+  api_subscribe_wipe_nvs_on_failure: 'false'
 
 esphome:
   build_flags:
     - -D NSPANEL_EASY_SUBSCRIBE
     - -D NSPANEL_EASY_SUB_MAX=${api_subscribe_max}
     - -D NSPANEL_EASY_SUB_ENTITY_LEN=${api_subscribe_entity_len}
+    - -D NSPANEL_EASY_SUB_WIPE_NVS_ON_FAILURE=${api_subscribe_wipe_nvs_on_failure}
 
 api:
   homeassistant_states: true  # Required: enables USE_API_HOMEASSISTANT_STATES

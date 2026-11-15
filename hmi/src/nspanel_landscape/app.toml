@@ -24,6 +24,7 @@ pages = [
     "entitypage03",
     "entitypage04",
     "fan",
+    "graph",
     "keyb_num",
     "light",
     "media_player",
@@ -42,7 +43,6 @@ pages = [
     "weather03",
     "weather04",
     "weather05",
-    "graph",
 ]
 pictures = [
     "picture-0000",

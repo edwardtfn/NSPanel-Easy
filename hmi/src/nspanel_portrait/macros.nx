@@ -1,3 +1,38 @@
+// Reports the display settings to ESPHome, which asks for them when it connects (`call report_display`)
+// and whenever the display tells that it restarted. Nothing is sent before ESPHome asks.
+// Each value is sent on its own, as a custom sensor of ESPHome's Nextion component, and
+// "display_report" tells that all of them were sent.
+macro report_display:
+  // display_mode: stored on the display (EEPROM), or the default of this TFT file
+  printh 91
+  prints "display_mode",0
+  printh 00
+  prints display_mode,0
+  printh FF FF FF
+  // hard_coded_mode: the default display mode of this TFT file
+  printh 91
+  prints "hard_coded_mode",0
+  printh 00
+  prints hard_coded_display_mode,0
+  printh FF FF FF
+  // magic_flag: whether the display's EEPROM was already initialized when it started
+  printh 91
+  prints "magic_flag",0
+  printh 00
+  prints magic_flag_found_at_boot,0
+  printh FF FF FF
+  // tft_version: the version of this TFT file
+  printh 92
+  prints "tft_version",0
+  printh 00
+  prints boot.version.txt,0
+  printh 00
+  printh FF FF FF
+  // End of the report
+  printh 93
+  prints "display_report",0
+  printh 00 01 FF FF FF
+
 macro report_api_unavailable:
   // Report to ESPHome that Home Assistant is needed
   printh 93

@@ -31,6 +31,9 @@ bool api_stale = false;
 // Loop time of the last setting or binding received from the Blueprint; see base.h.
 uint32_t blueprint_last_setting_ms = 0;
 
+// Loop time at which the boot sequence started waiting for the Blueprint; see base.h.
+uint32_t blueprint_wait_started_ms = 0;
+
 // Fire a Home Assistant event for NSPanel HA Blueprint
 void fire_ha_event(const std::string &type, std::map<std::string, std::string> data) {
   // Add device name and type to the event data

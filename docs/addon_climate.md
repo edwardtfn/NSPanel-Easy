@@ -17,8 +17,8 @@ Don't use it to directly power your cooler/heater if it exceeds the panel specif
 2. A target temperature must be set on the climate entity in Home Assistant or the page Climate in your panel.
 
 > [!NOTE]
-> More details on the [Sonoff NSPanel's page](https://sonoff.tech/product/central-control-panel/nspanel/)
-> and the [product specifications document](https://sonoff.tech/wp-content/uploads/2021/11/%E4%BA%A7%E5%93%81%E5%8F%82%E6%95%B0%E8%A1%A8-NSPanel-20210831.pdf).
+> More details on the [Sonoff NSPanel's page](https://sonoff.tech/product/central-control-panel/nspanel/),
+> which has the product specifications in its "Specs & User Manual" section.
 
 ## Installation
 
@@ -32,7 +32,8 @@ and after the `remote_package` (base code), as shown below (for `heat` in this e
 >
 > The Blueprint recognizes the embedded thermostat by its `entity_id` ending in `_thermostat`.
 > If its `entity_id` no longer ends in `_thermostat` (for example after renaming or localizing it, or with the `_2` suffix above),
-> the Blueprint handles it as an external climate entity, which is slower and does not work while the panel is offline ([#640](https://github.com/edwardtfn/NSPanel-Easy/issues/640)).
+> select it in the Blueprint's **Embedded thermostat - Entity override** input, next to the main climate entity.
+> Otherwise the Blueprint handles it as an external climate entity, which is slower and does not work while the panel is offline.
 
 ```yaml
 substitutions:
