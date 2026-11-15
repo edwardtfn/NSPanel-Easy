@@ -571,7 +571,8 @@ The Blueprint sends the bindings again after the restart. You can remove the but
 When it happens again after the reset, the partition is too small. Panels first installed with much older
 firmware, or with other firmware such as Tasmota, can have a small NVS partition (`0x5000` in the partition
 table that the log shows at boot), and an update over the air never changes it.
-Those panels need to be flashed once over USB, which writes the current partition table.
+The partition table can be updated over the air, see
+[Updating the partition table over the air](customization.md#updating-the-partition-table-over-the-air).
 The log line `NVS entries: ... used, ... free of ...`, written with the error and in `dump_config`,
 shows how full the partition is.
 
