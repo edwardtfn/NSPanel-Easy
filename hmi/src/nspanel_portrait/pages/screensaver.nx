@@ -6,6 +6,13 @@ on screensaver.load:
     tsw 255,0
     boot_count.val=0
     boot_wait.en=1
+    // Start screen: a dimmed watermark instead of a black screen, kept until ESPHome opens a page.
+    // The screensaver settings come from ESPHome, so they are not applied yet.
+    apply_settings.en=0
+    text.font=4
+    text.pco=16904  // Dark gray
+    text.txt="NSPanel Easy"
+    dim=10
   }
   // restore chips
   for(sys0=6;sys0<=15;sys0++)
