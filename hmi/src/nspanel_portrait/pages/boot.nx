@@ -1,4 +1,6 @@
 on boot.load:
+  // Only shown when ESPHome does not connect or on request, so it is always bright enough to be read
+  dim=100
   covx baud,tmp_baudrate.txt,0,0
   sys_baudrate.txt="Baud rate: "
   sys_baudrate.txt+=tmp_baudrate.txt
@@ -84,7 +86,11 @@ on bt_reboot.up:
 
 on tm_esphome.timer:
   // Only waits for ESPHome, which asks for the display settings when it connects (macro
-  // report_display) and then stops this timer. Without ESPHome for a minute, the display restarts.
+  // report_display) and sets `esphome`. Without ESPHome for a minute, the display restarts.
+  if(esphome==1)
+  {
+    tm_esphome.en=0
+  }
   counter.val++
   if(counter.val>60)
   {
