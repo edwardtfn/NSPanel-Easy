@@ -35,13 +35,14 @@ struct SystemFlags {
   uint16_t ota_dialog_shown : 1;        ///< OTA dialog is shown on the display
   uint16_t display_sleep : 1;           ///< Display is in sleep mode
   uint16_t display_resync_pending : 1;  ///< Display restarted; repaint on next page entry
+  uint16_t display_start_hold : 1;      ///< Display keeps its start screen until the boot opens a page
 
   // Baud rate flags
   uint16_t baud_fallback_active : 1;  ///< UART is operating at non-primary rate (detected via scan)
   uint16_t baud_scan_success : 1;     ///< Last baud rate scan found a responsive rate
 
   // Reserved flags
-  uint16_t reserved : 2;
+  uint16_t reserved : 1;
 
   // Default constructor - all flags start as false (zero-initialized)
   SystemFlags()
@@ -56,6 +57,8 @@ struct SystemFlags {
         ota_in_progress(0),
         ota_dialog_shown(0),
         display_sleep(0),
+        display_resync_pending(0),
+        display_start_hold(0),
         baud_fallback_active(0),
         baud_scan_success(0),
         reserved(0) {}
@@ -224,9 +227,10 @@ extern bool unavailable_unhide_pending;
 /**
  * @brief Whether the Home Assistant values on display are stale.
  *
- * Set once the API has been disconnected for longer than the `api_stale_grace_period`
- * substitution, and cleared as soon as it reconnects, so a short drop such as a Home
- * Assistant restart leaves the display untouched. While set, the last values received
+ * Set at boot, until the API connects for the first time, and then once the API has been
+ * disconnected for longer than the `api_stale_grace_period` substitution. Cleared as soon
+ * as it reconnects, so a short drop such as a Home Assistant restart leaves the display
+ * untouched. While set, the last values received
  * from Home Assistant cannot be trusted: each module hides them, greys them out or falls
  * back to the panel's own data. Modules react to a change by extending the
  * `api_stale_changed` script.

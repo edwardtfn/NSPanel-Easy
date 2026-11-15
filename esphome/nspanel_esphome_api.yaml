@@ -646,7 +646,15 @@ script:
           if (api_server->is_connected_with_state_subscription()) {
             api_stale_timer->stop();
             if (api_stale) {
-              ESP_LOGI("${TAG_API}", "Home Assistant is back: values are fresh");
+              // The values are stale from the start (see api_stale), so the first connection also lands here.
+              // Its time tells how long the start took, which the log over the network cannot show.
+              static bool connected_once = false;
+              if (connected_once) {
+                ESP_LOGI("${TAG_API}", "Home Assistant is back: values are fresh");
+              } else {
+                connected_once = true;
+                ESP_LOGI("${TAG_API}", "Home Assistant connected %.1fs after the start", millis() / 1000.0f);
+              }  // if (connected_once)
               api_stale = false;
               api_stale_changed->execute();
             }  // if (api_stale)

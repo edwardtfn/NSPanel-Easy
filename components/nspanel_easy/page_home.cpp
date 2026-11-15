@@ -626,7 +626,9 @@ static bool home_value_format(const HomeValueState &value, char *out) {
   std::string text;
   bool non_zero = true;
   const optional<float> number = parse_number<float>(state);
-  if (strcasecmp(state, "unavailable") == 0 || state[0] == '\0') {
+  if (state[0] == '\0') {
+    text.clear();  // Nothing received yet, e.g. after a restart before Home Assistant connects
+  } else if (strcasecmp(state, "unavailable") == 0) {
     text = home_value_text_unavailable;
   } else if (strcasecmp(state, "unknown") == 0 || strcasecmp(state, "none") == 0) {
     text = home_value_text_unknown;
