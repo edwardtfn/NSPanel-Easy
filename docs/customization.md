@@ -26,6 +26,7 @@ Table of contents:
   - [Frameworks](#frameworks)
     - [Framework `esp-idf` (RECOMMENDED)](#framework-esp-idf-recommended)
     - [Framework `arduino` (DEPRECATED)](#framework-arduino-deprecated)
+  - [Updating the partition table over the air](#updating-the-partition-table-over-the-air)
   - [Logger via UART](#logger-via-uart)
   - [Climate custom presets](#climate-custom-presets)
   - [Push button / Momentary switch](#push-button--momentary-switch)
@@ -582,7 +583,8 @@ time:
 
 > [!IMPORTANT]
 > When switching between frameworks, make sure to update the device with a serial cable as the partition table is different between the two frameworks
-> as [OTA Update Component](https://esphome.io/components/ota) updates will not change the partition table.
+> as [OTA Update Component](https://esphome.io/components/ota) updates will not change the partition table,
+> unless it is updated separately (see [Updating the partition table over the air](#updating-the-partition-table-over-the-air)).
 > While it will appear to work, the device will boot the old framework after a reset.
 <!-- markdownlint-enable MD028 -->
 
@@ -624,6 +626,93 @@ esp32:
   framework:
     type: arduino
 ```
+
+### Updating the partition table over the air
+
+Panels first installed with much older firmware, or with other firmware such as Tasmota, can have
+an old partition table with a small NVS partition (20 KB instead of 448 KB).
+A regular update over the air never changes the partition table, but since ESPHome 2026.5
+it can be updated over the air in a separate step, without opening the panel.
+
+<!-- markdownlint-disable MD028 -->
+> [!CAUTION]
+> Keep the panel powered for the whole update (usually under 15 seconds).
+> If the power is cut or the panel restarts while the table is written, the panel can only be recovered over USB.
+
+> [!IMPORTANT]
+> The NVS partition moves, so **everything stored on the panel is erased**: the temperature calibration,
+> the settings changed from Home Assistant (such as brightness and timeouts), and the last state of the relays.
+> Take note of your settings first. The Blueprint sends the entities and pages again after the restart.
+> The Wi-Fi credentials come from your YAML and are not affected, unless you customized the panel
+> to set them through a fallback hotspot.
+<!-- markdownlint-enable MD028 -->
+
+1. Allow the partition update in your panel's YAML, then install that firmware as usual:
+
+   ```yaml
+   ota:
+     - id: !extend ota_std
+       allow_partition_access: true
+   ```
+
+2. Upload the partition table from the ESPHome command line, with the same YAML
+   (the table comes from the last compilation, so compile first):
+
+   ```bash
+   esphome compile your-panel.yaml
+   esphome upload --partition-table your-panel.yaml
+   ```
+
+   The panel checks the new table before writing anything. When it is not compatible with the firmware
+   that is running, it refuses it and logs why, and nothing in the flash is changed.
+   After the update, the panel restarts with the new table.
+
+3. Remove `allow_partition_access` from the YAML and install the firmware again.
+   This also writes the firmware to the second app partition.
+
+For more details, see [Partition Table Update](https://esphome.io/components/ota/esphome/) in the ESPHome documentation.
+
+#### Running the commands with the ESPHome add-on in Home Assistant
+
+The ESPHome Device Builder has no button for these commands, but they can be run inside the add-on.
+With a terminal app that can reach the add-on's container, such as **Advanced SSH & Web Terminal**
+(with its protection mode disabled), open a shell in the ESPHome container, in the folder with your YAML files:
+
+```bash
+docker exec -it -w /config/esphome $(docker ps -q -f name=esphome) bash
+```
+
+Then run the commands from step 2 there.
+
+#### Updating the bootloader (optional)
+
+With `allow_partition_access` still enabled, the bootloader can be updated the same way, after the partition table:
+
+```bash
+esphome upload --bootloader your-panel.yaml
+```
+
+It is not needed for the partition table, but a current bootloader allows
+`sram1_as_iram`, which gives 40 KB more IRAM for heavy customizations:
+
+<!-- markdownlint-disable MD028 -->
+```yaml
+esp32:
+  framework:
+    advanced:
+      sram1_as_iram: true
+```
+
+> [!CAUTION]
+> If the power is cut while the bootloader is written, the panel does not start anymore
+> and can only be recovered over USB.
+
+> [!WARNING]
+> Enable `sram1_as_iram` only on panels with a bootloader from ESP-IDF 5.1 or later
+> (ESPHome logs `Bootloader supports SRAM1 as IRAM` at boot when it is).
+> With an older bootloader, the panel does not start after the update and can only be recovered over USB.
+> For this reason, it is not enabled by default.
+<!-- markdownlint-enable MD028 -->
 
 ### Logger via UART
 
