@@ -656,9 +656,10 @@ it can be updated over the air in a separate step, without opening the panel.
    ```
 
 2. Upload the partition table from the ESPHome command line, with the same YAML
-   (the table comes from the last compilation, so run it after step 1):
+   (the table comes from the last compilation, so compile first):
 
    ```bash
+   esphome compile your-panel.yaml
    esphome upload --partition-table your-panel.yaml
    ```
 
@@ -669,8 +670,49 @@ it can be updated over the air in a separate step, without opening the panel.
 3. Remove `allow_partition_access` from the YAML and install the firmware again.
    This also writes the firmware to the second app partition.
 
-As far as we know, this is only available from the command line, not from the ESPHome Device Builder.
 For more details, see [Partition Table Update](https://esphome.io/components/ota/esphome/) in the ESPHome documentation.
+
+#### Running the commands with the ESPHome add-on in Home Assistant
+
+The ESPHome Device Builder has no button for these commands, but they can be run inside the add-on.
+With a terminal app that can reach the add-on's container, such as **Advanced SSH & Web Terminal**
+(with its protection mode disabled), open a shell in the ESPHome container, in the folder with your YAML files:
+
+```bash
+docker exec -it -w /config/esphome $(docker ps -q -f name=esphome) bash
+```
+
+Then run the commands from step 2 there.
+
+#### Updating the bootloader (optional)
+
+With `allow_partition_access` still enabled, the bootloader can be updated the same way, after the partition table:
+
+```bash
+esphome upload --bootloader your-panel.yaml
+```
+
+It is not needed for the partition table, but a current bootloader allows
+`sram1_as_iram`, which gives 40 KB more IRAM for heavy customizations:
+
+<!-- markdownlint-disable MD028 -->
+```yaml
+esp32:
+  framework:
+    advanced:
+      sram1_as_iram: true
+```
+
+> [!CAUTION]
+> If the power is cut while the bootloader is written, the panel does not start anymore
+> and can only be recovered over USB.
+
+> [!WARNING]
+> Enable `sram1_as_iram` only on panels with a bootloader from ESP-IDF 5.1 or later
+> (ESPHome logs `Bootloader supports SRAM1 as IRAM` at boot when it is).
+> With an older bootloader, the panel does not start after the update and can only be recovered over USB.
+> For this reason, it is not enabled by default.
+<!-- markdownlint-enable MD028 -->
 
 ### Logger via UART
 
