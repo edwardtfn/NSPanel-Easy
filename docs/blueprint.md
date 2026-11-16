@@ -15,6 +15,9 @@ however, your panel will only support the icons available on the
 
 For an easier overview, the menu items "Icon Color" and "Label Color" will not be described separately in the following documentation.
 
+To keep the list short, the settings of a chip, button or value (its icon, name, colors, ...) appear only after its entity is selected.
+Clearing the entity hides them again, and they have no effect while hidden.
+
 ## Basic settings
 
 ### NSPanel device (REQUIRED)
@@ -152,6 +155,7 @@ The graph is drawn from the 5-minute means that Home Assistant keeps in the reco
 
 Fixed lower and upper bounds of the graph, as numbers (e.g. `0` and `3000`). A comma is also accepted as decimal separator (e.g. `0,5`).
 Leave a field empty for an automatic bound, from the lowest or highest value of the last 24 hours. For example, set only the minimum to `0` for a power sensor.
+These fields appear only when the graph is enabled.
 
 ## Alarm Control Panel
 
