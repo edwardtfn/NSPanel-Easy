@@ -533,8 +533,10 @@ static SubEntityState sub_classify(const SubBinding &binding, const SubRuntime &
 
   const SubEntityState eval = evaluate_sub_state(domain, effective);
 
-  // A calendar chip is already shown during its lead time before the next event
+  // A calendar chip is already shown during its lead time before the next event. The effective
+  // state follows, so renderers pick the active icon and colour as during the event.
   if (domain == SUB_DOMAIN_CALENDAR && eval == SUB_STATE_OFF && sub_calendar_upcoming(binding, rt)) {
+    effective = "on";
     return SUB_STATE_ON;
   }
   return eval;

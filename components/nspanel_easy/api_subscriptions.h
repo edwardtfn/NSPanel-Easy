@@ -226,7 +226,8 @@ struct SubRuntime {
  *
  * @param binding The binding being rendered.
  * @param rt Runtime state, including blueprint-supplied appearance.
- * @param state Effective state string; hvac_action for climate when usable.
+ * @param state Effective state string; hvac_action for climate when usable, and "on" for a calendar
+ *              chip within its lead time.
  * @param visible Whether the component should be shown.
  */
 using SubRenderFn = void (*)(const SubBinding &binding, const SubRuntime &rt, const char *state, bool visible);
@@ -496,7 +497,8 @@ static constexpr size_t COVER_ICONS_FALLBACK = (sizeof(COVER_ICONS) / sizeof(COV
  *
  * @param domain Domain of the bound entity.
  * @param device_class HA device_class, or an empty string when unset. Cover only.
- * @param state Effective state string; hvac_action for climate when usable.
+ * @param state Effective state string; hvac_action for climate when usable, and "on" for a calendar
+ *              chip within its lead time.
  * @param color_on Fallback colour for active states.
  * @param color_off Fallback colour for inactive states.
  * @return Icon codepoint and RGB565 colour.
@@ -686,7 +688,8 @@ static constexpr uint8_t SUB_ICON_KEY_LEN = 48;
  * when the Blueprint pushed no icon (no override, no `icon` attribute).
  *
  * @param binding The binding.
- * @param state Effective state string; hvac_action for climate when usable.
+ * @param state Effective state string; hvac_action for climate when usable, and "on" for a calendar
+ *              chip within its lead time.
  * @param color_on Colour for active states.
  * @param color_off Colour for inactive states.
  * @return Icon codepoint and RGB565 colour; a null icon when nothing matches.
