@@ -165,6 +165,8 @@ script:
           ESP_LOGV("${TAG_PAGE_SCREENSAVER}", "page_screensaver: current_page_id='%s'",
                    page_names[current_page_id]);
           if (current_page_id != get_page_id("screensaver")) return;
+          // The start screen of the display is left as it is, until the boot opens a page
+          if (system_flags.display_start_hold) return;
           page_screensaver_apply_settings->execute();
           if (id(screensaver_display_time)) refresh_datetime->execute();
           brightness_current = int(display_sleep_brightness->state);
@@ -177,6 +179,7 @@ script:
     then:
       - lambda: |-
           if (current_page_id != get_page_id("screensaver")) return;
+          if (system_flags.display_start_hold) return;  // The start screen keeps its own settings
           disp1->send_command("apply_settings.en=1");
 
   - id: page_screensaver_apply_settings_with_delay

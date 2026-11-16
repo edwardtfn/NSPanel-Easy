@@ -146,6 +146,7 @@ The thermostat falls back to the calibrated panel sensor when:
 
 - the reference is `unavailable`, `unknown` or has no number,
 - Home Assistant has been unavailable for longer than `api_stale_grace_period` (30 seconds by default),
+  or has not connected yet since the panel started,
 - the reference has not changed for 2 hours (`temp_reference_max_age`), as some sensors keep reporting their last value long after they stopped working, or
 - the reference differs from the panel's sensor by more than 10 °C (18 °F), which usually means it reports in a different unit. A warning is logged.
 

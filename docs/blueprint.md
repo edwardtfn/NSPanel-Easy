@@ -101,6 +101,7 @@ Calibration pauses and keeps the current correction when:
 
 - the reference is `unavailable`, `unknown` or has no number,
 - Home Assistant has been unavailable for longer than `api_stale_grace_period` (30 seconds by default),
+  or has not connected yet since the panel started,
 - the reference has not changed for 2 hours (`temp_calibration_max_age`), as some sensors keep reporting their last value long after they stopped working, or
 - the difference is more than 10 °C (18 °F), which usually means the reference reports in a different unit. A warning is logged.
 

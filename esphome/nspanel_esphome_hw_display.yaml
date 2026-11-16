@@ -112,10 +112,15 @@ display:
               // Keep the display dimmed while booting, e.g. after a power outage at night (#485).
               // Only a user action, such as a touch, restores the regular brightness (#656).
               brightness_auto_hold = true;
+              // The display keeps its start screen, at its own brightness, until the boot opens a page
+              // (see `display_start_hold_release`), so nothing is shown before its settings arrive
+              system_flags.display_start_hold = true;
             }  // if (!system_flags.boot_completed)
-            // After a display reset in normal use, this applies again the brightness the panel had
-            set_brightness->execute((brightness_dim_hold or brightness_auto_hold) ? display_dim_brightness->state :
-                                                                                    display_brightness->state);
+            if (!system_flags.display_start_hold) {
+              // After a display reset in normal use, this applies again the brightness the panel had
+              set_brightness->execute((brightness_dim_hold or brightness_auto_hold) ? display_dim_brightness->state :
+                                                                                      display_brightness->state);
+            }  // if (!system_flags.display_start_hold)
 
     on_page:
       then:

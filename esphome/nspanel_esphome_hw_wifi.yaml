@@ -99,13 +99,18 @@ script:
               // Poor signal (< -70 dBm): Orange
               color_new = Colors::RGB565_ORANGE;
             }
-          } else {
+          } else if (system_flags.boot_completed) {
             // Not fully operational (WiFi down, API down, or Blueprint not ready): Red
             color_new = Colors::RGB565_RED;
-          }
+          }  // if (operational)
+          // While booting, a missing connection is expected, so it stays neutral (Gray Moss)
           #else  // _WIFI_ICON_COLORS
-          // Determine new color based on availability
-          const uint16_t color_new = system_flags.blueprint_ready ? Colors::RGB565_GRAY_MOSS : Colors::RGB565_RED;
+          // Determine new color based on availability, neutral while booting
+          const bool operational = wifi_component->is_connected() and
+                                   api_server->is_connected_with_state_subscription() and
+                                   system_flags.blueprint_ready;
+          const uint16_t color_new = (operational or !system_flags.boot_completed) ?
+                                     Colors::RGB565_GRAY_MOSS : Colors::RGB565_RED;
           #endif  // _WIFI_ICON_COLORS
 
           // Update WiFi icon color only when changed

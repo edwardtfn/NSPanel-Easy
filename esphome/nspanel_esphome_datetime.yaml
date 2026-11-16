@@ -70,7 +70,8 @@ script:
             // No clock yet, e.g. after a power loss without Home Assistant or SNTP: show a placeholder
             // instead of leaving the time blank, so the panel doesn't look broken (#735)
             ESP_LOGW("${TAG_DATETIME}", "refresh_datetime: time provider not yet synchronized");
-            if (id(screensaver_display_time) && current_page_id == get_page_id("screensaver")) {
+            if (id(screensaver_display_time) && current_page_id == get_page_id("screensaver") &&
+                !system_flags.display_start_hold) {
               std::string placeholder = "${TIME_PLACEHOLDER}";
               screensaver_layout(placeholder);
               disp1->set_component_text("text", placeholder.c_str());
@@ -95,7 +96,8 @@ script:
                                                             : "${LOCALIZATION[LANG].meridiem.pm}";
           const bool has_meridiem = (time_format_str.find("%p") != std::string::npos);
 
-          if (id(screensaver_display_time) && current_page_id == get_page_id("screensaver")) {
+          if (id(screensaver_display_time) && current_page_id == get_page_id("screensaver") &&
+              !system_flags.display_start_hold) {
             std::string time_format_str_sleep = time_format_str;
             nspanel_easy::replace_all(time_format_str_sleep, "%p", meridiem_text);
             screensaver_layout(time_format_str_sleep);

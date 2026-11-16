@@ -64,8 +64,12 @@ display:
               disp1->send_command_printf("brightness_dim=%i", static_cast<int>(display_dim_brightness->state));
               disp1->send_command_printf("brightness_sleep=%i", static_cast<int>(display_sleep_brightness->state));
               brightness_current = UINT8_MAX;
-              set_brightness->execute((brightness_dim_hold or brightness_auto_hold) ?
-                                      display_dim_brightness->state : display_brightness->state);
+              // While booting, the display keeps its start screen until the boot opens a page
+              // (see `display_start_hold_release`)
+              if (!system_flags.display_start_hold) {
+                set_brightness->execute((brightness_dim_hold or brightness_auto_hold) ?
+                                        display_dim_brightness->state : display_brightness->state);
+              }  // if (!system_flags.display_start_hold)
             }  // if (disp1->is_setup())
             system_flags.display_resync_pending = true;
             boot_request_blueprint_settings->execute("display_ack");
@@ -292,6 +296,26 @@ script:
           ESP_LOGI("${TAG_PAGE_BOOT}", "Display ready, opening the wake-up page");
           wakeup->execute(false);
 
+  # Ends the start screen of the display (see `display_start_hold`), when the display leaves the screensaver it
+  # starts on, or when the boot completes: from then on, the panel sets the brightness. The boot page sets its
+  # own brightness, as it is shown at full brightness when ESPHome does not connect.
+  - id: display_start_hold_release
+    mode: single
+    then:
+      - lambda: |-
+          if (!system_flags.display_start_hold) return;
+          system_flags.display_start_hold = false;
+          ESP_LOGD("${TAG_PAGE_BOOT}", "Start screen released on page '%s'", page_names[current_page_id]);
+          brightness_current = UINT8_MAX;  // Set by the display itself until now
+          if (current_page_id == get_page_id("boot")) return;
+          if (current_page_id == get_page_id("screensaver")) {
+            // Still on the screensaver when the boot completes: replace the start screen by the screensaver
+            page_screensaver->execute();
+            return;
+          }  // if (screensaver)
+          set_brightness->execute((brightness_dim_hold or brightness_auto_hold) ? display_dim_brightness->state :
+                                                                                  display_brightness->state);
+
   - id: page_boot
     mode: single
     then:
@@ -345,6 +369,8 @@ script:
   - id: !extend page_change
     then:
       - lambda: |-
+          // Leaving the screensaver the display starts on ends its start screen
+          if (new_page_id != get_page_id("screensaver")) display_start_hold_release->execute();
           if (new_page_id != get_page_id("boot")) return;
           page_boot->execute();
 
