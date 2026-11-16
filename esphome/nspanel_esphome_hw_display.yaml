@@ -100,7 +100,7 @@ display:
             // page is showing, and unscoped names resolve against the
             // visible page only.
             system_flags.display_resync_pending = true;
-            theme_on_display = false;  // The display restarted with the palette of its TFT
+            display_start++;  // The display restarted with the palette of its TFT
             boot_request_blueprint_settings->execute("setup");
             // The display restarted with its own defaults: send the configured values the pages use on load
             // (`dim=brightness`), so a page loaded after this restart doesn't fall back to the defaults
@@ -260,7 +260,7 @@ script:
       # Applied already when the display got ready (`boot_show_wakeup_page`): applying it again reloads the page
       - if:
           condition:
-            lambda: return !theme_on_display;
+            lambda: return !theme_on_display();
           then:
             - script.execute: theme_update
             - script.wait: theme_update
@@ -392,8 +392,11 @@ script:
           // Report new page to logs
           ESP_LOGV("${TAG_HW_DISPLAY}", "New page: %s", page_names[new_page_id]);
           current_page->publish_state(page_names[new_page_id]);
-          // The same page loaded again, such as `page dp` after a theme change, is not a page change by the user
-          const bool page_reload = (current_page_id == new_page_id);
+          // The same page loaded again, such as `page dp` after a theme change, is not a page change by the user:
+          // it keeps the brightness as an automatic page change (#656). The screensaver does not consume it below.
+          if (current_page_id == new_page_id and new_page_id != get_page_id("screensaver")) {
+            brightness_auto_hold_armed = true;
+          }  // if (page reload)
           if (current_page_id != new_page_id) {
             last_page_id = current_page_id;
             current_page_id = new_page_id;
@@ -434,7 +437,7 @@ script:
             // Every page but boot and home sets the backlight on load (`dim=brightness`) without the firmware
             // knowing, so the brightness the panel should have is sent again by `timer_dim` (#656)
             brightness_current = UINT8_MAX;
-            if (brightness_auto_hold_armed or page_reload or current_page_id == get_page_id("boot")) {
+            if (brightness_auto_hold_armed or current_page_id == get_page_id("boot")) {
               brightness_auto_hold_armed = false;  // Automatic page change: the display keeps its brightness
             } else {
               brightness_auto_hold = false;  // Page opened by the user or through the API: regular brightness
@@ -530,9 +533,12 @@ script:
     then:  # Modules owning a themed component should subscribe themselves to this
 
   - id: theme_update
+    mode: queued  # A selection changed while applying is applied after it, with the latest selection
+    max_runs: 3
     then:
       - lambda: |-
           ESP_LOGI("${TAG_HW_DISPLAY}", "Apply theme: %s", background_type->current_option().c_str());
+          theme_update_start = display_start;
           current_theme = (background_type->current_option() == "${THEME_LIGHT_LABEL}") ?
                                                                 ThemeMode::LIGHT : ThemeMode::DARK;
           theme_update_all->execute();
@@ -562,7 +568,8 @@ script:
           // The display runs serial commands in order, so anything sent from
           // here lands after the repaint: let each module restore what it owns.
           theme_applied->execute();
-          theme_on_display = true;
+          // Marked as applied only for the display start it was sent to (see `theme_display_start`)
+          theme_display_start = theme_update_start;
 
   - id: theme_update_all
     mode: restart

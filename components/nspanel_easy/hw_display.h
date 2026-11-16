@@ -31,7 +31,25 @@ enum class ThemeMode : uint8_t {
   LIGHT = 1,  ///< Light theme - dark text on light background
 };
 extern ThemeMode current_theme;  ///< Active display theme
-extern bool theme_on_display;    ///< The theme was applied to the display since it last (re)started
+/**
+ * @brief Counts the starts of the display: its setup, and each restart reported with `display_ack`.
+ *
+ * Wraps around, as only equality with `theme_display_start` matters.
+ */
+extern uint8_t display_start;
+/**
+ * @brief Value of `display_start` when `theme_update` last completed.
+ *
+ * Captured when `theme_update` starts, so a display restart while it runs leaves the theme marked as not applied.
+ */
+extern uint8_t theme_display_start;
+/// @brief Value of `display_start` when the running `theme_update` started.
+extern uint8_t theme_update_start;
+/**
+ * @brief Whether the theme was applied to the display since it last (re)started.
+ * @return `true` when `theme_update` completed after the last start of the display.
+ */
+inline bool theme_on_display() { return theme_display_start == display_start; }
 
 extern uint8_t brightness_current;
 /**
