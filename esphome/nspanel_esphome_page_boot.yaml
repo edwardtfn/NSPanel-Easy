@@ -294,6 +294,8 @@ script:
           if (system_flags.boot_completed) return;
           if (current_page_id != get_page_id("screensaver") and current_page_id != get_page_id("boot")) return;
           ESP_LOGI("${TAG_PAGE_BOOT}", "Display ready, opening the wake-up page");
+          // Not a user action: the wake-up page stays dimmed while booting, e.g. after a power outage at night (#485, #656)
+          brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));
           wakeup->execute(false);
 
   # Ends the start screen of the display (see `display_start_hold`), when the display leaves the screensaver it
