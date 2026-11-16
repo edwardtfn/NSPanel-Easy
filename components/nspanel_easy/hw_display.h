@@ -31,6 +31,7 @@ enum class ThemeMode : uint8_t {
   LIGHT = 1,  ///< Light theme - dark text on light background
 };
 extern ThemeMode current_theme;  ///< Active display theme
+extern bool theme_on_display;    ///< The theme was applied to the display since it last (re)started
 
 extern uint8_t brightness_current;
 /**

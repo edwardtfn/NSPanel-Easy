@@ -72,6 +72,7 @@ display:
               }  // if (!system_flags.display_start_hold)
             }  // if (disp1->is_setup())
             system_flags.display_resync_pending = true;
+            theme_on_display = false;  // The display (re)started with the palette of its TFT
             boot_request_blueprint_settings->execute("display_ack");
             display_report_request->execute();  // The display (re)started, so its settings may have changed
 

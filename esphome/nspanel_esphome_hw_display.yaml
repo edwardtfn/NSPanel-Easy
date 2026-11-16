@@ -100,6 +100,7 @@ display:
             // page is showing, and unscoped names resolve against the
             // visible page only.
             system_flags.display_resync_pending = true;
+            theme_on_display = false;  // The display restarted with the palette of its TFT
             boot_request_blueprint_settings->execute("setup");
             // The display restarted with its own defaults: send the configured values the pages use on load
             // (`dim=brightness`), so a page loaded after this restart doesn't fall back to the defaults
@@ -256,8 +257,13 @@ script:
 
   - id: !extend boot_wrap_up
     then:
-      - script.execute: theme_update
-      - script.wait: theme_update
+      # Applied already when the display got ready (`boot_show_wakeup_page`): applying it again reloads the page
+      - if:
+          condition:
+            lambda: return !theme_on_display;
+          then:
+            - script.execute: theme_update
+            - script.wait: theme_update
 
   - id: !extend dump_config
     then:
@@ -386,6 +392,8 @@ script:
           // Report new page to logs
           ESP_LOGV("${TAG_HW_DISPLAY}", "New page: %s", page_names[new_page_id]);
           current_page->publish_state(page_names[new_page_id]);
+          // The same page loaded again, such as `page dp` after a theme change, is not a page change by the user
+          const bool page_reload = (current_page_id == new_page_id);
           if (current_page_id != new_page_id) {
             last_page_id = current_page_id;
             current_page_id = new_page_id;
@@ -426,7 +434,7 @@ script:
             // Every page but boot and home sets the backlight on load (`dim=brightness`) without the firmware
             // knowing, so the brightness the panel should have is sent again by `timer_dim` (#656)
             brightness_current = UINT8_MAX;
-            if (brightness_auto_hold_armed or current_page_id == get_page_id("boot")) {
+            if (brightness_auto_hold_armed or page_reload or current_page_id == get_page_id("boot")) {
               brightness_auto_hold_armed = false;  // Automatic page change: the display keeps its brightness
             } else {
               brightness_auto_hold = false;  // Page opened by the user or through the API: regular brightness
@@ -544,14 +552,17 @@ script:
           // from the theme palette in place, without leaving the current page.
           disp1->send_command("call theme_apply");
           // The boot page has no themed component, and reloading it would rerun
-          // its boot sequence. Any other page reloads to show the new palette.
-          if (current_page_id != get_page_id("boot")) {
+          // its boot sequence. The start screen is about to be replaced by the
+          // wake-up page, which loads with the new palette. Any other page
+          // reloads to show the new palette.
+          if (current_page_id != get_page_id("boot") and !system_flags.display_start_hold) {
             disp1->send_command("page dp");
-          }  // if (current_page_id != boot)
+          }  // if (current_page_id != boot and not the start screen)
           // The macro discards whatever colour the Blueprint pushed before it.
           // The display runs serial commands in order, so anything sent from
           // here lands after the repaint: let each module restore what it owns.
           theme_applied->execute();
+          theme_on_display = true;
 
   - id: theme_update_all
     mode: restart

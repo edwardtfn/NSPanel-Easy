@@ -16,6 +16,7 @@ namespace esphome::nspanel_easy {
 static const char *TAG_COMPONENT_HW_DISPLAY = "nspanel.component.hw_display";
 
 ThemeMode current_theme = ThemeMode::DARK;  ///< Active display theme
+bool theme_on_display = false;
 
 uint8_t brightness_current = 100;
 bool brightness_dim_hold = false;
