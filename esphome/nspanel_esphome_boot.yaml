@@ -103,6 +103,8 @@ script:
 
       - lambda: |-
           system_flags.boot_completed = true;
+          refresh_wifi_icon->execute(false);  // Red from now on when a connection is missing
+          display_start_hold_release->execute();
           boot_log->execute("Boot", "Jump to wake-up page");
           // Not a user action: the display stays dimmed as during the boot (#485), unless it was touched
           // meanwhile, and only returns to the regular brightness on a user action (#656)
