@@ -893,9 +893,19 @@ substitutions:
 Both patterns end with the same `multi_click_gap` window, and that is what keeps a double click from also being
 reported as a single click.
 
+Two limits come with the substitutions:
+
+- `multi_click_press` has to stay below the 0.8 s hold threshold. The hold pattern is evaluated first, so a longer
+  value would report every press in that range as a hold instead of a click.
+- `multi_click_gap: 0ms` turns the detection off: a double click can no longer complete, and `short_click` is sent
+  immediately at release, as before this feature.
+
 The cost of the detection is one window of latency on the single click: `short_click` is sent `multi_click_gap` after
 the button is released (0.35 s by default), because the panel has to wait for a possible second press. The local relay
 toggle (`button_left_press_short`, `button_right_press_short`) and the screensaver wake-up move by the same amount.
+
+A press that lasts longer than `multi_click_press` but is released before the hold threshold is still reported as a
+single click, so no press is lost.
 
 ### Expose Relay Fallback Switch
 

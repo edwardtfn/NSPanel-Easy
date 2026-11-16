@@ -16,6 +16,8 @@ substitutions:
   # Double click: a press counts as one click while it lasts up to `multi_click_press`, and a second
   # press has to follow within `multi_click_gap`. The single click waits for that window before it is
   # dispatched, so both patterns end with the same `multi_click_gap`.
+  # Keep `multi_click_press` below the 0.8 s hold threshold: the hold pattern is evaluated first, so a
+  # longer value would turn every press in that range into a hold.
   multi_click_press: 600ms
   multi_click_gap: 350ms
   buttons_color_on: ${COLOR_CYAN_BRIGHT}
@@ -53,7 +55,9 @@ binary_sensor:
           - OFF for at most ${multi_click_gap}
           - ON for at most ${multi_click_press}
           - OFF for at least ${multi_click_gap}
-        invalid_cooldown: ${invalid_cooldown}
+        # No cooldown here: the recognizer is invalidated by every single click (its window
+        # expires), and a 100 ms block would swallow the first press of the next double click.
+        invalid_cooldown: 0ms
         then:
           - lambda: |-
               ESP_LOGV("${TAG_HW_BUTTONS}", "Left button - Double click detected");
@@ -61,7 +65,8 @@ binary_sensor:
               ha_button->execute(page_names[current_page_id], "hw_bt_left", "double_click");
               ESP_LOGD("${TAG_HW_BUTTONS}", "Left button - Double click dispatched");
       - timing: &short_click-timing
-          - ON for at most ${multi_click_press}
+          # Up to the hold threshold, so a press between `multi_click_press` and 0.8 s is still a click
+          - ON for at most 0.8s
           - OFF for at least ${multi_click_gap}
         invalid_cooldown: ${invalid_cooldown}
         then:
@@ -90,7 +95,7 @@ binary_sensor:
               ha_button->execute(page_names[current_page_id], "hw_bt_right", "long_click");
               ESP_LOGD("${TAG_HW_BUTTONS}", "Right button - Long click dispatched");
       - timing: *double_click-timing
-        invalid_cooldown: ${invalid_cooldown}
+        invalid_cooldown: 0ms  # See the left button block
         then:
           - lambda: |-
               ESP_LOGV("${TAG_HW_BUTTONS}", "Right button - Double click detected");
