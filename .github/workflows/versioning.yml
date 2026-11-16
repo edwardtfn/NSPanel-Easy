@@ -755,6 +755,7 @@ jobs:
             prebuilt/wall_display.manifest.json \
             hmi/nspanel_blank.tft \
             hmi/nspanel_landscape.tft \
+            hmi/nspanel_landscape_left.tft \
             hmi/nspanel_portrait.tft; do
             if [ ! -s "$f" ]; then
               echo "ERROR: missing or empty file: $f"
