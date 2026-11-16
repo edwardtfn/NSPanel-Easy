@@ -71,4 +71,32 @@ jobs:
           operations-per-run: 30
 
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------------------------------------------------
+      # Resolved issues waiting for the reporter's confirmation
+      # -------------------------------------------------------------------
+      # The label is added by hand, after a comment explaining what was
+      # done. The issue is closed as completed after 7 days, unless someone
+      # comments (which removes the label and keeps the issue open).
+      # Issues are never labeled automatically, and pull requests are
+      # ignored.
+      # -------------------------------------------------------------------
+      - uses: actions/stale@v11.0.0
+        with:
+          days-before-issue-stale: -1  # Never added automatically
+          days-before-issue-close: 7   # Days after the label before closing
+          stale-issue-label: 'Resolved: pending confirmation'
+          only-issue-labels: 'Resolved: pending confirmation'
+          close-issue-reason: 'completed'
+          close-issue-message: >
+            This issue was closed as resolved, as there were no objections
+            within 7 days. If the problem is still there, please comment
+            here and it can be reopened.
+
+          days-before-pr-stale: -1  # Pull requests are not handled here
+          days-before-pr-close: -1
+
+          operations-per-run: 30
+
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 ...
