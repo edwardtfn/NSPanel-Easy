@@ -35,13 +35,14 @@ struct SystemFlags {
   uint16_t ota_dialog_shown : 1;        ///< OTA dialog is shown on the display
   uint16_t display_sleep : 1;           ///< Display is in sleep mode
   uint16_t display_resync_pending : 1;  ///< Display restarted; repaint on next page entry
+  uint16_t display_start_hold : 1;      ///< Display keeps its start screen until the boot opens a page
 
   // Baud rate flags
   uint16_t baud_fallback_active : 1;  ///< UART is operating at non-primary rate (detected via scan)
   uint16_t baud_scan_success : 1;     ///< Last baud rate scan found a responsive rate
 
   // Reserved flags
-  uint16_t reserved : 2;
+  uint16_t reserved : 1;
 
   // Default constructor - all flags start as false (zero-initialized)
   SystemFlags()
@@ -56,6 +57,8 @@ struct SystemFlags {
         ota_in_progress(0),
         ota_dialog_shown(0),
         display_sleep(0),
+        display_resync_pending(0),
+        display_start_hold(0),
         baud_fallback_active(0),
         baud_scan_success(0),
         reserved(0) {}
@@ -224,9 +227,10 @@ extern bool unavailable_unhide_pending;
 /**
  * @brief Whether the Home Assistant values on display are stale.
  *
- * Set once the API has been disconnected for longer than the `api_stale_grace_period`
- * substitution, and cleared as soon as it reconnects, so a short drop such as a Home
- * Assistant restart leaves the display untouched. While set, the last values received
+ * Set at boot, until the API connects for the first time, and then once the API has been
+ * disconnected for longer than the `api_stale_grace_period` substitution. Cleared as soon
+ * as it reconnects, so a short drop such as a Home Assistant restart leaves the display
+ * untouched. While set, the last values received
  * from Home Assistant cannot be trusted: each module hides them, greys them out or falls
  * back to the panel's own data. Modules react to a change by extending the
  * `api_stale_changed` script.
@@ -250,6 +254,55 @@ extern uint32_t blueprint_last_setting_ms;
  * Called by the API actions that carry settings (`page: mem`) and bindings.
  */
 inline void blueprint_setting_received() { blueprint_last_setting_ms = App.get_loop_component_start_time(); }
+
+/**
+ * @brief Loop time at which the boot sequence started waiting for the Blueprint settings.
+ *
+ * @see blueprint_wait_start()
+ * @see blueprint_wait_expired()
+ */
+extern uint32_t blueprint_wait_started_ms;
+
+/**
+ * @brief Record that the boot sequence starts waiting for the Blueprint settings now.
+ *
+ * Called once per boot sequence, before its first wait for the Blueprint.
+ */
+inline void blueprint_wait_start() { blueprint_wait_started_ms = App.get_loop_component_start_time(); }
+
+/**
+ * @brief Check if the boot sequence should stop waiting for the Blueprint settings.
+ *
+ * The boot sequence must complete also when the Blueprint cannot answer, so the panel keeps
+ * working on its own with the settings it has stored (#516):
+ * - Without Home Assistant there is no Blueprint to wait for.
+ * - With Home Assistant connected, the wait ends after `timeout_ms`, unless settings are still
+ *   arriving: a push in progress on a slow Home Assistant is not a missing Blueprint (#636).
+ * - Settings that keep arriving extend the wait up to twice `timeout_ms` only, so nothing can
+ *   hold the boot forever.
+ *
+ * The wait is counted from blueprint_wait_start(), which the boot sequence calls once, so waiting
+ * for the Blueprint again later in the same boot does not start a new timeout.
+ *
+ * @param api_connected Whether Home Assistant is connected (with state subscription).
+ * @param timeout_ms Time to wait for the Blueprint while Home Assistant is connected, in milliseconds.
+ * @param quiet_ms Time without any setting from the Blueprint to consider its push as ended, in milliseconds.
+ * @return true when the boot sequence should go on without the Blueprint, false to keep waiting.
+ */
+inline bool blueprint_wait_expired(const bool api_connected, const uint32_t timeout_ms, const uint32_t quiet_ms) {
+  if (!api_connected) {
+    return true;
+  }  // if (!api_connected)
+  const uint32_t now = App.get_loop_component_start_time();
+  const uint32_t waited_ms = now - blueprint_wait_started_ms;
+  if (waited_ms < timeout_ms) {
+    return false;
+  }  // if still within the timeout
+  if (waited_ms / 2 >= timeout_ms) {
+    return true;
+  }  // if the extension for settings still arriving is also over
+  return blueprint_last_setting_ms == 0 || static_cast<uint32_t>(now - blueprint_last_setting_ms) >= quiet_ms;
+}
 
 /**
  * @brief Fire a Home Assistant event for NSPanel HA Blueprint

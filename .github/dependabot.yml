@@ -30,6 +30,7 @@ updates:
   #   - RafikFarhad/*      (clang-format-github-action)
   #   - mikefarah/*        (yq in versioning)
   #   - softprops/*        (action-gh-release in versioning)
+  #   - anthropics/*       (claude-code-action in claude_issue_*, pinned to a commit)
   # ---------------------------------------------------------------------------
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -73,6 +74,10 @@ updates:
       actions-builders:
         patterns:
           - "esphome/*"
+      # AI agent used by the issue workflows
+      actions-ai:
+        patterns:
+          - "anthropics/*"
 
   # ---------------------------------------------------------------------------
   # Python (pip)

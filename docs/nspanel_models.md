@@ -5,9 +5,8 @@ I've seen multiple questions about the possibilities of using the US panel in Eu
 ## The differences between the EU and US models
 
 Probably the Sonoff page will be the best source of info around this, so please take a look there first:
-
-1. [Sonoff NSPanel product page](https://sonoff.tech/product/central-control-panel/nspanel/)
-1. [Sonoff NSPanel user's manual](https://sonoff.tech/wp-content/uploads/2021/11/%E8%AF%B4%E6%98%8E%E4%B9%A6-NSPanel-V1.1-20210826.pdf)
+the [Sonoff NSPanel product page](https://sonoff.tech/product/central-control-panel/nspanel/) has the specifications
+of both models and the link to the user's manual, in its "Specs & User Manual" section.
 
 ### Installing a US panel in EU
 
@@ -41,6 +40,9 @@ but if you are planing to customize your displays, be aware that the US version 
 The US Landscape model is fully supported.
 Simply select **NSPanel US Landscape** from the **Update TFT display - Model** selector on your device's page in Home Assistant and upload the TFT file as usual.
 This variant is purpose-built for the US panel mounted horizontally, with the physical buttons on the right side of the screen.
+
+If your panel is mounted the other way around, with the physical buttons on the left side of the screen,
+select **NSPanel US Landscape (buttons on the left)** instead. It shows the same pages, rotated by 180 degrees.
 
 ![NSPanel US and EU side-by-side](pics/nspanel_eu_and_us_side_by_side.png)
 

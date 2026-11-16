@@ -3,9 +3,12 @@
 When your panel starts, a number of different things need to be set
 and ESPHome must establish a connection to the Nextion display used by your panel
 and also to your Home Assistant, which will provide the proper settings required by your panel.
-If everything goes right, the boot page will be shown for just a few seconds, then the wake-up page will be shown.
+If everything goes right, the screen shows a dimmed "NSPanel Easy" for a few seconds, until ESPHome connects to the display, and then the wake-up page is shown.
+Until Home Assistant connects, the values from Home Assistant are empty or greyed out, and the connection icon is grey.
+They appear as soon as each one is available, and the connection icon turns red only if the boot completes without Home Assistant.
 
-If something happens during this process, your panel may get stuck on this page.
+The boot page is only shown when ESPHome does not connect to the display within about 20 seconds,
+or while the display has an older TFT file that has to be updated first.
 In many cases, restarting your panel can resolve the issue, but if it is still showing the boot page after a reboot, this guide may help you.
 
 Understanding what is shown on the boot page can be useful to find the cause of the problem or when you are looking for help.

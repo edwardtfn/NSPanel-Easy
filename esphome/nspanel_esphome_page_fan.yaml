@@ -214,6 +214,12 @@ script:
             }  // if (preset_buttons)
           }  // if (preset_modes)
 
+          // The active preset mode, shown under the mode button (#274); the preset buttons highlight it instead.
+          // Always written, so the mode of an entity shown before on this page does not stay.
+          std::string mode_label = (fan.preset_modes and !fan.preset_buttons) ? fan.preset_mode : "";
+          mode_label.erase(std::remove(mode_label.begin(), mode_label.end(), '"'), mode_label.end());
+          disp1->set_component_text("mode_label", mode_label.c_str());
+
   - id: !extend picker_selected
     then:
       - lambda: |-

@@ -52,10 +52,18 @@ substitutions:
       ID: 3
       IDX: 2
       TEXT: "NSPanel US Landscape"
+    # The landscape TFT rotated by 180 degrees. Listed next to the US Landscape model, but its ID comes
+    # after Blank's, as the IDs are stored on the displays and cannot change. So the position of an option
+    # (IDX) is no longer its ID minus one: see `display_mode_id_of()` and `display_mode_index_of()`.
+    US_LAND_LEFT:
+      FILE: "landscape_left"
+      ID: 5
+      IDX: 3
+      TEXT: "NSPanel US Landscape (buttons on the left)"
     BLANK:
       FILE: "blank"
       ID: 4
-      IDX: 3
+      IDX: 4
       TEXT: "NSPanel Blank"
 
   TAG_HW_DISPLAY: nspanel.hw.display
@@ -92,43 +100,50 @@ display:
             // page is showing, and unscoped names resolve against the
             // visible page only.
             system_flags.display_resync_pending = true;
+            display_start++;  // The display restarted with the palette of its TFT
             boot_request_blueprint_settings->execute("setup");
             // The display restarted with its own defaults: send the configured values the pages use on load
             // (`dim=brightness`), so a page loaded after this restart doesn't fall back to the defaults
-            // While booting, the regular brightness holds the dimmed value (see `boot_nextion`)
-            disp1->send_command_printf("brightness=%i", static_cast<int>(system_flags.boot_completed ?
-                                                                         display_brightness->state :
-                                                                         display_dim_brightness->state));
+            disp1->send_command_printf("brightness=%i", static_cast<int>(display_brightness->state));
             disp1->send_command_printf("brightness_dim=%i", static_cast<int>(display_dim_brightness->state));
             disp1->send_command_printf("brightness_sleep=%i", static_cast<int>(display_sleep_brightness->state));
-            // The display restarted with the boot page's own brightness, so the next change must be sent
+            // The display restarted dimmed, at its own default value, so the next change must be sent
             brightness_current = UINT8_MAX;
-            if (system_flags.boot_completed) {
-              set_brightness->execute(display_brightness->state);
-            } else {
+            if (!system_flags.boot_completed) {
               // Keep the display dimmed while booting, e.g. after a power outage at night (#485).
-              // The boot sequence restores the regular brightness when it jumps to the wake-up page.
-              set_brightness->execute(display_dim_brightness->state);
-            }  // if (system_flags.boot_completed)
+              // Only a user action, such as a touch, restores the regular brightness (#656).
+              brightness_auto_hold = true;
+              // The display keeps its start screen, at its own brightness, until the boot opens a page
+              // (see `display_start_hold_release`), so nothing is shown before its settings arrive
+              system_flags.display_start_hold = true;
+            }  // if (!system_flags.boot_completed)
+            if (!system_flags.display_start_hold) {
+              // After a display reset in normal use, this applies again the brightness the panel had
+              set_brightness->execute((brightness_dim_hold or brightness_auto_hold) ? display_dim_brightness->state :
+                                                                                      display_brightness->state);
+            }  // if (!system_flags.display_start_hold)
 
     on_page:
       then:
         - lambda: |-
+            // The display can report anything while its TFT is being replaced, or with a TFT of another version.
+            // Past this check, current_page_id is always a page of this firmware.
+            if (x >= PAGE_COUNT) {
+              ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown page id %" PRIu8 " from the display, ignored", x);
+              // The display answered, so a pending page change is over: the boot page must not wait for a
+              // report that may never come. current_page_id keeps the last valid page.
+              id(page_change_pending) = false;
+              return;
+            }  // if (x >= PAGE_COUNT)
             ESP_LOGI("${TAG_HW_DISPLAY}", "Page changed: '%s'->'%s'", page_names[current_page_id], page_names[x]);
             ESP_LOGW_IF("${TAG_HW_DISPLAY}", (x == current_page_id), "Same page");
             page_change->execute(x);
-            if (!system_flags.boot_completed and x != get_page_id("boot")) {
-              // The page set the regular brightness on load (`dim=brightness`), e.g. after a wake-up before
-              // the boot completes: keep the display dimmed until the boot completes (#485)
-              brightness_current = UINT8_MAX;
-              set_brightness->execute(display_dim_brightness->state);
-            }  // if (!system_flags.boot_completed and x != get_page_id("boot"))
 
     on_touch:
       then:
         - lambda: |-
             if (touch_event) {  // Reset timers on touch, but not on release (to avoid two calls per touch)
-              brightness_dim_hold = false;  // A touch always restores the regular brightness
+              brightness_user_action();  // A touch always restores the regular brightness
               timer_reset_all->execute();
             }  // if (touch_event)
 
@@ -169,12 +184,12 @@ number:
     on_value:
       then:
         - lambda: |-
-            // While booting, the TFT holds the dimmed value instead, and gets this one when the boot completes
-            if (system_flags.boot_completed)
-              disp1->send_command_printf("brightness=%i", int(x));
+            disp1->send_command_printf("brightness=%i", int(x));
         - if:
-            condition:  # While booting, the display stays dimmed (see `on_setup`)
-              - lambda: return system_flags.boot_completed and current_page_id != get_page_id("screensaver");
+            condition:  # A display held dimmed stays dimmed, e.g. while booting (see `brightness_auto_hold`)
+              - lambda: |-
+                  return (not brightness_dim_hold) and (not brightness_auto_hold) and
+                         current_page_id != get_page_id("screensaver");
             then:
               - script.execute:
                   id: set_brightness
@@ -195,9 +210,6 @@ number:
       then:
         - lambda: |-
             disp1->send_command_printf("brightness_dim=%i", int(x));
-            // While booting, the TFT's regular brightness holds the dimmed value (see `boot_nextion`)
-            if (!system_flags.boot_completed)
-              disp1->send_command_printf("brightness=%i", int(x));
         - if:
             condition:
               - lambda: return current_page_id != get_page_id("screensaver");
@@ -235,13 +247,23 @@ script:
           disp1->send_command_printf("button_back_font=%i", id(button_back_font));
           disp1->send_command_printf("home_page_id=%" PRIu8, home_page_id);
           wakeup_page_id = get_page_id(wakeup_page_name->current_option().c_str());
+          if (wakeup_page_id >= PAGE_COUNT) {
+            // Not the name of a page: keep a valid id, as it is used to look up the name of the page
+            ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown wake-up page, using home");
+            wakeup_page_id = get_page_id("home");
+          }  // if (wakeup_page_id >= PAGE_COUNT)
           wakeup_page_update->execute();
 
 
   - id: !extend boot_wrap_up
     then:
-      - script.execute: theme_update
-      - script.wait: theme_update
+      # Applied already when the display got ready (`boot_show_wakeup_page`): applying it again reloads the page
+      - if:
+          condition:
+            lambda: return !theme_on_display();
+          then:
+            - script.execute: theme_update
+            - script.wait: theme_update
 
   - id: !extend dump_config
     then:
@@ -341,6 +363,11 @@ script:
       page_id: uint8_t
     then:
       - lambda: |-
+          // get_page_id() returns UINT8_MAX for a page name it does not know
+          if (page_id >= PAGE_COUNT) {
+            ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown page id %" PRIu8 ", not opened", page_id);
+            return;
+          }  // if (page_id >= PAGE_COUNT)
           ESP_LOGV("${TAG_HW_DISPLAY}", "Go to page '%s' (id: %" PRIu8 ")", page_names[page_id], page_id);
           if (page_id == current_page_id) {
             ESP_LOGW("${TAG_HW_DISPLAY}", "Already the current page");
@@ -365,6 +392,11 @@ script:
           // Report new page to logs
           ESP_LOGV("${TAG_HW_DISPLAY}", "New page: %s", page_names[new_page_id]);
           current_page->publish_state(page_names[new_page_id]);
+          // The same page loaded again, such as `page dp` after a theme change, is not a page change by the user:
+          // it keeps the brightness as an automatic page change (#656). The screensaver does not consume it below.
+          if (current_page_id == new_page_id and new_page_id != get_page_id("screensaver")) {
+            brightness_auto_hold_armed = true;
+          }  // if (page reload)
           if (current_page_id != new_page_id) {
             last_page_id = current_page_id;
             current_page_id = new_page_id;
@@ -402,6 +434,14 @@ script:
 
           // Reset timers
           if (current_page_id != get_page_id("screensaver")) {
+            // Every page but boot and home sets the backlight on load (`dim=brightness`) without the firmware
+            // knowing, so the brightness the panel should have is sent again by `timer_dim` (#656)
+            brightness_current = UINT8_MAX;
+            if (brightness_auto_hold_armed or current_page_id == get_page_id("boot")) {
+              brightness_auto_hold_armed = false;  // Automatic page change: the display keeps its brightness
+            } else {
+              brightness_auto_hold = false;  // Page opened by the user or through the API: regular brightness
+            }  // if automatic page change
             ESP_LOGV("${TAG_HW_DISPLAY}", "Reset timers");
             timer_reset_all->execute();
           }
@@ -493,9 +533,12 @@ script:
     then:  # Modules owning a themed component should subscribe themselves to this
 
   - id: theme_update
+    mode: queued  # A selection changed while applying is applied after it, with the latest selection
+    max_runs: 3
     then:
       - lambda: |-
           ESP_LOGI("${TAG_HW_DISPLAY}", "Apply theme: %s", background_type->current_option().c_str());
+          theme_update_start = display_start;
           current_theme = (background_type->current_option() == "${THEME_LIGHT_LABEL}") ?
                                                                 ThemeMode::LIGHT : ThemeMode::DARK;
           theme_update_all->execute();
@@ -515,14 +558,18 @@ script:
           // from the theme palette in place, without leaving the current page.
           disp1->send_command("call theme_apply");
           // The boot page has no themed component, and reloading it would rerun
-          // its boot sequence. Any other page reloads to show the new palette.
-          if (current_page_id != get_page_id("boot")) {
+          // its boot sequence. The start screen is about to be replaced by the
+          // wake-up page, which loads with the new palette. Any other page
+          // reloads to show the new palette.
+          if (current_page_id != get_page_id("boot") and !system_flags.display_start_hold) {
             disp1->send_command("page dp");
-          }  // if (current_page_id != boot)
+          }  // if (current_page_id != boot and not the start screen)
           // The macro discards whatever colour the Blueprint pushed before it.
           // The display runs serial commands in order, so anything sent from
           // here lands after the repaint: let each module restore what it owns.
           theme_applied->execute();
+          // Marked as applied only for the display start it was sent to (see `theme_display_start`)
+          theme_display_start = theme_update_start;
 
   - id: theme_update_all
     mode: restart
@@ -556,9 +603,9 @@ script:
     mode: restart
     then:
       - lambda: |-
-          // Keep the display dimmed while a hardware button holds it (see `brightness_dim_hold`),
-          // and while booting (see `on_setup`), e.g. after a touch on the boot page
-          set_brightness->execute((brightness_dim_hold or !system_flags.boot_completed) ?
+          // Keep the display dimmed while a hardware button holds it (see `brightness_dim_hold`), and after
+          // an automatic change or while booting, until a user action (see `brightness_auto_hold`)
+          set_brightness->execute((brightness_dim_hold or brightness_auto_hold) ?
                                   display_dim_brightness->state : display_brightness->state);
       - delay: !lambda return (int(timeout_dim->state) *1000);
       - lambda: |-
@@ -587,6 +634,8 @@ script:
                 current_page_id != get_page_id("notification") and
                 current_page_id != get_page_id("screensaver")) {
               ESP_LOGD("${TAG_HW_DISPLAY}", "Fallback to page Home");
+              // Not a user action: a dimmed display stays dimmed (#656)
+              brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));
               goto_page->execute(home_page_id);
             }
           }
@@ -700,11 +749,19 @@ script:
                                                              id(is_embedded_thermostat));
           ESP_LOGV("${TAG_HW_DISPLAY}", "Wake-up (%s->%s)", page_names[current_page_id], page_names[target_page_id]);
           ESP_LOGV("${TAG_HW_DISPLAY}", "  reset timer: %s", YESNO(reset_timer));
+          // A wake-up not announced as automatic (see `brightness_auto_hold_arm`) was asked by the user, by a
+          // sensor or through the API, and restores the regular brightness (#656)
+          const bool automatic = brightness_auto_hold_armed;
+          brightness_auto_hold_armed = false;
+          if (!automatic) {
+            brightness_auto_hold = false;
+          }  // if (!automatic)
           if (version_tft->state.empty()) {
             ESP_LOGE("${TAG_HW_DISPLAY}", "TFT version invalid");
             return;
           }
           if (current_page_id == get_page_id("screensaver") or current_page_id == get_page_id("boot")) {
+            brightness_auto_hold_armed = automatic;  // Consumed by the page change
             ESP_LOGD("${TAG_HW_DISPLAY}", "Wake-up on page %s", page_names[target_page_id]);
             #ifdef NSPANEL_EASY_PAGE_CLIMATE
             if (target_page_id == get_page_id("climate")) {
@@ -760,6 +817,7 @@ select:
       - ${DISPLAY_MODES.EU.TEXT}
       - ${DISPLAY_MODES.US.TEXT}
       - ${DISPLAY_MODES.US_LAND.TEXT}
+      - ${DISPLAY_MODES.US_LAND_LEFT.TEXT}
     initial_option: ${DISPLAY_MODES.EU.TEXT}
     optimistic: true
     restore_value: false
@@ -773,8 +831,17 @@ select:
 
             display_portrait = (i == ${DISPLAY_MODES.US.IDX});
 
+            // The positions and IDs in DISPLAY_MODES must be the ones of the table in hw_display.h
+            static_assert(display_mode_id_of(${DISPLAY_MODES.EU.IDX}) == ${DISPLAY_MODES.EU.ID} and
+                          display_mode_id_of(${DISPLAY_MODES.US.IDX}) == ${DISPLAY_MODES.US.ID} and
+                          display_mode_id_of(${DISPLAY_MODES.US_LAND.IDX}) == ${DISPLAY_MODES.US_LAND.ID} and
+                          display_mode_id_of(${DISPLAY_MODES.US_LAND_LEFT.IDX}) == ${DISPLAY_MODES.US_LAND_LEFT.ID} and
+                          display_mode_id_of(${DISPLAY_MODES.BLANK.IDX}) == ${DISPLAY_MODES.BLANK.ID},
+                          "DISPLAY_MODES does not match DISPLAY_MODE_IDS");
+
             // Persist to Nextion EEPROM
-            const uint8_t mode = static_cast<uint8_t>(i) + 1;
+            const uint8_t mode = display_mode_id_of(i);
+            if (mode == 0) return;  // Not a known display model
             if (mode != display_mode_eeprom) {
               disp1->send_command_printf("wepo %" PRIu8 ",4", mode);
               disp1->send_command_printf("display_mode=%" PRIu8, mode);
@@ -808,6 +875,11 @@ select:
       then:
         - lambda: |-
             wakeup_page_id = get_page_id(x.c_str());
+            if (wakeup_page_id >= PAGE_COUNT) {
+              // Not the name of a page (e.g. an option of a customization): keep a page the display can open
+              ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown wake-up page '%s', using home", x.c_str());
+              wakeup_page_id = get_page_id("home");
+            }  // if (wakeup_page_id >= PAGE_COUNT)
             wakeup_page_update->execute();
             wait_to_be_ready->execute();
         - script.wait: wait_to_be_ready

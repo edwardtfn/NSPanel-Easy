@@ -186,7 +186,13 @@ script:  # Scripts
       - lambda: boot_log->execute("Boot", "Waiting for Blueprint");
       - while:
           condition:
-            - lambda: return (not system_flags.blueprint_ready) and (not is_blueprint_fully_ready());
+            # The wait ends without the Blueprint when Home Assistant is not connected, or when the Blueprint
+            # does not answer in time: the boot then completes with the settings stored on the panel (#516).
+            # The time is counted from `blueprint_wait_start()`, called by the `boot` script.
+            - lambda: |-
+                return (not system_flags.blueprint_ready) and (not is_blueprint_fully_ready()) and
+                       (not blueprint_wait_expired(api_server->is_connected_with_state_subscription(),
+                                                   ${BOOT_BLUEPRINT_WAIT_TIMEOUT_MS}, ${BOOT_SETTINGS_QUIET_MS}));
           then:
             - lambda: |-
                 // Single counter for all periodic actions
@@ -221,6 +227,11 @@ script:  # Scripts
       - lambda: |-
           ESP_LOGI("${TAG_CORE}", "Receiving settings from Blueprint: %0.1f%%",
                                   blueprint_status_flags.get_completion_percentage());
-          boot_log->execute("Boot", "Blueprint is ready");
+          if (system_flags.blueprint_ready) {
+            boot_log->execute("Boot", "Blueprint is ready");
+          } else {
+            // The watchdog asks for the settings again once Home Assistant is connected (see `boot`)
+            ESP_LOGW("${TAG_CORE}", "Blueprint not available: using the settings stored on the panel");
+          }  // if (system_flags.blueprint_ready)
           refresh_wifi_icon->execute(false);
 ...

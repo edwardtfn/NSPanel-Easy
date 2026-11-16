@@ -141,6 +141,11 @@ What CI does with the built files (workflow "Build HMI"):
   `display-files` artifact. They are not committed. To test a pull request on a panel, download the artifact,
   host the TFT file where the panel can reach it (e.g. the `www` folder of Home Assistant), and upload it from there.
 - **`dev`:** after a merge that changes the source, the HMI and TFT files are built and committed to `dev`.
+- **`test/...` branches:** the same as `dev`. Such a branch combines pull requests to try them together and is never merged.
+  Its workflows run with write access, as on `dev`, so only merge into it what was reviewed: never a pull request
+  from a fork that changes workflows or build scripts.
+  A panel built from it can download its TFT file from the branch, with this substitution (the branch name in place of `test/my-branch`):
+  `nextion_update_base_url: "https://raw.githubusercontent.com/edwardtfn/NSPanel-Easy/test/my-branch/hmi"`.
 
 Working in the Nextion Editor is still supported: open the `.hmi` file from `dev` (Nextion Editor v1.68.2 or later,
 since the projects use macros), make the change, save, and commit the `.hmi` file to your pull request.
@@ -154,8 +159,11 @@ Use a macro for code repeated across components or pages, so it is changed in on
 Macros are in `macros.nx` in each project's source folder.
 
 Macros only reach global data: the system variables (`sys0` to `sys3`), the variables declared in `Program.s`
-and global-scope components on the `home` page. Pass inputs in system variables, return results in a global-scope
-`home` variable, and document both, plus any system variable the macro changes, at the top of the macro.
+and global-scope components, given with the name of their page (most of them are on the `home` page).
+Pass inputs in system variables, return results in a global-scope `home` variable, and document both,
+plus any system variable the macro changes, at the top of the macro.
+
+ESPHome can also run a macro, by sending `call <name>` to the display.
 
 #### `format_tenths`
 
@@ -172,6 +180,26 @@ sys1=temp_step.val
 call format_tenths
 target.txt=home.tenths_txt.txt+temp_unit.txt
 ```
+
+#### `report_display`
+
+Reports the display settings to ESPHome: the display mode, the default display mode of the TFT file,
+whether the display's EEPROM was already initialized, and the TFT version.
+
+The display sends nothing by itself. ESPHome asks for the report with `call report_display` when it connects to the display
+and when the display tells that it restarted (`display_report_request` in `esphome/nspanel_esphome_page_boot.yaml`),
+so it also works when ESPHome restarts while the display keeps running, on any page.
+
+- Inputs: none
+- Output: each value on its own, with the Nextion custom protocol (see [Reporting to ESPHome](#reporting-to-esphome)):
+  the custom sensors `display_mode`, `hard_coded_mode` and `magic_flag`, the custom text sensor `tft_version`,
+  and then the custom binary sensor `display_report`, which tells that the report is complete.
+- Also uses: `boot.version`, a global-scope variable of the `boot` page
+
+To report another value, add it to the macro before `display_report` and handle its key in `on_custom_sensor`
+(or `on_custom_text_sensor`) in the same ESPHome package.
+A custom sensor carries a number as four bytes, so do not report this way a number whose bytes contain
+three `FF` in a row (for example -256 to -1, or 16777215), as three `FF` end a message.
 
 ### Interface used by external tools
 
