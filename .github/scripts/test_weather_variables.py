@@ -106,8 +106,8 @@ def setup_environment(hass):
     )
 
 
-def load_forecast(branch, path):
-    """Return the variables building `forecast_day` for a page, its fallback for today, and the values of the day."""
+def load_forecast(branch, path, units_source):
+    """Return the variables building `forecast_day` for a page, its fallback for today, the values of the day and the units."""
     builder = find(branch, lambda d: "datetime_is_string" in d and "forecast_day" in d)
     fallback = find(branch, lambda d: isinstance(d.get("forecast_day"), str)
                     and "page_index == 0" in d["forecast_day"] and "datetime_is_string" not in d)
@@ -115,7 +115,7 @@ def load_forecast(branch, path):
     if builder is None or fallback is None or values is None:
         sys.exit(f"ERROR: the forecast variables were not found in {path}")
     names = FORECAST_VALUE_NAMES + (FORECAST_VALUES_DICT,)
-    return builder, fallback["forecast_day"], {name: values[name] for name in names if name in values}
+    return builder, fallback["forecast_day"], {name: values[name] for name in names if name in values}, units_source
 
 
 def load_branch(path):
@@ -132,7 +132,7 @@ def load_branch(path):
     if units is None or params is None or repeat is None:
         sys.exit(f"ERROR: 'weather_units', 'parameters' or its 'for_each' not found in {path}")
     branch_parts = (units["weather_units"], params["parameters"], repeat["for_each"], global_step["variables"]["nextion"])
-    return branch_parts, load_forecast(branch, path)
+    return branch_parts, load_forecast(branch, path, units["weather_units"])
 
 
 def run_branch(hass, branch, db, context):
@@ -178,9 +178,11 @@ def value_cases():
 
 def run_forecast(hass, forecast_parts, context):
     """Render the forecast values of a page as the branch does; a template error is returned as the result."""
-    builder, fallback, values = forecast_parts
+    builder, fallback, values, units_source = forecast_parts
     try:
-        context = dict(context, datetime_is_string=render(hass, builder["datetime_is_string"], context))
+        # The values of the day may depend on the units (decimals, issue #803)
+        context = dict(context, weather_units=render(hass, units_source, context))
+        context["datetime_is_string"] = render(hass, builder["datetime_is_string"], context)
         context["forecast_day"] = render(hass, builder["forecast_day"], context)
         if not (len(context["forecast_day"]) > 0 or context["page_index"] == 0):
             return "no forecast"
