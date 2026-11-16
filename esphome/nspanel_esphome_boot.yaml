@@ -176,20 +176,24 @@ script:
           // either. Every other step is a retry and stays rate-limited to keep a stalled boot from flooding
           // Home Assistant.
           const bool display_reset = (step == "display_ack" && system_flags.blueprint_ready);
-          if (step != "start" && step != "display_ack" &&
+          // The display being ready asks for the full settings: "display_ack" from the boot page of a TFT up to
+          // v2026.11.16, or "setup" when ESPHome sets up the display, as a newer TFT starts on the screensaver and
+          // sends no "display_ack". Rate-limited after "start", "setup" waited for the next retry, up to a minute.
+          const bool display_ready_step = (step == "display_ack" || step == "setup");
+          if (step != "start" && !display_ready_step &&
               (uint32_t)(now - last_boot_event_fired) < ${BOOT_EVENT_REPEAT_INTERVAL_MS}) return;
           // During boot, the display repeats "display_ack" until it is set up (it ignores display_ack=1 before
           // that). Each one used to start a full push in parallel with the others (#636): once a full request
           // reached Home Assistant, the repeats wait for the repeat interval. A display reset later in the boot
           // still requests the settings again after that interval.
-          if (step == "display_ack" && !display_reset && last_full_request_fired != 0 &&
+          if (display_ready_step && !display_reset && last_full_request_fired != 0 &&
               (uint32_t)(now - last_full_request_fired) < ${BOOT_EVENT_REPEAT_INTERVAL_MS}) {
             ESP_LOGD("${TAG_BOOT}", "Display acknowledged again while booting, request skipped");
             return;
           }  // if repeated display_ack while booting
           // A retry while the Blueprint is still sending settings would start a second full push in
           // parallel with the one in progress, slowing Home Assistant down and both pushes with it (#636).
-          if (step != "start" && step != "display_ack" && blueprint_last_setting_ms != 0 &&
+          if (step != "start" && !display_ready_step && blueprint_last_setting_ms != 0 &&
               (uint32_t)(now - blueprint_last_setting_ms) < ${BOOT_SETTINGS_QUIET_MS}) {
             ESP_LOGD("${TAG_BOOT}", "Blueprint settings still arriving, request skipped");
             return;
