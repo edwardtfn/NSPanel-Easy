@@ -11,6 +11,7 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cstring>
+#include <ctime>  // For time and mktime, the calendar lead time
 
 #include <esp_attr.h>
 #include <esp_heap_caps.h>
@@ -467,19 +468,84 @@ static uint16_t sub_find_target(const SubBinding *set, uint16_t count, const cha
  *
  * @param idx Binding index.
  */
-static void sub_apply(uint16_t idx) {
-  const SubBinding &binding = sub_bindings[idx];
-  SubRuntime &rt = sub_runtime[idx];
+/// @brief Lead time of calendar chips, in seconds (see sub_set_calendar_lead()).
+static uint32_t sub_calendar_lead_s = 0;
+
+/// @brief Clock values before this epoch (2024-01-01) mean the clock is not set yet.
+static constexpr time_t SUB_CLOCK_VALID_EPOCH = 1704067200;
+
+/// @brief Time a calendar chip stays shown after the event start, until Home Assistant reports the event as on.
+static constexpr time_t SUB_CALENDAR_START_GRACE_S = 120;
+
+/**
+ * @brief Whether a calendar chip is within its lead time before the next event.
+ *
+ * Home Assistant reports `start_time` in its local time, as "YYYY-MM-DD HH:MM:SS",
+ * and the panel's clock and time zone come from Home Assistant, so both read the same.
+ *
+ * @param binding The calendar binding.
+ * @param rt Its runtime state, with the start of the current or next event.
+ * @return true from the lead time before the event starts until shortly after it starts
+ *         (SUB_CALENDAR_START_GRACE_S), so the chip does not blink before the `on` state arrives.
+ */
+static bool sub_calendar_upcoming(const SubBinding &binding, const SubRuntime &rt) {
+  if (sub_calendar_lead_s == 0 || strcmp(binding.page, "chips") != 0 || rt.start_time[0] == '\0') {
+    return false;
+  }
+  const time_t now = ::time(nullptr);
+  if (now < SUB_CLOCK_VALID_EPOCH) {
+    return false;  // The clock has not been synchronised yet
+  }
+
+  struct tm start_tm{};
+  if (sscanf(rt.start_time, "%d-%d-%d %d:%d:%d", &start_tm.tm_year, &start_tm.tm_mon, &start_tm.tm_mday,
+             &start_tm.tm_hour, &start_tm.tm_min, &start_tm.tm_sec) != 6) {
+    return false;  // No upcoming event ("None"), or an unexpected format
+  }
+  start_tm.tm_year -= 1900;
+  start_tm.tm_mon -= 1;
+  start_tm.tm_isdst = -1;  // Let the time zone decide on daylight saving time
+  const time_t start = mktime(&start_tm);
+  if (start == static_cast<time_t>(-1)) {
+    return false;
+  }
+
+  return now >= start - static_cast<time_t>(sub_calendar_lead_s) && now < start + SUB_CALENDAR_START_GRACE_S;
+}
+
+/**
+ * @brief Classify a binding's current state.
+ *
+ * @param binding The binding.
+ * @param rt Its runtime state.
+ * @param[out] effective The state string the classification was made from.
+ * @return The classification.
+ */
+static SubEntityState sub_classify(const SubBinding &binding, const SubRuntime &rt, const char *&effective) {
   const SubDomain domain = static_cast<SubDomain>(binding.domain);
 
   // Climate prefers hvac_action over the hvac mode whenever the attribute holds
   // a usable value, matching the blueprint's precedence.
-  const char *effective = rt.state;
+  effective = rt.state;
   if (domain == SUB_DOMAIN_CLIMATE && rt.action[0] != '\0' && !sub_state_in(rt.action, SUB_UNUSABLE_STATES)) {
     effective = rt.action;
   }
 
-  rt.last_state = evaluate_sub_state(domain, effective);
+  const SubEntityState eval = evaluate_sub_state(domain, effective);
+
+  // A calendar chip is already shown during its lead time before the next event
+  if (domain == SUB_DOMAIN_CALENDAR && eval == SUB_STATE_OFF && sub_calendar_upcoming(binding, rt)) {
+    return SUB_STATE_ON;
+  }
+  return eval;
+}
+
+static void sub_apply(uint16_t idx) {
+  const SubBinding &binding = sub_bindings[idx];
+  SubRuntime &rt = sub_runtime[idx];
+
+  const char *effective = nullptr;
+  rt.last_state = sub_classify(binding, rt, effective);
   const bool visible = sub_visible(rt.last_state, binding.inverted);
 
   ESP_LOGV(TAG, "%s.%s%s%s: '%s' => vis=%s", binding.page, binding.component, binding.attribute[0] != '\0' ? "." : "",
@@ -689,6 +755,22 @@ void sub_subscribe_all() {
             }
             ++sub_stats_changed;
             sub_copy(rt.action, sizeof(rt.action), action.c_str());
+            sub_apply(idx);
+          }));
+    }
+
+    // A calendar chip can be shown before its next event, so the start of that
+    // event needs a subscription of its own (only chips use it).
+    if (binding.domain == SUB_DOMAIN_CALENDAR && attribute == nullptr && strcmp(binding.page, "chips") == 0) {
+      api::global_api_server->subscribe_home_assistant_state(
+          binding.entity, SUB_CALENDAR_START, std::function<void(StringRef)>([idx](StringRef start_time) {
+            sub_stats_count(idx);
+            SubRuntime &rt = sub_runtime[idx];
+            if (strncmp(rt.start_time, start_time.c_str(), sizeof(rt.start_time)) == 0) {
+              return;  // Unchanged; nothing to recompute
+            }
+            ++sub_stats_changed;
+            sub_copy(rt.start_time, sizeof(rt.start_time), start_time.c_str());
             sub_apply(idx);
           }));
     }
@@ -1304,6 +1386,29 @@ void sub_render_page(const char *page) {
     if (strcmp(sub_bindings[idx].page, page) == 0) {
       sub_apply(idx);
     }  // if (binding on the page)
+  }  // for each binding
+}
+
+void sub_set_calendar_lead(uint32_t minutes) {
+  const uint32_t lead_s = minutes * 60;
+  if (lead_s == sub_calendar_lead_s) {
+    return;
+  }
+  sub_calendar_lead_s = lead_s;
+  ESP_LOGD(TAG, "Calendar chips lead time: %" PRIu32 " min", minutes);
+  sub_calendar_recheck();
+}
+
+void sub_calendar_recheck() {
+  for (uint16_t idx = 0; idx < sub_count; ++idx) {
+    if (sub_bindings[idx].domain != SUB_DOMAIN_CALENDAR) {
+      continue;
+    }
+    // Rendered again only when the lead time changed the classification
+    const char *effective = nullptr;
+    if (sub_classify(sub_bindings[idx], sub_runtime[idx], effective) != sub_runtime[idx].last_state) {
+      sub_apply(idx);
+    }
   }  // for each binding
 }
 

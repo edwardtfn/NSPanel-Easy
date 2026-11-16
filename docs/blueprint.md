@@ -119,6 +119,17 @@ Calibration pauses and keeps the current correction when:
 | Home page - Chips 01-07 (optional) | Used to display icons of HA binary entities on the home screen. The icon is displayed when the entity is on/open/true/active. Otherwise, no icon is displayed. | ![chip](pics/home_page_chips.jpg) |
 | Custom button 01-07 (Optional) | 7 custom buttons that can be assigned to different entities from your Home Assistant. The behavior of these buttons will depend on the entity's domain, such as light, media player, etc. | ![home_page_custom_buttons.jpg](pics/home_page_custom_buttons.jpg) |
 
+### Home page - Chips - Calendar entities and lead time
+
+A chip can also show a `calendar` entity: its icon is displayed while one of the calendar's events is ongoing.
+This works well for waste collection, with one calendar per waste type, each on its own chip with its own icon and color.
+In [Waste Collection Schedule](https://github.com/mampfes/hacs_waste_collection_schedule), this is the "Use dedicated calendar" option of each waste type.
+Several collections on the same day then show as several chips.
+
+**Calendar chips - Lead time** shows the chips earlier, before the event starts. For example, 9 hours shows the chip of an all-day event from 15:00 the day before.
+The setting applies to all calendar chips; at zero (the default) they are shown only during the event.
+The panel follows the time on its own clock, so the chip appears on time even when nothing changes in Home Assistant.
+
 ### Home page - Entity State 01-04 - How the value is shown
 
 The panel shows these values itself, straight from the Home Assistant states, so they are always up to date,
