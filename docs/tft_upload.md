@@ -78,17 +78,40 @@ Observe any changes in the display or logs indicators to ensure the device is re
 
 ### Using a Local Source (Home Assistant)
 
-- **Issue**: Problems with downloading the TFT from GitHub.
-- **Solution**: Host the TFT file on your Home Assistant and change the `nextion_update_url` accordingly.
-- **Step-by-Step Guide**: Here's how you can change your `nextion_update_url`:
-    1. Locate your panel's ESPHome configuration file.
-    2. Find the line with `nextion_update_url`.
-    3. Replace the URL with the local address where your TFT file is hosted.
+- **Issue**: Problems with downloading the TFT from GitHub, for example when your panels cannot reach `raw.githubusercontent.com`.
+- **Solution**: Host the TFT files on your Home Assistant and point `nextion_update_base_url` to them.
+This keeps the automatic selection of the TFT file based on the **Display model**.
+- **Step-by-Step Guide**:
+    1. Download the TFT files of the firmware version installed on your panel from the `hmi` folder of the matching
+    [release](https://github.com/edwardtfn/NSPanel-Easy/releases), using the table below.
+    2. Copy them to `/config/www/nspanel-easy/` on your Home Assistant. Home Assistant serves this folder at `/local/` without any extra configuration.
+    3. Add the base URL to your panel's YAML, without a trailing slash (`/`):
+
+        ```yaml
+        substitutions:
+          nextion_update_base_url: "http://192.168.0.100:8123/local/nspanel-easy"
+        ```
+
+    4. Install the firmware, then press **Update TFT display** on the device's page in Home Assistant.
+    5. Every time you update the firmware, download the TFT files of the new version to the same folder, replacing the old ones.
+
+    | Display model | TFT file |
+    | ------------- | -------- |
+    | NSPanel EU | `nspanel_landscape.tft` |
+    | NSPanel US | `nspanel_portrait.tft` |
+    | NSPanel US Landscape | `nspanel_landscape.tft` |
+    | NSPanel US Landscape (buttons on the left) | `nspanel_landscape_left.tft` |
+    | NSPanel Blank | `nspanel_blank.tft` |
+
+- **Additional Guidance**: Prefer `nextion_update_base_url` over `nextion_update_url`.
+`nextion_update_url` uses the URL as-is and ignores the **Display model**, so a wrong file (for example, the US portrait TFT on an EU panel) results in a rotated display.
+Use it only for custom TFT files.
+See [Upload TFT add-on](addon_upload_tft.md#nextion_update_url-behaviour) for details.
 
 ### HTTP Instead of HTTPS
 
 - **Issue**: HTTPS connections may be problematic with ESP, especially when using `arduino` as framework.
-- **Solution**: Use HTTP for hosting the TFT file and updating the `nextion_update_url`.
+- **Solution**: Use HTTP for hosting the TFT file and in the `nextion_update_base_url` (or `nextion_update_url`).
 - **Why HTTP?**: HTTP can be more stable for these connections.
 To switch, simply replace 'https' with 'http' in your URLs and make sure your http server supports non-secure connections.
 

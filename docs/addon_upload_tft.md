@@ -264,8 +264,8 @@ substitutions:
   ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
   language: en      # Language code - see docs/localization.md for all supported codes
 
-  # Mirror the TFT files locally and point to your server
-  nextion_update_base_url: "http://homeassistant.local:8123/local/nspanel-easy/"
+  # Mirror the TFT files locally and point to your server (no trailing slash)
+  nextion_update_base_url: "http://homeassistant.local:8123/local/nspanel-easy"
 
 packages:
   remote_package:
