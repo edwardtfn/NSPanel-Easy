@@ -107,6 +107,10 @@ In some cases you can also see duplicate entities on the device's page in Home A
 
 ![ha_device_sensors_duplicated.png](pics/ha_device_sensors_duplicated.png)
 
+The panel requests its settings from the Blueprint when it starts, when its display restarts, and when the Blueprint automation is saved or reloaded (or Home Assistant starts).
+If the settings do not arrive completely, the panel requests them again a few times, waiting longer each time.
+When it gives up, the panel keeps working with the settings it has, and its log shows `Blueprint settings incomplete after 5 requests`.
+
 <!-- markdownlint-disable MD013 MD033 -->
 | Possible causes | Suggestions |
 | :-- | :-- |

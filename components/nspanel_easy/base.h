@@ -254,6 +254,41 @@ extern uint32_t blueprint_last_setting_ms;
 inline void blueprint_setting_received() { blueprint_last_setting_ms = App.get_loop_component_start_time(); }
 
 /**
+ * @brief Check if the Blueprint has sent nothing for a while, so no settings push is in progress.
+ *
+ * @param quiet_ms Time without any setting from the Blueprint to consider its push as ended, in milliseconds.
+ * @return true when nothing was received from the Blueprint for at least `quiet_ms`, or nothing at all yet.
+ */
+inline bool blueprint_settings_quiet(const uint32_t quiet_ms) {
+  return blueprint_last_setting_ms == 0 ||
+         static_cast<uint32_t>(App.get_loop_component_start_time() - blueprint_last_setting_ms) >= quiet_ms;
+}
+
+/**
+ * @brief State of the global settings the panel requests from the Blueprint (#664).
+ *
+ * Only the panel requests its settings: on boot, when the display restarts, and when the Blueprint tells that
+ * the settings it has are stale (`settings_stale`, after an automation reload or a Home Assistant start).
+ * The Blueprint ends each full send with `settings_end`, so the panel knows the settings arrived completely,
+ * and requests them again when that end marker does not arrive.
+ */
+enum class BlueprintSettingsState : uint8_t {
+  NEEDED = 0,  ///< Needed and not requested from Home Assistant yet (boot, display restart, stale settings, retry)
+  PENDING,     ///< Requested from Home Assistant, waiting for the end marker (`settings_end`)
+  COMPLETE,    ///< End marker received: the panel has the complete settings
+  FAILED,      ///< No end marker after the last allowed request; requested again only when needed again
+};
+
+/// @brief State of the global settings requested from the Blueprint, see BlueprintSettingsState.
+extern BlueprintSettingsState blueprint_settings_state;
+
+/// @brief Full requests sent to Home Assistant since the settings were last needed; limits the retries.
+extern uint8_t blueprint_settings_requests;
+
+/// @brief The display restarted during a send: the settings are requested again once that send ends.
+extern bool blueprint_settings_resend;
+
+/**
  * @brief Loop time at which the boot sequence started waiting for the Blueprint settings.
  *
  * @see blueprint_wait_start()
@@ -299,7 +334,7 @@ inline bool blueprint_wait_expired(const bool api_connected, const uint32_t time
   if (waited_ms / 2 >= timeout_ms) {
     return true;
   }  // if the extension for settings still arriving is also over
-  return blueprint_last_setting_ms == 0 || static_cast<uint32_t>(now - blueprint_last_setting_ms) >= quiet_ms;
+  return blueprint_settings_quiet(quiet_ms);
 }
 
 /**

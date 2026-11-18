@@ -191,7 +191,8 @@ script:  # Scripts
             # does not answer in time: the boot then completes with the settings stored on the panel (#516).
             # The time is counted from `blueprint_wait_start()`, called by the `boot` script.
             - lambda: |-
-                return (not system_flags.blueprint_ready) and (not is_blueprint_fully_ready()) and
+                return blueprint_settings_state != BlueprintSettingsState::COMPLETE and
+                       (not system_flags.blueprint_ready) and (not is_blueprint_fully_ready()) and
                        (not blueprint_wait_expired(api_server->is_connected_with_state_subscription(),
                                                    ${BOOT_BLUEPRINT_WAIT_TIMEOUT_MS}, ${BOOT_SETTINGS_QUIET_MS}));
           then:
@@ -218,10 +219,7 @@ script:  # Scripts
                                               YESNO(blueprint_status_flags.hw_buttons_settings));
                 }
 
-                // Re-request blueprint settings on timeout (every 30s)
-                if (counter % 30 == 0) {
-                  boot_request_blueprint_settings->execute("timeout");
-                }
+                // The settings are requested again by `blueprint_settings_timeout` when they do not complete (#664)
 
                 counter++;
             - delay: 1s
