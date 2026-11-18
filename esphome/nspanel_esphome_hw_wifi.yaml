@@ -14,8 +14,6 @@ substitutions:
   TAG_HW_WIFI: nspanel.hw.wifi
   wifi_icon_colors: true
   _WIFI_ICON_COLORS: ${ 1 if wifi_icon_colors else 0 }
-  # While booting, the icon stays neutral, unless Wi-Fi is still missing this long after the start (#821)
-  WIFI_ICON_BOOT_GRACE_MS: '30000'
 
 api:
   on_client_connected:
@@ -83,11 +81,10 @@ script:
             icon_previous = icon_new;
           }
 
-          // While booting, a missing connection is expected, so the icon stays neutral (Gray Moss).
-          // Wi-Fi still missing some time after the start is not: after a reboot caused by a missing
-          // Wi-Fi (`wifi: reboot_timeout`), the icon must stay red and not turn grey again (#821).
-          const bool boot_neutral = !system_flags.boot_completed &&
-                                    (wifi_component->is_connected() || millis() < ${WIFI_ICON_BOOT_GRACE_MS});
+          // While booting, Home Assistant and the Blueprint are expected to be missing for a while, so the icon
+          // stays neutral (Gray Moss) once Wi-Fi is connected. Without Wi-Fi it is red from the start, also after
+          // a reboot caused by a missing Wi-Fi (`wifi: reboot_timeout`), instead of turning grey again (#821).
+          const bool boot_neutral = !system_flags.boot_completed && wifi_component->is_connected();
 
           #if ${_WIFI_ICON_COLORS}
           // Determine new color based on connection state and WiFi signal strength
