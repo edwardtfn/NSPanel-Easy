@@ -10,6 +10,7 @@ This page describes how, so you know what to expect.
 
 - **First-pass issue triage:** when a new issue is opened, an AI agent (Claude) reads it together with the documentation and the other issues.
   It may add labels, flag missing information, mark the issue as a possible duplicate of an existing one (without closing it), and post one comment with a first hint.
+  An issue flagged with missing information is closed by the daily [stale workflow](../.github/workflows/stale.yml) (not by the agent) if nobody comments within 7 days, and the agent's comment says so.
   That comment is not reviewed before it is posted, and it says so. The agent itself has read-only access:
   a separate script checks its answer and applies it, and it cannot close, edit, or change anything else.
 

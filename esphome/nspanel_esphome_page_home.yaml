@@ -206,7 +206,7 @@ script:
     then:
       - lambda: |-
           // Setup Home page
-          boot_log->execute("Boot", "Set Home page elements");
+          ESP_LOGD("${TAG_BOOT}", "Boot: Set Home page elements");
 
           // Bluetooth icon
           #if defined(USE_ESP32_BLE_SERVER) || defined(USE_ESP32_BLE_CLIENT) || defined(USE_BLUETOOTH_PROXY)
