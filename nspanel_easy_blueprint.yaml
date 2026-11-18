@@ -9678,7 +9678,13 @@ actions:
                                         {%- endif -%}
                                       # Values of the day from the forecast slots, as [field, how the slots combine]. One template computes
                                       # them all, so the Blueprint has fewer distinct templates (#636). A value is none when no slot has a number.
+                                      # Values are rounded to whole numbers, except for the units listed in `decimals`, where whole numbers
+                                      # would hide the changes of the day (e.g. pressure in inHg, rain in inches, #803).
                                       forecast_values: >-
+                                        {%- set decimals = {
+                                              "precipitation": {"in": 2, "mm": 1},
+                                              "pressure": {"inHg": 2, "kPa": 1}
+                                            } -%}
                                         {%- set ns = namespace(values={}) -%}
                                         {%- for field, operation in [
                                              ["precipitation", "sum"],
@@ -9696,7 +9702,16 @@ actions:
                                                | map(attribute=field)
                                                | map("float")
                                                | list -%}
-                                          {%- set value = ((numbers | sum if operation == "sum" else numbers | max) | round(0)) if numbers | count > 0 else none -%}
+                                          {%- set total = (numbers | sum if operation == "sum" else numbers | max) if numbers | count > 0 else none -%}
+                                          {%- set field_decimals = decimals.get(field, {}).get(weather_units.get(field), 0) -%}
+                                          {%- if total is none -%}
+                                            {%- set value = none -%}
+                                          {%- elif field_decimals == 0 -%}
+                                            {%- set value = total | round(0) -%}
+                                          {%- else -%}
+                                            {#- Fixed decimals, so the text keeps its length (30.10 inHg, not 30.1 inHg) -#}
+                                            {%- set value = ("%." ~ field_decimals ~ "f") | format(total) -%}
+                                          {%- endif -%}
                                           {%- set ns.values = dict(ns.values, **{field: value}) -%}
                                         {%- endfor -%}
                                         {{ ns.values }}
