@@ -42,6 +42,9 @@ BlueprintSettingsState blueprint_settings_state = BlueprintSettingsState::NEEDED
 // Full requests sent to Home Assistant since the settings were last needed; see base.h.
 uint8_t blueprint_settings_requests = 0;
 
+// The display restarted during a send; see base.h.
+bool blueprint_settings_resend = false;
+
 // Fire a Home Assistant event for NSPanel HA Blueprint
 void fire_ha_event(const std::string &type, std::map<std::string, std::string> data) {
   // Add device name and type to the event data
