@@ -5297,7 +5297,7 @@ variables:
   # action or a new field in an existing one. The versioning workflow replaces 'next' by the version
   # being released. Releases that keep the contract leave it unchanged, so older firmware keeps working.
   # While it is 'next' (development builds), the minimum firmware check is skipped.
-  min_esphome_version: 2026.11.17
+  min_esphome_version: next
 
   # API version [MAJOR, MINOR] this Blueprint uses, matching api_version in
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
@@ -5481,16 +5481,6 @@ triggers:
         id: nspanel_event
         trigger: event
         event_type: esphome.nspanel_easy
-        event_data:
-          device_id: !input nspanel_name
-
-      # Fired by this automation itself when the panel needs its global settings again (e.g. after a reload).
-      # The same id as the panel's events, so it is handled by "Boot init", where the global settings live once
-      # in the automation (#657).
-      - alias: Settings request
-        id: nspanel_event
-        trigger: event
-        event_type: nspanel_easy_settings_request
         event_data:
           device_id: !input nspanel_name
 
@@ -7590,6 +7580,8 @@ actions:
                       nspanel_event.type == "boot" and
                       nspanel_event.step is defined and nspanel_event.step in ["display_ack", "setup", "start", "timeout", "reload"]
                     }}
+                # Only the panel requests its settings (#664): on boot ("start" for the version only, then "setup",
+                # "display_ack" or "timeout") and after it was told that its settings are stale ("reload").
                 sequence:
                   - &global_settings
                     sequence:
@@ -8974,6 +8966,16 @@ actions:
                               txt_list: '{{ txt_list_payload }}'
                             continue_on_error: true
                           - *delay_boot
+
+                      # Must stay the last call: tells the panel that its settings arrived completely. Without it,
+                      # the panel requests them again (#664).
+                      - alias: End of settings
+                        action: 'esphome.{{ action_prefix }}_component_val'
+                        data:
+                          page: mem
+                          id: settings_end
+                          val: 1
+                        continue_on_error: true
 
               # The first number of a home page value whose entity had no value when the settings were sent
               - alias: Home page value format request
@@ -12061,26 +12063,17 @@ actions:
           # Checked against the source action_prefix was built from, so both always agree.
           - condition: '{{ action_prefix_source != "entity_ids" }}'
 
-          - delay: >  # Prevents all panels updating simultaneously in large systems
-              {% set ns = namespace(panels=[]) %}
-              {% for s in states.sensor | selectattr("entity_id", "search", "_device_name$") %}
-                {% set did = device_id(s.entity_id) %}
-                {% if did and device_attr(did, "model") == "NSPanel-Easy" %}
-                  {% set ns.panels = ns.panels + [s.entity_id] %}
-                {% endif %}
-              {% endfor %}
-              {{ (4 * ns.panels.index(device_name_sensor)) if (device_name_sensor in ns.panels) else 0 }}
-
           ##### Update global settings (as user may have changed something) #####
-          # Sent through "Boot init" in a run of its own, instead of a second copy of the global settings here,
-          # which Home Assistant would expand into the automation again (about 90 kB, #657)
-          - alias: Request global settings
-            event: nspanel_easy_settings_request
-            event_data:
-              device_id: '{{ nspanel_deviceid }}'
-              device_name: '{{ action_prefix }}'  # Read by `action_prefix` in the run handling the request
-              type: boot
-              step: reload
+          # The Blueprint never pushes the settings (#664): it tells the panel that the settings it has are stale,
+          # and the panel requests them (handled by "Boot init"), after a random delay of its own, so the panels of
+          # a large installation do not all request at the same time.
+          - alias: Settings are stale
+            action: 'esphome.{{ action_prefix }}_component_val'
+            data:
+              page: mem
+              id: settings_stale
+              val: 1
+            continue_on_error: true
 
           # A home page value slot left without an entity is cleared, otherwise the last value sent
           # stays on screen after the entity is removed (#351). The text is cleared instead of hidden,

@@ -16,6 +16,13 @@ substitutions:
   BOOT_SETTINGS_QUIET_MS: 15000  # A retry waits until the Blueprint has sent nothing for this long
   # Time the boot waits for the Blueprint while Home Assistant is connected, before it goes on without it
   BOOT_BLUEPRINT_WAIT_TIMEOUT_MS: 120000
+  # Without the end of the settings (`settings_end`), the panel requests them again after this delay, doubled on
+  # each new request (up to 8 times), and gives up after BOOT_SETTINGS_MAX_REQUESTS requests (#664)
+  BOOT_SETTINGS_RETRY_DELAY_MS: 30000
+  BOOT_SETTINGS_MAX_REQUESTS: 5
+  # When the Blueprint tells that the settings changed, the panel waits up to this long (at random) before requesting
+  # them, so the panels of a large installation do not all request at the same time
+  BOOT_SETTINGS_STALE_MAX_DELAY_MS: 20000
   BOOT_NEXTION_WAIT_TIMEOUT: 120s
   TAG_BOOT: nspanel.boot
 
@@ -163,7 +170,16 @@ script:
       step: string
     then:
       - lambda: |-
-          if (system_flags.blueprint_ready and step != "display_ack") return;
+          // Only the panel requests its settings (#664). "start" asks for the Blueprint version only, so it is
+          // always sent. A full request is only sent while the settings are needed: once requested, the panel
+          // waits for their end (`settings_end`), and `blueprint_settings_timeout` requests them again without it.
+          // A display that restarts after the settings were complete (or given up) needs them again.
+          if (step == "display_ack" and (blueprint_settings_state == BlueprintSettingsState::COMPLETE or
+                                         blueprint_settings_state == BlueprintSettingsState::FAILED)) {
+            blueprint_settings_state = BlueprintSettingsState::NEEDED;
+            blueprint_settings_requests = 0;
+          }  // if (display restarted after the settings)
+          if (step != "start" and blueprint_settings_state != BlueprintSettingsState::NEEDED) return;
           static uint32_t last_boot_event_fired = 0;
           // Last full request (every step but "start", which the Blueprint answers with the version only)
           static uint32_t last_full_request_fired = 0;
@@ -180,7 +196,10 @@ script:
           // v2026.11.16, or "setup" when ESPHome sets up the display, as a newer TFT starts on the screensaver and
           // sends no "display_ack". Rate-limited after "start", "setup" waited for the next retry, up to a minute.
           const bool display_ready_step = (step == "display_ack" || step == "setup");
-          if (step != "start" && !display_ready_step &&
+          // "reload" follows `settings_stale`, sent by a new automation after a reload or a Home Assistant start:
+          // the push of the automation it replaced, if any, was stopped with it, so nothing is sent in parallel.
+          const bool settings_changed_step = (step == "reload");
+          if (step != "start" && !display_ready_step && !settings_changed_step &&
               (uint32_t)(now - last_boot_event_fired) < ${BOOT_EVENT_REPEAT_INTERVAL_MS}) return;
           // During boot, the display repeats "display_ack" until it is set up (it ignores display_ack=1 before
           // that). Each one used to start a full push in parallel with the others (#636): once a full request
@@ -193,8 +212,8 @@ script:
           }  // if repeated display_ack while booting
           // A retry while the Blueprint is still sending settings would start a second full push in
           // parallel with the one in progress, slowing Home Assistant down and both pushes with it (#636).
-          if (step != "start" && !display_ready_step && blueprint_last_setting_ms != 0 &&
-              (uint32_t)(now - blueprint_last_setting_ms) < ${BOOT_SETTINGS_QUIET_MS}) {
+          if (step != "start" && !display_ready_step && !settings_changed_step &&
+              !blueprint_settings_quiet(${BOOT_SETTINGS_QUIET_MS})) {
             ESP_LOGD("${TAG_BOOT}", "Blueprint settings still arriving, request skipped");
             return;
           }  // if settings still arriving
@@ -206,6 +225,7 @@ script:
             if (api_connected) {
               last_full_request_fired = now;  // Only a request that reached Home Assistant holds the repeats back
               full_request_lost = false;
+              blueprint_settings_requested->execute();
             } else if (step != "display_ack" or disp1->is_setup()) {
               // Until the display is set up, ESPHome drops display_ack=1 and the display sends display_ack again
               full_request_lost = true;
@@ -217,7 +237,78 @@ script:
             fire_ha_event("boot", {{"step", "display_ack"}});
             last_full_request_fired = now;
             full_request_lost = false;
+            blueprint_settings_requested->execute();
           }
+
+  # A full request reached Home Assistant: the settings are pending until their end (`settings_end`)
+  - id: blueprint_settings_requested
+    mode: single
+    then:
+      - lambda: |-
+          blueprint_settings_state = BlueprintSettingsState::PENDING;
+          if (blueprint_settings_requests < UINT8_MAX) blueprint_settings_requests++;
+          ESP_LOGD("${TAG_BOOT}", "Blueprint settings requested (request %" PRIu8 ")", blueprint_settings_requests);
+          blueprint_settings_timeout->execute();
+
+  # Waits for the end of the requested settings (`settings_end`). Without it, the settings are requested again,
+  # after a delay that doubles on each new request, until BOOT_SETTINGS_MAX_REQUESTS requests were sent, so a
+  # Blueprint that cannot complete them (e.g. a version mismatch) is not asked forever (#664).
+  - id: blueprint_settings_timeout
+    mode: restart
+    then:
+      - delay: !lambda |-
+          // The first request waits the base delay, each new one twice as long as the one before, up to 8 times
+          const uint8_t shift = (blueprint_settings_requests > 1) ? std::min<uint8_t>(blueprint_settings_requests - 1, 3) : 0;
+          return static_cast<uint32_t>(${BOOT_SETTINGS_RETRY_DELAY_MS}) << shift;
+      # A push still in progress on a slow Home Assistant is not a missing end (#636)
+      - wait_until:
+          condition:
+            - lambda: |-
+                return blueprint_settings_state != BlueprintSettingsState::PENDING or
+                       blueprint_settings_quiet(${BOOT_SETTINGS_QUIET_MS});
+          timeout: 60s
+      - lambda: |-
+          if (blueprint_settings_state != BlueprintSettingsState::PENDING) return;
+          if (blueprint_settings_requests >= ${BOOT_SETTINGS_MAX_REQUESTS}) {
+            blueprint_settings_state = BlueprintSettingsState::FAILED;
+            ESP_LOGW("${TAG_BOOT}", "Blueprint settings incomplete after %" PRIu8 " requests, using what was received. "
+                                    "Check that the Blueprint and the firmware versions match.", blueprint_settings_requests);
+            return;
+          }  // if (no request left)
+          ESP_LOGW("${TAG_BOOT}", "Blueprint settings incomplete, requesting them again");
+          blueprint_settings_state = BlueprintSettingsState::NEEDED;
+          boot_request_blueprint_settings->execute("timeout");
+
+  # Told by the Blueprint that the settings it sent are stale (`settings_stale`), after an automation reload or a
+  # Home Assistant start: requested after a random delay, so the panels do not all request at the same time.
+  - id: blueprint_settings_stale
+    mode: restart
+    then:
+      - lambda: |-
+          ESP_LOGI("${TAG_BOOT}", "Blueprint settings changed, requesting them");
+          blueprint_settings_timeout->stop();
+          blueprint_settings_state = BlueprintSettingsState::NEEDED;
+          blueprint_settings_requests = 0;
+      - delay: !lambda return random_uint32() % (${BOOT_SETTINGS_STALE_MAX_DELAY_MS} + 1);
+      - lambda: |-
+          boot_request_blueprint_settings->execute("reload");
+
+  - id: !extend action_component_val
+    then:
+      - lambda: |-
+          if (page != "mem") return;
+          if (component == "settings_stale") {
+            blueprint_settings_stale->execute();
+            return;
+          }  // if (settings_stale)
+          if (component == "settings_end") {
+            // The end of a full send: the settings arrived completely
+            blueprint_settings_timeout->stop();
+            blueprint_settings_state = BlueprintSettingsState::COMPLETE;
+            ESP_LOGI("${TAG_BOOT}", "Blueprint settings complete (request %" PRIu8 ")", blueprint_settings_requests);
+            blueprint_settings_requests = 0;
+            return;
+          }  // if (settings_end)
 
   - id: boot_wrap_up
     mode: restart
@@ -234,17 +325,20 @@ script:
           boot_preparation->stop();
           boot_request_blueprint_settings->stop();
           boot_wrap_up->stop();
+          blueprint_settings_stale->stop();
+          blueprint_settings_timeout->stop();
 
   - id: !extend watchdog_round
     then:
       - lambda: |-
           if (system_flags.boot_completed) {
-            // The boot completed without the Blueprint (#516): ask for its settings as soon as
-            // Home Assistant is connected. The request is rate-limited by `boot_request_blueprint_settings`.
-            if ((not system_flags.blueprint_ready) and (not is_blueprint_fully_ready()) and
+            // The boot completed without the Blueprint (#516), or a request did not reach Home Assistant: ask for
+            // the settings as soon as Home Assistant is connected. Not while a request after stale settings waits
+            // for its random delay. The request is rate-limited by `boot_request_blueprint_settings`.
+            if (blueprint_settings_state == BlueprintSettingsState::NEEDED and !blueprint_settings_stale->is_running() and
                 api_server->is_connected_with_state_subscription()) {
               boot_request_blueprint_settings->execute("timeout");
-            }  // if the Blueprint settings are still missing
+            }  // if the Blueprint settings are still needed
             return;
           }  // if (system_flags.boot_completed)
           if (boot->is_running()) return;
