@@ -176,6 +176,11 @@ models defined in the base firmware:
 | NSPanel US Landscape (buttons on the left) | `nspanel_landscape_left.tft` | US hardware mounted in landscape, rotated to have the buttons on the left |
 | NSPanel Blank | `nspanel_blank.tft` | First-time installation only. See [NSPanel Blank](nspanel_blank.md) |
 
+> [!NOTE]
+> The file names describe the orientation of the screen, not of the panel.
+> The EU panel is taller than it is wide, but its screen is landscape, so it uses `nspanel_landscape.tft`.
+> The portrait file is for the US panel only; on an EU panel it shows a rotated display.
+
 ### Example: Automatic updates with a longer wait time
 
 ```yaml
@@ -255,8 +260,9 @@ packages:
 If your panels cannot reach GitHub (for example, `raw.githubusercontent.com` times out), host the TFT files on your Home Assistant
 and override `nextion_update_base_url` instead of `nextion_update_url`. This keeps the automatic selection of the TFT file based on the **Display model**:
 
-1. Download the TFT files of the firmware version installed on your panel from the `hmi` folder of the matching
-   [release](https://github.com/edwardtfn/NSPanel-Easy/releases). See [Display model options](#display-model-options) for the file used by each model.
+1. Download the TFT files of the firmware version you install on your panel from the `hmi` folder of the matching
+   [release](https://github.com/edwardtfn/NSPanel-Easy/releases). See [Display model options](#display-model-options) for the file used by each model:
+   for example, `nspanel_landscape.tft` for the EU panel and `nspanel_portrait.tft` for the US panel.
 2. Copy them to `/config/www/nspanel-easy/` on your Home Assistant. Home Assistant serves this folder at `/local/` without any extra configuration.
 3. Set `nextion_update_base_url` in your panel's YAML, as in the example below, without a trailing slash (`/`).
    Prefer HTTP and your Home Assistant's IP address if HTTPS or DNS cause problems.
