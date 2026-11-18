@@ -14,6 +14,8 @@ substitutions:
   TAG_HW_WIFI: nspanel.hw.wifi
   wifi_icon_colors: true
   _WIFI_ICON_COLORS: ${ 1 if wifi_icon_colors else 0 }
+  # While booting, the icon stays neutral, unless Wi-Fi is still missing this long after the start (#821)
+  WIFI_ICON_BOOT_GRACE_MS: '30000'
 
 api:
   on_client_connected:
@@ -81,6 +83,12 @@ script:
             icon_previous = icon_new;
           }
 
+          // While booting, a missing connection is expected, so the icon stays neutral (Gray Moss).
+          // Wi-Fi still missing some time after the start is not: after a reboot caused by a missing
+          // Wi-Fi (`wifi: reboot_timeout`), the icon must stay red and not turn grey again (#821).
+          const bool boot_neutral = !system_flags.boot_completed &&
+                                    (wifi_component->is_connected() || millis() < ${WIFI_ICON_BOOT_GRACE_MS});
+
           #if ${_WIFI_ICON_COLORS}
           // Determine new color based on connection state and WiFi signal strength
           uint16_t color_new = Colors::RGB565_GRAY_MOSS;
@@ -99,17 +107,16 @@ script:
               // Poor signal (< -70 dBm): Orange
               color_new = Colors::RGB565_ORANGE;
             }
-          } else if (system_flags.boot_completed) {
+          } else if (!boot_neutral) {
             // Not fully operational (WiFi down, API down, or Blueprint not ready): Red
             color_new = Colors::RGB565_RED;
           }  // if (operational)
-          // While booting, a missing connection is expected, so it stays neutral (Gray Moss)
           #else  // _WIFI_ICON_COLORS
           // Determine new color based on availability, neutral while booting
           const bool operational = wifi_component->is_connected() and
                                    api_server->is_connected_with_state_subscription() and
                                    system_flags.blueprint_ready;
-          const uint16_t color_new = (operational or !system_flags.boot_completed) ?
+          const uint16_t color_new = (operational or boot_neutral) ?
                                      Colors::RGB565_GRAY_MOSS : Colors::RGB565_RED;
           #endif  // _WIFI_ICON_COLORS
 

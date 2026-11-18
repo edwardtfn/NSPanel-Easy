@@ -46,7 +46,7 @@ substitutions:
 | Substitution | Default | Description |
 | :- | :- | :- |
 | `chips_page_screensaver` | `true` | Shows the chips on the screensaver page as well as on the home page. |
-| `wifi_icon_colors` | `true` | Colours the Wi-Fi icon by signal strength while everything is connected (green, yellow or orange), and red otherwise. When `false`, the icon is grey while everything is connected, and red otherwise. In both cases it stays grey while the panel is booting. |
+| `wifi_icon_colors` | `true` | Colours the Wi-Fi icon by signal strength while everything is connected (green, yellow or orange), and red otherwise. When `false`, the icon is grey while everything is connected, and red otherwise. In both cases it stays grey while the panel is booting, unless Wi-Fi is still not connected 30 seconds after the start (shown red at the next check, about 1.5 minutes after the start), e.g. after the panel restarted because Wi-Fi was missing. |
 <!-- markdownlint-enable MD013 -->
 
 ## Home Assistant connection
