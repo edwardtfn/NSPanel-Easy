@@ -78,17 +78,19 @@ Observe any changes in the display or logs indicators to ensure the device is re
 
 ### Using a Local Source (Home Assistant)
 
-- **Issue**: Problems with downloading the TFT from GitHub.
-- **Solution**: Host the TFT file on your Home Assistant and change the `nextion_update_url` accordingly.
-- **Step-by-Step Guide**: Here's how you can change your `nextion_update_url`:
-    1. Locate your panel's ESPHome configuration file.
-    2. Find the line with `nextion_update_url`.
-    3. Replace the URL with the local address where your TFT file is hosted.
+- **Issue**: Problems with downloading the TFT from GitHub, for example when your panels cannot reach `raw.githubusercontent.com`.
+- **Solution**: Host the TFT files on your Home Assistant and point `nextion_update_base_url` to them.
+This keeps the automatic selection of the TFT file based on the **Display model**.
+- **Step-by-Step Guide**: See [Using a local base URL with automatic model selection](addon_upload_tft.md#example-using-a-local-base-url-with-automatic-model-selection).
+- **Additional Guidance**: Prefer `nextion_update_base_url` over `nextion_update_url`.
+`nextion_update_url` uses the URL as-is and ignores the **Display model**, so a wrong file (for example, the US portrait TFT on an EU panel) results in a rotated display.
+Use it only for custom TFT files.
+When it is set, it takes priority over `nextion_update_base_url`, so remove it when switching to `nextion_update_base_url`.
 
 ### HTTP Instead of HTTPS
 
 - **Issue**: HTTPS connections may be problematic with ESP, especially when using `arduino` as framework.
-- **Solution**: Use HTTP for hosting the TFT file and updating the `nextion_update_url`.
+- **Solution**: Use HTTP for hosting the TFT file and in the `nextion_update_base_url` (or `nextion_update_url`).
 - **Why HTTP?**: HTTP can be more stable for these connections.
 To switch, simply replace 'https' with 'http' in your URLs and make sure your http server supports non-secure connections.
 
@@ -105,7 +107,7 @@ Pay special attention to memory-intensive customizations.
 
 - **Issue**: DNS may cause connection problems.
 - **Solution**: Use the IP address of your Home Assistant directly.
-- **Example**: Replace `http://homeassistant.local:8123/local/nspanel_blank.tft` with `http://192.168.0.100:8123/local/nspanel_blank.tft`.
+- **Example**: In `nextion_update_base_url`, replace `http://homeassistant.local:8123/local/nspanel-easy` with `http://192.168.0.100:8123/local/nspanel-easy`.
 
 ### Increase the Upload Timeouts
 
