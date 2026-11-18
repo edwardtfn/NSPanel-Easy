@@ -429,6 +429,7 @@ A button is highlighted while the setpoint equals its temperature, so a manual c
 `Comfort` and `Eco` switch the room on and set the setpoint to the value of `pid_comfort_entity` or `pid_eco_entity`.
 These values are stored in flash, so the presets also work while Home Assistant is unavailable.
 When the value changes while its preset is active, the setpoint follows.
+A manual setpoint is kept when Home Assistant sends the same value again, for example after the panel reconnects.
 Until an entity has reported a value, the preset uses `pid_comfort_temp` or `pid_eco_temp`.
 
 When the setpoint is set to the comfort or eco value from elsewhere, e.g. by a schedule in Home Assistant, the panel marks the matching preset within `pid_sync_interval` seconds.
