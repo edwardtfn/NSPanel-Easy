@@ -12,6 +12,9 @@ values of the day) from mocked forecasts with missing, empty, `none`, non-numeri
 must render the same in both versions, except where the reference fails with a template error: there the
 tested version must render (a fix), and an error in the tested version always counts as a difference.
 
+The forecast cases above carry no unit attributes, so the decimals of the forecast pressure and precipitation,
+which depend on the unit (issue #803), are also checked against fixed expectations, in the tested version only.
+
 The values of the day may be separate variables or entries of one `forecast_values` variable (one template
 for all of them, issue #636); both forms are compared by name. When rendering `parameters`, the values are
 given in both forms, so either version reads them.
@@ -93,6 +96,18 @@ def as_timestamp(value):
     return datetime.datetime.fromisoformat(str(value)).timestamp()
 
 
+def ha_round(value, precision=0, method="common"):
+    """Home Assistant's `round` filter: an int for precision 0 (Jinja's returns a float), the value itself when not a number."""
+    try:
+        if method == "half":
+            value = round(float(value) * 2) / 2
+        else:
+            value = round(float(value), precision)
+    except (ValueError, TypeError):
+        return value
+    return int(value) if precision == 0 else value
+
+
 def setup_environment(hass):
     """Add the Home Assistant functions, filters and tests the weather pages use to the mocked environment."""
     hass.env.globals.update(is_number=is_number, now=lambda: NOW, timedelta=datetime.timedelta,
@@ -100,14 +115,15 @@ def setup_environment(hass):
     hass.env.tests["is_number"] = is_number
     hass.env.filters.update(
         float=ha_float,
+        round=ha_round,
         as_timestamp=as_timestamp,
         as_datetime=lambda value: datetime.datetime.fromtimestamp(value, datetime.timezone.utc),
         timestamp_utc=lambda value: datetime.datetime.fromtimestamp(value, datetime.timezone.utc).isoformat(),
     )
 
 
-def load_forecast(branch, path):
-    """Return the variables building `forecast_day` for a page, its fallback for today, and the values of the day."""
+def load_forecast(branch, path, units_source):
+    """Return the variables building `forecast_day` for a page, its fallback for today, the values of the day and the units."""
     builder = find(branch, lambda d: "datetime_is_string" in d and "forecast_day" in d)
     fallback = find(branch, lambda d: isinstance(d.get("forecast_day"), str)
                     and "page_index == 0" in d["forecast_day"] and "datetime_is_string" not in d)
@@ -115,7 +131,7 @@ def load_forecast(branch, path):
     if builder is None or fallback is None or values is None:
         sys.exit(f"ERROR: the forecast variables were not found in {path}")
     names = FORECAST_VALUE_NAMES + (FORECAST_VALUES_DICT,)
-    return builder, fallback["forecast_day"], {name: values[name] for name in names if name in values}
+    return builder, fallback["forecast_day"], {name: values[name] for name in names if name in values}, units_source
 
 
 def load_branch(path):
@@ -132,7 +148,7 @@ def load_branch(path):
     if units is None or params is None or repeat is None:
         sys.exit(f"ERROR: 'weather_units', 'parameters' or its 'for_each' not found in {path}")
     branch_parts = (units["weather_units"], params["parameters"], repeat["for_each"], global_step["variables"]["nextion"])
-    return branch_parts, load_forecast(branch, path)
+    return branch_parts, load_forecast(branch, path, units["weather_units"])
 
 
 def run_branch(hass, branch, db, context):
@@ -178,9 +194,11 @@ def value_cases():
 
 def run_forecast(hass, forecast_parts, context):
     """Render the forecast values of a page as the branch does; a template error is returned as the result."""
-    builder, fallback, values = forecast_parts
+    builder, fallback, values, units_source = forecast_parts
     try:
-        context = dict(context, datetime_is_string=render(hass, builder["datetime_is_string"], context))
+        # The values of the day may depend on the units (decimals, issue #803)
+        context = dict(context, weather_units=render(hass, units_source, context))
+        context["datetime_is_string"] = render(hass, builder["datetime_is_string"], context)
         context["forecast_day"] = render(hass, builder["forecast_day"], context)
         if not (len(context["forecast_day"]) > 0 or context["page_index"] == 0):
             return "no forecast"
@@ -244,6 +262,39 @@ def compare_forecast(reference, candidate):
     return total, fixed, differences
 
 
+# (pressure_unit, precipitation_unit, expected pressure, expected precipitation) for the forecast in check_precision()
+PRECISION_CASES = (
+    ("inHg", "in", "30.08", "0.30"),
+    ("kPa", "mm", "30.1", "0.3"),
+    ("hPa", "mm", "30", "0.3"),
+    ("mbar", "in", "30", "0.30"),
+    ("mmHg", None, "30", "0"),
+    (None, None, "30", "0"),
+)
+
+
+def check_precision(candidate):
+    """Check the decimals of the forecast pressure and precipitation per unit; return (cases, failures)."""
+    hass = MockHomeAssistant()
+    setup_environment(hass)
+    forecast = [
+        {"datetime": "2026-11-05T06:00:00+00:00", "condition": "sunny", "pressure": 29.97, "precipitation": 0.12},
+        {"datetime": "2026-11-05T18:00:00+00:00", "condition": "sunny", "pressure": 30.08, "precipitation": 0.18},
+    ]
+    failures = 0
+    for pressure_unit, precipitation_unit, pressure, precipitation in PRECISION_CASES:
+        attributes = {key: value for key, value in (("pressure_unit", pressure_unit),
+                                                    ("precipitation_unit", precipitation_unit)) if value}
+        hass.db = {WEATHER_ENTITY: MockState(WEATHER_ENTITY, "sunny", attributes)}
+        context = {"forecast": forecast, "page_index": 0, "weather_entity": WEATHER_ENTITY}
+        result = run_forecast(hass, candidate, context)
+        actual = (str(result.get("pressure")), str(result.get("precipitation"))) if isinstance(result, dict) else result
+        if actual != (pressure, precipitation):
+            failures += 1
+            print(f"PRECISION units={attributes}\n  expected: {(pressure, precipitation)!r}\n  tested:   {actual!r}")
+    return len(PRECISION_CASES), failures
+
+
 def compare(reference, candidate):
     """Run every case through both versions; return (cases, differences)."""
     hass = MockHomeAssistant()
@@ -280,7 +331,9 @@ def main():
     forecast_total, fixed, forecast_differences = compare_forecast(reference_forecast, candidate_forecast)
     print(f"Forecast values: {forecast_total:,} cases, {forecast_differences:,} differences, "
           f"{fixed:,} fixed (reference fails, tested renders)")
-    return 1 if differences or forecast_differences else 0
+    precision_total, precision_failures = check_precision(candidate_forecast)
+    print(f"Forecast decimals per unit: {precision_total:,} cases, {precision_failures:,} failures")
+    return 1 if differences or forecast_differences or precision_failures else 0
 
 
 if __name__ == "__main__":
