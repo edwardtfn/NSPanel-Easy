@@ -59,6 +59,7 @@ Most of the weather integrations are supported, however some may be able to prov
 
 We run all of our tests with "Accuweather", so the parameters shown on the panel are targetting this integration and will be shown with your integration when available.
 Forecast values that the integration doesn't provide, or provides as something other than a number, are left out of the weather pages.
+Forecast values are shown as whole numbers, except the pressure in inHg and the precipitation in inches (2 decimals), and the pressure in kPa and the precipitation in mm (1 decimal), where whole numbers would hide the changes from day to day.
 
 ### Weather pages - Show maximum temperature first
 
