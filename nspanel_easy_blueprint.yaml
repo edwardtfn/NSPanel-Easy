@@ -844,6 +844,19 @@ blueprint:
                   value: '7'
                 - label: 32px
                   value: '8'
+        chip_calendar_lead:
+          name: Calendar chips - Lead time
+          description: >-
+            A chip linked to a `calendar` entity is shown while one of its events is ongoing,
+            for example on a waste collection day when each waste type has its own calendar.
+            Set a lead time to also show it before the event starts: 9 hours shows the chip of an all-day event from 15:00 the day before.
+            It applies to all calendar chips. Leave it at zero to show them only during the event.
+          default:
+            hours: 0
+            minutes: 0
+            seconds: 0
+          selector:
+            duration: {}
         chip01:
           name: Chip 01 - Entity
           description: *description_entity_displayed
@@ -855,6 +868,7 @@ blueprint:
                 domain:
                   - alarm_control_panel
                   - binary_sensor
+                  - calendar
                   - climate
                   - cover
                   - fan
@@ -8077,6 +8091,24 @@ actions:
                                   val: !input chip_font_size
                                 continue_on_error: true
                               - *delay_boot
+                              - alias: chip_calendar_lead
+                                sequence:
+                                  - variables:
+                                      chip_calendar_lead: !input chip_calendar_lead
+                                  - action: 'esphome.{{ action_prefix }}_component_val'
+                                    data:
+                                      page: mem
+                                      id: chip_calendar_lead
+                                      # Duration in minutes
+                                      val: >-
+                                        {%- set lead = chip_calendar_lead if chip_calendar_lead is mapping else {} -%}
+                                        {{
+                                          (lead.days | default(0, true) | int(0)) * 1440
+                                          + (lead.hours | default(0, true) | int(0)) * 60
+                                          + (lead.minutes | default(0, true) | int(0))
+                                        }}
+                                    continue_on_error: true
+                                  - *delay_boot
                           - alias: custom_buttons_font
                             action: 'esphome.{{ action_prefix }}_component_val'
                             data:
@@ -9646,7 +9678,13 @@ actions:
                                         {%- endif -%}
                                       # Values of the day from the forecast slots, as [field, how the slots combine]. One template computes
                                       # them all, so the Blueprint has fewer distinct templates (#636). A value is none when no slot has a number.
+                                      # Values are rounded to whole numbers, except for the units listed in `decimals`, where whole numbers
+                                      # would hide the changes of the day (e.g. pressure in inHg, rain in inches, #803).
                                       forecast_values: >-
+                                        {%- set decimals = {
+                                              "precipitation": {"in": 2, "mm": 1},
+                                              "pressure": {"inHg": 2, "kPa": 1}
+                                            } -%}
                                         {%- set ns = namespace(values={}) -%}
                                         {%- for field, operation in [
                                              ["precipitation", "sum"],
@@ -9664,7 +9702,16 @@ actions:
                                                | map(attribute=field)
                                                | map("float")
                                                | list -%}
-                                          {%- set value = ((numbers | sum if operation == "sum" else numbers | max) | round(0)) if numbers | count > 0 else none -%}
+                                          {%- set total = (numbers | sum if operation == "sum" else numbers | max) if numbers | count > 0 else none -%}
+                                          {%- set field_decimals = decimals.get(field, {}).get(weather_units.get(field), 0) -%}
+                                          {%- if total is none -%}
+                                            {%- set value = none -%}
+                                          {%- elif field_decimals == 0 -%}
+                                            {%- set value = total | round(0) -%}
+                                          {%- else -%}
+                                            {#- Fixed decimals, so the text keeps its length (30.10 inHg, not 30.1 inHg) -#}
+                                            {%- set value = ("%." ~ field_decimals ~ "f") | format(total) -%}
+                                          {%- endif -%}
                                           {%- set ns.values = dict(ns.values, **{field: value}) -%}
                                         {%- endfor -%}
                                         {{ ns.values }}
