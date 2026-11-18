@@ -869,7 +869,7 @@ script:
 
 ### Hardware button double click
 
-Each hardware button reports a double click as its own event, next to the single click and the hold:
+Each hardware button can report a double click as its own event, next to the single click and the hold:
 
 | Pattern | `command` of the `button_click` event | When it is sent |
 | --- | --- | --- |
@@ -880,6 +880,24 @@ Each hardware button reports a double click as its own event, next to the single
 The Blueprint exposes one action per pattern and button ("custom action", "double click action" and "custom hold action"),
 so nothing has to be coded for this. On the panel, `button_left_press_double` and `button_right_press_double` run for the
 double click, like the other button scripts.
+
+#### Enabling it
+
+The double click is opt-in, per button. Without the option, the buttons keep their current behaviour: the single click
+is dispatched at release, without any additional delay.
+
+```yaml
+substitutions:
+  hw_button_left_double_click: true   # left button only
+  hw_button_right_double_click: true  # right button only
+```
+
+**The cost of the option:** with it enabled, every single click on that button is delayed by `multi_click_gap`
+(0.35 s by default), because the panel waits for a possible second press. The local relay toggle
+(`button_left_press_short`, `button_right_press_short`) and the screensaver wake-up move by the same amount.
+A click followed quickly by a hold is reported as a hold only, so the first click is lost in that case.
+
+#### Timing
 
 A press counts as one click while it lasts up to `multi_click_press`, and a second press has to follow within
 `multi_click_gap` to make it a double click. Both are substitutions when the default timing doesn't suit you:
@@ -893,16 +911,8 @@ substitutions:
 Both patterns end with the same `multi_click_gap` window, and that is what keeps a double click from also being
 reported as a single click.
 
-Two limits come with the substitutions:
-
-- `multi_click_press` has to stay below the 0.8 s hold threshold. The hold pattern is evaluated first, so a longer
-  value would report every press in that range as a hold instead of a click.
-- `multi_click_gap: 0ms` turns the detection off: a double click can no longer complete, and `short_click` is sent
-  immediately at release, as before this feature.
-
-The cost of the detection is one window of latency on the single click: `short_click` is sent `multi_click_gap` after
-the button is released (0.35 s by default), because the panel has to wait for a possible second press. The local relay
-toggle (`button_left_press_short`, `button_right_press_short`) and the screensaver wake-up move by the same amount.
+`multi_click_press` has to stay below the 0.8 s hold threshold. The hold pattern is evaluated first, so a longer
+value would report every press in that range as a hold instead of a click.
 
 A press that lasts longer than `multi_click_press` but is released before the hold threshold is still reported as a
 single click, so no press is lost.

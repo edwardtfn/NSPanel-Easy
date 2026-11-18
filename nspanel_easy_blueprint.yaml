@@ -1641,6 +1641,8 @@ blueprint:
           name: Left hardware button double click action
           description: >-
             Additional action(s) to run when the button is clicked twice.
+            The firmware has to report the double click: set the substitution
+            `hw_button_left_double_click` to true (see docs/customization.md).
           default: []
           selector:
             action:
@@ -1763,6 +1765,8 @@ blueprint:
           name: Right hardware button double click action
           description: >-
             Additional action(s) to run when the button is clicked twice.
+            The firmware has to report the double click: set the substitution
+            `hw_button_right_double_click` to true (see docs/customization.md).
           default: []
           selector:
             action:

@@ -13,6 +13,15 @@ substitutions:
   ## local yaml substitutions ##
   ##############################
   invalid_cooldown: 100ms
+  # Double click detection is opt-in, per button: set `hw_button_left_double_click` or
+  # `hw_button_right_double_click` to true to enable it for that button.
+  # With the option off (the default) the button keeps its current behaviour: the single click is
+  # dispatched at release, without any additional delay and without the debounce filter.
+  # With the option on, every single click on that button is delayed by `multi_click_gap`, because
+  # the panel waits for a possible second press. The local relay toggle and the screensaver
+  # wake-up move by the same amount, and a click followed quickly by a hold is reported as a hold.
+  hw_button_left_double_click: false
+  hw_button_right_double_click: false
   # Double click: a press counts as one click while it lasts up to `multi_click_press`, and a second
   # press has to follow within `multi_click_gap`. The single click waits for that window before it is
   # dispatched, so both patterns end with the same `multi_click_gap`.
@@ -31,15 +40,35 @@ substitutions:
     inverted: true
   TAG_HW_BUTTONS: nspanel.hw.buttons
 
+  # Internal values, derived from the options above. Do not change them.
+  # True when the double click is enabled for that button.
+  _left_double_click: ${ (hw_button_left_double_click | string | lower) in ['true', 'yes', '1'] }
+  _right_double_click: ${ (hw_button_right_double_click | string | lower) in ['true', 'yes', '1'] }
+  # The double click is only reported when it is enabled for that button
+  _left_double_click_cpp: ${ 'true' if _left_double_click else 'false' }
+  _right_double_click_cpp: ${ 'true' if _right_double_click else 'false' }
+  # The single click waits for a possible second press only when the double click is enabled
+  _short_click_timing:
+    - ON for at most 0.8s
+  _short_click_timing_double:
+    - ON for at most 0.8s
+    - OFF for at least ${multi_click_gap}
+  _left_short_click_timing: ${ _short_click_timing_double if _left_double_click else _short_click_timing }
+  _right_short_click_timing: ${ _short_click_timing_double if _right_double_click else _short_click_timing }
+  # Bounce inside a sequence's final window cancels the pending trigger, so the double click is
+  # missed on the raw GPIO without a debounce filter. Only needed with the double click.
+  _double_click_filters:
+    - delayed_on_off: 20ms
+  _left_button_filters: ${ _double_click_filters if _left_double_click else [] }
+  _right_button_filters: ${ _double_click_filters if _right_double_click else [] }
+
 binary_sensor:
   - name: Left Button  # LEFT BUTTON BELOW DISPLAY
     platform: gpio
     id: left_button
     pin: ${GPIO_BUTTON_LEFT_PIN}
-    filters:
-      # Bounce inside a sequence's final window cancels the pending trigger, so the double click is
-      # missed on the raw GPIO without a debounce filter
-      - delayed_on_off: 20ms
+    # The debounce filter is only needed for the double click detection
+    filters: ${_left_button_filters}
     on_multi_click:
       - timing: &long_click-timing
           - ON for at least 0.8s
@@ -60,14 +89,14 @@ binary_sensor:
         invalid_cooldown: 0ms
         then:
           - lambda: |-
+              if (!${_left_double_click_cpp}) { return; }
               ESP_LOGV("${TAG_HW_BUTTONS}", "Left button - Double click detected");
               button_left_press_double->execute();
               ha_button->execute(page_names[current_page_id], "hw_bt_left", "double_click");
               ESP_LOGD("${TAG_HW_BUTTONS}", "Left button - Double click dispatched");
-      - timing: &short_click-timing
-          # Up to the hold threshold, so a press between `multi_click_press` and 0.8 s is still a click
-          - ON for at most 0.8s
-          - OFF for at least ${multi_click_gap}
+      # Up to the hold threshold, so a press between `multi_click_press` and 0.8 s is still a click.
+      # The final window is only there when the double click is enabled for this button.
+      - timing: ${_left_short_click_timing}
         invalid_cooldown: ${invalid_cooldown}
         then:
           - lambda: |-
@@ -83,8 +112,8 @@ binary_sensor:
     platform: gpio
     id: right_button
     pin: ${GPIO_BUTTON_RIGHT_PIN}
-    filters:
-      - delayed_on_off: 20ms
+    # The debounce filter is only needed for the double click detection
+    filters: ${_right_button_filters}
     on_multi_click:
       - timing: *long_click-timing
         invalid_cooldown: ${invalid_cooldown}
@@ -98,11 +127,12 @@ binary_sensor:
         invalid_cooldown: 0ms  # See the left button block
         then:
           - lambda: |-
+              if (!${_right_double_click_cpp}) { return; }
               ESP_LOGV("${TAG_HW_BUTTONS}", "Right button - Double click detected");
               button_right_press_double->execute();
               ha_button->execute(page_names[current_page_id], "hw_bt_right", "double_click");
               ESP_LOGD("${TAG_HW_BUTTONS}", "Right button - Double click dispatched");
-      - timing: *short_click-timing
+      - timing: ${_right_short_click_timing}
         invalid_cooldown: ${invalid_cooldown}
         then:
           - lambda: |-
