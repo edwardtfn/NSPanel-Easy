@@ -86,7 +86,7 @@ The bar colours themselves are set in the Blueprint, not through substitutions.
 | `qrcode_background_color` | `65535` | RGB565 background colour of the QR code. |
 | `qrcode_foreground_color` | `0` | RGB565 foreground colour of the QR code. |
 | `qrcode_border_size` | `8` | Border size of the QR code, as the `dis` attribute of the Nextion QR code component. |
-| `qrcode_restore_value` | `false` | Keeps the last QR code, its title and its icon across restarts. |
+| `qrcode_restore_value` | `false` | Keeps the last QR code, its title and its icon across restarts, so the QR code page also works when the panel restarts without Home Assistant. Off by default, as it uses storage space on the panel. |
 | `wakeup_with_button_press` | `false` | Wakes the display when a hardware button is pressed while the screensaver is showing. |
 | `wakeup_with_button_press_dimmed` | `false` | When a hardware button press wakes the display, or resets its timers while dimmed, keeps it at the dimmed brightness. |
 <!-- markdownlint-enable MD013 -->
