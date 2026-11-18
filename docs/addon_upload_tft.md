@@ -260,9 +260,12 @@ and override `nextion_update_base_url` instead of `nextion_update_url`. This kee
 2. Copy them to `/config/www/nspanel-easy/` on your Home Assistant. Home Assistant serves this folder at `/local/` without any extra configuration.
 3. Set `nextion_update_base_url` in your panel's YAML, as in the example below, without a trailing slash (`/`).
    Prefer HTTP and your Home Assistant's IP address if HTTPS or DNS cause problems.
-4. Install the firmware, then press **Update TFT display** on the device's page in Home Assistant.
-5. Every time you update the firmware, download the TFT files of the new version to the same folder, replacing the old ones.
-   The firmware version is not part of the local URL, so the files must match the installed version.
+   If your YAML also sets `nextion_update_url`, remove it: it takes priority over `nextion_update_base_url`.
+4. Install the firmware. With `upload_tft_automatically` (on by default), the panel then updates its TFT on its own.
+   Press **Update TFT display** on the device's page in Home Assistant only if the automatic upload is disabled or did not happen.
+5. Every time you update the firmware, first download the TFT files of the new version to the same folder, replacing the old ones, and only then install the firmware.
+   The firmware version is not part of the local URL, so the files must match the version being installed.
+   The automatic upload runs only once per firmware version: if it uploads old files, replace them and press **Update TFT display**.
 
 ```yaml
 substitutions:
