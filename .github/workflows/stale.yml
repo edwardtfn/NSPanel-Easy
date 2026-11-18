@@ -57,7 +57,8 @@ jobs:
           # ---------------------------------------------------------------
           # Exemptions - labels that prevent stale processing
           # ---------------------------------------------------------------
-          exempt-issue-labels: 'blocked,help-wanted,long-term,not-stale,pinned,security,work in progress'
+          # The labels closed by the steps below are exempt here, so these issues are never closed as stale
+          exempt-issue-labels: 'blocked,help-wanted,long-term,not-stale,pinned,security,work in progress,Resolved: pending confirmation,👀 Missing information'
           exempt-pr-labels: 'blocked,help-wanted,long-term,not-stale,pinned,security,work in progress'
 
           # ---------------------------------------------------------------
