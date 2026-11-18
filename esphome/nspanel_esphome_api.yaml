@@ -36,7 +36,7 @@ api:
   on_client_connected:
     then:
       - lambda: |-
-          boot_log->execute("API", "Client connected");
+          ESP_LOGD("${TAG_BOOT}", "API: Client connected");
       - wait_until:
           condition:
             api.connected:
@@ -47,7 +47,7 @@ api:
             ESP_LOGD("${TAG_API}", "Client connected but did not subscribe to states (likely logger-only)");
             return;
           }
-          boot_log->execute("API", "Home Assistant is connected");
+          ESP_LOGD("${TAG_BOOT}", "API: Home Assistant is connected");
           update_flag_api_ready->execute();
 
   on_client_disconnected:

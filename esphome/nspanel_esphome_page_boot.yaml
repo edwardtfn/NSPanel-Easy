@@ -8,7 +8,7 @@
 
 ---
 substitutions:
-  PAGE_BOOT_COMPONENT_ID_BT_REBOOT: 20
+  PAGE_BOOT_COMPONENT_ID_BT_REBOOT: 14
   PAGE_BOOT_DELAY_TO_EXIT: 30s
   PAGE_BOOT_ID: 0
   TAG_PAGE_BOOT: nspanel.page.boot
@@ -96,13 +96,6 @@ esphome:
     - -D NSPANEL_EASY_PAGE_BOOT
 
 script:
-  - id: !extend boot_log
-    then:
-      - lambda: |-
-          // Not while a page change is pending: the command would reach the next page, which has no log_body
-          if (current_page_id != get_page_id("boot") or id(page_change_pending)) return;
-          disp1->send_command_printf("log_body.txt+=\"%s: %s\\r\"", category.c_str(), log_message.c_str());
-
   - id: !extend boot_preparation
     then:
       - script.execute: page_boot_exit_on_timeout
@@ -347,6 +340,8 @@ script:
       - delay: ${PAGE_BOOT_DELAY_TO_EXIT}
       - script.wait: wait_for_version_tft
       - lambda: |-
+          // Opened by the user as a status page: kept until the user leaves it
+          if (system_flags.boot_page_requested) return;
           // Not a user action: the wake-up page stays dimmed, unless the boot page was touched (#485, #656)
           if (current_page_id == get_page_id("boot")) {
             brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));
@@ -364,8 +359,11 @@ script:
     mode: single
     then:
       - lambda: |-
-          if (!wifi_component->is_connected()) return;
           if (current_page_id != get_page_id("boot") or id(page_change_pending)) return;
+          if (!wifi_component->is_connected()) {
+            disp1->set_component_text("sys_ip", "Wi-Fi: Not connected");
+            return;
+          }  // if (!wifi_component->is_connected())
           auto ips = network::get_ip_addresses();
           if (ips.empty()) return;
           char ip[16];  // sufficient for IPv4: "255.255.255.255" + '\0'
@@ -377,6 +375,10 @@ script:
       - lambda: |-
           // Leaving the screensaver the display starts on ends its start screen
           if (new_page_id != get_page_id("screensaver")) display_start_hold_release->execute();
+          // The boot page opened from the settings page (long press) is the status page, shown on request: it is
+          // left by the user, like any other page, instead of by the boot (#615)
+          system_flags.boot_page_requested = (new_page_id == get_page_id("boot") and
+                                              last_page_id == get_page_id("settings"));
           if (new_page_id != get_page_id("boot")) return;
           page_boot->execute();
 
@@ -408,6 +410,7 @@ script:
     then:
       - lambda: |-
           if (current_page_id != get_page_id("boot")) return;
+          if (system_flags.boot_page_requested) return;  // Status page opened by the user
           if (version_tft->state.empty()) return;
           brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));  // Not a user action (#656)
           wakeup->execute(true);
@@ -422,6 +425,9 @@ text_sensor:
 
 wifi:
   on_connect:
+    then:
+      - script.execute: page_boot_show_ip
+  on_disconnect:
     then:
       - script.execute: page_boot_show_ip
 ...

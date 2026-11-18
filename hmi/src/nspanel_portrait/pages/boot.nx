@@ -6,6 +6,12 @@ on boot.load:
   sys_baudrate.txt+=tmp_baudrate.txt
   sys_baudrate.txt+=" bps"
   ver_tft.txt="TFT: "+version.txt
+  // Shown when ESPHome does not connect, or opened from the settings page (long press) for troubleshooting.
+  // Without ESPHome, there is no page to go back to.
+  if(esphome==0)
+  {
+    vis button_back,0
+  }
   sendme
 
 on boot.loadend:
@@ -17,7 +23,7 @@ on boot.loadend:
   line 303,338,303,475,WHITE
   line 16,338,16,475,WHITE
   line 16,475,305,475,WHITE
-  vis log_title,1
+  vis stat_title,1
   line 14,76,305,76,WHITE
   line 305,76,305,192,WHITE
   line 14,76,14,192,WHITE
@@ -37,48 +43,94 @@ on boot.loadend:
   line 16,320,305,320,WHITE
   vis sys_title,1
 
-on log_scroll.timer:
-  strlen log_body.txt,log_len.val
-  log_pos.val=0
-  log_line_count.val=0
-  log_start_pos.val=0
-  log_end_pos.val=0
-  log_temp.txt=""
-  // Count the number of lines (instances of \r)
-  while(log_pos.val<log_len.val)
+on tm_status.timer:
+  // The status known by the display, rebuilt every second while the page is shown, so it follows the connections.
+  // Built in va1 and copied once, so the text is only redrawn when it changes.
+  va1.txt="ESPHome: "
+  if(esphome==1)
   {
-    // Extract each character to find \r
-    substr log_body.txt,log_temp.txt,log_pos.val,2
-    if(log_temp.txt=="\r")
-    {
-      log_line_count.val++
-      // Record the position of the first \r
-      if(log_line_count.val==1)
-      {
-        log_start_pos.val=log_pos.val
-      }
-      // Record the position of the second \r
-      if(log_line_count.val==2)
-      {
-        log_end_pos.val=log_pos.val
-      }
-    }
-    log_pos.val++
-  }
-  // Check if the number of lines exceeds the maximum allowed
-  if(log_line_count.val>log_max_lines.val)
+    va1.txt+="Yes"
+  }else
   {
-    // If more than max_lines, remove the first line
-    if(log_end_pos.val>0)
-    {
-      // Remove the first line including the newline character
-      substr log_body.txt,log_body.txt,log_start_pos.val+1,log_len.val-log_start_pos.val-1
-    }
+    va1.txt+="No"
   }
-  doevents
+  va1.txt+="  HA: "
+  if(api==1)
+  {
+    va1.txt+="Yes"
+  }else
+  {
+    va1.txt+="No"
+  }
+  va1.txt+="Model: "
+  covx display_mode,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=" (TFT "
+  covx hard_coded_display_mode,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=")  Ack: "
+  covx display_ack,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="Pages: home "
+  covx home_page_id,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=" wake "
+  covx wakeup_page_id,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=" back "
+  covx back_page_id,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="Brightness: "
+  covx brightness,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="/"
+  covx brightness_dim,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="/"
+  covx brightness_sleep,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="Backlight: "
+  covx dim,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="  Recmod: "
+  covx recmod,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="Thermostat: "
+  covx climate_embedded,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="  Home: "
+  covx vis_home,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="Button pages: "
+  covx is_buttonpage01,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=" "
+  covx is_buttonpage02,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=" "
+  covx is_buttonpage03,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=" "
+  covx is_buttonpage04,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="Entity pages: "
+  covx is_entitypage01,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=" "
+  covx is_entitypage02,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=" "
+  covx is_entitypage03,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=" "
+  covx is_entitypage04,va0.txt,0,0
+  va1.txt+=va0.txt
+  if(stat_body.txt!=va1.txt)
+  {
+    stat_body.txt=va1.txt
+  }
 
 on bt_reboot.up:
-  log_body.txt+="Click button 'Reboot'\r"
   if(api==0)
   {
     rest
@@ -108,3 +160,6 @@ on tm_display_ack.timer:
     prints "display_ack",0
     printh 00 01 FF FF FF
   }
+
+on button_back.down:
+  page home_page_id

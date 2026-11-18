@@ -10,12 +10,12 @@ bco = "#4282b5"
 pic = "picture-0032"
 
 [[component]]
-name = "log_body"
+name = "stat_body"
 type = "text"
 x = 20
-y = 349
+y = 344
 w = 280
-h = 119
+h = 130
 groupid0 = 902360959
 groupid1 = -743349853
 sta = 0
@@ -25,14 +25,14 @@ pco = "#ffffff"
 xcen = 0
 ycen = 0
 txt = ""
-txt_maxl = 800
+txt_maxl = 300
 
 [[component]]
 name = "nspanel_easy"
 type = "text"
 x = 15
 y = 36
-w = 170
+w = 160
 h = 30
 sta = 0
 font = "font-03"
@@ -189,11 +189,11 @@ txt = "Baud rate: Waiting..."
 txt_maxl = 30
 
 [[component]]
-name = "log_title"
+name = "stat_title"
 type = "text"
 x = 20
 y = 325
-w = 35
+w = 60
 h = 27
 groupid0 = 902360959
 groupid1 = -743349853
@@ -202,45 +202,19 @@ bco = "#4282b5"
 picc = "picture-0032"
 pco = "#ffffff"
 xcen = 0
-txt = " Log"
+txt = " Status"
 txt_maxl = 9
 
 [[component]]
-name = "log_scroll"
+name = "tm_status"
 type = "timer"
-
-[[component]]
-name = "log_len"
-type = "variable"
-
-[[component]]
-name = "log_pos"
-type = "variable"
-
-[[component]]
-name = "log_line_count"
-type = "variable"
-
-[[component]]
-name = "log_start_pos"
-type = "variable"
-
-[[component]]
-name = "log_end_pos"
-type = "variable"
-
-[[component]]
-name = "log_temp"
-type = "variable"
-sta = 1
-txt = ""
-txt_maxl = 2
+tim = 1000
 
 [[component]]
 name = "bt_reboot"
 type = "dual-state-button"
 sendkey = 3
-x = 225
+x = 180
 y = 36
 w = 80
 h = 30
@@ -258,11 +232,6 @@ txt = ""
 txt_maxl = 8
 
 [[component]]
-name = "log_max_lines"
-type = "variable"
-val = 7
-
-[[component]]
 name = "counter"
 type = "variable"
 
@@ -276,14 +245,35 @@ name = "va0"
 type = "variable"
 sta = 1
 txt = ""
+txt_maxl = 12
 
 [[component]]
 name = "va1"
 type = "variable"
 sta = 1
 txt = ""
+txt_maxl = 300
 
 [[component]]
 name = "tm_display_ack"
 type = "timer"
 tim = 1000
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 262
+y = 0
+w = 58
+h = 48
+sta = 0
+style = 0
+font = "font-08"
+picc = "picture-0032"
+bco = "#4282b5"
+picc2 = "picture-0032"
+bco2 = "#4282b5"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3

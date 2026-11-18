@@ -64,7 +64,7 @@ script:
           // Only when boot sound is enabled
           #if ${_BOOT_SOUND}
           if (current_page_id == ${PAGE_BOOT_ID}) return;    // Page boot is visible, do not play sound
-          boot_log->execute("Boot", "Play boot sound");
+          ESP_LOGD("${TAG_BOOT}", "Boot: Play boot sound");
           buzzer->play("${tone_boot}");
           #endif  // _BOOT_SOUND
 ...

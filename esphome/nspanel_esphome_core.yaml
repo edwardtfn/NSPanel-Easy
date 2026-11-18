@@ -177,13 +177,14 @@ script:  # Scripts
           then:
             - lambda: |-
                 if (api_server->is_connected_with_state_subscription()) wait_for_api->stop();
-                if (iteration % 5 == 1) boot_log->execute("Boot", "Waiting for API");
+                if (iteration % 5 == 1) ESP_LOGD("${TAG_BOOT}", "Boot: Waiting for API");
             - delay: 1s
 
   - id: wait_for_blueprint
     mode: single
     then:
-      - lambda: boot_log->execute("Boot", "Waiting for Blueprint");
+      - lambda: |-
+          ESP_LOGD("${TAG_BOOT}", "Boot: Waiting for Blueprint");
       - while:
           condition:
             # The wait ends without the Blueprint when Home Assistant is not connected, or when the Blueprint
@@ -228,7 +229,7 @@ script:  # Scripts
           ESP_LOGI("${TAG_CORE}", "Receiving settings from Blueprint: %0.1f%%",
                                   blueprint_status_flags.get_completion_percentage());
           if (system_flags.blueprint_ready) {
-            boot_log->execute("Boot", "Blueprint is ready");
+            ESP_LOGD("${TAG_BOOT}", "Boot: Blueprint is ready");
           } else {
             // The watchdog asks for the settings again once Home Assistant is connected (see `boot`)
             ESP_LOGW("${TAG_CORE}", "Blueprint not available: using the settings stored on the panel");

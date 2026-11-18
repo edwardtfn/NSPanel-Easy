@@ -36,13 +36,11 @@ struct SystemFlags {
   uint16_t display_sleep : 1;           ///< Display is in sleep mode
   uint16_t display_resync_pending : 1;  ///< Display restarted; repaint on next page entry
   uint16_t display_start_hold : 1;      ///< Display keeps its start screen until the boot opens a page
+  uint16_t boot_page_requested : 1;     ///< Boot page opened by the user as a status page, not by the boot
 
   // Baud rate flags
   uint16_t baud_fallback_active : 1;  ///< UART is operating at non-primary rate (detected via scan)
   uint16_t baud_scan_success : 1;     ///< Last baud rate scan found a responsive rate
-
-  // Reserved flags
-  uint16_t reserved : 1;
 
   // Default constructor - all flags start as false (zero-initialized)
   SystemFlags()
@@ -59,9 +57,9 @@ struct SystemFlags {
         display_sleep(0),
         display_resync_pending(0),
         display_start_hold(0),
+        boot_page_requested(0),
         baud_fallback_active(0),
-        baud_scan_success(0),
-        reserved(0) {}
+        baud_scan_success(0) {}
 };
 
 /**
