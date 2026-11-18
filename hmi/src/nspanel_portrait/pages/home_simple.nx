@@ -1,0 +1,171 @@
+on home_simple.load:
+  back_page_id=home_page_id
+  for(sys0=7;sys0<=16;sys0++)
+  {
+    b[sys0].font=chip_font
+  }
+  // Light mode only: background image and foreground colors
+  if(theme==1)
+  {
+    b[0].pic=pic_background_main
+    for(sys0=7;sys0<=19;sys0++)
+    {
+      b[sys0].picc=pic_background_main
+    }
+    time.pco=color_pco_main
+    meridiem.pco=color_pco_main
+  }
+  // A tile for each custom button shown on home (bits 7 to 12 of vis_home, as on home)
+  sys0=vis_home/128
+  for(sys1=0;sys1<6;sys1++)
+  {
+    sys2=sys0%2
+    sys0=sys0/2
+    sys3=sys1+20
+    vis b[sys3],sys2
+    sys3=sys1+26
+    vis b[sys3],sys2
+    sys3=sys1+32
+    vis b[sys3],sys2
+    sys3=sys1+38
+    vis b[sys3],sys2
+  }
+  // The page shows copies of home's global components: first copy right away, then every second
+  tm_sync.tim=50
+  tm_sync.en=1
+
+on tm_sync.timer:
+  tm_sync.tim=1000
+  chip_relay1.txt=home.chip_relay1.txt
+  chip_relay1.pco=home.chip_relay1.pco
+  chip_relay2.txt=home.chip_relay2.txt
+  chip_relay2.pco=home.chip_relay2.pco
+  chip_climate.txt=home.chip_climate.txt
+  chip_climate.pco=home.chip_climate.pco
+  chip01.txt=home.chip01.txt
+  chip01.pco=home.chip01.pco
+  chip02.txt=home.chip02.txt
+  chip02.pco=home.chip02.pco
+  chip03.txt=home.chip03.txt
+  chip03.pco=home.chip03.pco
+  chip04.txt=home.chip04.txt
+  chip04.pco=home.chip04.pco
+  chip05.txt=home.chip05.txt
+  chip05.pco=home.chip05.pco
+  chip06.txt=home.chip06.txt
+  chip06.pco=home.chip06.pco
+  chip07.txt=home.chip07.txt
+  chip07.pco=home.chip07.pco
+  wifi_icon.txt=home.wifi_icon.txt
+  wifi_icon.pco=home.wifi_icon.pco
+  time.txt=home.time.txt
+  meridiem.txt=home.meridiem.txt
+  icon01.txt=home.button01.txt
+  icon01.pco=home.button01.pco
+  icon02.txt=home.button02.txt
+  icon02.pco=home.button02.pco
+  icon03.txt=home.button03.txt
+  icon03.pco=home.button03.pco
+  icon04.txt=home.button04.txt
+  icon04.pco=home.button04.pco
+  icon05.txt=home.button05.txt
+  icon05.pco=home.button05.pco
+  icon06.txt=home.button06.txt
+  icon06.pco=home.button06.pco
+
+on time.down:
+  tm_home.en=1
+
+on time.up:
+  tm_home.en=0
+
+on tm_home.timer:
+  tm_home.en=0
+  // A long press on the clock opens the full home page (intentionally not home_page_id, which is this page)
+  page home
+
+on hot01.down:
+  short_click_tm.en=0
+  click_comp.txt="button01"
+  click_timer.en=1
+
+on hot01.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on hot02.down:
+  short_click_tm.en=0
+  click_comp.txt="button02"
+  click_timer.en=1
+
+on hot02.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on hot03.down:
+  short_click_tm.en=0
+  click_comp.txt="button03"
+  click_timer.en=1
+
+on hot03.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on hot04.down:
+  short_click_tm.en=0
+  click_comp.txt="button04"
+  click_timer.en=1
+
+on hot04.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on hot05.down:
+  short_click_tm.en=0
+  click_comp.txt="button05"
+  click_timer.en=1
+
+on hot05.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on hot06.down:
+  short_click_tm.en=0
+  click_comp.txt="button06"
+  click_timer.en=1
+
+on hot06.up:
+  click_timer.en=0
+  short_click_tm.en=1
+
+on click_timer.timer:
+  short_click_tm.en=0
+  click_timer.en=0
+  if(click_comp.txt!="")
+  {
+    // The same click as the custom button on home, so firmware and Blueprint handle it as one
+    lastclick.txt="home,long_click,"+click_comp.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints lastclick.txt,0
+    printh 00
+    printh FF FF FF
+    click_comp.txt=""
+  }
+
+on short_click_tm.timer:
+  short_click_tm.en=0
+  click_timer.en=0
+  if(click_comp.txt!="")
+  {
+    // The same click as the custom button on home, so firmware and Blueprint handle it as one
+    lastclick.txt="home,short_click,"+click_comp.txt
+    printh 92
+    prints "localevent",0
+    printh 00
+    prints lastclick.txt,0
+    printh 00
+    printh FF FF FF
+    click_comp.txt=""
+  }

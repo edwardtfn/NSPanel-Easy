@@ -247,6 +247,7 @@ script:
           disp1->send_command_printf("button_back_font=%i", id(button_back_font));
           disp1->send_command_printf("home_page_id=%" PRIu8, home_page_id);
           wakeup_page_id = get_page_id(wakeup_page_name->current_option().c_str());
+          if (wakeup_page_id == get_page_id("home")) wakeup_page_id = home_page_id;  // The selected home page (#339)
           if (wakeup_page_id >= PAGE_COUNT) {
             // Not the name of a page: keep a valid id, as it is used to look up the name of the page
             ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown wake-up page, using home");
@@ -875,6 +876,7 @@ select:
       then:
         - lambda: |-
             wakeup_page_id = get_page_id(x.c_str());
+            if (wakeup_page_id == get_page_id("home")) wakeup_page_id = home_page_id;  // The selected home page (#339)
             if (wakeup_page_id >= PAGE_COUNT) {
               // Not the name of a page (e.g. an option of a customization): keep a page the display can open
               ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown wake-up page '%s', using home", x.c_str());
