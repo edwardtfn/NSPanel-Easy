@@ -81,6 +81,11 @@ script:
             icon_previous = icon_new;
           }
 
+          // While booting, Home Assistant and the Blueprint are expected to be missing for a while, so the icon
+          // stays neutral (Gray Moss) once Wi-Fi is connected. Without Wi-Fi it is red from the start, also after
+          // a reboot caused by a missing Wi-Fi (`wifi: reboot_timeout`), instead of turning grey again (#821).
+          const bool boot_neutral = !system_flags.boot_completed && wifi_component->is_connected();
+
           #if ${_WIFI_ICON_COLORS}
           // Determine new color based on connection state and WiFi signal strength
           uint16_t color_new = Colors::RGB565_GRAY_MOSS;
@@ -99,17 +104,16 @@ script:
               // Poor signal (< -70 dBm): Orange
               color_new = Colors::RGB565_ORANGE;
             }
-          } else if (system_flags.boot_completed) {
+          } else if (!boot_neutral) {
             // Not fully operational (WiFi down, API down, or Blueprint not ready): Red
             color_new = Colors::RGB565_RED;
           }  // if (operational)
-          // While booting, a missing connection is expected, so it stays neutral (Gray Moss)
           #else  // _WIFI_ICON_COLORS
           // Determine new color based on availability, neutral while booting
           const bool operational = wifi_component->is_connected() and
                                    api_server->is_connected_with_state_subscription() and
                                    system_flags.blueprint_ready;
-          const uint16_t color_new = (operational or !system_flags.boot_completed) ?
+          const uint16_t color_new = (operational or boot_neutral) ?
                                      Colors::RGB565_GRAY_MOSS : Colors::RGB565_RED;
           #endif  // _WIFI_ICON_COLORS
 
@@ -156,7 +160,7 @@ script:
                   wait_for_wifi->stop();
                 }
                 if (iteration % 5 == 1) {  // Log every 5 seconds (at iterations 1, 6, 11, etc.)
-                  boot_log->execute("Boot", "Waiting for Wi-Fi");
+                  ESP_LOGD("${TAG_BOOT}", "Boot: Waiting for Wi-Fi");
                 }
             - delay: 1s
 

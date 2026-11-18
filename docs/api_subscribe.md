@@ -371,6 +371,7 @@ polarities. An entity that drops off the network never lights an inverted compon
 | `cover` | `open` | `opening`, `closing` | `closed` |
 | `lock` | `unlocked`, `open`, `jammed` | `locking`, `unlocking`, `opening` | `locked` |
 | `water_heater` | `on`, `eco`, `electric`, `gas`, `heat_pump`, `high_demand`, `performance` | — | `off` |
+| `calendar` | `on` (also during the lead time before the next event, on the `chips` page) | — | `off` |
 | `input_number`, `number`, `sensor` | any other usable value | — | `off`, `false` |
 | everything else | `on`, `true`, `1`, `active`, `home`, `playing` | — | `off`, `false`, `0`, `not_home`, `idle`, `standby`, `paused` |
 
@@ -379,6 +380,11 @@ holds a usable value it takes precedence, so a thermostat set to `heat` but curr
 classified as inactive. A climate binding that names an attribute of its own — such as the indoor
 temperature reading `current_temperature` — does not subscribe to `hvac_action`, because it wants
 the attribute value rather than the action.
+
+`calendar` bindings on the `chips` page also subscribe to the `start_time` attribute, the start of the current or next event.
+While the calendar is `off`, the chip is classified as active from the lead time before that start until the event begins, after which the `on` state takes over.
+The lead time is a single setting for all calendar chips, sent with `component_val` (`page: mem`, `id: chip_calendar_lead`, the value in minutes; 0 by default, which disables it).
+The panel compares the start time with its own clock every minute, so the chip appears on time with no state change from Home Assistant.
 
 The weather picture and both temperature components do not use classification at all. They consume
 the raw value: the picture looks the condition up in a table, and the temperatures parse a number.

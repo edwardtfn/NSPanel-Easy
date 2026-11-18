@@ -57,7 +57,8 @@ jobs:
           # ---------------------------------------------------------------
           # Exemptions - labels that prevent stale processing
           # ---------------------------------------------------------------
-          exempt-issue-labels: 'blocked,help-wanted,long-term,not-stale,pinned,security,work in progress'
+          # The labels closed by the steps below are exempt here, so these issues are never closed as stale
+          exempt-issue-labels: 'blocked,help-wanted,long-term,not-stale,pinned,security,work in progress,Resolved: pending confirmation,👀 Missing information'
           exempt-pr-labels: 'blocked,help-wanted,long-term,not-stale,pinned,security,work in progress'
 
           # ---------------------------------------------------------------
@@ -68,6 +69,65 @@ jobs:
           # ---------------------------------------------------------------
           # Rate limiting - max operations per run (default: 30)
           # ---------------------------------------------------------------
+          operations-per-run: 30
+
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------------------------------------------------
+      # Resolved issues waiting for the reporter's confirmation
+      # -------------------------------------------------------------------
+      # The label is added by hand, after a comment explaining what was
+      # done. The issue is closed as completed after 7 days, unless someone
+      # comments (which removes the label and keeps the issue open).
+      # Issues are never labeled automatically, and pull requests are
+      # ignored.
+      # -------------------------------------------------------------------
+      - uses: actions/stale@v11.0.0
+        with:
+          days-before-issue-stale: -1  # Never added automatically
+          days-before-issue-close: 7   # Days after the label before closing
+          stale-issue-label: 'Resolved: pending confirmation'
+          only-issue-labels: 'Resolved: pending confirmation'
+          close-issue-reason: 'completed'
+          close-issue-message: >
+            This issue was closed as resolved, as there were no objections
+            within 7 days. If the problem is still there, please comment
+            here and it can be reopened.
+
+          days-before-pr-stale: -1  # Pull requests are not handled here
+          days-before-pr-close: -1
+
+          operations-per-run: 30
+
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------------------------------------------------
+      # Issues waiting for information from the reporter
+      # -------------------------------------------------------------------
+      # The label is added by the issue triage (claude_issue_triage.py) or
+      # by hand, always after a comment asking for the information: any
+      # later update counts as activity and removes the label. The issue is
+      # closed after 7 days without a comment; a comment from anyone
+      # removes the label and keeps the issue open. Issues are never
+      # labeled here, and pull requests are ignored.
+      # Keep the 7 days in sync with MISSING_INFO_CLOSE_DAYS in
+      # claude_issue_triage.py, which tells the reporter.
+      # -------------------------------------------------------------------
+      - uses: actions/stale@v11.0.0
+        with:
+          days-before-issue-stale: -1  # Never added automatically
+          days-before-issue-close: 7   # Days after the label before closing
+          stale-issue-label: '👀 Missing information'
+          only-issue-labels: '👀 Missing information'
+          close-issue-reason: 'not_planned'
+          close-issue-message: >
+            This issue was closed because the information requested was not
+            provided within 7 days. If you can still provide it, please
+            comment here and it can be reopened.
+
+          days-before-pr-stale: -1  # Pull requests are not handled here
+          days-before-pr-close: -1
+
           operations-per-run: 30
 
           repo-token: ${{ secrets.GITHUB_TOKEN }}

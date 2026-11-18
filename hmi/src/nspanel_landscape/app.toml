@@ -18,7 +18,6 @@ pages = [
     "climate",
     "confirm",
     "cover",
-    "debug",
     "entitypage01",
     "entitypage02",
     "entitypage03",

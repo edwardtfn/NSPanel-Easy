@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.11.17)
+  name: NSPanel Easy Configuration (v9999.99.9)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -844,6 +844,19 @@ blueprint:
                   value: '7'
                 - label: 32px
                   value: '8'
+        chip_calendar_lead:
+          name: Calendar chips - Lead time
+          description: >-
+            A chip linked to a `calendar` entity is shown while one of its events is ongoing,
+            for example on a waste collection day when each waste type has its own calendar.
+            Set a lead time to also show it before the event starts: 9 hours shows the chip of an all-day event from 15:00 the day before.
+            It applies to all calendar chips. Leave it at zero to show them only during the event.
+          default:
+            hours: 0
+            minutes: 0
+            seconds: 0
+          selector:
+            duration: {}
         chip01:
           name: Chip 01 - Entity
           description: *description_entity_displayed
@@ -855,6 +868,7 @@ blueprint:
                 domain:
                   - alarm_control_panel
                   - binary_sensor
+                  - calendar
                   - climate
                   - cover
                   - fan
@@ -5308,7 +5322,7 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.11.17
+  blueprint_version: 9999.99.9
 
   # Minimum ESPHome firmware version required by this Blueprint (the Blueprint -> ESPHome contract).
   # Set it to 'next' when a change makes the Blueprint depend on a newer firmware, e.g. a new API
@@ -5499,16 +5513,6 @@ triggers:
         id: nspanel_event
         trigger: event
         event_type: esphome.nspanel_easy
-        event_data:
-          device_id: !input nspanel_name
-
-      # Fired by this automation itself when the panel needs its global settings again (e.g. after a reload).
-      # The same id as the panel's events, so it is handled by "Boot init", where the global settings live once
-      # in the automation (#657).
-      - alias: Settings request
-        id: nspanel_event
-        trigger: event
-        event_type: nspanel_easy_settings_request
         event_data:
           device_id: !input nspanel_name
 
@@ -7608,6 +7612,8 @@ actions:
                       nspanel_event.type == "boot" and
                       nspanel_event.step is defined and nspanel_event.step in ["display_ack", "setup", "start", "timeout", "reload"]
                     }}
+                # Only the panel requests its settings (#664): on boot ("start" for the version only, then "setup",
+                # "display_ack" or "timeout") and after it was told that its settings are stale ("reload").
                 sequence:
                   - &global_settings
                     sequence:
@@ -8095,6 +8101,24 @@ actions:
                                   val: !input chip_font_size
                                 continue_on_error: true
                               - *delay_boot
+                              - alias: chip_calendar_lead
+                                sequence:
+                                  - variables:
+                                      chip_calendar_lead: !input chip_calendar_lead
+                                  - action: 'esphome.{{ action_prefix }}_component_val'
+                                    data:
+                                      page: mem
+                                      id: chip_calendar_lead
+                                      # Duration in minutes
+                                      val: >-
+                                        {%- set lead = chip_calendar_lead if chip_calendar_lead is mapping else {} -%}
+                                        {{
+                                          (lead.days | default(0, true) | int(0)) * 1440
+                                          + (lead.hours | default(0, true) | int(0)) * 60
+                                          + (lead.minutes | default(0, true) | int(0))
+                                        }}
+                                    continue_on_error: true
+                                  - *delay_boot
                           - alias: custom_buttons_font
                             action: 'esphome.{{ action_prefix }}_component_val'
                             data:
@@ -8993,6 +9017,16 @@ actions:
                             continue_on_error: true
                           - *delay_boot
 
+                      # Must stay the last call: tells the panel that its settings arrived completely. Without it,
+                      # the panel requests them again (#664).
+                      - alias: End of settings
+                        action: 'esphome.{{ action_prefix }}_component_val'
+                        data:
+                          page: mem
+                          id: settings_end
+                          val: 1
+                        continue_on_error: true
+
               # The first number of a home page value whose entity had no value when the settings were sent
               - alias: Home page value format request
                 conditions: '{{ nspanel_event.type == "home_value_format" }}'
@@ -9664,7 +9698,13 @@ actions:
                                         {%- endif -%}
                                       # Values of the day from the forecast slots, as [field, how the slots combine]. One template computes
                                       # them all, so the Blueprint has fewer distinct templates (#636). A value is none when no slot has a number.
+                                      # Values are rounded to whole numbers, except for the units listed in `decimals`, where whole numbers
+                                      # would hide the changes of the day (e.g. pressure in inHg, rain in inches, #803).
                                       forecast_values: >-
+                                        {%- set decimals = {
+                                              "precipitation": {"in": 2, "mm": 1},
+                                              "pressure": {"inHg": 2, "kPa": 1}
+                                            } -%}
                                         {%- set ns = namespace(values={}) -%}
                                         {%- for field, operation in [
                                              ["precipitation", "sum"],
@@ -9682,7 +9722,16 @@ actions:
                                                | map(attribute=field)
                                                | map("float")
                                                | list -%}
-                                          {%- set value = ((numbers | sum if operation == "sum" else numbers | max) | round(0)) if numbers | count > 0 else none -%}
+                                          {%- set total = (numbers | sum if operation == "sum" else numbers | max) if numbers | count > 0 else none -%}
+                                          {%- set field_decimals = decimals.get(field, {}).get(weather_units.get(field), 0) -%}
+                                          {%- if total is none -%}
+                                            {%- set value = none -%}
+                                          {%- elif field_decimals == 0 -%}
+                                            {%- set value = total | round(0) -%}
+                                          {%- else -%}
+                                            {#- Fixed decimals, so the text keeps its length (30.10 inHg, not 30.1 inHg) -#}
+                                            {%- set value = ("%." ~ field_decimals ~ "f") | format(total) -%}
+                                          {%- endif -%}
                                           {%- set ns.values = dict(ns.values, **{field: value}) -%}
                                         {%- endfor -%}
                                         {{ ns.values }}
@@ -12095,26 +12144,17 @@ actions:
           # Checked against the source action_prefix was built from, so both always agree.
           - condition: '{{ action_prefix_source != "entity_ids" }}'
 
-          - delay: >  # Prevents all panels updating simultaneously in large systems
-              {% set ns = namespace(panels=[]) %}
-              {% for s in states.sensor | selectattr("entity_id", "search", "_device_name$") %}
-                {% set did = device_id(s.entity_id) %}
-                {% if did and device_attr(did, "model") == "NSPanel-Easy" %}
-                  {% set ns.panels = ns.panels + [s.entity_id] %}
-                {% endif %}
-              {% endfor %}
-              {{ (4 * ns.panels.index(device_name_sensor)) if (device_name_sensor in ns.panels) else 0 }}
-
           ##### Update global settings (as user may have changed something) #####
-          # Sent through "Boot init" in a run of its own, instead of a second copy of the global settings here,
-          # which Home Assistant would expand into the automation again (about 90 kB, #657)
-          - alias: Request global settings
-            event: nspanel_easy_settings_request
-            event_data:
-              device_id: '{{ nspanel_deviceid }}'
-              device_name: '{{ action_prefix }}'  # Read by `action_prefix` in the run handling the request
-              type: boot
-              step: reload
+          # The Blueprint never pushes the settings (#664): it tells the panel that the settings it has are stale,
+          # and the panel requests them (handled by "Boot init"), after a random delay of its own, so the panels of
+          # a large installation do not all request at the same time.
+          - alias: Settings are stale
+            action: 'esphome.{{ action_prefix }}_component_val'
+            data:
+              page: mem
+              id: settings_stale
+              val: 1
+            continue_on_error: true
 
           # A home page value slot left without an entity is cleared, otherwise the last value sent
           # stays on screen after the entity is removed (#351). The text is cleared instead of hidden,

@@ -144,6 +144,12 @@ script:
             sub_subscribe_all();
           }
 
+  - id: !extend new_minute
+    then:
+      - lambda: |-
+          // A calendar chip's lead time starts with no state change, so the clock decides
+          sub_calendar_recheck();
+
   - id: !extend page_change
     then:
       - lambda: |-
