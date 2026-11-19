@@ -9,7 +9,7 @@
 substitutions:
   TAG_CHIPS: nspanel.chips
   chips_page_screensaver: true
-  chips_page_buttons: false  # Prototype: chips on the button pages too, at the same position as on home
+  chips_page_buttons: true  # Chips on the button pages too, at the same position as on home
 
 esphome:
   build_flags:

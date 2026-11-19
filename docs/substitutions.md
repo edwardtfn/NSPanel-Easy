@@ -46,7 +46,7 @@ substitutions:
 | Substitution | Default | Description |
 | :- | :- | :- |
 | `chips_page_screensaver` | `true` | Shows the chips on the screensaver page as well as on the home page. |
-| `chips_page_buttons` | `false` | Shows the chips on the button pages as well, at the same position as on the home page. The button pages keep that row free for them: their name is at the bottom (landscape) or in the row below the chips (portrait). |
+| `chips_page_buttons` | `true` | Shows the chips on the button pages as well, at the same position as on the home page. The button pages keep that row free for them: their name is at the bottom (landscape) or in the row below the chips (portrait). |
 | `wifi_icon_colors` | `true` | Colours the Wi-Fi icon by signal strength while everything is connected (green, yellow or orange), and red otherwise. When `false`, the icon is grey while everything is connected, and red otherwise. In both cases it is red until Wi-Fi connects, and then grey while the panel is still booting (waiting for Home Assistant and the Blueprint). |
 <!-- markdownlint-enable MD013 -->
 

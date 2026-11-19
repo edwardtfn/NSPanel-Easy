@@ -152,3 +152,39 @@ macro format_tenths:
     covx sys2,home.tenths_tmp.txt,0,0
     home.tenths_txt.txt+=home.dec_sep.txt+home.tenths_tmp.txt
   }
+
+// Copies the chips of the home page to the current page, for the pages that show the same chips
+// (screensaver and button pages). Their chips must be consecutive components, in home's order:
+// chip_relay1, chip_relay2, chip_climate, chip01 to chip07.
+// Set sys0 to the id of the current page's chip_relay1 before `call chips_copy_home`. Changes sys0.
+macro chips_copy_home:
+  p[dp].b[sys0].txt=home.chip_relay1.txt
+  p[dp].b[sys0].pco=home.chip_relay1.pco
+  sys0++
+  p[dp].b[sys0].txt=home.chip_relay2.txt
+  p[dp].b[sys0].pco=home.chip_relay2.pco
+  sys0++
+  p[dp].b[sys0].txt=home.chip_climate.txt
+  p[dp].b[sys0].pco=home.chip_climate.pco
+  sys0++
+  p[dp].b[sys0].txt=home.chip01.txt
+  p[dp].b[sys0].pco=home.chip01.pco
+  sys0++
+  p[dp].b[sys0].txt=home.chip02.txt
+  p[dp].b[sys0].pco=home.chip02.pco
+  sys0++
+  p[dp].b[sys0].txt=home.chip03.txt
+  p[dp].b[sys0].pco=home.chip03.pco
+  sys0++
+  p[dp].b[sys0].txt=home.chip04.txt
+  p[dp].b[sys0].pco=home.chip04.pco
+  sys0++
+  p[dp].b[sys0].txt=home.chip05.txt
+  p[dp].b[sys0].pco=home.chip05.pco
+  sys0++
+  p[dp].b[sys0].txt=home.chip06.txt
+  p[dp].b[sys0].pco=home.chip06.pco
+  sys0++
+  p[dp].b[sys0].txt=home.chip07.txt
+  p[dp].b[sys0].pco=home.chip07.pco
+  sys0++
