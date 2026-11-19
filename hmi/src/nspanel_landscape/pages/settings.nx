@@ -42,10 +42,10 @@ on settings.load:
   sendme
 
 on settings.down:
-  tm_debug.en=1
+  tm_status.en=1
 
 on settings.up:
-  tm_debug.en=0
+  tm_status.en=0
 
 on brightslider.up:
   tm_bright.en=1
@@ -91,8 +91,8 @@ on tm_dim.timer:
   brightness_dim=dimslider.val
   tm_dim.en=0
 
-on tm_debug.timer:
-  page debug
+on tm_status.timer:
+  page boot  // The status page, for troubleshooting
 
 on bt_sleep_hs.up:
   page screensaver

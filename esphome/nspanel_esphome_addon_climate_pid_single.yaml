@@ -597,7 +597,9 @@ sensor:
           if (!std::isnan(id(pid_comfort_value)) && fabsf(id(pid_comfort_value) - value) < 0.01f) return;
           ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Comfort temperature: %.1f°C", value);
           id(pid_comfort_value) = value;
-      - script.execute: pid_apply_preset  # Follow the new value while Comfort is active
+          // Only a new value moves the setpoint while Comfort is active: Home Assistant sends the
+          // unchanged value again after every reconnect, which must keep a manual setpoint (#820)
+          id(pid_apply_preset).execute();
       - script.execute: pid_match_preset
 
   - platform: homeassistant
@@ -615,7 +617,9 @@ sensor:
           if (!std::isnan(id(pid_eco_value)) && fabsf(id(pid_eco_value) - value) < 0.01f) return;
           ESP_LOGI("${TAG_ADDON_CLIMATE_PID}", "Eco temperature: %.1f°C", value);
           id(pid_eco_value) = value;
-      - script.execute: pid_apply_preset  # Follow the new value while Eco is active
+          // Only a new value moves the setpoint while Eco is active: Home Assistant sends the
+          // unchanged value again after every reconnect, which must keep a manual setpoint (#820)
+          id(pid_apply_preset).execute();
       - script.execute: pid_match_preset
 
 number:
