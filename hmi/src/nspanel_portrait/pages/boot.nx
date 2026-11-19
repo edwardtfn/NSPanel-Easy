@@ -62,7 +62,7 @@ on tm_status.timer:
   {
     va1.txt+="No"
   }
-  va1.txt+="Model: "
+  va1.txt+="\rModel: "
   covx display_mode,va0.txt,0,0
   va1.txt+=va0.txt
   va1.txt+=" (TFT "
@@ -71,7 +71,7 @@ on tm_status.timer:
   va1.txt+=")  Ack: "
   covx display_ack,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="Pages: home "
+  va1.txt+="\rPages: home "
   covx home_page_id,va0.txt,0,0
   va1.txt+=va0.txt
   va1.txt+=" wake "
@@ -80,7 +80,7 @@ on tm_status.timer:
   va1.txt+=" back "
   covx back_page_id,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="Brightness: "
+  va1.txt+="\rBrightness: "
   covx brightness,va0.txt,0,0
   va1.txt+=va0.txt
   va1.txt+="/"
@@ -89,19 +89,19 @@ on tm_status.timer:
   va1.txt+="/"
   covx brightness_sleep,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="Backlight: "
+  va1.txt+="\rBacklight: "
   covx dim,va0.txt,0,0
   va1.txt+=va0.txt
   va1.txt+="  Recmod: "
   covx recmod,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="Thermostat: "
+  va1.txt+="\rThermostat: "
   covx climate_embedded,va0.txt,0,0
   va1.txt+=va0.txt
   va1.txt+="  Home: "
   covx vis_home,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="Button pages: "
+  va1.txt+="\rButton pages: "
   covx is_buttonpage01,va0.txt,0,0
   va1.txt+=va0.txt
   va1.txt+=" "
@@ -113,7 +113,7 @@ on tm_status.timer:
   va1.txt+=" "
   covx is_buttonpage04,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="Entity pages: "
+  va1.txt+="\rEntity pages: "
   covx is_entitypage01,va0.txt,0,0
   va1.txt+=va0.txt
   va1.txt+=" "
