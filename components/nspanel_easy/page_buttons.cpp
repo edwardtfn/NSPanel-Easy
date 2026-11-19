@@ -714,6 +714,9 @@ void buttons_sub_render(const SubBinding &binding, const SubRuntime &rt, const c
         return;
       }
       const bool changed = slot.icon_attr[0] != '\0' && strncmp(rt.state, "mdi:", 4) == 0;
+      if (changed && sub_icon_names_wanted()) {
+        return;  // Not recorded yet: applied once the icon names are in (sub_render_all())
+      }
       strncpy(slot.icon_attr, rt.state, sizeof(slot.icon_attr) - 1);
       slot.icon_attr[sizeof(slot.icon_attr) - 1] = '\0';
       if (changed) {

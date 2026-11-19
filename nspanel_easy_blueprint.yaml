@@ -5317,7 +5317,7 @@ variables:
   # esphome/nspanel_esphome_version.yaml. Raise MINOR when the Blueprint starts calling a new API action,
   # and MAJOR when it follows a firmware change that removed an action or changed its parameters.
   # Kept as a list: Home Assistant would convert "1.10" to the number 1.1.
-  api_version: [3, 0]
+  api_version: [4, 0]
 
   # Firmware version as reported by the ESPHome integration in the device registry.
   # Format: "<project_version> (ESPHome <compiler_version>)", e.g. "2026.8.5 (ESPHome 2026.6.0)".
@@ -7863,20 +7863,8 @@ actions:
                               # too large for the recorder to store with the action call.
                               - variables:
                                   push_id: '{{ utcnow().strftime("%Y%m%dT%H%M%S%f") }}'
-                              # Icon names, in codepoint order, so the panel resolves any icon name itself. Only the names travel:
-                              # each chunk carries the position of its first name. Not persisted, so sent every session.
-                              # (Split per chunk rather than kept as one list variable, which would render a single ~150 KB result.)
-                              - alias: Icon names
-                                repeat:
-                                  for_each: '{{ range(0, all_icon_names.count(",") - 1, 400) | list }}'
-                                  sequence:
-                                    - action: 'esphome.{{ action_prefix }}_api_subscribe_icon_names'
-                                      data:
-                                        start: '{{ repeat.item }}'
-                                        names: '{{ all_icon_names[1:-1].split(",")[repeat.item:repeat.item + 400] | join(",") }}'
-                                      continue_on_error: true
-                                    - *delay_default
-
+                              # The icon names are not sent here: the panel asks for them, one block at a time
+                              # (event `icon_names_request`, see "Icon names request").
                               - repeat:
                                   for_each: '{{ api_subscriptions }}'
                                   sequence:
@@ -9008,6 +8996,32 @@ actions:
                           id: settings_end
                           val: 1
                         continue_on_error: true
+
+              # The panel asks for the icon names one block at a time, in codepoint order, so it resolves any icon
+              # name itself. Each reply carries the total, so the panel knows when the list is complete; a block
+              # that does not arrive is asked for again (#828).
+              - alias: Icon names request
+                conditions: '{{ nspanel_event.type == "icon_names_request" }}'
+                sequence:
+                  - variables:
+                      icon_names_total: '{{ all_icon_names.count(",") - 1 }}'
+                      icon_names_start: '{{ nspanel_event.start | default(0) | int(0) }}'
+                      icon_names_count: '{{ nspanel_event.count | default(0) | int(0) }}'
+                  - condition: >-
+                      {{
+                        0 <= icon_names_start < icon_names_total and
+                        0 < icon_names_count <= 1000
+                      }}
+                  - action: 'esphome.{{ action_prefix }}_api_subscribe_icon_names'
+                    data:
+                      start: '{{ icon_names_start }}'
+                      total: '{{ icon_names_total }}'
+                      names: >-
+                        {{
+                          all_icon_names[1:-1].split(",")[icon_names_start:icon_names_start + icon_names_count]
+                          | join(",")
+                        }}
+                    continue_on_error: true
 
               # The first number of a home page value whose entity had no value when the settings were sent
               - alias: Home page value format request
