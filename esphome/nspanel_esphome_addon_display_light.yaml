@@ -55,6 +55,12 @@ output:
             ESP_LOGV("${TAG_ADDON_DISPLAY_LIGHT}", "Skipping brightness change - boot not complete");
             return;
           }
+          // The screensaver applies the sleep brightness itself (`page_screensaver`). The light turns off when the
+          // panel goes to sleep, and that must not switch the backlight off on top of it.
+          if (state <= 0.0f and current_page_id == get_page_id("screensaver")) {
+            ESP_LOGV("${TAG_ADDON_DISPLAY_LIGHT}", "Skipping brightness change - the screensaver applies its own");
+            return;
+          }  // if (light off on the screensaver)
           ESP_LOGV("${TAG_ADDON_DISPLAY_LIGHT}", "state: %f", state);
           uint8_t target_brightness = int(round(state * 100.0f));
           ESP_LOGV("${TAG_ADDON_DISPLAY_LIGHT}", "target_brightness: %" PRIu8 "%%", target_brightness);
