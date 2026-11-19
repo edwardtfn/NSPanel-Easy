@@ -319,6 +319,9 @@ script:
             blueprint_settings_state = BlueprintSettingsState::COMPLETE;
             ESP_LOGI("${TAG_BOOT}", "Blueprint settings complete (request %" PRIu8 ")", blueprint_settings_requests);
             blueprint_settings_requests = 0;
+            // The boot may have stopped waiting for the Blueprint already: update its state here as well,
+            // and the Wi-Fi icon, which turns red without it
+            if (is_blueprint_fully_ready()) refresh_wifi_icon->execute(false);
             return;
           }  // if (settings_end)
 
