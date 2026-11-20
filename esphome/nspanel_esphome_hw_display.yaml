@@ -616,8 +616,8 @@ script:
           if (
                 timeout_dim->state >= 1 and
                 current_page_id != get_page_id("screensaver") and
-                // The boot page dims as any page only when opened by the user as a status page
-                (current_page_id != get_page_id("boot") or system_flags.boot_page_requested)
+                // The boot page is the status page: shown at full brightness until it is closed
+                current_page_id != get_page_id("boot")
               ) {
             set_brightness->execute(display_dim_brightness->state);
           }
@@ -629,8 +629,8 @@ script:
       - lambda: |-
           if (timeout_page->state >= 1) {
             ESP_LOGV("${TAG_HW_DISPLAY}", "Timed out on page: %s", page_names[current_page_id]);
-            // The boot page falls back as any page only when opened by the user as a status page
-            if ((current_page_id != get_page_id("boot") or system_flags.boot_page_requested) and
+            // The boot page is the status page: kept until it is closed, the problem is solved or the panel restarts
+            if (current_page_id != get_page_id("boot") and
                 current_page_id != get_page_id("confirm") and
                 current_page_id != home_page_id and
                 current_page_id != get_page_id("notification") and

@@ -321,16 +321,9 @@ script:
       - lambda: |-
           ESP_LOGD("${TAG_PAGE_BOOT}", "Page boot constructor started");
           page_boot_exit_on_timeout->execute();
-          disp1->set_component_text("ver_firmware", "Firmware: ${version}");  // ESPHome version
-          #ifdef ARDUINO
-          disp1->set_component_text("sys_framework", "Framework: Arduino");
-          #elif defined(USE_ESP_IDF)
-          disp1->set_component_text("sys_framework", "Framework: ESP-IDF");
-          #else
-          disp1->set_component_text("sys_framework", "Framework: Unknown");
-          #endif
-          page_boot_show_blueprint_version->execute();
-          page_boot_show_ip->execute();
+          // The close button is hidden by the display while ESPHome is not connected
+          disp1->send_command("vis button_back,1");
+          page_boot_status->execute(true);
           wait_for_page_boot_exit->execute();
           ESP_LOGD("${TAG_PAGE_BOOT}", "Page boot constructor completed");
 
@@ -348,27 +341,117 @@ script:
             wakeup->execute(false);
           }  // if (current_page_id == get_page_id("boot"))
 
-  - id: page_boot_show_blueprint_version
+  ##### Status page: the lines known by the firmware, from ESPHome to the icon names #####
+  # The display fills the first line (TFT version and baud rate) and the details itself, and greys these lines out
+  # while ESPHome is not connected. Called when the page opens (force: send every line) and every second while it is
+  # shown (only the lines that changed).
+  - id: page_boot_status
     mode: single
-    then:
-      - lambda: |-
-          if (current_page_id == get_page_id("boot") and !id(page_change_pending) and !version_blueprint->state.empty())
-            disp1->set_component_text_printf("ver_blueprint", "Blueprint: %s", version_blueprint->state.c_str());
-
-  - id: page_boot_show_ip
-    mode: single
+    parameters:
+      force: bool
     then:
       - lambda: |-
           if (current_page_id != get_page_id("boot") or id(page_change_pending)) return;
+          enum StatusMark : uint8_t { STATUS_OK, STATUS_WARN, STATUS_BAD, STATUS_NONE };
+          static constexpr const char *STATUS_GLYPHS[] = {"\uE5DF", "\uE027", "\uE158", "\uE765"};
+          static constexpr uint16_t STATUS_COLORS[] = {15947, 62885, 57895, 33913};  // Green, orange, red, grey
+          static constexpr uint16_t STATUS_WHITE = 65535;
+          // Rows 2 to 7, as last sent: the mark and the value
+          static std::string shown[6];
+          if (force) {
+            for (auto &row : shown) row.clear();
+          }
+          auto show = [&](uint8_t row, StatusMark mark, const std::string &value) {
+            const std::string key = std::to_string(mark) + value;
+            if (shown[row - 2] == key) return;
+            shown[row - 2] = key;
+            const uint16_t color = (mark == STATUS_OK) ? STATUS_WHITE : STATUS_COLORS[mark];
+            disp1->send_command_printf("mark%u.txt=\"%s\"", row, STATUS_GLYPHS[mark]);
+            disp1->send_command_printf("mark%u.pco=%u", row, STATUS_COLORS[mark]);
+            disp1->send_command_printf("val%u.txt=\"%s\"", row, value.c_str());
+            disp1->send_command_printf("val%u.pco=%u", row, color);
+            disp1->send_command_printf("lbl%u.pco=%u", row, mark == STATUS_NONE ? STATUS_COLORS[STATUS_NONE] : STATUS_WHITE);
+          };
+
+          // ESPHome: the firmware version, orange when the TFT carries another one
+          const std::string &tft = version_tft->state;
+          if (!tft.empty() and tft != "${version}") {
+            show(2, STATUS_WARN, "${version}, TFT differs");
+          } else {
+            show(2, STATUS_OK, "${version}");
+          }  // if (TFT version)
+
+          // Wi-Fi: the IP address and the signal, orange below -75 dBm
           if (!wifi_component->is_connected()) {
-            disp1->set_component_text("sys_ip", "Wi-Fi: Not connected");
-            return;
-          }  // if (!wifi_component->is_connected())
-          auto ips = network::get_ip_addresses();
-          if (ips.empty()) return;
-          char ip[16];  // sufficient for IPv4: "255.255.255.255" + '\0'
-          ips[0].str_to(ip);
-          disp1->set_component_text_printf("sys_ip", "IP: %s", ip);
+            show(3, STATUS_BAD, "not connected");
+          } else {
+            char wifi[32] = "connected";
+            auto ips = network::get_ip_addresses();
+            const int rssi = wifi_component->wifi_rssi();
+            if (!ips.empty()) {
+              char ip[16];  // Sufficient for IPv4: "255.255.255.255" + '\0'
+              ips[0].str_to(ip);
+              snprintf(wifi, sizeof(wifi), "%s %d dBm", ip, rssi);
+            }  // if (address known)
+            show(3, rssi < -75 ? STATUS_WARN : STATUS_OK, wifi);
+          }  // if (Wi-Fi)
+
+          // Home Assistant
+          const bool ha = api_server->is_connected_with_state_subscription();
+          show(4, ha ? STATUS_OK : STATUS_BAD, ha ? "connected" : "not connected");
+
+          // Blueprint: its version and how far its settings are
+          const std::string &blueprint = version_blueprint->state;
+          const std::string prefix = blueprint.empty() ? "" : blueprint + " ";
+          switch (blueprint_settings_state) {
+            case BlueprintSettingsState::COMPLETE:
+              show(5, system_flags.blueprint_ready ? STATUS_OK : STATUS_WARN, prefix + "complete");
+              break;
+            case BlueprintSettingsState::PENDING:
+              show(5, STATUS_WARN, prefix + "receiving");
+              break;
+            case BlueprintSettingsState::FAILED:
+              show(5, STATUS_BAD, prefix + "gave up");
+              break;
+            default:
+              show(5, ha ? STATUS_WARN : STATUS_BAD, ha ? prefix + "waiting" : "not available");
+              break;
+          }  // switch (blueprint_settings_state)
+
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          // Bindings: how many are live, and whether they are stored and verified
+          char bindings[32];
+          if (sub_store_failed()) {
+            snprintf(bindings, sizeof(bindings), "%" PRIu16 ", not stored", sub_count);
+            show(6, STATUS_BAD, bindings);
+          } else if (sub_unverified_count() > 0) {
+            snprintf(bindings, sizeof(bindings), "%" PRIu16 ", not verified", sub_count);
+            show(6, STATUS_WARN, bindings);
+          } else {
+            snprintf(bindings, sizeof(bindings), "%" PRIu16, sub_count);
+            show(6, sub_count > 0 ? STATUS_OK : STATUS_WARN, bindings);
+          }  // if (bindings)
+
+          // Icon names: all received, still arriving, or given up
+          char icons[32];
+          const uint16_t received = sub_icon_names_received();
+          const uint16_t expected = sub_icon_names_expected();
+          if (sub_icon_names_complete()) {
+            snprintf(icons, sizeof(icons), "all %" PRIu16, expected);
+            show(7, STATUS_OK, icons);
+          } else if (sub_icon_names_failed()) {
+            snprintf(icons, sizeof(icons), "gave up at %" PRIu16, received);
+            show(7, STATUS_BAD, icons);
+          } else if (expected > 0) {
+            snprintf(icons, sizeof(icons), "%" PRIu16 " of %" PRIu16, received, expected);
+            show(7, STATUS_WARN, icons);
+          } else {
+            show(7, STATUS_WARN, "waiting");
+          }  // if (icon names)
+          #else
+          show(6, STATUS_NONE, "-");
+          show(7, STATUS_NONE, "-");
+          #endif  // NSPANEL_EASY_SUBSCRIBE
 
   - id: !extend page_change
     then:
@@ -391,8 +474,7 @@ script:
     then:
       - lambda: |-
           page_boot->stop();
-          page_boot_show_blueprint_version->stop();
-          page_boot_show_ip->stop();
+          page_boot_status->stop();
 
   - id: wait_for_page_boot_exit
     mode: restart
@@ -404,6 +486,7 @@ script:
           then:
             - lambda: |-
                 ESP_LOGV("${TAG_PAGE_BOOT}", "Waiting for boot page exit");
+                page_boot_status->execute(false);
             - delay: 1s
 
   - id: !extend watchdog_round
@@ -420,14 +503,5 @@ text_sensor:
     on_value:
       then:
         - lambda: |-
-            page_boot_show_blueprint_version->execute();
             wait_to_be_ready->execute();
-
-wifi:
-  on_connect:
-    then:
-      - script.execute: page_boot_show_ip
-  on_disconnect:
-    then:
-      - script.execute: page_boot_show_ip
 ...

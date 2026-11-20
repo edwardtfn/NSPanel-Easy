@@ -729,6 +729,21 @@ bool sub_icon_names_wanted();
 /// @brief Whether a block was asked for and has not arrived yet.
 bool sub_icon_names_awaiting();
 
+/// @brief Icon names received in this session.
+uint16_t sub_icon_names_received();
+
+/// @brief Number of icon names in the whole list; 0 until the Blueprint's first reply.
+uint16_t sub_icon_names_expected();
+
+/// @brief Whether the icon names were given up in this session, after the last retry.
+bool sub_icon_names_failed();
+
+/// @brief Commits of the stored bindings without an end marker (see sub_persist()); 0 when verified.
+uint8_t sub_unverified_count();
+
+/// @brief Whether the bindings could not be stored in this session.
+bool sub_store_failed();
+
 /// @brief Start asking for the icon names again, with a fresh count of retries, keeping the names received.
 void sub_icon_names_fetch_reset();
 
