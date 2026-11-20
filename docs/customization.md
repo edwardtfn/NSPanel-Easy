@@ -888,9 +888,10 @@ is dispatched at release, without any additional delay.
 
 ```yaml
 substitutions:
-  hw_button_left_double_click: true   # left button only
-  hw_button_right_double_click: true  # right button only
+  hw_button_left_double_click: true  # Double click on the left button
 ```
+
+`hw_button_right_double_click: true` does the same for the right button. Both can be set together.
 
 **The cost of the option:** with it enabled, every single click on that button is delayed by `multi_click_gap`
 (0.35 s by default), because the panel waits for a possible second press. The local relay toggle
