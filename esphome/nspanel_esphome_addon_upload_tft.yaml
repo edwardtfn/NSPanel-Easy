@@ -144,6 +144,30 @@ display:
             #endif  // NSPANEL_EASY_ADDON_UPLOAD_TFT_AUTOMATICALLY
 
 script:
+  ##### Stops the Bluetooth scan and releases the proxy's connections before the TFT upload #####
+  - id: upload_tft_quiesce_bluetooth
+    mode: single
+    then:
+      - lambda: |-
+          #ifdef USE_ESP32_BLE_TRACKER
+          // Stop scanning and disable continuous scan, so the tracker stops promoting clients
+          auto *tracker = esp32_ble_tracker::global_esp32_ble_tracker;
+          if (tracker != nullptr and tracker->scan_running()) {
+            ESP_LOGD("${TAG_UPLOAD_TFT}", "Stopping Bluetooth scan");
+            tracker->stop_scan();
+          }  // if (scanning)
+          #endif  // USE_ESP32_BLE_TRACKER
+          #ifdef USE_BLUETOOTH_PROXY
+          // Drop the Home Assistant subscription: without a subscriber, the proxy
+          // disconnects all its connections on every loop (including links that
+          // were still connecting, once they are established)
+          auto *proxy = bluetooth_proxy::global_bluetooth_proxy;
+          if (proxy != nullptr and proxy->get_api_connection() != nullptr) {
+            ESP_LOGD("${TAG_UPLOAD_TFT}", "Releasing Bluetooth proxy connections");
+            proxy->unsubscribe_api_connection(proxy->get_api_connection());
+          }  // if (subscribed)
+          #endif  // USE_BLUETOOTH_PROXY
+
   - id: !extend action_component_text
     then:
       - lambda: |-
@@ -374,6 +398,27 @@ script:
             - lambda: return !display_valid;
           timeout: 1s
 
+      # Quiesce Bluetooth before tearing the stack down.
+      # A GATT link that is open (or opening) when esp32_ble dismantles Bluedroid
+      # blocks the teardown long enough to trigger the task watchdog.
+      # Repeated during the wait: Home Assistant reconnecting meanwhile subscribes the proxy again, and a client
+      # still connecting only disconnects once its link is up. Skipped, with no wait, without Bluetooth.
+      - if:
+          condition:
+            - lambda: |-
+                #if defined(USE_ESP32_BLE_TRACKER) || defined(USE_BLUETOOTH_PROXY)
+                return true;
+                #else
+                return false;
+                #endif
+          then:
+            - repeat:
+                count: 6
+                then:
+                  - script.execute: upload_tft_quiesce_bluetooth
+                  - delay: 500ms
+
+      # Stop Bluetooth stack if present
       # Stop Bluetooth stack if present
       - lambda: |-
           // Stop Bluetooth stack to free memory for TFT upload
@@ -384,6 +429,8 @@ script:
 
           action_component_visibility->execute("home", "bt_icon", false);  // Hide Bluetooth icon on page "home"
 
+          // Once more right before the teardown, in case Home Assistant reconnected during the last wait
+          upload_tft_quiesce_bluetooth->execute();
           // Disable BLE stack
           if (esp32_ble::global_ble != nullptr) {
             ESP_LOGI("${TAG_UPLOAD_TFT}", "Disabling BLE stack");
