@@ -345,7 +345,9 @@ To manually trigger a TFT upload:
 The TFT upload process requires a significant amount of free memory on the ESP32.
 If Bluetooth is enabled (e.g. with the [Bluetooth Proxy add-on](addon_bluetooth_proxy.md)),
 this add-on stops the Bluetooth stack and releases its memory before the upload starts,
-so both can be enabled at the same time. The panel restarts after the upload, restoring Bluetooth.
+so both can be enabled at the same time.
+Before that, it stops the Bluetooth scan and closes the connections the Bluetooth proxy holds for Home Assistant,
+which adds about 3 seconds to the preparation. The panel restarts after the upload, restoring Bluetooth.
 If the memory cannot be released, the log shows `Bluetooth memory release failed` and the upload is still attempted.
 
 Other memory-intensive customizations may still cause the upload to fail due to insufficient memory.
