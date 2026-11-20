@@ -128,7 +128,7 @@ The package enables `api: homeassistant_states: true` automatically, which is re
 | `api_subscribe_entity_len` | `96` | Buffer size for an `entity_id`, null terminator included (`32` to `255`). A longer `entity_id` is not bound; the log reports the size to set. |
 | `api_subscribe_debounce` | `10s` | Quiet period after the last binding before a restart is applied. |
 | `api_subscribe_timeout` | `120s` | Time without an end marker before the push is committed unverified. |
-| `api_icon_names_block` | `400` | Icon names asked for in one block (the Blueprint replies with at most `1000`). |
+| `api_icon_names_block` | `400` | Icon names asked for in one block, from `1` to `1000` (the most the Blueprint replies with). |
 | `api_icon_names_timeout` | `5s` | Time to wait for a block of icon names before asking for it again. |
 | `api_icon_names_retries` | `3` | Retries of one block of icon names before the icons given by name are drawn by domain. |
 | `api_subscribe_wipe_nvs_on_failure` | `false` | Erase every stored preference and restart when the bindings cannot be stored. Read [this](#clearing-the-storage-automatically) first. |
