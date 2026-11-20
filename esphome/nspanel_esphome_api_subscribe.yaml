@@ -85,7 +85,8 @@ api:
       then:
         - lambda: |-
             if (start < 0 or start > UINT16_MAX or total < 0 or total > UINT16_MAX) {
-              ESP_LOGW("${TAG_SUB}", "Icon names: start %d or total %d out of range; ignored", start, total);
+              ESP_LOGW("${TAG_SUB}", "Icon names: start %" PRId32 " or total %" PRId32 " out of range; ignored", start,
+                       total);
               return;
             }  // if (out of range)
             sub_icon_names_add(static_cast<uint16_t>(start), static_cast<uint16_t>(total), names);
