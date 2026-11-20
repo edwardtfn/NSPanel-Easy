@@ -172,6 +172,7 @@ binary_sensor:
               ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
               button_right_press_short->execute();
               ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
+              ESP_LOGD("${TAG_HW_BUTTONS}", "Right button - Two short clicks dispatched");
     on_release:
       then:
         - script.execute: button_right_release
