@@ -1,86 +1,104 @@
 on boot.load:
   // Only shown when ESPHome does not connect or on request, so it is always bright enough to be read
   dim=100
-  covx baud,tmp_baudrate.txt,0,0
-  sys_baudrate.txt="Baud rate: "
-  sys_baudrate.txt+=tmp_baudrate.txt
-  sys_baudrate.txt+=" bps"
-  ver_tft.txt="TFT: "+version.txt
   // Shown when ESPHome does not connect, or opened from the settings page (long press) for troubleshooting.
   // Without ESPHome, there is no page to go back to.
   if(esphome==0)
   {
     vis button_back,0
   }
+  // The status is filled right away, then every second
+  tm_status.tim=50
   sendme
 
 on boot.loadend:
-  line 216,72,450,72,WHITE
-  line 450,72,450,318,WHITE
-  line 216,72,216,318,WHITE
-  line 216,318,450,318,WHITE
-  line 218,74,448,74,WHITE
-  line 448,74,448,316,WHITE
-  line 218,74,218,316,WHITE
-  line 218,316,450,316,WHITE
+  line 10,72,470,72,WHITE
+  line 470,72,470,314,WHITE
+  line 10,72,10,314,WHITE
+  line 10,314,470,314,WHITE
+  line 12,74,468,74,WHITE
+  line 468,74,468,312,WHITE
+  line 12,74,12,312,WHITE
+  line 12,312,468,312,WHITE
+  line 20,253,460,253,44509
   vis stat_title,1
-  line 14,72,200,72,WHITE
-  line 200,72,200,188,WHITE
-  line 14,72,14,188,WHITE
-  line 14,188,200,188,WHITE
-  line 16,74,198,74,WHITE
-  line 198,74,198,186,WHITE
-  line 16,74,16,186,WHITE
-  line 16,186,200,186,WHITE
-  vis ver_title,1
-  line 14,202,200,202,WHITE
-  line 200,202,200,318,WHITE
-  line 14,202,14,318,WHITE
-  line 14,318,200,318,WHITE
-  line 16,204,198,204,WHITE
-  line 198,204,198,316,WHITE
-  line 16,204,16,316,WHITE
-  line 16,316,200,316,WHITE
-  vis sys_title,1
 
 on tm_status.timer:
-  // The status known by the display, rebuilt every second while the page is shown, so it follows the connections.
-  // Built in va1 and copied once, so the text is only redrawn when it changes.
-  va1.txt="ESPHome: "
+  // A checklist of what the panel needs, rebuilt every second while the page is shown. The display fills the
+  // first line and the details itself, so they are shown also without ESPHome. With ESPHome, the firmware
+  // fills the other lines (`page_boot_status`). Texts are only written when they change, to avoid redrawing.
+  tm_status.tim=1000
+  // Display: the TFT version and the baud rate, the first things to check when ESPHome does not connect
+  covx baud,va0.txt,0,0
+  va1.txt="TFT "+version.txt+"  "+va0.txt+" bps"
+  if(val1.txt!=va1.txt)
+  {
+    val1.txt=va1.txt
+  }
+  // Orange while ESPHome is connected but the display was not acknowledged
+  sys0=15947
   if(esphome==1)
   {
-    va1.txt+="Yes"
-  }else
-  {
-    va1.txt+="No"
+    if(display_ack==0)
+    {
+      sys0=62885
+    }
   }
-  va1.txt+="  HA: "
-  if(api==1)
+  if(mark1.pco!=sys0)
   {
-    va1.txt+="Yes"
-  }else
-  {
-    va1.txt+="No"
+    mark1.pco=sys0
+    if(sys0==15947)
+    {
+      mark1.txt=""
+    }else
+    {
+      mark1.txt=""
+    }
   }
-  va1.txt+="\rModel: "
+  // Without ESPHome, the other lines are not known: ESPHome is marked as missing, and the rest is greyed out
+  if(esphome==0)
+  {
+    if(val2.txt!="not connected")
+    {
+      mark2.txt=""
+      mark2.pco=57895
+      val2.txt="not connected"
+      val2.pco=57895
+      // mark3 to mark7 (ids 30 to 34), val3 to val7 (ids 23 to 27), lbl3 to lbl7 (ids 6 to 10)
+      sys1=23
+      sys2=6
+      for(sys0=30;sys0<=34;sys0++)
+      {
+        b[sys0].txt=""
+        b[sys0].pco=33913
+        b[sys1].txt="-"
+        b[sys1].pco=33913
+        b[sys2].pco=33913
+        sys1++
+        sys2++
+      }
+    }
+  }
+  // Details, from the display
+  va1.txt="Model "
   covx display_mode,va0.txt,0,0
   va1.txt+=va0.txt
   va1.txt+=" (TFT "
   covx hard_coded_display_mode,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+=")  Ack: "
+  va1.txt+="), ack "
   covx display_ack,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="\rPages: home "
+  va1.txt+="   Pages: home "
   covx home_page_id,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+=" wake "
+  va1.txt+=", wake "
   covx wakeup_page_id,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+=" back "
+  va1.txt+=", back "
   covx back_page_id,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="\rBrightness: "
+  va1.txt+="\rBrightness "
   covx brightness,va0.txt,0,0
   va1.txt+=va0.txt
   va1.txt+="/"
@@ -89,41 +107,67 @@ on tm_status.timer:
   va1.txt+="/"
   covx brightness_sleep,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="\rBacklight: "
+  va1.txt+=", now "
   covx dim,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="  Recmod: "
-  covx recmod,va0.txt,0,0
-  va1.txt+=va0.txt
-  va1.txt+="\rThermostat: "
+  va1.txt+="   Thermostat "
   covx climate_embedded,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="  Home: "
-  covx vis_home,va0.txt,0,0
+  va1.txt+=", recmod "
+  covx recmod,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+="\rButton pages: "
-  covx is_buttonpage01,va0.txt,0,0
+  // Home page items shown: the bits set in vis_home
+  sys0=vis_home
+  sys1=0
+  while(sys0>0)
+  {
+    sys2=sys0&1
+    sys1+=sys2
+    sys0=sys0>>1
+  }
+  va1.txt+="\rHome "
+  covx sys1,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+=" "
-  covx is_buttonpage02,va0.txt,0,0
+  // Button and entity pages in use
+  sys1=0
+  if(is_buttonpage01!=0)
+  {
+    sys1++
+  }
+  if(is_buttonpage02!=0)
+  {
+    sys1++
+  }
+  if(is_buttonpage03!=0)
+  {
+    sys1++
+  }
+  if(is_buttonpage04!=0)
+  {
+    sys1++
+  }
+  va1.txt+=" shown   Button pages "
+  covx sys1,va0.txt,0,0
   va1.txt+=va0.txt
-  va1.txt+=" "
-  covx is_buttonpage03,va0.txt,0,0
-  va1.txt+=va0.txt
-  va1.txt+=" "
-  covx is_buttonpage04,va0.txt,0,0
-  va1.txt+=va0.txt
-  va1.txt+="\rEntity pages: "
-  covx is_entitypage01,va0.txt,0,0
-  va1.txt+=va0.txt
-  va1.txt+=" "
-  covx is_entitypage02,va0.txt,0,0
-  va1.txt+=va0.txt
-  va1.txt+=" "
-  covx is_entitypage03,va0.txt,0,0
-  va1.txt+=va0.txt
-  va1.txt+=" "
-  covx is_entitypage04,va0.txt,0,0
+  sys1=0
+  if(is_entitypage01!=0)
+  {
+    sys1++
+  }
+  if(is_entitypage02!=0)
+  {
+    sys1++
+  }
+  if(is_entitypage03!=0)
+  {
+    sys1++
+  }
+  if(is_entitypage04!=0)
+  {
+    sys1++
+  }
+  va1.txt+="   Entity pages "
+  covx sys1,va0.txt,0,0
   va1.txt+=va0.txt
   if(stat_body.txt!=va1.txt)
   {

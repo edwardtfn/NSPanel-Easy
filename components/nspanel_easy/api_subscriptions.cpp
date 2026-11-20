@@ -296,7 +296,11 @@ static RTC_NOINIT_ATTR uint32_t sub_wipe_marker;
  * @param count Number of bindings that could not be stored.
  * @return true when the preferences were erased and the panel is restarting.
  */
+/// @brief Set once storing the bindings failed in this session, for the status page.
+static bool sub_store_failed_flag = false;
+
 static bool sub_persist_failed(uint16_t count) {
+  sub_store_failed_flag = true;
   // How full the storage is, as the usual cause is a small or fragmented NVS partition
   nvs_stats_t nvs{};
   if (nvs_get_stats(nullptr, &nvs) == ESP_OK) {
@@ -1127,6 +1131,16 @@ bool sub_icon_names_complete() { return sub_icon_names_total > 0 && sub_icon_nam
 bool sub_icon_names_wanted() { return !sub_icon_names_complete() && !sub_icon_names_given_up; }
 
 bool sub_icon_names_awaiting() { return sub_icon_names_waiting; }
+
+uint16_t sub_icon_names_received() { return sub_icon_names_count; }
+
+uint16_t sub_icon_names_expected() { return sub_icon_names_total; }
+
+bool sub_icon_names_failed() { return sub_icon_names_given_up; }
+
+uint8_t sub_unverified_count() { return sub_unverified; }
+
+bool sub_store_failed() { return sub_store_failed_flag; }
 
 void sub_icon_names_fetch_reset() {
   sub_icon_names_given_up = false;

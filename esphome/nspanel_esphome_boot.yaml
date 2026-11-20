@@ -63,7 +63,6 @@ script:
       - lambda: |-
           if (wifi_component->is_connected()) {  // Wi-Fi connected
             ESP_LOGD("${TAG_BOOT}", "Boot: Wi-Fi connected");
-            page_boot_show_ip->execute();
           } else {
             ESP_LOGD("${TAG_BOOT}", "Boot: Wi-Fi NOT available");
           }

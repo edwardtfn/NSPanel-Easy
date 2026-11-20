@@ -208,8 +208,8 @@ script:
             - lambda: |-
                 if (timeout_sleep->state <= 0) return;                      // Sleep is disabled
                 if (current_page_id == get_page_id("screensaver")) return;  // Already sleeping
-                // Don't sleep during boot; the status page opened by the user sleeps as any page
-                if (current_page_id == get_page_id("boot") and !system_flags.boot_page_requested) return;
+                // Never on the boot page: shown while booting, and as the status page until it is closed
+                if (current_page_id == get_page_id("boot")) return;
                 #ifdef NSPANEL_EASY_SUBSCRIBE
                 if (wakeup_sensors_active()) return;  // Kept on while a wake-up sensor is active
                 #endif  // NSPANEL_EASY_SUBSCRIBE
