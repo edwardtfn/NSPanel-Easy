@@ -285,7 +285,7 @@ extern BlueprintSettingsState blueprint_settings_state;
 /// @brief Full requests sent to Home Assistant since the settings were last needed; limits the retries.
 extern uint8_t blueprint_settings_requests;
 
-/// @brief The display restarted during a send: the settings are requested again once that send ends.
+/// @brief The display restarted, or Home Assistant disconnected, during a send: requested again once it ends.
 extern bool blueprint_settings_resend;
 
 /**

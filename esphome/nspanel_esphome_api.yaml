@@ -53,6 +53,10 @@ api:
   on_client_disconnected:
     then:
       - script.execute: update_flag_api_ready
+      - lambda: |-
+          // A settings send cut by the disconnection misses the calls made while disconnected. If its end still
+          // arrives after the connection is back, the settings are requested again, as after a display restart.
+          if (blueprint_settings_state == BlueprintSettingsState::PENDING) blueprint_settings_resend = true;
 
   actions:
     # Changes the foreground color of a specified component on the display.
