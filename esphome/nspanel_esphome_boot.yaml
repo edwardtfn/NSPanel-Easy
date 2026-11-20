@@ -308,8 +308,8 @@ script:
             }  // if (no request waiting for it)
             blueprint_settings_timeout->stop();
             if (blueprint_settings_resend) {
-              // The display restarted during this send, so it missed part of it
-              ESP_LOGI("${TAG_BOOT}", "Blueprint settings received, requesting them again after a display restart");
+              // The display restarted, or Home Assistant disconnected, during this send, so part of it was missed
+              ESP_LOGI("${TAG_BOOT}", "Blueprint settings received, requesting them again after an interruption");
               blueprint_settings_resend = false;
               blueprint_settings_state = BlueprintSettingsState::NEEDED;
               blueprint_settings_requests = 0;
@@ -358,4 +358,17 @@ script:
           if (boot->is_running()) return;
           boot_request_blueprint_settings->execute("timeout");
           boot->execute();
+
+ota:
+  # An OTA stops every script (stop_all), including the wait for the end of the settings. A failed or aborted OTA
+  # does not reboot the panel: wait for the end of a request in progress again, so it is requested again if needed.
+  - id: !extend ota_std
+    on_abort:
+      then:
+        - lambda: |-
+            if (blueprint_settings_state == BlueprintSettingsState::PENDING) blueprint_settings_timeout->execute();
+    on_error:
+      then:
+        - lambda: |-
+            if (blueprint_settings_state == BlueprintSettingsState::PENDING) blueprint_settings_timeout->execute();
 ...

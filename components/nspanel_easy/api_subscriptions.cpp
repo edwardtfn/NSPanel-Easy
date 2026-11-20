@@ -786,7 +786,7 @@ void sub_subscribe_all() {
 }
 
 // Defined with the icon names below
-static void sub_icon_pending_set(uint16_t idx, const char *name);
+static bool sub_icon_pending_set(uint16_t idx, const char *name);
 
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
@@ -905,8 +905,7 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
     rt.color_on = color_on;
     rt.color_off = color_off;
     // An icon waiting for its name is not drawn yet, so the fallback icon never shows in between
-    sub_icon_pending_set(idx, pending_name);
-    rt.has_appearance = (pending_name[0] == '\0');
+    rt.has_appearance = !sub_icon_pending_set(idx, pending_name);
 
     sub_apply(idx);
     break;
@@ -1099,23 +1098,28 @@ static void sub_icon_names_settle() {
   sub_render_all();
 }
 
-/// @brief Keeps (or clears, with an empty name) the icon name of a live binding until the list is complete.
-static void sub_icon_pending_set(uint16_t idx, const char *name) {
+/**
+ * @brief Keeps (or clears, with an empty name) the icon name of a live binding until the list is complete.
+ * @return true when a name is kept; false when cleared, or when it cannot be kept (the binding is then drawn
+ *         with the fallback icon, instead of waiting for a name that would never be resolved).
+ */
+static bool sub_icon_pending_set(uint16_t idx, const char *name) {
   if (idx >= SUB_MAX) {
-    return;
+    return false;
   }
   if (sub_icon_pending == nullptr) {
     if (name[0] == '\0') {
-      return;
+      return false;
     }
     sub_icon_pending = static_cast<char (*)[SUB_ICON_NAME_LEN]>(sub_alloc(SUB_ICON_NAME_LEN * SUB_MAX));
     if (sub_icon_pending == nullptr) {
       ESP_LOGW(TAG, "Out of memory for the icons waiting for their names");
-      return;
+      return false;
     }
     memset(sub_icon_pending, 0, SUB_ICON_NAME_LEN * SUB_MAX);
   }  // if (sub_icon_pending == nullptr)
   sub_copy(sub_icon_pending[idx], SUB_ICON_NAME_LEN, name);
+  return name[0] != '\0';
 }
 
 bool sub_icon_names_complete() { return sub_icon_names_total > 0 && sub_icon_names_count >= sub_icon_names_total; }

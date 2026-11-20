@@ -113,6 +113,11 @@ script:
     mode: restart
     then:
       - lambda: |-
+          // A block of 0 would never ask for anything, and more than the Blueprint answers would never complete
+          static_assert(${api_icon_names_block} >= 1 and ${api_icon_names_block} <= 1000,
+                        "api_icon_names_block must be from 1 to 1000");
+          static_assert(${api_icon_names_retries} >= 0 and ${api_icon_names_retries} <= 255,
+                        "api_icon_names_retries must be from 0 to 255");
           sub_icon_names_fetch_reset();
       - while:
           condition:

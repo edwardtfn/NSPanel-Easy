@@ -412,16 +412,23 @@ def apply(repo, token, number, result, digest, dry_run):
     # The comment goes first: an update after the missing information label would remove it (stale.yml).
     if body:
         # A re-run updates the previous triage comment instead of adding a new one
-        previous = None
+        comments = []
         page = 1
-        while previous is None:
+        while True:
             batch = api("GET", f"/repos/{repo}/issues/{number}/comments?per_page=100&page={page}", token)
-            previous = next((item for item in batch if item["user"]["type"] == "Bot" and COMMENT_MARKER in (item.get("body") or "")), None)
+            comments.extend(batch)
             if len(batch) < 100:
                 break
             page += 1
+        previous = next((item for item in comments if item["user"]["type"] == "Bot" and COMMENT_MARKER in (item.get("body") or "")), None)
         if previous:
             api("PATCH", f"/repos/{repo}/issues/comments/{previous['id']}", token, {"body": body})
+            # A reply since that comment answers the request: the label would close the issue anyway, as the stale
+            # action only counts the comments made after the label was added
+            replied = any(item["user"]["type"] != "Bot" and item["created_at"] > previous["created_at"] for item in comments)
+            if replied and MISSING_INFO_LABEL in labels:
+                print("Reply since the previous triage comment: the missing information label is not added")
+                labels.remove(MISSING_INFO_LABEL)
         else:
             api("POST", f"/repos/{repo}/issues/{number}/comments", token, {"body": body}, retry=False)
     if labels:
