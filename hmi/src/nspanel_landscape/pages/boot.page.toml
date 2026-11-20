@@ -361,7 +361,7 @@ pco = "#ffffff"
 xcen = 1
 ycen = 1
 txt = ""
-txt_maxl = 1
+txt_maxl = 5
 
 [[component]]
 name = "mark2"
@@ -377,7 +377,7 @@ pco = "#ffffff"
 xcen = 1
 ycen = 1
 txt = ""
-txt_maxl = 1
+txt_maxl = 5
 
 [[component]]
 name = "mark3"
@@ -393,7 +393,7 @@ pco = "#ffffff"
 xcen = 1
 ycen = 1
 txt = ""
-txt_maxl = 1
+txt_maxl = 5
 
 [[component]]
 name = "mark4"
@@ -409,7 +409,7 @@ pco = "#ffffff"
 xcen = 1
 ycen = 1
 txt = ""
-txt_maxl = 1
+txt_maxl = 5
 
 [[component]]
 name = "mark5"
@@ -425,7 +425,7 @@ pco = "#ffffff"
 xcen = 1
 ycen = 1
 txt = ""
-txt_maxl = 1
+txt_maxl = 5
 
 [[component]]
 name = "mark6"
@@ -441,7 +441,7 @@ pco = "#ffffff"
 xcen = 1
 ycen = 1
 txt = ""
-txt_maxl = 1
+txt_maxl = 5
 
 [[component]]
 name = "mark7"
@@ -457,4 +457,4 @@ pco = "#ffffff"
 xcen = 1
 ycen = 1
 txt = ""
-txt_maxl = 1
+txt_maxl = 5
