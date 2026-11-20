@@ -374,6 +374,31 @@ script:
             - lambda: return !display_valid;
           timeout: 1s
 
+      # Quiesce Bluetooth before tearing the stack down.
+      # A GATT link that is open (or opening) when esp32_ble dismantles Bluedroid
+      # blocks the teardown long enough to trigger the task watchdog.
+      - lambda: |-
+          #ifdef USE_ESP32_BLE_TRACKER
+          // Stop scanning and disable continuous scan, so the tracker stops promoting clients
+          if (esp32_ble_tracker::global_esp32_ble_tracker != nullptr) {
+            ESP_LOGD("${TAG_UPLOAD_TFT}", "Stopping Bluetooth scan");
+            esp32_ble_tracker::global_esp32_ble_tracker->stop_scan();
+          }
+          #endif  // USE_ESP32_BLE_TRACKER
+          #ifdef USE_BLUETOOTH_PROXY
+          // Drop the Home Assistant subscription: without a subscriber, the proxy
+          // disconnects all its connections on every loop (including links that
+          // were still connecting, once they are established)
+          auto *proxy = bluetooth_proxy::global_bluetooth_proxy;
+          if (proxy != nullptr && proxy->get_api_connection() != nullptr) {
+            ESP_LOGD("${TAG_UPLOAD_TFT}", "Releasing Bluetooth proxy connections");
+            proxy->unsubscribe_api_connection(proxy->get_api_connection());
+          }
+          #endif  // USE_BLUETOOTH_PROXY
+      # Give pending connections time to complete and be closed
+      # (a client in CONNECTING only disconnects after the link is up)
+      - delay: 3s
+
       # Stop Bluetooth stack if present
       - lambda: |-
           // Stop Bluetooth stack to free memory for TFT upload
