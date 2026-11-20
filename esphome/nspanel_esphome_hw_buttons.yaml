@@ -61,6 +61,12 @@ substitutions:
     - delayed_on_off: 20ms
   _left_button_filters: ${ _double_click_filters if _left_double_click else [] }
   _right_button_filters: ${ _double_click_filters if _right_double_click else [] }
+  # With the double click enabled the hold pattern needs no cooldown: every tap's release
+  # invalidates it, and the 100 ms block would swallow a hold that starts right after the tap.
+  # The debounce filter above already covers bounce, so nothing is lost by dropping it there.
+  _long_click_cooldown_double: 0ms
+  _left_long_click_cooldown: ${ _long_click_cooldown_double if _left_double_click else invalid_cooldown }
+  _right_long_click_cooldown: ${ _long_click_cooldown_double if _right_double_click else invalid_cooldown }
 
 binary_sensor:
   - name: Left Button  # LEFT BUTTON BELOW DISPLAY
@@ -72,7 +78,7 @@ binary_sensor:
     on_multi_click:
       - timing: &long_click-timing
           - ON for at least 0.8s
-        invalid_cooldown: ${invalid_cooldown}
+        invalid_cooldown: ${_left_long_click_cooldown}
         then:
           - lambda: |-
               ESP_LOGV("${TAG_HW_BUTTONS}", "Left button - Long click detected");
@@ -104,6 +110,21 @@ binary_sensor:
               button_left_press_short->execute();
               ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
               ESP_LOGD("${TAG_HW_BUTTONS}", "Left button - Short click dispatched");
+      # A tap followed by a press between `multi_click_press` and the hold threshold: `dev`
+      # reports two single clicks here, so this pattern does the same instead of dropping both.
+      - timing: &short_then_long_click-timing
+          - ON for at most 0.8s
+          - OFF for at most ${multi_click_gap}
+          - ON for ${multi_click_press} to 0.8s
+        invalid_cooldown: 0ms
+        then:
+          - lambda: |-
+              if (!${_left_double_click_cpp}) { return; }
+              ESP_LOGV("${TAG_HW_BUTTONS}", "Left button - Click followed by a longer press");
+              button_left_press_short->execute();
+              ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
+              button_left_press_short->execute();
+              ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
     on_release:
       then:
         - script.execute: button_left_release
@@ -116,7 +137,7 @@ binary_sensor:
     filters: ${_right_button_filters}
     on_multi_click:
       - timing: *long_click-timing
-        invalid_cooldown: ${invalid_cooldown}
+        invalid_cooldown: ${_right_long_click_cooldown}
         then:
           - lambda: |-
               ESP_LOGV("${TAG_HW_BUTTONS}", "Right button - Long click detected");
@@ -140,6 +161,16 @@ binary_sensor:
               button_right_press_short->execute();
               ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
               ESP_LOGD("${TAG_HW_BUTTONS}", "Right button - Short click dispatched");
+      - timing: *short_then_long_click-timing
+        invalid_cooldown: 0ms
+        then:
+          - lambda: |-
+              if (!${_right_double_click_cpp}) { return; }
+              ESP_LOGV("${TAG_HW_BUTTONS}", "Right button - Click followed by a longer press");
+              button_right_press_short->execute();
+              ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
+              button_right_press_short->execute();
+              ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
     on_release:
       then:
         - script.execute: button_right_release
