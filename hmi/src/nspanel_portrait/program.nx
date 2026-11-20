@@ -21,6 +21,7 @@ int color_pco_highlight=31  // Foreground font color for highlighted or pending-
 int button_back_font=8
 int chip_font=7
 int chips_screensaver=1
+int chips_buttons=1
 // Boot flag
 int display_ack=0
 int esphome=0 // 0 = ESPHome did not connect to the display since it started, 1 = connected

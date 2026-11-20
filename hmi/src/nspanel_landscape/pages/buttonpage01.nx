@@ -41,6 +41,21 @@ on buttonpage01.load:
     }
   }
   button_back.font=button_back_font
+  // Chips, at the same position as on the home page (shown when chips_buttons is set)
+  for(sys0=51;sys0<=60;sys0++)
+  {
+    b[sys0].font=chip_font
+    if(theme==1)
+    {
+      b[sys0].picc=pic_background_main
+    }
+    b[sys0].txt=""
+  }
+  if(chips_buttons==1)
+  {
+    sys0=51  // id of chip_relay1 on this page
+    call chips_copy_home
+  }
   // Set up button slots from bitmask
   for(sys0=0;sys0<8;sys0++)
   {
