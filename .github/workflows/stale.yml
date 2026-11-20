@@ -69,7 +69,9 @@ jobs:
           # ---------------------------------------------------------------
           # Rate limiting - max operations per run (default: 30)
           # ---------------------------------------------------------------
-          operations-per-run: 30
+          # High enough to finish in one run: the three steps share the action's saved state (cache key
+          # `_state`), so a step that stops early would hand its progress to the next one
+          operations-per-run: 200
 
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -97,7 +99,9 @@ jobs:
           days-before-pr-stale: -1  # Pull requests are not handled here
           days-before-pr-close: -1
 
-          operations-per-run: 30
+          # High enough to finish in one run: the three steps share the action's saved state (cache key
+          # `_state`), so a step that stops early would hand its progress to the next one
+          operations-per-run: 200
 
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -128,7 +132,9 @@ jobs:
           days-before-pr-stale: -1  # Pull requests are not handled here
           days-before-pr-close: -1
 
-          operations-per-run: 30
+          # High enough to finish in one run: the three steps share the action's saved state (cache key
+          # `_state`), so a step that stops early would hand its progress to the next one
+          operations-per-run: 200
 
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 ...
