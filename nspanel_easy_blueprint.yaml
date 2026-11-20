@@ -1651,6 +1651,15 @@ blueprint:
           default: []
           selector:
             action:
+        left_button_double_click_custom_action:
+          name: Left hardware button double click action
+          description: >-
+            Additional action(s) to run when the button is clicked twice.
+            The firmware has to report the double click: set the substitution
+            `hw_button_left_double_click` to true (see docs/customization.md).
+          default: []
+          selector:
+            action:
         left_button_label_type:
           name: Left hardware button - Label type
           description: >
@@ -1763,6 +1772,15 @@ blueprint:
           name: Right hardware button custom action
           description: >-
             Additional action(s) to run when the button is clicked.
+          default: []
+          selector:
+            action:
+        right_button_double_click_custom_action:
+          name: Right hardware button double click action
+          description: >-
+            Additional action(s) to run when the button is clicked twice.
+            The firmware has to report the double click: set the substitution
+            `hw_button_right_double_click` to true (see docs/customization.md).
           default: []
           selector:
             action:
@@ -11021,6 +11039,22 @@ actions:
                                 }}
                           - *variables_light_modes
                           - choose:
+                              # Double click is evaluated before "Long click", whose condition also
+                              # matches every command for a detailed_only domain.
+                              - alias: Double click
+                                conditions: >-
+                                  {{
+                                    nspanel_event.command == "double_click"
+                                  }}
+                                sequence:
+                                  - alias: Custom double click action - Left
+                                    if: '{{ nspanel_event.component == "hw_bt_left" }}'
+                                    then:
+                                      - sequence: !input left_button_double_click_custom_action
+                                  - alias: Custom double click action - Right
+                                    if: '{{ nspanel_event.component == "hw_bt_right" }}'
+                                    then:
+                                      - sequence: !input right_button_double_click_custom_action
                               - alias: Long click
                                 conditions: >-
                                   {{
