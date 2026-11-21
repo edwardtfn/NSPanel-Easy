@@ -110,22 +110,32 @@ binary_sensor:
               button_left_press_short->execute();
               ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
               ESP_LOGD("${TAG_HW_BUTTONS}", "Left button - Short click dispatched");
-      # A tap followed by a press between `multi_click_press` and the hold threshold: `dev`
-      # reports two single clicks here, so this pattern does the same instead of dropping both.
+      # A tap followed by a press between `multi_click_press` and the hold threshold: without the double click,
+      # these are two single clicks, so this pattern reports them as such instead of dropping both.
       - timing: &short_then_long_click-timing
           - ON for at most 0.8s
           - OFF for at most ${multi_click_gap}
           - ON for ${multi_click_press} to 0.8s
         invalid_cooldown: 0ms
         then:
-          - lambda: |-
-              if (!${_left_double_click_cpp}) { return; }
-              ESP_LOGV("${TAG_HW_BUTTONS}", "Left button - Click followed by a longer press");
-              button_left_press_short->execute();
-              ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
-              button_left_press_short->execute();
-              ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
-              ESP_LOGD("${TAG_HW_BUTTONS}", "Left button - Two short clicks dispatched");
+          - if:
+              condition:
+                - lambda: return ${_left_double_click_cpp};
+              then:
+                - script.execute: button_left_press_short_twice
+      # The same, the other way round: a press between `multi_click_press` and the hold threshold, then a
+      # tap. Neither press is a double click (the first one is too long), so both are reported as clicks.
+      - timing: &long_then_short_click-timing
+          - ON for ${multi_click_press} to 0.8s
+          - OFF for at most ${multi_click_gap}
+          - ON for at most ${multi_click_press}
+        invalid_cooldown: 0ms
+        then:
+          - if:
+              condition:
+                - lambda: return ${_left_double_click_cpp};
+              then:
+                - script.execute: button_left_press_short_twice
     on_release:
       then:
         - script.execute: button_left_release
@@ -165,14 +175,19 @@ binary_sensor:
       - timing: *short_then_long_click-timing
         invalid_cooldown: 0ms
         then:
-          - lambda: |-
-              if (!${_right_double_click_cpp}) { return; }
-              ESP_LOGV("${TAG_HW_BUTTONS}", "Right button - Click followed by a longer press");
-              button_right_press_short->execute();
-              ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
-              button_right_press_short->execute();
-              ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
-              ESP_LOGD("${TAG_HW_BUTTONS}", "Right button - Two short clicks dispatched");
+          - if:
+              condition:
+                - lambda: return ${_right_double_click_cpp};
+              then:
+                - script.execute: button_right_press_short_twice
+      - timing: *long_then_short_click-timing
+        invalid_cooldown: 0ms
+        then:
+          - if:
+              condition:
+                - lambda: return ${_right_double_click_cpp};
+              then:
+                - script.execute: button_right_press_short_twice
     on_release:
       then:
         - script.execute: button_right_release
@@ -398,6 +413,40 @@ script:
     mode: restart
     then:
 
+  ##### Two single clicks in a row, from the patterns that are neither a double click nor a hold #####
+  # Both clicks are reported to Home Assistant at once, with the page they were made on. The second local action
+  # waits for the first one to finish: `button_*_press_short` restarts when called while running, which would cut a
+  # customization with a delay. A few pairs can wait behind a long customization, and are dropped beyond that.
+  - id: button_left_press_short_twice
+    mode: queued
+    max_runs: 4
+    then:
+      - lambda: |-
+          ESP_LOGV("${TAG_HW_BUTTONS}", "Left button - Two clicks, neither a double click nor a hold");
+          ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
+          ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
+      - repeat:
+          count: 2
+          then:
+            - script.execute: button_left_press_short
+            - script.wait: button_left_press_short
+      - lambda: ESP_LOGD("${TAG_HW_BUTTONS}", "Left button - Two short clicks dispatched");
+
+  - id: button_right_press_short_twice
+    mode: queued
+    max_runs: 4
+    then:
+      - lambda: |-
+          ESP_LOGV("${TAG_HW_BUTTONS}", "Right button - Two clicks, neither a double click nor a hold");
+          ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
+          ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
+      - repeat:
+          count: 2
+          then:
+            - script.execute: button_right_press_short
+            - script.wait: button_right_press_short
+      - lambda: ESP_LOGD("${TAG_HW_BUTTONS}", "Right button - Two short clicks dispatched");
+
   - id: button_left_release
     mode: restart
     then:
@@ -608,10 +657,12 @@ script:
     then:
       - lambda: |-
           button_left_press_long->stop();
+          button_left_press_short_twice->stop();  // Before its child, so it can't run the next click
           button_left_press_short->stop();
           button_left_press_double->stop();
           button_left_release->stop();
           button_right_press_long->stop();
+          button_right_press_short_twice->stop();  // Before its child, so it can't run the next click
           button_right_press_short->stop();
           button_right_press_double->stop();
           button_right_release->stop();

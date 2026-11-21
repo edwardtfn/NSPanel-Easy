@@ -263,7 +263,8 @@ and override `nextion_update_base_url` instead of `nextion_update_url`. This kee
 1. Download the TFT files of the firmware version you install on your panel from the `hmi` folder of the matching
    [release](https://github.com/edwardtfn/NSPanel-Easy/releases). See [Display model options](#display-model-options) for the file used by each model:
    for example, `nspanel_landscape.tft` for the EU panel and `nspanel_portrait.tft` for the US panel.
-2. Copy them to `/config/www/nspanel-easy/` on your Home Assistant. Home Assistant serves this folder at `/local/` without any extra configuration.
+2. Copy them to `/config/www/nspanel-easy/` on your Home Assistant, without changing them: the panel gets exactly the files of the release.
+   Home Assistant serves this folder at `/local/` without any extra configuration.
    If you created the `www` folder now, restart Home Assistant once: it only serves `/local/` when that folder exists at its start.
 3. Set `nextion_update_base_url` in your panel's YAML, as in the example below, without a trailing slash (`/`).
    Replace `homeassistant.local:8123` with the address and port of your Home Assistant.

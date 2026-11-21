@@ -422,13 +422,16 @@ def apply(repo, token, number, result, digest, dry_run):
             page += 1
         previous = next((item for item in comments if item["user"]["type"] == "Bot" and COMMENT_MARKER in (item.get("body") or "")), None)
         if previous:
-            api("PATCH", f"/repos/{repo}/issues/comments/{previous['id']}", token, {"body": body})
-            # A reply since that comment answers the request: the label would close the issue anyway, as the stale
-            # action only counts the comments made after the label was added
+            # A reply to that comment answers its request for information, retried here: the label would close the
+            # issue anyway, as the stale action only counts the comments made after the label was added. Only when that
+            # comment asked for information too: a new request is not answered by a reply to a comment without one.
             replied = any(item["user"]["type"] != "Bot" and item["created_at"] > previous["created_at"] for item in comments)
-            if replied and MISSING_INFO_LABEL in labels:
-                print("Reply since the previous triage comment: the missing information label is not added")
+            asked_before = f"is now labeled `{MISSING_INFO_LABEL}`" in (previous.get("body") or "")
+            if replied and asked_before and MISSING_INFO_LABEL in labels:
+                print("Reply since the previous request for information: the missing information label is not added")
                 labels.remove(MISSING_INFO_LABEL)
+                body = "\n\n".join(part for part in body.split("\n\n") if not part.startswith("This issue is now labeled"))
+            api("PATCH", f"/repos/{repo}/issues/comments/{previous['id']}", token, {"body": body})
         else:
             api("POST", f"/repos/{repo}/issues/{number}/comments", token, {"body": body}, retry=False)
     if labels:
