@@ -918,8 +918,8 @@ value would report every press in that range as a hold instead of a click.
 A press that lasts longer than `multi_click_press` but is released before the hold threshold is still reported as a
 single click, so no press is lost.
 
-A click followed by a press that is released between `multi_click_press` and the hold threshold is reported as two
-single clicks, which is what the panel does without the option as well.
+Two presses in a row where one of them is released between `multi_click_press` and the hold threshold, in either
+order, are reported as two single clicks, which is what the panel does without the option as well.
 
 ### Expose Relay Fallback Switch
 
