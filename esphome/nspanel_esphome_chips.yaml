@@ -59,6 +59,17 @@ script:
     then:
       - lambda: |-
           if (page != "mem") return;
+
+          if (component == "chip_calendar_lead") {
+            // How long before a calendar event its chips are shown, in minutes
+            #ifdef NSPANEL_EASY_SUBSCRIBE
+            sub_set_calendar_lead(val > 0 ? static_cast<uint32_t>(val) : 0);
+            #else   // NSPANEL_EASY_SUBSCRIBE
+            ESP_LOGW("${TAG_CHIPS}", "Calendar chips need the subscriptions; lead time ignored");
+            #endif  // NSPANEL_EASY_SUBSCRIBE
+            return;
+          }  // if (chip_calendar_lead)
+
           if (component != "chip_font") return;
 
           const uint8_t new_font = static_cast<uint8_t>(val);

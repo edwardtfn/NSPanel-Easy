@@ -5,28 +5,23 @@ x = 0
 y = 0
 w = 480
 h = 320
-sta = 2
-bco = "#4282b5"
-pic = "picture-0032"
+sta = 1
+bco = "#1a23b0"
 
 [[component]]
-name = "log_body"
+name = "stat_body"
 type = "text"
-x = 222
-y = 86
-w = 226
-h = 224
-groupid0 = 902360959
-groupid1 = -743349853
-sta = 0
-bco = "#4282b5"
-picc = "picture-0032"
-pco = "#ffffff"
+x = 20
+y = 255
+w = 440
+h = 56
+sta = 1
+bco = "#1a23b0"
+pco = "#adbdeb"
 xcen = 0
 ycen = 0
 txt = ""
-txt_maxl = 800
-
+txt_maxl = 300
 [[component]]
 name = "nspanel_easy"
 type = "text"
@@ -34,10 +29,9 @@ x = 15
 y = 33
 w = 200
 h = 30
-sta = 0
+sta = 1
 font = "font-03"
-bco = "#4282b5"
-picc = "picture-0032"
+bco = "#1a23b0"
 pco = "#ffffff"
 xcen = 0
 ycen = 0
@@ -45,203 +39,157 @@ txt = "NSPanel Easy"
 txt_maxl = 12
 
 [[component]]
-name = "ver_title"
+name = "lbl1"
 type = "text"
-x = 20
-y = 59
-w = 67
-h = 30
-groupid0 = 615243540
-groupid1 = 1085526768
-sta = 0
-bco = "#4282b5"
-picc = "picture-0032"
+x = 48
+y = 82
+w = 126
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
 pco = "#ffffff"
 xcen = 0
-txt = " Versions"
-txt_maxl = 9
-
+ycen = 1
+txt = "Display"
+txt_maxl = 16
 [[component]]
-name = "ver_tft"
+name = "lbl2"
 type = "text"
-x = 20
-y = 90
-w = 175
-h = 30
-groupid0 = 615243540
-groupid1 = 1085526768
-sta = 0
-bco = "#4282b5"
-picc = "picture-0032"
+x = 48
+y = 106
+w = 126
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
 pco = "#ffffff"
 xcen = 0
-txt = "TFT: Waiting..."
-txt_maxl = 25
-
+ycen = 1
+txt = "ESPHome"
+txt_maxl = 16
 [[component]]
 name = "version"
 type = "variable"
 vscope = 1
 sta = 1
-txt = "2026.11.17"
+txt = "9999.99.9"
 txt_maxl = 12
 
 [[component]]
-name = "ver_firmware"
+name = "lbl3"
 type = "text"
-x = 20
-y = 120
-w = 175
-h = 30
-groupid0 = 615243540
-groupid1 = 1085526768
-sta = 0
-bco = "#4282b5"
-picc = "picture-0032"
-pco = "#ffffff"
-xcen = 0
-txt = "Firmware: Waiting..."
-txt_maxl = 30
-
-[[component]]
-name = "ver_blueprint"
-type = "text"
-x = 20
-y = 150
-w = 175
-h = 30
-groupid0 = 615243540
-groupid1 = 1085526768
-sta = 0
-bco = "#4282b5"
-picc = "picture-0032"
-pco = "#ffffff"
-xcen = 0
-txt = "Blueprint: Waiting..."
-txt_maxl = 30
-
-[[component]]
-name = "sys_title"
-type = "text"
-x = 20
-y = 195
-w = 58
-h = 26
-groupid0 = -554846624
-groupid1 = 1124451396
-sta = 0
-bco = "#4282b5"
-picc = "picture-0032"
-pco = "#ffffff"
-xcen = 0
-ycen = 0
-txt = " System"
-txt_maxl = 9
-
-[[component]]
-name = "sys_ip"
-type = "text"
-x = 20
-y = 220
-w = 175
-h = 30
-groupid0 = -554846624
-groupid1 = 1124451396
-sta = 0
-bco = "#4282b5"
-picc = "picture-0032"
-pco = "#ffffff"
-xcen = 0
-txt = "IP: Waiting..."
-txt_maxl = 20
-
-[[component]]
-name = "sys_framework"
-type = "text"
-x = 20
-y = 253
-w = 175
-h = 30
-groupid0 = -554846624
-groupid1 = 1124451396
-sta = 0
-bco = "#4282b5"
-picc = "picture-0032"
-pco = "#ffffff"
-xcen = 0
-txt = "Framework: Waiting..."
-txt_maxl = 30
-
-[[component]]
-name = "sys_baudrate"
-type = "text"
-x = 20
-y = 286
-w = 175
-h = 30
-groupid0 = -554846624
-groupid1 = 1124451396
-sta = 0
-bco = "#4282b5"
-picc = "picture-0032"
-pco = "#ffffff"
-xcen = 0
-txt = "Baud rate: Waiting..."
-txt_maxl = 30
-
-[[component]]
-name = "log_title"
-type = "text"
-x = 222
-y = 59
-w = 35
-h = 30
-groupid0 = 902360959
-groupid1 = -743349853
-sta = 0
-bco = "#4282b5"
-picc = "picture-0032"
-pco = "#ffffff"
-xcen = 0
-txt = " Log"
-txt_maxl = 9
-
-[[component]]
-name = "log_scroll"
-type = "timer"
-
-[[component]]
-name = "log_len"
-type = "variable"
-
-[[component]]
-name = "log_pos"
-type = "variable"
-
-[[component]]
-name = "log_line_count"
-type = "variable"
-
-[[component]]
-name = "log_start_pos"
-type = "variable"
-
-[[component]]
-name = "log_end_pos"
-type = "variable"
-
-[[component]]
-name = "log_temp"
-type = "variable"
+x = 48
+y = 130
+w = 126
+h = 24
 sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = "Wi-Fi"
+txt_maxl = 16
+[[component]]
+name = "lbl4"
+type = "text"
+x = 48
+y = 154
+w = 126
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = "Home Assistant"
+txt_maxl = 16
+[[component]]
+name = "lbl5"
+type = "text"
+x = 48
+y = 178
+w = 126
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = "Blueprint"
+txt_maxl = 16
+[[component]]
+name = "lbl6"
+type = "text"
+x = 48
+y = 202
+w = 126
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = "Bindings"
+txt_maxl = 16
+[[component]]
+name = "lbl7"
+type = "text"
+x = 48
+y = 226
+w = 126
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = "Icon names"
+txt_maxl = 16
+[[component]]
+name = "val1"
+type = "text"
+x = 176
+y = 82
+w = 288
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
 txt = ""
-txt_maxl = 2
+txt_maxl = 32
+[[component]]
+name = "stat_title"
+type = "text"
+x = 16
+y = 63
+w = 54
+h = 18
+sta = 1
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = " Status"
+txt_maxl = 9
+[[component]]
+name = "tm_status"
+type = "timer"
+tim = 1000
 
 [[component]]
 name = "bt_reboot"
 type = "dual-state-button"
 sendkey = 3
-x = 354
+x = 290
 y = 33
 w = 80
 h = 30
@@ -259,11 +207,6 @@ txt = ""
 txt_maxl = 8
 
 [[component]]
-name = "log_max_lines"
-type = "variable"
-val = 14
-
-[[component]]
 name = "counter"
 type = "variable"
 
@@ -277,14 +220,241 @@ name = "va0"
 type = "variable"
 sta = 1
 txt = ""
+txt_maxl = 12
 
 [[component]]
 name = "va1"
 type = "variable"
 sta = 1
 txt = ""
+txt_maxl = 300
 
 [[component]]
 name = "tm_display_ack"
 type = "timer"
 tim = 1000
+
+[[component]]
+name = "button_back"
+type = "button"
+sendkey = 3
+x = 385
+y = 0
+w = 95
+h = 48
+sta = 1
+style = 0
+font = "font-08"
+bco = "#1a23b0"
+bco2 = "#1a23b0"
+pco = "#ffffff"
+txt = ""
+txt_maxl = 3
+
+[[component]]
+name = "val2"
+type = "text"
+x = 176
+y = 106
+w = 288
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = ""
+txt_maxl = 32
+
+[[component]]
+name = "val3"
+type = "text"
+x = 176
+y = 130
+w = 288
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = ""
+txt_maxl = 32
+
+[[component]]
+name = "val4"
+type = "text"
+x = 176
+y = 154
+w = 288
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = ""
+txt_maxl = 32
+
+[[component]]
+name = "val5"
+type = "text"
+x = 176
+y = 178
+w = 288
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = ""
+txt_maxl = 32
+
+[[component]]
+name = "val6"
+type = "text"
+x = 176
+y = 202
+w = 288
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = ""
+txt_maxl = 32
+
+[[component]]
+name = "val7"
+type = "text"
+x = 176
+y = 226
+w = 288
+h = 24
+sta = 1
+font = "font-01"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 0
+ycen = 1
+txt = ""
+txt_maxl = 32
+
+[[component]]
+name = "mark1"
+type = "text"
+x = 20
+y = 82
+w = 26
+h = 24
+sta = 1
+font = "SarasaGothicSC-Regular"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 1
+ycen = 1
+txt = ""
+txt_maxl = 5
+
+[[component]]
+name = "mark2"
+type = "text"
+x = 20
+y = 106
+w = 26
+h = 24
+sta = 1
+font = "SarasaGothicSC-Regular"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 1
+ycen = 1
+txt = ""
+txt_maxl = 5
+
+[[component]]
+name = "mark3"
+type = "text"
+x = 20
+y = 130
+w = 26
+h = 24
+sta = 1
+font = "SarasaGothicSC-Regular"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 1
+ycen = 1
+txt = ""
+txt_maxl = 5
+
+[[component]]
+name = "mark4"
+type = "text"
+x = 20
+y = 154
+w = 26
+h = 24
+sta = 1
+font = "SarasaGothicSC-Regular"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 1
+ycen = 1
+txt = ""
+txt_maxl = 5
+
+[[component]]
+name = "mark5"
+type = "text"
+x = 20
+y = 178
+w = 26
+h = 24
+sta = 1
+font = "SarasaGothicSC-Regular"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 1
+ycen = 1
+txt = ""
+txt_maxl = 5
+
+[[component]]
+name = "mark6"
+type = "text"
+x = 20
+y = 202
+w = 26
+h = 24
+sta = 1
+font = "SarasaGothicSC-Regular"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 1
+ycen = 1
+txt = ""
+txt_maxl = 5
+
+[[component]]
+name = "mark7"
+type = "text"
+x = 20
+y = 226
+w = 26
+h = 24
+sta = 1
+font = "SarasaGothicSC-Regular"
+bco = "#1a23b0"
+pco = "#ffffff"
+xcen = 1
+ycen = 1
+txt = ""
+txt_maxl = 5

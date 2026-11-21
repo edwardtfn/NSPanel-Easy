@@ -36,7 +36,7 @@ api:
   on_client_connected:
     then:
       - lambda: |-
-          boot_log->execute("API", "Client connected");
+          ESP_LOGD("${TAG_BOOT}", "API: Client connected");
       - wait_until:
           condition:
             api.connected:
@@ -47,12 +47,21 @@ api:
             ESP_LOGD("${TAG_API}", "Client connected but did not subscribe to states (likely logger-only)");
             return;
           }
-          boot_log->execute("API", "Home Assistant is connected");
+          ESP_LOGD("${TAG_BOOT}", "API: Home Assistant is connected");
           update_flag_api_ready->execute();
 
   on_client_disconnected:
     then:
       - script.execute: update_flag_api_ready
+      - lambda: |-
+          // A settings send cut by the disconnection of Home Assistant misses the calls made while disconnected. If its
+          // end still arrives after the connection is back, the settings are requested again, as after a display
+          // restart. Not for other clients, such as the ESPHome logs, while Home Assistant stays connected.
+          const bool home_assistant = client_info.rfind("Home Assistant", 0) == 0 or
+                                      !api_server->is_connected_with_state_subscription();
+          if (home_assistant and blueprint_settings_state == BlueprintSettingsState::PENDING) {
+            blueprint_settings_resend = true;
+          }  // if (Home Assistant disconnected during a send)
 
   actions:
     # Changes the foreground color of a specified component on the display.

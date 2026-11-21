@@ -616,6 +616,7 @@ script:
           if (
                 timeout_dim->state >= 1 and
                 current_page_id != get_page_id("screensaver") and
+                // The boot page is the status page: shown at full brightness until it is closed
                 current_page_id != get_page_id("boot")
               ) {
             set_brightness->execute(display_dim_brightness->state);
@@ -628,6 +629,7 @@ script:
       - lambda: |-
           if (timeout_page->state >= 1) {
             ESP_LOGV("${TAG_HW_DISPLAY}", "Timed out on page: %s", page_names[current_page_id]);
+            // The boot page is the status page: kept until it is closed, the problem is solved or the panel restarts
             if (current_page_id != get_page_id("boot") and
                 current_page_id != get_page_id("confirm") and
                 current_page_id != home_page_id and
@@ -722,16 +724,14 @@ script:
   - id: wait_for_version_tft
     mode: single
     then:
-      - script.execute:
-          id: boot_log
-          category: Boot
-          log_message: Check TFT version
+      - lambda: |-
+          ESP_LOGD("${TAG_BOOT}", "Boot: Check TFT version");
       - repeat:
           count: 180  # seconds
           then:
             - lambda: |-
                 if (!version_tft->state.empty()) wait_for_version_tft->stop();
-                if (iteration % 5 == 0) boot_log->execute("Boot", "Waiting for TFT version");
+                if (iteration % 5 == 0) ESP_LOGD("${TAG_BOOT}", "Boot: Waiting for TFT version");
             - delay: 1s
 
   - id: !extend wait_for_versions

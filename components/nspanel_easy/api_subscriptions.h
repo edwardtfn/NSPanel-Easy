@@ -101,6 +101,12 @@ static_assert(NSPANEL_EASY_SUB_ENTITY_LEN <= 255, "api_subscribe_entity_len must
 ///        SubBinding::attribute which is subscribed instead of the state.
 static constexpr const char SUB_HVAC_ACTION[] = "hvac_action";
 
+/// @brief Attribute of a calendar entity with the start of its current or next event.
+static constexpr const char SUB_CALENDAR_START[] = "start_time";
+
+/// @brief Length of a calendar start time ("YYYY-MM-DD HH:MM:SS") with its terminator.
+static constexpr uint8_t SUB_CALENDAR_START_LEN = 20;
+
 /// @brief Consecutive unverified commits tolerated before refusing to commit again.
 static constexpr uint8_t SUB_MAX_UNVERIFIED_COMMITS = 3;
 
@@ -149,6 +155,7 @@ enum SubDomain : uint8_t {
   SUB_DOMAIN_LOCK,          ///< lock
   SUB_DOMAIN_WATER_HEATER,  ///< water_heater
   SUB_DOMAIN_VALUE,         ///< input_number, number, sensor; any usable non-false value is active
+  SUB_DOMAIN_CALENDAR,      ///< calendar; also subscribes to the start_time attribute, for the chip lead time
 };
 
 /// @brief Icon and colour for a component in a given state.
@@ -198,15 +205,16 @@ struct SubPackChunk {
  * stays hidden after a boot until the blueprint reconnects and pushes again.
  */
 struct SubRuntime {
-  char state[SUB_STATE_LEN];   ///< Last raw state string
-  char action[SUB_STATE_LEN];  ///< Last hvac_action value; climate bindings only
-  char icon_on[4];             ///< Blueprint-supplied icon for the active state
-  char icon_off[4];            ///< Blueprint-supplied icon for the inactive state
-  uint16_t color_on;           ///< Blueprint-supplied colour for the active state
-  uint16_t color_off;          ///< Blueprint-supplied colour for the inactive state
-  SubEntityState last_state;   ///< Classification of the effective state
-  bool has_appearance;         ///< Blueprint has pushed appearance in this session
-  uint16_t received;           ///< Updates received in the current statistics window (see sub_log_stats())
+  char state[SUB_STATE_LEN];                ///< Last raw state string
+  char action[SUB_STATE_LEN];               ///< Last hvac_action value; climate bindings only
+  char start_time[SUB_CALENDAR_START_LEN];  ///< Start of the current or next event; calendar bindings only
+  char icon_on[4];                          ///< Blueprint-supplied icon for the active state
+  char icon_off[4];                         ///< Blueprint-supplied icon for the inactive state
+  uint16_t color_on;                        ///< Blueprint-supplied colour for the active state
+  uint16_t color_off;                       ///< Blueprint-supplied colour for the inactive state
+  SubEntityState last_state;                ///< Classification of the effective state
+  bool has_appearance;                      ///< Blueprint has pushed appearance in this session
+  uint16_t received;                        ///< Updates received in the current statistics window (see sub_log_stats())
 };
 
 /**
@@ -218,7 +226,8 @@ struct SubRuntime {
  *
  * @param binding The binding being rendered.
  * @param rt Runtime state, including blueprint-supplied appearance.
- * @param state Effective state string; hvac_action for climate when usable.
+ * @param state Effective state string; hvac_action for climate when usable, and "on" for a calendar
+ *              chip within its lead time.
  * @param visible Whether the component should be shown.
  */
 using SubRenderFn = void (*)(const SubBinding &binding, const SubRuntime &rt, const char *state, bool visible);
@@ -285,6 +294,7 @@ inline SubDomain parse_sub_domain(const char *entity_id) {
   };
   static constexpr DomainEntry DOMAINS[] = {
       {"alarm_control_panel", SUB_DOMAIN_ALARM},
+      {"calendar", SUB_DOMAIN_CALENDAR},
       {"climate", SUB_DOMAIN_CLIMATE},
       {"cover", SUB_DOMAIN_COVER},
       {"input_number", SUB_DOMAIN_VALUE},
@@ -399,6 +409,15 @@ inline SubEntityState evaluate_sub_state(SubDomain domain, const char *state) {
       return sub_state_in(state, OFF_STATES) ? SUB_STATE_OFF : SUB_STATE_ON;
     }  // case SUB_DOMAIN_VALUE
 
+    case SUB_DOMAIN_CALENDAR: {
+      // A calendar is on while one of its events is ongoing. The lead time before
+      // an event is applied on top of this classification (see sub_calendar_recheck()).
+      if (strcmp(state, "on") == 0) {
+        return SUB_STATE_ON;
+      }
+      return (strcmp(state, "off") == 0) ? SUB_STATE_OFF : SUB_STATE_NEITHER;
+    }  // case SUB_DOMAIN_CALENDAR
+
     case SUB_DOMAIN_GENERIC:
     default: {
       static constexpr const char *ON_STATES[] = {"on", "true", "True", "1", "active", "home", "playing"};
@@ -478,7 +497,8 @@ static constexpr size_t COVER_ICONS_FALLBACK = (sizeof(COVER_ICONS) / sizeof(COV
  *
  * @param domain Domain of the bound entity.
  * @param device_class HA device_class, or an empty string when unset. Cover only.
- * @param state Effective state string; hvac_action for climate when usable.
+ * @param state Effective state string; hvac_action for climate when usable, and "on" for a calendar
+ *              chip within its lead time.
  * @param color_on Fallback colour for active states.
  * @param color_off Fallback colour for inactive states.
  * @return Icon codepoint and RGB565 colour.
@@ -668,7 +688,8 @@ static constexpr uint8_t SUB_ICON_KEY_LEN = 48;
  * when the Blueprint pushed no icon (no override, no `icon` attribute).
  *
  * @param binding The binding.
- * @param state Effective state string; hvac_action for climate when usable.
+ * @param state Effective state string; hvac_action for climate when usable, and "on" for a calendar
+ *              chip within its lead time.
  * @param color_on Colour for active states.
  * @param color_off Colour for inactive states.
  * @return Icon codepoint and RGB565 colour; a null icon when nothing matches.
@@ -679,18 +700,66 @@ SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *
 /// @brief Bytes reserved for the icon names (all_icon_names is about 121 KB).
 static constexpr uint32_t SUB_ICON_NAMES_CAPACITY = 160 * 1024;
 
+/// @brief Longest icon name kept for a binding whose icon waits for the icon names, null included.
+static constexpr size_t SUB_ICON_NAME_LEN = 65;
+
 /**
- * @brief Add a run of MDI icon names, sent by the Blueprint in chunks once per session.
+ * @brief Add a block of MDI icon names, sent by the Blueprint in reply to the event `icon_names_request`.
  *
  * The names are the Blueprint's all_icon_names, in codepoint order: the name at
  * position i (0-based) is U+E000 + i, so only the names travel and every
  * codepoint is worked out on the panel. Kept in PSRAM, never persisted.
  *
- * @param start Position of the first name of the chunk; 0 starts a new list. A chunk that does not
- *              continue the list is ignored.
+ * The panel asks for one block at a time (see sub_icon_names_request()). A block is kept only when it
+ * continues the list and holds the number of names asked for, or the rest of the list when fewer are left;
+ * anything else is ignored and asked for again.
+ *
+ * @param start Position of the first name of the block.
+ * @param total Number of names in the whole list.
  * @param names Comma-separated names, without "mdi:".
  */
-void sub_icon_names_add(uint16_t start, const std::string &names);
+void sub_icon_names_add(uint16_t start, uint16_t total, const std::string &names);
+
+/// @brief Whether every icon name has arrived in this session.
+bool sub_icon_names_complete();
+
+/// @brief Whether the icon names are still to be asked for: not complete, and not given up.
+bool sub_icon_names_wanted();
+
+/// @brief Whether a block was asked for and has not arrived yet.
+bool sub_icon_names_awaiting();
+
+/// @brief Icon names received in this session.
+uint16_t sub_icon_names_received();
+
+/// @brief Number of icon names in the whole list; 0 until the Blueprint's first reply.
+uint16_t sub_icon_names_expected();
+
+/// @brief Whether the icon names were given up in this session, after the last retry.
+bool sub_icon_names_failed();
+
+/// @brief Commits of the stored bindings without an end marker (see sub_persist()); 0 when verified.
+uint8_t sub_unverified_count();
+
+/// @brief Whether the bindings could not be stored in this session.
+bool sub_store_failed();
+
+/// @brief Start asking for the icon names again, with a fresh count of retries, keeping the names received.
+void sub_icon_names_fetch_reset();
+
+/**
+ * @brief Next block of icon names to ask for.
+ *
+ * Asking again for the same block counts as a retry. After @p retries retries the list is given up for this
+ * session: the icons waiting for it are drawn from the domain, device class and state, and logged.
+ *
+ * @param block Names per block.
+ * @param retries Retries of one block before giving up.
+ * @param start Receives the position of the first name to ask for.
+ * @param count Receives the number of names to ask for.
+ * @return false when there is nothing to ask for (complete, or given up).
+ */
+bool sub_icon_names_request(uint16_t block, uint8_t retries, uint16_t &start, uint16_t &count);
 
 /**
  * @brief Codepoint of an MDI icon name.
@@ -702,7 +771,7 @@ void sub_icon_names_add(uint16_t start, const std::string &names);
  * @param name Icon name, with or without "mdi:", e.g. "mdi:lightbulb".
  * @param glyph Receives the codepoint (null-terminated, 3 bytes).
  * @param size Size of glyph; at least 4.
- * @return false when the name is unknown, or the names have not arrived yet.
+ * @return false when the name is unknown, or the names have not all arrived yet.
  */
 bool sub_icon_lookup(const char *name, char *glyph, size_t size);
 
@@ -817,6 +886,25 @@ void sub_render_all();
  * @param page Target page of the bindings, e.g. "climate".
  */
 void sub_render_page(const char *page);
+
+/**
+ * @brief Set how long before a calendar event its chips are shown.
+ *
+ * Applies to calendar bindings on the chips page only: from the lead time before
+ * the next event starts, they classify as active, as during the event itself.
+ * Re-checks the calendar bindings when the value changes.
+ *
+ * @param minutes Lead time in minutes; 0 shows a chip only during the event.
+ */
+void sub_set_calendar_lead(uint32_t minutes);
+
+/**
+ * @brief Re-check the calendar bindings against the clock.
+ *
+ * A chip's lead time starts without any state change, so this runs every minute.
+ * Only bindings whose classification changed are rendered again.
+ */
+void sub_calendar_recheck();
 
 /// @brief Bindings named in the statistics log line, by updates received.
 static constexpr uint8_t SUB_STATS_TOP = 5;

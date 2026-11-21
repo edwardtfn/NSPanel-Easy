@@ -140,7 +140,7 @@ tim = 750
 en = 0
 
 [[component]]
-name = "tm_debug"
+name = "tm_status"
 type = "timer"
 tim = 5000
 en = 0

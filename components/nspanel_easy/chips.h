@@ -156,7 +156,8 @@ void chip_render(uint8_t idx);
  *
  * @param binding The binding being rendered.
  * @param rt Runtime state, including blueprint-supplied appearance.
- * @param state Effective state string; hvac_action for climate when usable.
+ * @param state Effective state string; hvac_action for climate when usable, and "on" for a calendar
+ *              chip within its lead time.
  * @param visible Whether the chip should be shown. Ignored while api_stale is
  *                set, when the chip is hidden.
  */

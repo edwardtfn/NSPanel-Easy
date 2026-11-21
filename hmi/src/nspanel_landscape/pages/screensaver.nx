@@ -12,7 +12,7 @@ on screensaver.load:
     text.font=4
     text.pco=16904  // Dark gray
     text.txt="NSPanel Easy"
-    dim=10
+    dim=15
   }
   // restore chips
   for(sys0=6;sys0<=15;sys0++)
@@ -99,10 +99,23 @@ on text.up:
 on apply_settings.timer:
   apply_settings.en=0
   dim=brightness_sleep
-  screensaver.bco=screensaver_bco
-  text.bco=screensaver_bco
-  text.font=screensaver_font
-  text.pco=screensaver_pco
+  // Only what changed: writing an attribute redraws, and the whole page for the page's background
+  if(screensaver.bco!=screensaver_bco)
+  {
+    screensaver.bco=screensaver_bco
+  }
+  if(text.bco!=screensaver_bco)
+  {
+    text.bco=screensaver_bco
+  }
+  if(text.font!=screensaver_font)
+  {
+    text.font=screensaver_font
+  }
+  if(text.pco!=screensaver_pco)
+  {
+    text.pco=screensaver_pco
+  }
 
 on chip_relay1.up:
   page wakeup_page_id

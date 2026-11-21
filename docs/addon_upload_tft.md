@@ -176,6 +176,11 @@ models defined in the base firmware:
 | NSPanel US Landscape (buttons on the left) | `nspanel_landscape_left.tft` | US hardware mounted in landscape, rotated to have the buttons on the left |
 | NSPanel Blank | `nspanel_blank.tft` | First-time installation only. See [NSPanel Blank](nspanel_blank.md) |
 
+> [!NOTE]
+> The file names describe the orientation of the screen, not of the panel.
+> The EU panel is taller than it is wide, but its screen is landscape, so it uses `nspanel_landscape.tft`.
+> The portrait file is for the US panel only; on an EU panel it shows a rotated display.
+
 ### Example: Automatic updates with a longer wait time
 
 ```yaml
@@ -252,8 +257,25 @@ packages:
 
 ### Example: Using a local base URL with automatic model selection
 
-If your network cannot reach GitHub but you want to keep automatic model and version selection,
-override `nextion_update_base_url` instead of `nextion_update_url`:
+If your panels cannot reach GitHub (for example, `raw.githubusercontent.com` times out), host the TFT files on your Home Assistant
+and override `nextion_update_base_url` instead of `nextion_update_url`. This keeps the automatic selection of the TFT file based on the **Display model**:
+
+1. Download the TFT files of the firmware version you install on your panel from the `hmi` folder of the matching
+   [release](https://github.com/edwardtfn/NSPanel-Easy/releases). See [Display model options](#display-model-options) for the file used by each model:
+   for example, `nspanel_landscape.tft` for the EU panel and `nspanel_portrait.tft` for the US panel.
+2. Copy them to `/config/www/nspanel-easy/` on your Home Assistant, without changing them: the panel gets exactly the files of the release.
+   Home Assistant serves this folder at `/local/` without any extra configuration.
+   If you created the `www` folder now, restart Home Assistant once: it only serves `/local/` when that folder exists at its start.
+3. Set `nextion_update_base_url` in your panel's YAML, as in the example below, without a trailing slash (`/`).
+   Replace `homeassistant.local:8123` with the address and port of your Home Assistant.
+   Prefer HTTP and your Home Assistant's IP address if HTTPS or DNS cause problems.
+   If your YAML also sets `nextion_update_url`, remove it: it takes priority over `nextion_update_base_url`.
+4. Install the firmware. With `upload_tft_automatically` (on by default), the panel then updates its TFT on its own.
+   Press **Update TFT display** on the device's page in Home Assistant only if the automatic upload is disabled or did not happen.
+5. Every time you update the firmware, first download the TFT files of the new version to the same folder, replacing the old ones, and only then install the firmware.
+   The firmware version is not part of the local URL, so the files must match the version being installed.
+   For a TFT of another version, the automatic upload runs at most 3 times per firmware version: if it uploads old files, replace them and press **Update TFT display**.
+   A TFT older than the minimum version the firmware requires is uploaded again at every start, until the files are replaced.
 
 ```yaml
 substitutions:
@@ -264,8 +286,8 @@ substitutions:
   ota_password: ""  # Optional: set OTA password, or use ${wifi_password} for backward compatibility (see migration guide)
   language: en      # Language code - see docs/localization.md for all supported codes
 
-  # Mirror the TFT files locally and point to your server
-  nextion_update_base_url: "http://homeassistant.local:8123/local/nspanel-easy/"
+  # Mirror the TFT files locally and point to your server (no trailing slash)
+  nextion_update_base_url: "http://homeassistant.local:8123/local/nspanel-easy"
 
 packages:
   remote_package:
@@ -324,7 +346,9 @@ To manually trigger a TFT upload:
 The TFT upload process requires a significant amount of free memory on the ESP32.
 If Bluetooth is enabled (e.g. with the [Bluetooth Proxy add-on](addon_bluetooth_proxy.md)),
 this add-on stops the Bluetooth stack and releases its memory before the upload starts,
-so both can be enabled at the same time. The panel restarts after the upload, restoring Bluetooth.
+so both can be enabled at the same time.
+Before that, it stops the Bluetooth scan and closes the connections the Bluetooth proxy holds for Home Assistant,
+which adds about 3 seconds to the preparation. The panel restarts after the upload, restoring Bluetooth.
 If the memory cannot be released, the log shows `Bluetooth memory release failed` and the upload is still attempted.
 
 Other memory-intensive customizations may still cause the upload to fail due to insufficient memory.
