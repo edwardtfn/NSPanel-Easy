@@ -46,7 +46,7 @@ substitutions:
 | Substitution | Default | Description |
 | :- | :- | :- |
 | `chips_page_screensaver` | `true` | Shows the chips on the screensaver page as well as on the home page. |
-| `wifi_icon_colors` | `true` | Colours the Wi-Fi icon by signal strength while everything is connected (green, yellow or orange), and red otherwise. When `false`, the icon is grey while everything is connected, and red otherwise. In both cases it stays grey while the panel is booting. |
+| `wifi_icon_colors` | `true` | Colours the Wi-Fi icon by signal strength while everything is connected (green, yellow or orange), and red otherwise. When `false`, the icon is grey while everything is connected, and red otherwise. In both cases it is red until Wi-Fi connects, and then grey while the panel is still booting (waiting for Home Assistant and the Blueprint). |
 <!-- markdownlint-enable MD013 -->
 
 ## Home Assistant connection
@@ -86,7 +86,7 @@ The bar colours themselves are set in the Blueprint, not through substitutions.
 | `qrcode_background_color` | `65535` | RGB565 background colour of the QR code. |
 | `qrcode_foreground_color` | `0` | RGB565 foreground colour of the QR code. |
 | `qrcode_border_size` | `8` | Border size of the QR code, as the `dis` attribute of the Nextion QR code component. |
-| `qrcode_restore_value` | `false` | Keeps the last QR code, its title and its icon across restarts. |
+| `qrcode_restore_value` | `false` | Keeps the last QR code, its title and its icon across restarts, so the QR code page also works when the panel restarts without Home Assistant. Off by default, as it uses storage space on the panel. |
 | `wakeup_with_button_press` | `false` | Wakes the display when a hardware button is pressed while the screensaver is showing. |
 | `wakeup_with_button_press_dimmed` | `false` | When a hardware button press wakes the display, or resets its timers while dimmed, keeps it at the dimmed brightness. |
 <!-- markdownlint-enable MD013 -->
@@ -113,6 +113,9 @@ The defaults suit almost every installation, so change them only to solve a spec
 <!-- markdownlint-disable MD013 -->
 | Substitution | Default | Description |
 | :- | :- | :- |
+| `api_icon_names_block` | `400` | Icon names asked from the Blueprint in one block. See [API Subscriptions](api_subscribe.md#options). |
+| `api_icon_names_retries` | `3` | Retries of one block of icon names before the icons given by name are drawn by domain. See [API Subscriptions](api_subscribe.md#options). |
+| `api_icon_names_timeout` | `5s` | Time to wait for a block of icon names before asking for it again. See [API Subscriptions](api_subscribe.md#options). |
 | `api_subscribe_entity_len` | `96` | Buffer size for an `entity_id` in an [API subscription](api_subscribe.md), including the null terminator. An `entity_id` that does not fit is not bound and does not update; the log then reports the size to set. Accepts `32` to `255`; changing it discards the stored bindings once, and the Blueprint pushes them again. |
 | `api_subscribe_max` | `128` | Maximum number of [API subscription](api_subscribe.md#options) bindings. |
 | `api_subscribe_debounce` | `10s` | Quiet period after the last binding of a push before the panel restarts to apply it. See [API Subscriptions](api_subscribe.md#options). |

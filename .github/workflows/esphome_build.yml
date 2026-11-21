@@ -10,14 +10,13 @@ on:
   workflow_dispatch:
 
 env:
-  # Repository URL and ref for external_components resolution.
-  # For fork PRs, points to the fork so the PR code is actually tested.
-  REF_URL: >-
-    https://github.com/${{
-      github.event.pull_request.head.repo.full_name
-      || github.repository
-    }}
-  REF_NAME: ${{ github.head_ref || github.ref_name }}
+  # Repository URL and ref for external_components resolution: the commit that actions/checkout checks out, so
+  # the C++ component always comes from the same code as the YAML. On a pull request that is the merge commit
+  # with the base branch (also for forks, as GitHub keeps it in this repository): the PR branch alone would miss
+  # C++ changes made on the base branch since it was created, while the YAML already has them. ESPHome fetches
+  # a commit SHA as a ref.
+  REF_URL: https://github.com/${{ github.repository }}
+  REF_NAME: ${{ github.sha }}
 
 permissions:
   contents: read

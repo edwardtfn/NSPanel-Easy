@@ -15,7 +15,7 @@ substitutions:
   # Select '${version}' (or 'next') when you change the "contract" between ESPHome and Blueprint
   # Versioning workflow will replace this by the new version being generated
   # Prefer '${version}': it is a valid version in development builds, while 'next' fails the firmware's version check
-  min_blueprint_version: 2026.11.17
+  min_blueprint_version: ${version}
 
   # API version (MAJOR.MINOR) provided by this firmware, reported to the Blueprint in every event
   # Keep it quoted: unquoted, YAML reads 1.10 as the number 1.1
@@ -23,7 +23,7 @@ substitutions:
   # MAJOR: bump (and reset MINOR to 0) when an API action is removed or its parameters change,
   #        and also set min_blueprint_version to '${version}', as older Blueprints can no longer call it
   # The Blueprint declares the API version it uses in its 'api_version' variable
-  api_version: "3.0"
+  api_version: "4.0"
 
   # Minimum required TFT version for compatibility
   # The TFT carries the release version (YYYY.M.seq), set by the versioning workflow on each release.
@@ -32,7 +32,7 @@ substitutions:
   # versioning workflow replaces it by the new version.
   # Prefer '${version}': it is a valid version in development builds, while 'next' fails the firmware's version check
   # A legacy TFT version (major.minor, e.g. 22.3) is older than any release version, so it is still a valid minimum.
-  min_tft_version: 2026.11.17
+  min_tft_version: ${version}
 
   # TFT version carried by the HMI source on dev, set by the versioning workflow after each release.
   # A TFT with this version is never replaced by the automatic TFT update.
@@ -192,7 +192,7 @@ script:
             - lambda: |-
                 ESP_LOGV("${TAG_VERSIONING}", "Blueprint version: '%s'", version_blueprint->state.c_str());
                 if (!version_blueprint->state.empty()) wait_for_version_blueprint->stop();
-                if (iteration % 5 == 1) boot_log->execute("Boot", "Waiting for Blueprint version");
+                if (iteration % 5 == 1) ESP_LOGD("${TAG_BOOT}", "Boot: Waiting for Blueprint version");
                 if (iteration % 9 == 0) boot_request_blueprint_settings->execute("timeout");
             - delay: 1s
 

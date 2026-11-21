@@ -9,7 +9,7 @@ This document provides details on custom actions designed for integration with H
     Binds a Home Assistant entity directly to a panel component, so state changes render without an automation run.
   - [API Subscribe End Action (`api_subscribe_end`)](#api-subscribe-actions-api_subscribe-api_subscribe_end): Closes a binding push and states how many bindings were sent.
   - [API Subscribe Icon Names Action (`api_subscribe_icon_names`)](api_subscribe.md#api_subscribe_icon_names):
-    Sends the MDI icon names, so the panel resolves icons given by name.
+    Sends a block of MDI icon names, asked for by the panel, so it resolves icons given by name.
   - [Buttons Setup Action (`buttons_setup`)](api_subscribe.md#button-pages): Sends the settings of a button page that the panel draws itself.
   - [Component Color Action (`component_color`)](#component-color-action-component_color): Changes the foreground color of a specified component on the display.
   - [Component Text List Action (`component_text_list`)](#component-text-list-action-component_text_list): Updates the text of a specified component on the display using a list of values.
@@ -66,7 +66,7 @@ You can look up the action names available on your Home Assistant instance under
 | --------- | ----------- | ----------- |
 | [`api_subscribe`](#api-subscribe-actions-api_subscribe-api_subscribe_end) | [API Subscribe Action](#api-subscribe-actions-api_subscribe-api_subscribe_end) | Binds a Home Assistant entity directly to a panel component, so state changes render without an automation run. |
 | [`api_subscribe_end`](#api-subscribe-actions-api_subscribe-api_subscribe_end) | [API Subscribe End Action](#api-subscribe-actions-api_subscribe-api_subscribe_end) | Closes a binding push and states how many bindings were sent. |
-| [`api_subscribe_icon_names`](api_subscribe.md#api_subscribe_icon_names) | [API Subscribe Icon Names Action](api_subscribe.md#api_subscribe_icon_names) | Sends the MDI icon names, so the panel resolves icons given by name. |
+| [`api_subscribe_icon_names`](api_subscribe.md#api_subscribe_icon_names) | [API Subscribe Icon Names Action](api_subscribe.md#api_subscribe_icon_names) | Sends a block of MDI icon names, asked for by the panel, so it resolves icons given by name. |
 | [`buttons_setup`](api_subscribe.md#button-pages) | [Buttons Setup Action](api_subscribe.md#button-pages) | Sends the settings of a button page that the panel draws itself. |
 | [`component_color`](#component-color-action-component_color) | [Component Color Action](#component-color-action-component_color) | Changes the foreground color of a specified component on the display. |
 | [`component_text_list`](#component-text-list-action-component_text_list) | [Component Text List Action](#component-text-list-action-component_text_list) | Updates the text of a specified component on the display using a list of values. |
