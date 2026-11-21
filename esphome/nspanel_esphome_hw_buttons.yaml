@@ -414,31 +414,36 @@ script:
     then:
 
   ##### Two single clicks in a row, from the patterns that are neither a double click nor a hold #####
-  # The second click waits for the first one to finish: `button_*_press_short` restarts when called while running,
-  # which would cut a customization with a delay.
+  # Both clicks are reported to Home Assistant at once, with the page they were made on. The second local action
+  # waits for the first one to finish: `button_*_press_short` restarts when called while running, which would cut a
+  # customization with a delay. A few pairs can wait behind a long customization, and are dropped beyond that.
   - id: button_left_press_short_twice
     mode: queued
-    max_runs: 2
+    max_runs: 4
     then:
-      - lambda: ESP_LOGV("${TAG_HW_BUTTONS}", "Left button - Two clicks, neither a double click nor a hold");
+      - lambda: |-
+          ESP_LOGV("${TAG_HW_BUTTONS}", "Left button - Two clicks, neither a double click nor a hold");
+          ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
+          ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
       - repeat:
           count: 2
           then:
             - script.execute: button_left_press_short
-            - lambda: ha_button->execute(page_names[current_page_id], "hw_bt_left", "short_click");
             - script.wait: button_left_press_short
       - lambda: ESP_LOGD("${TAG_HW_BUTTONS}", "Left button - Two short clicks dispatched");
 
   - id: button_right_press_short_twice
     mode: queued
-    max_runs: 2
+    max_runs: 4
     then:
-      - lambda: ESP_LOGV("${TAG_HW_BUTTONS}", "Right button - Two clicks, neither a double click nor a hold");
+      - lambda: |-
+          ESP_LOGV("${TAG_HW_BUTTONS}", "Right button - Two clicks, neither a double click nor a hold");
+          ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
+          ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
       - repeat:
           count: 2
           then:
             - script.execute: button_right_press_short
-            - lambda: ha_button->execute(page_names[current_page_id], "hw_bt_right", "short_click");
             - script.wait: button_right_press_short
       - lambda: ESP_LOGD("${TAG_HW_BUTTONS}", "Right button - Two short clicks dispatched");
 
@@ -652,10 +657,12 @@ script:
     then:
       - lambda: |-
           button_left_press_long->stop();
+          button_left_press_short_twice->stop();  // Before its child, so it can't run the next click
           button_left_press_short->stop();
           button_left_press_double->stop();
           button_left_release->stop();
           button_right_press_long->stop();
+          button_right_press_short_twice->stop();  // Before its child, so it can't run the next click
           button_right_press_short->stop();
           button_right_press_double->stop();
           button_right_release->stop();
