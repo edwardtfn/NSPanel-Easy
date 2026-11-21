@@ -146,7 +146,7 @@ txt_maxl = 255
 name = "version"
 type = "variable"
 sta = 1
-txt = "9999.99.9"
+txt = "2026.11.18"
 txt_maxl = 12
 
 [[component]]
