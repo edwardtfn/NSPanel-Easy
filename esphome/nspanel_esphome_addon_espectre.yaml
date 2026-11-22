@@ -72,8 +72,8 @@ switch:
     sensing:
       id: espectre_sensing
       name: "Sensing Enabled"
-      # The late boot script turns sensing on once the panel is ready.
-      restore_mode: ALWAYS_OFF
+      # Kept over restarts (the component's default, RESTORE_DEFAULT_ON). The stops for uploads don't go through
+      # this switch (see espectre_stop), so they don't change the saved state.
 
 sensor:
   - platform: espectre
@@ -108,14 +108,16 @@ button:
       - component.update: espectre_diagnostics
 
 ota:
-  # Sensing is paused when an OTA starts (ota_std.on_begin -> stop_all, see below).
+  # Sensing is stopped when an OTA starts (ota_std.on_begin -> stop_all -> espectre_stop, see below).
+  # The component only starts again with a restart, which a failed or aborted OTA does not do, so the panel restarts
+  # here when sensing is on.
   - id: !extend ota_std
     on_abort:
       then:
-        - switch.turn_on: espectre_sensing
+        - script.execute: espectre_restart_after_ota
     on_error:
       then:
-        - switch.turn_on: espectre_sensing
+        - script.execute: espectre_restart_after_ota
 
 script:
   - id: !extend dump_config
@@ -125,19 +127,37 @@ script:
           ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "  Configured traffic source: %s", "${espectre_traffic_generator_mode}");
           ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "  Configured detector: %s", "${espectre_detection_algorithm}");
 
-  # wait until platform ready - enable sensing in late boot
-  - id: !extend boot
+  # Stops the component at once, without the switch, so the switch keeps the user's choice. Used for the uploads,
+  # as their transfer blocks the main loop, where a change of the switch would be applied.
+  # The component only starts again with a restart.
+  - id: espectre_stop
+    mode: single
     then:
-      - switch.turn_on: espectre_sensing
+      - lambda: |-
+          ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Stopping sensing");
+          espectre_csi->on_shutdown();
+
+  # Resumes sensing after a failed or aborted OTA, which does not restart the panel, when the user left it on
+  - id: espectre_restart_after_ota
+    mode: single
+    then:
+      - if:
+          condition:
+            - switch.is_on: espectre_sensing
+          then:
+            - lambda: ESP_LOGW("${TAG_ADDON_ESPECTRE}", "Restarting to resume sensing after the OTA");
+            # Lets the warning reach the log and the OTA client before the restart
+            - delay: 1s
+            - lambda: App.safe_reboot();
 
   # reduce pressure on system during OTA and TFT uploads
   - id: !extend stop_all
     then:
       - if:
           condition:
-            lambda: return system_flags.tft_upload_active || system_flags.ota_in_progress;
+            lambda: return system_flags.tft_upload_active or system_flags.ota_in_progress;
           then:
-            - switch.turn_off: espectre_sensing
+            - script.execute: espectre_stop
 
   # display/hide the motion sensor icon in chip relay_2
   # chip_relay2 is repurposed to mirror the ESPectre motion sensor instead of relay 2's own state.
