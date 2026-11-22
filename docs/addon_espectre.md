@@ -84,7 +84,7 @@ The following keys are available to be used in your `substitutions`. All values 
 | Refresh Diagnostics | Button (diagnostic) | Updates the diagnostic sensors. |
 
 Sensing stops during OTA and TFT uploads. Both end with a restart, after which sensing resumes when "Sensing Enabled" is on.
-A failed or aborted OTA does not restart the panel by itself, so with "Sensing Enabled" on, the panel restarts to resume sensing.
+A failed or aborted OTA does not restart the panel by itself, so the panel restarts to bring ESPectre back.
 
 ## Blueprint settings
 
