@@ -9,6 +9,8 @@
 ---
 substitutions:
   PAGE_BOOT_COMPONENT_ID_BT_REBOOT: 14
+  # Plain substitution for the lambdas: a dotted one makes ESPHome read the whole lambda as a Jinja template
+  PAGE_BOOT_PORTRAIT_MODEL: ${DISPLAY_MODES.US.TEXT}
   PAGE_BOOT_COMPONENT_ID_HS_BLUEPRINT: 35   # Touch area of the Blueprint line
   PAGE_BOOT_COMPONENT_ID_HS_ICON_NAMES: 36  # Touch area of the icon names line
   PAGE_BOOT_DELAY_TO_EXIT: 30s
@@ -427,12 +429,16 @@ script:
             disp1->send_command_printf("lbl%u.pco=%u", row, mark == STATUS_NONE ? STATUS_COLORS[STATUS_NONE] : STATUS_WHITE);
           };
 
-          // ESPHome: the firmware version, orange when the TFT carries another one
+          // ESPHome: the firmware version and the ESPHome version it was built with (#841), orange when the TFT
+          // carries another one. Portrait (the US model) has room for the short form only.
           const std::string &tft = version_tft->state;
           if (!tft.empty() and tft != "${version}") {
             show(2, STATUS_WARN, "${version}, TFT differs");
           } else {
-            show(2, STATUS_OK, "${version}");
+            // The long form only fits in landscape, and up to the 32 bytes of the line (not a dev build of ESPHome)
+            const std::string full = "${version}, ESPHome " ESPHOME_VERSION;
+            const bool portrait = display_model->current_option() == "${PAGE_BOOT_PORTRAIT_MODEL}";
+            show(2, STATUS_OK, (portrait or full.size() > 32) ? "${version} / " ESPHOME_VERSION : full);
           }  // if (TFT version)
 
           // Wi-Fi: the IP address and the signal, orange below -75 dBm
