@@ -90,7 +90,7 @@ jobs:
         id: claude
         if: steps.context.outputs.run_agent == 'true'
         # Pinned to a commit; Dependabot keeps the pin and the version comment updated
-        uses: anthropics/claude-code-action@4d75e5f390ee76b2e09c1980ecc99ff3a2e088c8  # v1.0.275
+        uses: anthropics/claude-code-action@c84e279f859e2591391e95bd309286eb111c345f  # v1.0.284
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Job token (read-only here), required by `allowed_non_write_users`
