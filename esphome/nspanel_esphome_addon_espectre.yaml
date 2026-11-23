@@ -170,12 +170,12 @@ script:
     then:
       - lambda: |-
           ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Pause ESPectre sensing until boot completes");
-          espectre_csi->on_shutdown();
+          espectre_csi->disable_loop();
 
   # wait until platform ready - enable sensing in late boot
   - id: !extend boot
     then:
       - lambda: |-
           ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Resuming ESPectre sensing");
-          espectre_csi->on_startup();
+          espectre_csi->enable_loop();
 ...
