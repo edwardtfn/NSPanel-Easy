@@ -427,12 +427,16 @@ script:
             disp1->send_command_printf("lbl%u.pco=%u", row, mark == STATUS_NONE ? STATUS_COLORS[STATUS_NONE] : STATUS_WHITE);
           };
 
-          // ESPHome: the firmware version, orange when the TFT carries another one
+          // ESPHome: the firmware version and the ESPHome version it was built with (#841), orange when the TFT
+          // carries another one. Portrait (the US model) has room for the short form only.
           const std::string &tft = version_tft->state;
           if (!tft.empty() and tft != "${version}") {
             show(2, STATUS_WARN, "${version}, TFT differs");
           } else {
-            show(2, STATUS_OK, "${version}");
+            // The long form only fits in landscape, and up to the 32 bytes of the line (not a dev build of ESPHome)
+            const std::string full = "${version}, ESPHome " ESPHOME_VERSION;
+            const bool portrait = display_model->current_option() == "${DISPLAY_MODES.US.TEXT}";
+            show(2, STATUS_OK, (portrait or full.size() > 32) ? "${version} / " ESPHOME_VERSION : full);
           }  // if (TFT version)
 
           // Wi-Fi: the IP address and the signal, orange below -75 dBm
