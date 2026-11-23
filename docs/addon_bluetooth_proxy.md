@@ -11,6 +11,8 @@ To save resources, BLE scanning runs only while Home Assistant is connected to t
 > [!IMPORTANT]
 > Bluetooth is memory intensive and reduces the heap available for the rest of the firmware.
 > See [Tips for Managing Memory](customization.md#tips-for-managing-memory).
+>
+> It also increases the firmware size considerably. If your configuration gets close to the flash limit, see [Reducing flash usage](customization.md#reducing-flash-usage).
 
 ## Installation
 

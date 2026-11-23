@@ -149,6 +149,7 @@ The solution is to use a serial cable to reflash your device with a lighter firm
 - Be cautious when adding memory-intensive components like `bluetooth_proxy`.
 - Compile your firmware with the option to download it before installation.
 This lets you check static memory usage without risking wireless installation issues.
+- If your configuration is close to the flash limit (e.g. with `bluetooth_proxy`), see [Reducing flash usage](#reducing-flash-usage).
 
 ## Removing Standard Settings
 
@@ -575,6 +576,25 @@ time:
               mode: auto
               target_temperature: 18°C
 ```
+
+### Reducing flash usage
+
+Configurations with memory-intensive add-ons, such as the [Bluetooth Proxy](addon_bluetooth_proxy.md), can get close to the flash limit.
+Setting the ESP32 assertion level to `SILENT` saves about 55 kB of flash:
+
+```yaml
+esp32:
+  framework:
+    advanced:
+      # Failed assertions still abort and reboot the panel, but without the file/line/expression strings
+      assertion_level: SILENT
+```
+
+> [!NOTE]
+> A failed assertion still reboots the panel, but the crash log no longer shows the `assert failed:` line with the file, line and expression that failed.
+> This makes crashes harder to troubleshoot, so when reporting a crash, remove this setting first if you can reproduce it.
+>
+> Do not use `assertion_level: DISABLE`, as it lets the firmware continue running after a failed assertion.
 
 ### Frameworks
 <!-- markdownlint-disable MD028 -->
