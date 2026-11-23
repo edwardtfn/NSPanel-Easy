@@ -9,9 +9,24 @@
 ---
 substitutions:
   PAGE_BOOT_COMPONENT_ID_BT_REBOOT: 14
+  PAGE_BOOT_COMPONENT_ID_HS_BLUEPRINT: 35   # Touch area of the Blueprint line
+  PAGE_BOOT_COMPONENT_ID_HS_ICON_NAMES: 36  # Touch area of the icon names line
   PAGE_BOOT_DELAY_TO_EXIT: 30s
   PAGE_BOOT_ID: 0
   TAG_PAGE_BOOT: nspanel.page.boot
+
+globals:
+  # The status page stays open, also across restarts, from when the user opens it until the user closes it (#841)
+  - id: status_page_pinned
+    type: bool
+    restore_value: true
+    initial_value: "false"
+
+  # When Home Assistant connected, in ms since the start (millis_64); 0 while it is not connected
+  - id: ha_connected_since
+    type: uint64_t
+    restore_value: false
+    initial_value: "0"
 
 display:
   - id: !extend disp1
@@ -82,14 +97,33 @@ display:
     on_touch:
       then:
         - lambda: |-
-            if (
-                  !touch_event and  // Only act with release
-                  page_id == get_page_id("boot") and
-                  component_id == ${PAGE_BOOT_COMPONENT_ID_BT_REBOOT}  // Reboot button
-                ) {
-              screen_power->turn_off();
-              App.safe_reboot();
-            }
+            if (touch_event or page_id != get_page_id("boot")) return;  // Only act with release, on the boot page
+            switch (component_id) {
+              case ${PAGE_BOOT_COMPONENT_ID_BT_REBOOT}:
+                screen_power->turn_off();
+                App.safe_reboot();
+                break;
+              case ${PAGE_BOOT_COMPONENT_ID_HS_BLUEPRINT}:
+                // Retry a request of the Blueprint settings that was given up (red), as after a reload
+                if (blueprint_settings_state != BlueprintSettingsState::FAILED) break;
+                ESP_LOGI("${TAG_PAGE_BOOT}", "Blueprint settings requested again from the status page");
+                blueprint_settings_timeout->stop();
+                blueprint_settings_state = BlueprintSettingsState::NEEDED;
+                blueprint_settings_requests = 0;
+                blueprint_settings_resend = false;
+                boot_request_blueprint_settings->execute("reload");
+                page_boot_status->execute(false);
+                break;
+              #ifdef NSPANEL_EASY_SUBSCRIBE
+              case ${PAGE_BOOT_COMPONENT_ID_HS_ICON_NAMES}:
+                // Retry the icon names that were given up (red), keeping the names received
+                if (!sub_icon_names_failed()) break;
+                ESP_LOGI("${TAG_PAGE_BOOT}", "Icon names requested again from the status page");
+                api_icon_names_fetch->execute();
+                page_boot_status->execute(false);
+                break;
+              #endif  // NSPANEL_EASY_SUBSCRIBE
+            }  // switch (component_id)
 
 esphome:
   build_flags:
@@ -290,6 +324,12 @@ script:
       - lambda: |-
           if (system_flags.boot_completed) return;
           if (current_page_id != get_page_id("screensaver") and current_page_id != get_page_id("boot")) return;
+          if (id(status_page_pinned)) {
+            // Left open by the user before the restart: shown again until the user closes it (#841)
+            ESP_LOGI("${TAG_PAGE_BOOT}", "Display ready, opening the status page left open");
+            if (current_page_id != get_page_id("boot")) goto_page->execute(get_page_id("boot"));
+            return;
+          }  // if (status page pinned)
           ESP_LOGI("${TAG_PAGE_BOOT}", "Display ready, opening the wake-up page");
           // Not a user action: the wake-up page stays dimmed while booting, e.g. after a power outage at night (#485, #656)
           brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));
@@ -308,6 +348,11 @@ script:
           brightness_current = UINT8_MAX;  // Set by the display itself until now
           if (current_page_id == get_page_id("boot")) return;
           if (current_page_id == get_page_id("screensaver")) {
+            if (id(status_page_pinned)) {
+              // Left open by the user before the restart: shown again until the user closes it (#841)
+              goto_page->execute(get_page_id("boot"));
+              return;
+            }  // if (status page pinned)
             // Still on the screensaver when the boot completes: replace the start screen by the screensaver
             page_screensaver->execute();
             return;
@@ -358,9 +403,26 @@ script:
           static constexpr uint16_t STATUS_WHITE = 65535;
           // Rows 2 to 7, as last sent: the mark and the value
           static std::string shown[6];
+          static std::string shown_name;
           if (force) {
             for (auto &row : shown) row.clear();
+            shown_name.clear();
           }
+
+          // The panel's name in the title, to tell the panels apart on photos (#841). Without ESPHome, the
+          // display keeps "NSPanel Easy".
+          std::string name = App.get_friendly_name().str();
+          if (name.empty()) name = App.get_name().str();
+          std::replace(name.begin(), name.end(), '"', '\'');
+          if (name.size() > 60) {
+            size_t cut = 60;
+            while (cut > 0 and (static_cast<uint8_t>(name[cut]) & 0xC0) == 0x80) cut--;  // Not inside a character
+            name.resize(cut);
+          }  // if (too long for the title)
+          if (!name.empty() and name != shown_name) {
+            shown_name = name;
+            disp1->send_command_printf("nspanel_easy.txt=\"%s\"", name.c_str());
+          }  // if (name changed)
           auto show = [&](uint8_t row, StatusMark mark, const std::string &value) {
             const std::string key = std::to_string(mark) + value;
             if (shown[row - 2] == key) return;
@@ -396,9 +458,22 @@ script:
             show(3, rssi < -75 ? STATUS_WARN : STATUS_OK, wifi);
           }  // if (Wi-Fi)
 
-          // Home Assistant
+          // Home Assistant, and for how long (#841)
           const bool ha = api_server->is_connected_with_state_subscription();
-          show(4, ha ? STATUS_OK : STATUS_BAD, ha ? "connected" : "not connected");
+          if (ha and id(ha_connected_since) > 0) {
+            const uint32_t minutes = static_cast<uint32_t>((millis_64() - id(ha_connected_since)) / 60000ULL);
+            char since[32];
+            if (minutes >= 1440) {
+              snprintf(since, sizeof(since), "connected %" PRIu32 "d %" PRIu32 "h", minutes / 1440, (minutes / 60) % 24);
+            } else if (minutes >= 60) {
+              snprintf(since, sizeof(since), "connected %" PRIu32 "h %" PRIu32 "m", minutes / 60, minutes % 60);
+            } else {
+              snprintf(since, sizeof(since), "connected %" PRIu32 "m", minutes);
+            }  // if (duration)
+            show(4, STATUS_OK, since);
+          } else {
+            show(4, ha ? STATUS_OK : STATUS_BAD, ha ? "connected" : "not connected");
+          }  // if (Home Assistant)
 
           // Blueprint: its version and how far its settings are
           const std::string &blueprint = version_blueprint->state;
@@ -459,11 +534,29 @@ script:
           // Leaving the screensaver the display starts on ends its start screen
           if (new_page_id != get_page_id("screensaver")) display_start_hold_release->execute();
           // The boot page opened from the settings page (long press) is the status page, shown on request: it is
-          // left by the user, like any other page, instead of by the boot (#615)
-          system_flags.boot_page_requested = (new_page_id == get_page_id("boot") and
-                                              last_page_id == get_page_id("settings"));
+          // left by the user, like any other page, instead of by the boot (#615). It stays open across restarts
+          // until the user leaves it (#841). A display restart goes back to the screensaver: that is not the user.
+          const uint8_t boot_page_id = get_page_id("boot");
+          if (new_page_id == boot_page_id and last_page_id == get_page_id("settings")) {
+            id(status_page_pinned) = true;
+          } else if (last_page_id == boot_page_id and new_page_id != boot_page_id and
+                     new_page_id != get_page_id("screensaver") and id(status_page_pinned)) {
+            ESP_LOGD("${TAG_PAGE_BOOT}", "Status page closed");
+            id(status_page_pinned) = false;
+          }  // if (status page opened or closed)
+          system_flags.boot_page_requested = (new_page_id == boot_page_id and id(status_page_pinned));
           if (new_page_id != get_page_id("boot")) return;
           page_boot->execute();
+
+  - id: !extend update_flag_api_ready
+    then:
+      - lambda: |-
+          // When Home Assistant connected, for the status page
+          if (!api_server->is_connected_with_state_subscription()) {
+            id(ha_connected_since) = 0;
+          } else if (id(ha_connected_since) == 0) {
+            id(ha_connected_since) = millis_64();
+          }  // if (Home Assistant connected)
 
   - id: !extend stop_all
     then:
