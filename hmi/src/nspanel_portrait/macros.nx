@@ -21,6 +21,12 @@ macro report_display:
   printh 00
   prints magic_flag_found_at_boot,0
   printh FF FF FF
+  // status_page_pinned: whether the display opened the status page by itself when it started (#841)
+  printh 91
+  prints "status_page_pinned",0
+  printh 00
+  prints status_page_pinned,0
+  printh FF FF FF
   // tft_version: the version of this TFT file
   printh 92
   prints "tft_version",0
