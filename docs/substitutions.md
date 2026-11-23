@@ -46,8 +46,8 @@ substitutions:
 | Substitution | Default | Description |
 | :- | :- | :- |
 | `chips_page_screensaver` | `true` | Shows the chips on the screensaver page as well as on the home page. |
-| `chips_page_buttons` | `true` | Shows the chips on the button pages as well, at the same position as on the home page. The button pages keep that row free for them: their name is at the bottom (landscape) or in the row below the chips (portrait). |
 | `home_page_simple` | `false` | Uses a simpler home page: the chips, the Wi-Fi icon, the clock and a big tile for each of the home page's custom buttons 1 to 6, with its icon and name (the button's title, or the entity's name). A tile works as the custom button on the home page. Pressing and holding the clock opens the regular home page. |
+| `chips_page_buttons` | `false` | Shows the chips on the button pages as well, at the same position as on the home page. The page's name then moves to the row below the chips. Without the option, the name stays at the top. |
 | `wifi_icon_colors` | `true` | Colours the Wi-Fi icon by signal strength while everything is connected (green, yellow or orange), and red otherwise. When `false`, the icon is grey while everything is connected, and red otherwise. In both cases it is red until Wi-Fi connects, and then grey while the panel is still booting (waiting for Home Assistant and the Blueprint). |
 <!-- markdownlint-enable MD013 -->
 
