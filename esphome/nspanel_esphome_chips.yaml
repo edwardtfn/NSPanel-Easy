@@ -10,12 +10,14 @@ substitutions:
   TAG_CHIPS: nspanel.chips
   chips_page_screensaver: true
   chips_page_buttons: false  # Chips on the button pages too, at the same position as on home
+  chips_page_alarm: false    # Chips on the alarm page too, at the same position as on home
 
 esphome:
   build_flags:
     - -D NSPANEL_EASY_CHIPS
     - -D NSPANEL_EASY_CHIPS_PAGE_SCREENSAVER=${1 if chips_page_screensaver else 0}
     - -D NSPANEL_EASY_CHIPS_PAGE_BUTTONS=${1 if chips_page_buttons else 0}
+    - -D NSPANEL_EASY_CHIPS_PAGE_ALARM=${1 if chips_page_alarm else 0}
 
 globals:
   # Font ID used for all chip icons. Persisted so relay chips can render
@@ -156,6 +158,7 @@ script:
           disp1->send_command_printf("chip_font=%" PRIu8, id(chip_font_id));
           disp1->send_command_printf("chips_screensaver=%d", NSPANEL_EASY_CHIPS_PAGE_SCREENSAVER);
           disp1->send_command_printf("chips_buttons=%d", NSPANEL_EASY_CHIPS_PAGE_BUTTONS);
+          disp1->send_command_printf("chips_alarm=%d", NSPANEL_EASY_CHIPS_PAGE_ALARM);
 
   - id: !extend dump_config
     then:
@@ -176,6 +179,9 @@ script:
                                 new_page_id == get_page_id("buttonpage03") ||
                                 new_page_id == get_page_id("buttonpage04") ||
                                 #endif  // NSPANEL_EASY_CHIPS_PAGE_BUTTONS
+                                #if NSPANEL_EASY_CHIPS_PAGE_ALARM
+                                new_page_id == get_page_id("alarm") ||
+                                #endif  // NSPANEL_EASY_CHIPS_PAGE_ALARM
                                 false
                               );
 
