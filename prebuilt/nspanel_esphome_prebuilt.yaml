@@ -49,6 +49,15 @@ dashboard_import:
   package_import_url: github://edwardtfn/NSPanel-Easy/prebuilt/nspanel_esphome_prebuilt.yaml@main
   import_full_config: false
 
+esp32:
+  framework:
+    advanced:
+      # Failed assertions still abort and reboot the panel, but without the file/line/expression strings
+      # Reduces flash usage; crash logs then show only the abort address
+      assertion_level: SILENT
+      # LWIP internal assertions are development-only checks
+      enable_lwip_assert: false
+
 esp32_ble:
   id: ble
 
