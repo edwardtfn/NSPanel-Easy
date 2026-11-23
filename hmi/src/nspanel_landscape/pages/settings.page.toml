@@ -142,7 +142,7 @@ en = 0
 [[component]]
 name = "tm_status"
 type = "timer"
-tim = 5000
+tim = 2000
 en = 0
 
 [[component]]
@@ -155,7 +155,7 @@ txt_maxl = 50
 [[component]]
 name = "bt_reboot_pic"
 type = "picture"
-x = 57
+x = 37
 y = 210
 w = 60
 h = 60
@@ -164,7 +164,7 @@ pic = "picture-0085"
 [[component]]
 name = "bt_sleep_pic"
 type = "picture"
-x = 177
+x = 142
 y = 210
 w = 60
 h = 60
@@ -173,7 +173,7 @@ pic = "picture-0086"
 [[component]]
 name = "bt_theme_pic"
 type = "picture"
-x = 297
+x = 247
 y = 210
 w = 60
 h = 60
@@ -182,7 +182,7 @@ pic = "picture-0087"
 [[component]]
 name = "bt_reboot_icon"
 type = "text"
-x = 62
+x = 42
 y = 215
 w = 50
 h = 50
@@ -196,7 +196,7 @@ txt_maxl = 4
 [[component]]
 name = "bt_sleep_icon"
 type = "text"
-x = 182
+x = 147
 y = 215
 w = 50
 h = 50
@@ -210,7 +210,7 @@ txt_maxl = 4
 [[component]]
 name = "bt_theme_icon"
 type = "text"
-x = 302
+x = 252
 y = 215
 w = 50
 h = 50
@@ -225,7 +225,7 @@ txt_maxl = 4
 name = "bt_reboot_hs"
 type = "hotspot"
 sendkey = 3
-x = 52
+x = 32
 y = 205
 w = 70
 h = 70
@@ -234,7 +234,7 @@ h = 70
 name = "bt_sleep_hs"
 type = "hotspot"
 sendkey = 3
-x = 172
+x = 137
 y = 205
 w = 70
 h = 70
@@ -243,7 +243,39 @@ h = 70
 name = "bt_theme_hs"
 type = "hotspot"
 sendkey = 3
-x = 292
+x = 242
+y = 205
+w = 70
+h = 70
+
+[[component]]
+name = "bt_status_pic"
+type = "picture"
+x = 352
+y = 210
+w = 60
+h = 60
+pic = "picture-0134"
+
+[[component]]
+name = "bt_status_icon"
+type = "text"
+x = 357
+y = 215
+w = 50
+h = 50
+font = "font-10"
+bco = "#292c29"
+pco = "#ffffff"
+xcen = 2
+txt = "\ue755"
+txt_maxl = 4
+
+[[component]]
+name = "bt_status_hs"
+type = "hotspot"
+sendkey = 3
+x = 347
 y = 205
 w = 70
 h = 70

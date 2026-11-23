@@ -11,10 +11,13 @@ The boot page is only shown when ESPHome does not connect to the display within 
 or while the display has an older TFT file that has to be updated first.
 In many cases, restarting your panel can resolve the issue, but if it is still showing the boot page after a reboot, this guide may help you.
 
-The same page is also the panel's status page: press and hold the background of the **Settings** page for a few seconds to open it at any time,
+The same page is also the panel's status page: use the status button (the checklist icon) on the **Settings** page, or press and hold the background of that page for 2 seconds, to open it at any time,
 for example to check the connections or the versions before asking for help.
 It stays open at full brightness until you close it with the close button (top right), which is shown once ESPHome is connected:
 the page timeout, the dimming and the sleep timeout do not apply to it.
+It also stays open across restarts, so a restart or a slow start can be followed from the beginning:
+after a restart, the display opens it again as soon as it starts, even before ESPHome connects, until you close it.
+With ESPHome connected, the title shows the name of the panel, which helps to tell the panels apart on photos.
 
 Understanding what is shown on the boot page can be useful to find the cause of the problem or when you are looking for help.
 
@@ -46,10 +49,10 @@ the other lines are greyed out, so the red cross on **ESPHome** shows where to s
 | **Display** | The TFT version and the baud rate of the display, known by the display itself. | ESPHome is connected but the display was not acknowledged (orange). |
 | **ESPHome** | The firmware version. | ESPHome is not connected to the display (red), or the TFT has another version than the firmware (orange). |
 | **Wi-Fi** | The IP address and the signal strength. | Wi-Fi is not connected (red), or the signal is below -75 dBm (orange). |
-| **Home Assistant** (**HA** in portrait) | Whether the panel is connected to Home Assistant. | It is not connected (red). |
-| **Blueprint** | The Blueprint version and its settings: `complete`, `receiving`, `waiting` or `gave up`. | Settings not complete yet (orange), no answer (red), or given up (red). |
+| **Home Assistant** (**HA** in portrait) | Whether the panel is connected to Home Assistant, and for how long. | It is not connected (red). |
+| **Blueprint** | The Blueprint version and its settings: `complete`, `receiving`, `waiting` or `gave up`. | Not complete yet (orange), no answer (red), or given up (red), touch it to retry. |
 | **Bindings** | The number of [API subscriptions](api_subscribe.md). | None yet, or stored but not verified yet (orange), or they could not be stored (red). |
-| **Icon names** (**Icons** in portrait) | The [icon names](api_subscribe.md#api_subscribe_icon_names) received from the Blueprint. | Still arriving (orange), or the panel gave up asking (red). |
+| **Icon names** (**Icons** in portrait) | The [icon names](api_subscribe.md#api_subscribe_icon_names) received from the Blueprint. | Still arriving (orange), or the panel gave up asking (red), touch it to retry. |
 
 When ESPHome does not connect to the display, the **Display** line is the first thing to check:
 the baud rate must match the one used by the firmware (921600 bps by default).
@@ -76,7 +79,7 @@ This button is available when ESPHome establishes communication with the display
 
 #### Back button
 
-Only shown when ESPHome is connected to the display. It returns to the home page.
+Only shown when ESPHome is connected to the display. It returns to the home page, and the page is no longer opened after a restart.
 
 ## Common issues
 

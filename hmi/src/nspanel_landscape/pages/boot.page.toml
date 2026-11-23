@@ -27,7 +27,7 @@ name = "nspanel_easy"
 type = "text"
 x = 15
 y = 33
-w = 200
+w = 270
 h = 30
 sta = 1
 font = "font-03"
@@ -36,7 +36,7 @@ pco = "#ffffff"
 xcen = 0
 ycen = 0
 txt = "NSPanel Easy"
-txt_maxl = 12
+txt_maxl = 64
 
 [[component]]
 name = "lbl1"
@@ -458,3 +458,21 @@ xcen = 1
 ycen = 1
 txt = ""
 txt_maxl = 5
+
+[[component]]
+name = "hs_blueprint"
+type = "hotspot"
+sendkey = 3
+x = 20
+y = 178
+w = 444
+h = 24
+
+[[component]]
+name = "hs_icon_names"
+type = "hotspot"
+sendkey = 3
+x = 20
+y = 226
+w = 444
+h = 24
