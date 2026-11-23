@@ -177,5 +177,5 @@ script:
     then:
       - lambda: |-
           ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Resuming ESPectre sensing");
-          espectre_csi->on_startupn();
+          espectre_csi->on_startup();
 ...
