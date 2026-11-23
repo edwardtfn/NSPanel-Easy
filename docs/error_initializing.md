@@ -11,7 +11,7 @@ The boot page is only shown when ESPHome does not connect to the display within 
 or while the display has an older TFT file that has to be updated first.
 In many cases, restarting your panel can resolve the issue, but if it is still showing the boot page after a reboot, this guide may help you.
 
-The same page is also the panel's status page: press and hold the background of the **Settings** page for 2 seconds to open it at any time,
+The same page is also the panel's status page: use the status button (the checklist icon) on the **Settings** page, or press and hold the background of that page for 2 seconds, to open it at any time,
 for example to check the connections or the versions before asking for help.
 It stays open at full brightness until you close it with the close button (top right), which is shown once ESPHome is connected:
 the page timeout, the dimming and the sleep timeout do not apply to it.
