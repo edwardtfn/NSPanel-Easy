@@ -168,10 +168,14 @@ script:
   # wait until platform ready - pause sensing in early boot
   - id: !extend boot_early_routines
     then:
-      - script.execute: espectre_stop
+      - lambda: |-
+          ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Pause ESPectre sensing until boot completes");
+          espectre_csi->on_shutdown();
 
   # wait until platform ready - enable sensing in late boot
   - id: !extend boot
     then:
-        - script.execute: espectre_start
+      - lambda: |-
+          ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Resuming ESPectre sensing");
+          espectre_csi->on_startupn();
 ...
