@@ -261,6 +261,37 @@ for entry in entries:
         errors.append(f"{entry_id}: missing coordinates or dimensions for '{orient_key}'")
         continue
 
+    # ------------------------------------------------------------------
+    # Tiled entries — the source is placed at each of a list of
+    # coordinates, and the whole canvas is kept (e.g. the buttons of the
+    # button pages, cropped by each button's components on the display)
+    # ------------------------------------------------------------------
+    if isinstance(coords, list):
+        src = resolve_src(entry, orient_key)
+        if not src or not os.path.isfile(os.path.join(pics_dir, src)):
+            errors.append(f"{entry_id}: source not found: {src}")
+            continue
+        placements = []
+        for coord in coords:
+            try:
+                tx, ty = coord.split(",")
+            except ValueError:
+                errors.append(f"{entry_id}: invalid coordinates format '{coord}'")
+                break
+            placements += [src, "-geometry", f"+{tx.strip()}+{ty.strip()}", "-composite"]
+        else:
+            written = set()
+            for theme, bg, slot in (("dark", bg_dark, dark_slot), ("light", bg_light, light_slot)):
+                if slot is None or slot in written:
+                    continue
+                try:
+                    magick(bg, *placements, "-background", "black", "-flatten", output_path(slot))
+                    print(f"  tiles     [{theme}] {src} x{len(coords)} -> {slot}.png")
+                except RuntimeError as e:
+                    errors.append(f"{entry_id} [{theme}]: magick failed: {e}")
+                written.add(slot)
+        continue
+
     # Parse "X,Y" -> "+X+Y" for ImageMagick -geometry
     try:
         cx, cy = coords.split(",")
