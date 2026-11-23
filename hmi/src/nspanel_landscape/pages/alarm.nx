@@ -12,6 +12,30 @@ on alarm.load:
     vis bt_bypass,0
   }
   button_back.font=button_back_font
+  // Chips, at the same position as on the home page (shown when chips_alarm is set)
+  for(sys0=31;sys0<=40;sys0++)
+  {
+    b[sys0].font=chip_font
+    b[sys0].txt=""
+  }
+  if(chips_alarm==1)
+  {
+    // The state icon and the title go under the chips, copied from the originals (tm_chips)
+    vis icon_state,0
+    vis page_label,0
+    sys0=31  // id of chip_relay1 on this page
+    call chips_copy_home
+    tm_chips.en=1
+  }else
+  {
+    // No chips: the state icon and the title stay at the top, where the chips would be
+    vis icon_chips,0
+    vis label_chips,0
+    for(sys0=31;sys0<=40;sys0++)
+    {
+      vis sys0,0
+    }
+  }
   sendme
 
 on bt_home.down:
@@ -112,3 +136,18 @@ on bt_disarm.up:
 
 on button_back.down:
   page back_page_id
+
+on tm_chips.timer:
+  // ESPHome and the Blueprint write the title and the state icon to the originals, hidden with the chips
+  if(label_chips.txt!=page_label.txt)
+  {
+    label_chips.txt=page_label.txt
+  }
+  if(icon_chips.txt!=icon_state.txt)
+  {
+    icon_chips.txt=icon_state.txt
+  }
+  if(icon_chips.pco!=icon_state.pco)
+  {
+    icon_chips.pco=icon_state.pco
+  }
