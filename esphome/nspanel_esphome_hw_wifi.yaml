@@ -193,9 +193,7 @@ text_sensor:
     entity_category: diagnostic
     internal: false
     disabled_by_default: false
-    update_interval: never
-    lambda: |-
-      return { cached_device_name };
+    update_interval: never  # Published once on Wi-Fi connect (see wifi.on_connect)
 
 wifi:
   id: wifi_component

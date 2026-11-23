@@ -193,9 +193,6 @@ script:
           system_flags.baud_fallback_active = found && (tf_uart->get_baud_rate() != ${BAUD_RATE});
           system_flags.baud_rate_set = found;
 
-          // Update baud rate sensor to reflect current UART state
-          baud_rate_active->update();
-
           if (found) {
             ESP_LOGD("${TAG_BOOT}", "Baud: Scan complete - rate found");
           } else {
@@ -280,18 +277,6 @@ script:
                 if (tf_uart->available() == 0) wait_for_uart_drain->stop();
                 if (iteration % 5 == 0) ESP_LOGD("${TAG_BOOT}", "Boot: Waiting for UART empty queue");
             - delay: 1s
-
-text_sensor:
-  - id: baud_rate_active
-    name: Baud rate
-    platform: template
-    icon: mdi:swap-horizontal
-    entity_category: diagnostic
-    lambda: |-
-      return std::to_string(tf_uart->get_baud_rate());
-    filters:
-      - append: " bps"
-    update_interval: 111min
 
 uart:
   - id: tf_uart  # UART for Nextion display
