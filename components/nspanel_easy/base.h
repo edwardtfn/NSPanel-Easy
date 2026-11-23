@@ -285,7 +285,7 @@ extern BlueprintSettingsState blueprint_settings_state;
 /// @brief Full requests sent to Home Assistant since the settings were last needed; limits the retries.
 extern uint8_t blueprint_settings_requests;
 
-/// @brief The display restarted during a send: the settings are requested again once that send ends.
+/// @brief The display restarted, or Home Assistant disconnected, during a send: requested again once it ends.
 extern bool blueprint_settings_resend;
 
 /**
@@ -382,5 +382,29 @@ struct HaEventField {
  * @endcode
  */
 void fire_ha_event(const char *type, std::initializer_list<HaEventField> data = {});
+
+/**
+ * @brief Whether the status page stays open until the user closes it, also across restarts (#841).
+ *
+ * Kept by the display in its EEPROM, as the display opens the page by itself when it starts, before ESPHome
+ * connects. The TFT reports it with its settings (`report_display`), and the page changes follow it: opened from
+ * the settings page, closed by leaving the page to any page but the screensaver (a display restart).
+ */
+extern bool status_page_pinned;
+
+/// @brief millis_64() when Home Assistant connected, for the status page; 0 while it is not connected.
+extern uint64_t ha_connected_since_ms;
+
+/**
+ * @brief Follow the connection of Home Assistant, for the status page.
+ * @param connected Whether Home Assistant is connected now.
+ */
+inline void ha_connection_update(const bool connected) {
+  if (!connected) {
+    ha_connected_since_ms = 0;
+  } else if (ha_connected_since_ms == 0) {
+    ha_connected_since_ms = millis_64();
+  }  // if (connected)
+}
 
 }  // namespace esphome::nspanel_easy

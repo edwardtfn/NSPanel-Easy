@@ -1,4 +1,8 @@
 on screensaver.load:
+  // The stacked time (hour, minute and meridiem in their own components) is shown by ESPHome when used
+  vis time_hour,0
+  vis time_minute,0
+  vis time_meridiem,0
   if(esphome==0)
   {
     // Power on: ESPHome did not connect yet, so nothing can be used. The touch is off and
@@ -78,13 +82,68 @@ on swipestore.timer:
 on text.up:
   page wakeup_page_id
 
+on time_hour.up:
+  page wakeup_page_id
+
+on time_minute.up:
+  page wakeup_page_id
+
+on time_meridiem.up:
+  page wakeup_page_id
+
 on apply_settings.timer:
   apply_settings.en=0
   dim=brightness_sleep
-  screensaver.bco=screensaver_bco
-  text.bco=screensaver_bco
-  text.font=screensaver_font
-  text.pco=screensaver_pco
+  // Only what changed: writing an attribute redraws, and the whole page for the page's background
+  if(screensaver.bco!=screensaver_bco)
+  {
+    screensaver.bco=screensaver_bco
+  }
+  if(text.bco!=screensaver_bco)
+  {
+    text.bco=screensaver_bco
+  }
+  if(text.font!=screensaver_font)
+  {
+    text.font=screensaver_font
+  }
+  if(text.pco!=screensaver_pco)
+  {
+    text.pco=screensaver_pco
+  }
+  if(time_hour.bco!=screensaver_bco)
+  {
+    time_hour.bco=screensaver_bco
+  }
+  if(time_hour.font!=screensaver_font)
+  {
+    time_hour.font=screensaver_font
+  }
+  if(time_hour.pco!=screensaver_pco)
+  {
+    time_hour.pco=screensaver_pco
+  }
+  if(time_minute.bco!=screensaver_bco)
+  {
+    time_minute.bco=screensaver_bco
+  }
+  if(time_minute.font!=screensaver_font)
+  {
+    time_minute.font=screensaver_font
+  }
+  if(time_minute.pco!=screensaver_pco)
+  {
+    time_minute.pco=screensaver_pco
+  }
+  // The meridiem keeps its own smaller font, under the stacked time
+  if(time_meridiem.bco!=screensaver_bco)
+  {
+    time_meridiem.bco=screensaver_bco
+  }
+  if(time_meridiem.pco!=screensaver_pco)
+  {
+    time_meridiem.pco=screensaver_pco
+  }
 
 on chip_relay1.up:
   page wakeup_page_id

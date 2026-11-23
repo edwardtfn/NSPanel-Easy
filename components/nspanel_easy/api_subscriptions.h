@@ -700,18 +700,66 @@ SubAppearance resolve_binding_appearance(const SubBinding &binding, const char *
 /// @brief Bytes reserved for the icon names (all_icon_names is about 121 KB).
 static constexpr uint32_t SUB_ICON_NAMES_CAPACITY = 160 * 1024;
 
+/// @brief Longest icon name kept for a binding whose icon waits for the icon names, null included.
+static constexpr size_t SUB_ICON_NAME_LEN = 65;
+
 /**
- * @brief Add a run of MDI icon names, sent by the Blueprint in chunks once per session.
+ * @brief Add a block of MDI icon names, sent by the Blueprint in reply to the event `icon_names_request`.
  *
  * The names are the Blueprint's all_icon_names, in codepoint order: the name at
  * position i (0-based) is U+E000 + i, so only the names travel and every
  * codepoint is worked out on the panel. Kept in PSRAM, never persisted.
  *
- * @param start Position of the first name of the chunk; 0 starts a new list. A chunk that does not
- *              continue the list is ignored.
+ * The panel asks for one block at a time (see sub_icon_names_request()). A block is kept only when it
+ * continues the list and holds the number of names asked for, or the rest of the list when fewer are left;
+ * anything else is ignored and asked for again.
+ *
+ * @param start Position of the first name of the block.
+ * @param total Number of names in the whole list.
  * @param names Comma-separated names, without "mdi:".
  */
-void sub_icon_names_add(uint16_t start, const std::string &names);
+void sub_icon_names_add(uint16_t start, uint16_t total, const std::string &names);
+
+/// @brief Whether every icon name has arrived in this session.
+bool sub_icon_names_complete();
+
+/// @brief Whether the icon names are still to be asked for: not complete, and not given up.
+bool sub_icon_names_wanted();
+
+/// @brief Whether a block was asked for and has not arrived yet.
+bool sub_icon_names_awaiting();
+
+/// @brief Icon names received in this session.
+uint16_t sub_icon_names_received();
+
+/// @brief Number of icon names in the whole list; 0 until the Blueprint's first reply.
+uint16_t sub_icon_names_expected();
+
+/// @brief Whether the icon names were given up in this session, after the last retry.
+bool sub_icon_names_failed();
+
+/// @brief Commits of the stored bindings without an end marker (see sub_persist()); 0 when verified.
+uint8_t sub_unverified_count();
+
+/// @brief Whether the bindings could not be stored in this session.
+bool sub_store_failed();
+
+/// @brief Start asking for the icon names again, with a fresh count of retries, keeping the names received.
+void sub_icon_names_fetch_reset();
+
+/**
+ * @brief Next block of icon names to ask for.
+ *
+ * Asking again for the same block counts as a retry. After @p retries retries the list is given up for this
+ * session: the icons waiting for it are drawn from the domain, device class and state, and logged.
+ *
+ * @param block Names per block.
+ * @param retries Retries of one block before giving up.
+ * @param start Receives the position of the first name to ask for.
+ * @param count Receives the number of names to ask for.
+ * @return false when there is nothing to ask for (complete, or given up).
+ */
+bool sub_icon_names_request(uint16_t block, uint8_t retries, uint16_t &start, uint16_t &count);
 
 /**
  * @brief Codepoint of an MDI icon name.
@@ -723,7 +771,7 @@ void sub_icon_names_add(uint16_t start, const std::string &names);
  * @param name Icon name, with or without "mdi:", e.g. "mdi:lightbulb".
  * @param glyph Receives the codepoint (null-terminated, 3 bytes).
  * @param size Size of glyph; at least 4.
- * @return false when the name is unknown, or the names have not arrived yet.
+ * @return false when the name is unknown, or the names have not all arrived yet.
  */
 bool sub_icon_lookup(const char *name, char *glyph, size_t size);
 

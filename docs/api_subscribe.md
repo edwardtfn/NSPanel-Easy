@@ -128,6 +128,9 @@ The package enables `api: homeassistant_states: true` automatically, which is re
 | `api_subscribe_entity_len` | `96` | Buffer size for an `entity_id`, null terminator included (`32` to `255`). A longer `entity_id` is not bound; the log reports the size to set. |
 | `api_subscribe_debounce` | `10s` | Quiet period after the last binding before a restart is applied. |
 | `api_subscribe_timeout` | `120s` | Time without an end marker before the push is committed unverified. |
+| `api_icon_names_block` | `400` | Icon names asked for in one block, from `1` to `1000` (the most the Blueprint replies with). |
+| `api_icon_names_timeout` | `5s` | Time to wait for a block of icon names before asking for it again. |
+| `api_icon_names_retries` | `3` | Retries of one block of icon names before the icons given by name are drawn by domain. |
 | `api_subscribe_wipe_nvs_on_failure` | `false` | Erase every stored preference and restart when the bindings cannot be stored. Read [this](#clearing-the-storage-automatically) first. |
 
 Lowering `api_subscribe_max` reduces the size of the staging buffer used during a push. It does not
@@ -199,18 +202,28 @@ the bindings that fit are committed, and the log names the ones left out.
 
 ### `api_subscribe_icon_names`
 
-Sends the MDI icon names, so the panel can turn an icon name (`icon_name`, or an entity's own `icon`
+Sends a block of MDI icon names, so the panel can turn an icon name (`icon_name`, or an entity's own `icon`
 attribute on the button pages) into its codepoint. The names are listed in codepoint order: the name at
-position *n* is the icon at `U+E000 + n`, so only the names travel. Sent in chunks once per session;
-kept in PSRAM and never persisted, so it causes no restart.
+position *n* is the icon at `U+E000 + n`, so only the names travel. Kept in PSRAM and never persisted, so
+it causes no restart.
+
+The panel asks for the names itself, one block at a time, with the event `icon_names_request` and the
+fields `start` (position of the first name, from 0) and `count` (number of names). It asks for the next
+block only once the previous one has arrived. A block is kept only when it continues the list and holds
+`count` names, or the rest of the list when fewer are left. A block that does not arrive within
+`api_icon_names_timeout` is asked for again, up to `api_icon_names_retries` times. While Home Assistant is
+away, the panel waits, and goes on from the last block received when it is back.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `start` | int | Position of the first name of the chunk. `0` starts a new list. |
-| `names` | string | Comma-separated names of the chunk, without `mdi:`. |
+| `start` | int | Position of the first name of the block, as asked for. |
+| `total` | int | Number of names in the whole list, so the panel knows when it is complete. |
+| `names` | string | Comma-separated names of the block, without `mdi:`. |
 
-The Blueprint sends its own `all_icon_names` list. Without it, icons given by name cannot be resolved,
-and the panel falls back to the icon by domain, device class and state.
+The Blueprint replies with its own `all_icon_names` list. A binding whose `icon_name` is not among the
+names received so far is drawn once the list is complete, so it does not show another icon in between.
+Without the list, after the last retry, icons given by name cannot be resolved, and the panel falls back
+to the icon by domain, device class and state, with a warning in the log for each.
 
 ### Push identifier
 
