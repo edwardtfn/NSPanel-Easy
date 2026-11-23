@@ -129,6 +129,19 @@ script:
     then:
       - lambda: |-
           if (page != "mem") return;
+          if (component == "home_simple_names") {
+            // Names of the tiles of the simple home page (#339), wrapped on two lines as on the button pages
+            #if NSPANEL_EASY_HOME_PAGE_SIMPLE
+            for (size_t i = 0; i < txt_list.size() and i < 6; ++i) {
+              std::string name = txt_list[i];
+              std::replace(name.begin(), name.end(), '\\', '/');  // Before the wrap, which adds "\r"
+              std::replace(name.begin(), name.end(), '"', '\'');
+              disp1->send_command_printf("home_simple.name%02u.txt=\"%s\"", static_cast<unsigned>(i + 1),
+                                         wrapText(name, 14, ${LANG_BYTES_PER_CHAR}).c_str());
+            }  // for (each tile)
+            #endif  // NSPANEL_EASY_HOME_PAGE_SIMPLE
+            return;
+          }  // if (home_simple_names)
           if (component == "sun_coordinates") {
             // Latitude and longitude arrive together so they are always applied
             // as a pair, never half-updated.

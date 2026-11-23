@@ -8152,24 +8152,22 @@ actions:
                                 continue_on_error: true
                               - *delay_boot
                           # Names of the tiles of the simple home page (#339): the button's title, or the entity's name.
-                          # One call with a display command per tile; a TFT without the page ignores them.
+                          # The panel wraps them on two lines, as the names of the buttons on the button pages.
                           - alias: Simple home page - Tile names
                             action: 'esphome.{{ action_prefix }}_component_text_list'
                             data:
                               page: mem
-                              id: command
+                              id: home_simple_names
                               txt_list: >-
-                                {%- set ns = namespace(commands=[]) -%}
+                                {%- set ns = namespace(names=[]) -%}
                                 {%- for button in home_page.custom_buttons[:6] -%}
                                   {%- set entity = button.entity if button.entity is string else "" -%}
                                   {%- set title = button.name if button.name is string and button.name | length > 0
                                       else (state_attr(entity, "friendly_name") | default(entity, true)
                                             if "." in entity and states[entity] is not none else "") -%}
-                                  {%- set title = (title | string).replace("\\", "/").replace('"', "'") -%}
-                                  {%- set ns.commands = ns.commands
-                                      + ['home_simple.name%02d.txt="%s"' | format(loop.index, title)] -%}
+                                  {%- set ns.names = ns.names + [title | string] -%}
                                 {%- endfor -%}
-                                {{ ns.commands }}
+                                {{ ns.names }}
                             continue_on_error: true
                           - *delay_boot
                           - alias: Temperatures appearance
