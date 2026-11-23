@@ -156,7 +156,7 @@ txt_maxl = 50
 [[component]]
 name = "bt_reboot_pic"
 type = "picture"
-x = 35
+x = 22
 y = 368
 w = 60
 h = 60
@@ -165,7 +165,7 @@ pic = "picture-0085"
 [[component]]
 name = "bt_sleep_pic"
 type = "picture"
-x = 130
+x = 94
 y = 368
 w = 60
 h = 60
@@ -174,7 +174,7 @@ pic = "picture-0086"
 [[component]]
 name = "bt_theme_pic"
 type = "picture"
-x = 225
+x = 166
 y = 368
 w = 60
 h = 60
@@ -183,7 +183,7 @@ pic = "picture-0087"
 [[component]]
 name = "bt_reboot_icon"
 type = "text"
-x = 40
+x = 27
 y = 373
 w = 50
 h = 50
@@ -197,7 +197,7 @@ txt_maxl = 4
 [[component]]
 name = "bt_sleep_icon"
 type = "text"
-x = 135
+x = 99
 y = 373
 w = 50
 h = 50
@@ -211,7 +211,7 @@ txt_maxl = 4
 [[component]]
 name = "bt_theme_icon"
 type = "text"
-x = 230
+x = 171
 y = 373
 w = 50
 h = 50
@@ -226,7 +226,7 @@ txt_maxl = 4
 name = "bt_reboot_hs"
 type = "hotspot"
 sendkey = 3
-x = 30
+x = 17
 y = 363
 w = 70
 h = 70
@@ -235,7 +235,7 @@ h = 70
 name = "bt_sleep_hs"
 type = "hotspot"
 sendkey = 3
-x = 125
+x = 89
 y = 363
 w = 70
 h = 70
@@ -244,7 +244,39 @@ h = 70
 name = "bt_theme_hs"
 type = "hotspot"
 sendkey = 3
-x = 220
+x = 161
+y = 363
+w = 70
+h = 70
+
+[[component]]
+name = "bt_status_pic"
+type = "picture"
+x = 238
+y = 368
+w = 60
+h = 60
+pic = "picture-0134"
+
+[[component]]
+name = "bt_status_icon"
+type = "text"
+x = 243
+y = 373
+w = 50
+h = 50
+font = "font-10"
+bco = "#292c29"
+pco = "#ffffff"
+xcen = 2
+txt = "\ue755"
+txt_maxl = 4
+
+[[component]]
+name = "bt_status_hs"
+type = "hotspot"
+sendkey = 3
+x = 233
 y = 363
 w = 70
 h = 70
