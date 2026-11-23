@@ -47,7 +47,7 @@ the other lines are greyed out, so the red cross on **ESPHome** shows where to s
 | Line | Shows | Needs attention when |
 | :-- | :-- | :-- |
 | **Display** | The TFT version and the baud rate of the display, known by the display itself. | ESPHome is connected but the display was not acknowledged (orange). |
-| **ESPHome** | The firmware version. | ESPHome is not connected to the display (red), or the TFT has another version than the firmware (orange). |
+| **ESPHome** | The firmware version, and the ESPHome version it was built with. | ESPHome is not connected to the display (red), or the TFT has another version than the firmware (orange). |
 | **Wi-Fi** | The IP address and the signal strength. | Wi-Fi is not connected (red), or the signal is below -75 dBm (orange). |
 | **Home Assistant** (**HA** in portrait) | Whether the panel is connected to Home Assistant, and for how long. | It is not connected (red). |
 | **Blueprint** | The Blueprint version and its settings: `complete`, `receiving`, `waiting` or `gave up`. | Not complete yet (orange), no answer (red), or given up (red), touch it to retry. |
