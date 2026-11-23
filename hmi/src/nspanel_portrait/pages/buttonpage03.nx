@@ -27,6 +27,8 @@ on buttonpage03.load:
     // Page label
     page_label.pco=color_pco_main
     page_label.picc=pic_background_main
+    label_chips.pco=color_pco_main
+    label_chips.picc=pic_background_main
     // Page index dots
     page_index.pco=color_pco_navigation
     page_index.picc=pic_background_main
@@ -53,8 +55,18 @@ on buttonpage03.load:
   }
   if(chips_buttons==1)
   {
+    // The title goes under the chips
+    vis page_label,0
     sys0=51  // id of chip_relay1 on this page
     call chips_copy_home
+  }else
+  {
+    // No chips: the title stays at the top, where the chips would be
+    vis label_chips,0
+    for(sys0=51;sys0<=60;sys0++)
+    {
+      vis sys0,0
+    }
   }
   // Set up button slots from bitmask
   for(sys0=0;sys0<8;sys0++)
