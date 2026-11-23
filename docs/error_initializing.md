@@ -16,7 +16,7 @@ for example to check the connections or the versions before asking for help.
 It stays open at full brightness until you close it with the close button (top right), which is shown once ESPHome is connected:
 the page timeout, the dimming and the sleep timeout do not apply to it.
 It also stays open across restarts, so a restart or a slow start can be followed from the beginning:
-after a restart, the panel opens it again as soon as the display is ready, until you close it.
+after a restart, the display opens it again as soon as it starts, even before ESPHome connects, until you close it.
 With ESPHome connected, the title shows the name of the panel, which helps to tell the panels apart on photos.
 
 Understanding what is shown on the boot page can be useful to find the cause of the problem or when you are looking for help.

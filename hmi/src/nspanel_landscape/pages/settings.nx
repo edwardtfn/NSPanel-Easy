@@ -92,7 +92,13 @@ on tm_dim.timer:
   tm_dim.en=0
 
 on tm_status.timer:
-  page boot  // The status page, for troubleshooting
+  // The status page, for troubleshooting. It stays open, also across restarts, until it is closed (#841).
+  if(status_page_pinned==0)
+  {
+    status_page_pinned=1
+    wepo 1,8
+  }
+  page boot
 
 on bt_sleep_hs.up:
   page screensaver

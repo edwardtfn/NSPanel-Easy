@@ -15,19 +15,6 @@ substitutions:
   PAGE_BOOT_ID: 0
   TAG_PAGE_BOOT: nspanel.page.boot
 
-globals:
-  # The status page stays open, also across restarts, from when the user opens it until the user closes it (#841)
-  - id: status_page_pinned
-    type: bool
-    restore_value: true
-    initial_value: "false"
-
-  # When Home Assistant connected, in ms since the start (millis_64); 0 while it is not connected
-  - id: ha_connected_since
-    type: uint64_t
-    restore_value: false
-    initial_value: "0"
-
 display:
   - id: !extend disp1
     # No `start_up_page`: the display is not sent to the boot page when ESPHome connects. It starts on the
@@ -51,6 +38,11 @@ display:
               display_report.hard_coded_mode = number;
             } else if (key == "magic_flag") {
               display_report.magic_flag = number;
+            } else if (key == "status_page_pinned") {
+              // The status page left open before a restart, which the display opens again by itself (#841). Before
+              // the end of the report, so the boot does not leave the page once the display is ready.
+              status_page_pinned = (number == 1);
+              system_flags.boot_page_requested = (current_page_id == get_page_id("boot") and status_page_pinned);
             }  // if (key)
     on_custom_text_sensor:
       then:
@@ -324,9 +316,9 @@ script:
       - lambda: |-
           if (system_flags.boot_completed) return;
           if (current_page_id != get_page_id("screensaver") and current_page_id != get_page_id("boot")) return;
-          if (id(status_page_pinned)) {
-            // Left open by the user before the restart: shown again until the user closes it (#841)
-            ESP_LOGI("${TAG_PAGE_BOOT}", "Display ready, opening the status page left open");
+          if (status_page_pinned) {
+            // Left open by the user before the restart: the display opened it again by itself (#841)
+            ESP_LOGI("${TAG_PAGE_BOOT}", "Display ready, keeping the status page left open");
             if (current_page_id != get_page_id("boot")) goto_page->execute(get_page_id("boot"));
             return;
           }  // if (status page pinned)
@@ -348,7 +340,7 @@ script:
           brightness_current = UINT8_MAX;  // Set by the display itself until now
           if (current_page_id == get_page_id("boot")) return;
           if (current_page_id == get_page_id("screensaver")) {
-            if (id(status_page_pinned)) {
+            if (status_page_pinned) {
               // Left open by the user before the restart: shown again until the user closes it (#841)
               goto_page->execute(get_page_id("boot"));
               return;
@@ -460,8 +452,8 @@ script:
 
           // Home Assistant, and for how long (#841)
           const bool ha = api_server->is_connected_with_state_subscription();
-          if (ha and id(ha_connected_since) > 0) {
-            const uint32_t minutes = static_cast<uint32_t>((millis_64() - id(ha_connected_since)) / 60000ULL);
+          if (ha and ha_connected_since_ms > 0) {
+            const uint32_t minutes = static_cast<uint32_t>((millis_64() - ha_connected_since_ms) / 60000ULL);
             char since[32];
             if (minutes >= 1440) {
               snprintf(since, sizeof(since), "connected %" PRIu32 "d %" PRIu32 "h", minutes / 1440, (minutes / 60) % 24);
@@ -535,28 +527,23 @@ script:
           if (new_page_id != get_page_id("screensaver")) display_start_hold_release->execute();
           // The boot page opened from the settings page (long press) is the status page, shown on request: it is
           // left by the user, like any other page, instead of by the boot (#615). It stays open across restarts
-          // until the user leaves it (#841). A display restart goes back to the screensaver: that is not the user.
+          // until the user leaves it (#841): the display keeps that in its EEPROM, and this follows it. A display
+          // restart goes back to the screensaver, or to this page when pinned: that is not the user.
           const uint8_t boot_page_id = get_page_id("boot");
           if (new_page_id == boot_page_id and last_page_id == get_page_id("settings")) {
-            id(status_page_pinned) = true;
+            status_page_pinned = true;
           } else if (last_page_id == boot_page_id and new_page_id != boot_page_id and
-                     new_page_id != get_page_id("screensaver") and id(status_page_pinned)) {
+                     new_page_id != get_page_id("screensaver") and status_page_pinned) {
             ESP_LOGD("${TAG_PAGE_BOOT}", "Status page closed");
-            id(status_page_pinned) = false;
+            status_page_pinned = false;
           }  // if (status page opened or closed)
-          system_flags.boot_page_requested = (new_page_id == boot_page_id and id(status_page_pinned));
+          system_flags.boot_page_requested = (new_page_id == boot_page_id and status_page_pinned);
           if (new_page_id != get_page_id("boot")) return;
           page_boot->execute();
 
   - id: !extend update_flag_api_ready
     then:
-      - lambda: |-
-          // When Home Assistant connected, for the status page
-          if (!api_server->is_connected_with_state_subscription()) {
-            id(ha_connected_since) = 0;
-          } else if (id(ha_connected_since) == 0) {
-            id(ha_connected_since) = millis_64();
-          }  // if (Home Assistant connected)
+      - lambda: ha_connection_update(api_server->is_connected_with_state_subscription());  // For the status page
 
   - id: !extend stop_all
     then:
