@@ -173,5 +173,5 @@ script:
   # wait until platform ready - enable sensing in late boot
   - id: !extend boot
     then:
-        - script.execute: espectre_restart_after_ota
+        - script.execute: espectre_start
 ...
