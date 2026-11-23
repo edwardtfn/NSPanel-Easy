@@ -55,8 +55,6 @@ esp32:
       # Failed assertions still abort and reboot the panel, but without the file/line/expression strings
       # Reduces flash usage; crash logs then show only the abort address
       assertion_level: SILENT
-      # LWIP internal assertions are development-only checks
-      enable_lwip_assert: false
 
 esp32_ble:
   id: ble
