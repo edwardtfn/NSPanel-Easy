@@ -15,27 +15,34 @@ on home_simple.load:
     time.pco=color_pco_main
     meridiem.pco=color_pco_main
   }
-  // A tile for each custom button shown on home (bits 7 to 12 of vis_home, as on home)
-  sys0=vis_home/128
-  for(sys1=0;sys1<6;sys1++)
-  {
-    sys2=sys0%2
-    sys0=sys0/2
-    sys3=sys1+20
-    vis b[sys3],sys2
-    sys3=sys1+26
-    vis b[sys3],sys2
-    sys3=sys1+32
-    vis b[sys3],sys2
-    sys3=sys1+38
-    vis b[sys3],sys2
-  }
+  // A tile for each custom button shown on home (bits 7 to 12 of vis_home, as on home), followed by tm_sync
+  vis_shown.val=-1
   // The page shows copies of home's global components: first copy right away, then every second
   tm_sync.tim=50
   tm_sync.en=1
+  sendme
 
 on tm_sync.timer:
   tm_sync.tim=1000
+  // The tiles follow the custom buttons shown on home, also when one changes while this page is open
+  if(vis_shown.val!=vis_home)
+  {
+    vis_shown.val=vis_home
+    sys0=vis_home/128
+    for(sys1=0;sys1<6;sys1++)
+    {
+      sys2=sys0%2
+      sys0=sys0/2
+      sys3=sys1+20
+      vis b[sys3],sys2
+      sys3=sys1+26
+      vis b[sys3],sys2
+      sys3=sys1+32
+      vis b[sys3],sys2
+      sys3=sys1+38
+      vis b[sys3],sys2
+    }
+  }
   chip_relay1.txt=home.chip_relay1.txt
   chip_relay1.pco=home.chip_relay1.pco
   chip_relay2.txt=home.chip_relay2.txt
