@@ -16,11 +16,15 @@ substitutions:
   ##############################
   espectre_traffic_generator_mode: "wifi_raw"    # ping, dns, dns_tcp, wifi_raw or external
   espectre_detection_algorithm: "high_accuracy"  # high_accuracy or lightweight
+  espectre_quiet_boot_log: false                 # Holds back the runtime's status line until the boot completes
 
 esphome:
   min_version: 2026.11.0
   build_flags:
     - -D NSPANEL_EASY_ADDON_ESPECTRE
+
+logger:
+  runtime_tag_levels: ${espectre_quiet_boot_log}  # For espectre.runtime, held back during the boot (see boot below)
 
 espectre:
   id: espectre_csi
@@ -165,17 +169,25 @@ script:
           chip_states[CHIP_IDX_RELAY2].visible = motion;
           chip_render(CHIP_IDX_RELAY2);
 
-  # wait until platform ready - pause sensing in early boot
+  # Sensing starts as soon as the component is set up, with the switch's saved state. With espectre_quiet_boot_log,
+  # the runtime's status line (espectre.runtime, every few seconds) is held back until the boot completes, to keep the
+  # boot log readable. Warnings and errors still show.
   - id: !extend boot_early_routines
     then:
       - lambda: |-
-          ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Pause ESPectre sensing until boot completes");
-          // espectre_csi->disable_loop();
+          #ifdef USE_LOGGER_RUNTIME_TAG_LEVELS
+          if (${espectre_quiet_boot_log} and logger::global_logger->get_log_level() > ESPHOME_LOG_LEVEL_WARN) {
+            logger::global_logger->set_log_level("espectre.runtime", ESPHOME_LOG_LEVEL_WARN);
+          }  // if (quiet boot log, and the logger more verbose than WARN)
+          #endif  // USE_LOGGER_RUNTIME_TAG_LEVELS
 
-  # wait until platform ready - enable sensing in late boot
   - id: !extend boot
     then:
       - lambda: |-
-          ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Resuming ESPectre sensing");
-          // espectre_csi->enable_loop();
+          #ifdef USE_LOGGER_RUNTIME_TAG_LEVELS
+          if (${espectre_quiet_boot_log}) {
+            logger::global_logger->set_log_level("espectre.runtime", logger::global_logger->get_log_level());
+            ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Boot completed: ESPectre status back in the log");
+          }  // if (quiet boot log)
+          #endif  // USE_LOGGER_RUNTIME_TAG_LEVELS
 ...

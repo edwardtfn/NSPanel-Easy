@@ -65,6 +65,7 @@ The following keys are available to be used in your `substitutions`. All values 
 | :- | :-: | :-: | :-: | :- |
 | espectre_detection_algorithm | no | "high_accuracy" or "lightweight" | "high_accuracy" | see ESPectre docs |
 | espectre_traffic_generator_mode | no | "ping", "dns", "dns_tcp", "wifi_raw" or "external" | "wifi_raw" | "external" if using ESPectre App as traffic generator |
+| espectre_quiet_boot_log | no | "false" or "true" | "false" | "true" holds back the status line of ESPectre in the log until the boot completes. Sensing itself is not delayed |
 <!-- markdownlint-enable MD013 MD033 -->
 
 `espectre_ref` and `espectre_direct_api` are no longer used, and can be removed from your settings.
