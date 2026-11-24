@@ -591,3 +591,8 @@ name = "swipestore"
 type = "timer"
 tim = 50
 en = 0
+
+[[component]]
+name = "vis_shown"
+type = "variable"
+val = -1

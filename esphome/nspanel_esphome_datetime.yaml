@@ -78,13 +78,13 @@ script:
               return;
             }  // if not stacked layout
 
-            // Hour up to the first separator (":" or " "), minute after it
-            const size_t split = bare.find_first_of(": ");
+            // Hour up to the first separator (":", "." or " "), minute after it
+            const size_t split = bare.find_first_of(":. ");
             const std::string hour = bare.substr(0, split);
             std::string minute;
             if (split != std::string::npos) {
               minute = bare.substr(split);
-              const size_t start = minute.find_first_not_of(": ");
+              const size_t start = minute.find_first_not_of(":. ");
               minute = (start == std::string::npos) ? "" : minute.substr(start);
             }  // if separator found
 

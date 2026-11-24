@@ -542,6 +542,9 @@ script:
                      new_page_id != get_page_id("screensaver") and status_page_pinned) {
             ESP_LOGD("${TAG_PAGE_BOOT}", "Status page closed");
             status_page_pinned = false;
+            // The display clears its own copy with the close button only: also for any other way out of the page
+            disp1->send_command("status_page_pinned=0");
+            disp1->send_command("wepo 0,8");
           }  // if (status page opened or closed)
           system_flags.boot_page_requested = (new_page_id == boot_page_id and status_page_pinned);
           if (new_page_id != get_page_id("boot")) return;

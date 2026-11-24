@@ -50,9 +50,9 @@ the other lines are greyed out, so the red cross on **ESPHome** shows where to s
 | **ESPHome** | The firmware version, and the ESPHome version it was built with. | ESPHome is not connected to the display (red), or the TFT has another version than the firmware (orange). |
 | **Wi-Fi** | The IP address and the signal strength. | Wi-Fi is not connected (red), or the signal is below -75 dBm (orange). |
 | **Home Assistant** (**HA** in portrait) | Whether the panel is connected to Home Assistant, and for how long. | It is not connected (red). |
-| **Blueprint** | The Blueprint version and its settings: `complete`, `receiving`, `waiting` or `gave up`. | Not complete yet (orange), no answer (red), or given up (red), touch it to retry. |
+| **Blueprint** | The Blueprint version and its settings: `complete`, `receiving`, `waiting` or `gave up`. | Not complete yet (orange), no answer (red), or given up (red): then touch it to retry. |
 | **Bindings** | The number of [API subscriptions](api_subscribe.md). | None yet, or stored but not verified yet (orange), or they could not be stored (red). |
-| **Icon names** (**Icons** in portrait) | The [icon names](api_subscribe.md#api_subscribe_icon_names) received from the Blueprint. | Still arriving (orange), or the panel gave up asking (red), touch it to retry. |
+| **Icon names** (**Icons** in portrait) | The [icon names](api_subscribe.md#api_subscribe_icon_names) received from the Blueprint. | Still arriving (orange), or the panel gave up asking (red): then touch it to retry. |
 
 When ESPHome does not connect to the display, the **Display** line is the first thing to check:
 the baud rate must match the one used by the firmware (921600 bps by default).
