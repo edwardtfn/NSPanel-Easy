@@ -297,12 +297,13 @@ def check_precision(candidate):
 
 
 # Forecasts for the night check of the next days' icons (issue #851): (forecast_type, forecast_day). The hourly
-# forecasts need the sun entity and the time, which the mock doesn't provide.
+# forecast runs without a sun entity, so it takes the fallback for missing sun data.
 NIGHT_CASES = (
     ("daily", []),
     ("daily", [{"datetime": "2026-11-05T12:00:00+00:00", "condition": "sunny"}]),
     ("twice_daily", [{"datetime": "2026-11-05T06:00:00+00:00", "condition": "sunny", "is_daytime": True}]),
     ("twice_daily", [{"datetime": "2026-11-05T18:00:00+00:00", "condition": "sunny", "is_daytime": False}]),
+    ("hourly", [{"datetime": "2026-11-05T22:00:00+00:00", "condition": "sunny"}]),
     ("other", [{"datetime": "2026-11-05T12:00:00+00:00", "condition": "sunny"}]),
 )
 
@@ -317,6 +318,7 @@ def check_night_type(path):
         sys.exit(f"ERROR: 'forecast_is_night' not found in {path}")
     hass = MockHomeAssistant()
     setup_environment(hass)
+    hass.env.globals["as_timestamp"] = as_timestamp  # As a function too, for the hourly forecast
     failures = 0
     for forecast_type, forecast_day in NIGHT_CASES:
         context = {"forecast_type": forecast_type, "forecast_day": forecast_day, "datetime_is_string": True}
