@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Option A: the panel, with a house on its screen -->
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#0d9488"/>
+  <rect x="12" y="12" width="40" height="30" rx="4" fill="#ffffff"/>
+  <path d="M32 18 L43 27 V36 H21 V27 Z" fill="#0d9488"/>
+  <rect x="29" y="29" width="6" height="7" fill="#ffffff"/>
+  <circle cx="22" cy="51" r="3" fill="#f59e0b"/>
+  <circle cx="42" cy="51" r="3" fill="#f59e0b"/>
+</svg>
