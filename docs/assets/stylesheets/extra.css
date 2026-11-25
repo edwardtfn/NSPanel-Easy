@@ -1,22 +1,22 @@
 /* NSPanel Easy - site styles */
 
-/* Brand colours: teal (primary) and amber (accent), from the logo */
+/* Brand colours, from the logo (the Discord server icon): sky blue (primary) and indigo (accent) */
 :root,
 [data-md-color-scheme="default"] {
-  --md-primary-fg-color: #0d9488;
-  --md-primary-fg-color--light: #14b8a6;
-  --md-primary-fg-color--dark: #0f766e;
-  --md-accent-fg-color: #d97706;
-  --md-accent-fg-color--transparent: rgba(217, 119, 6, 0.1);
+  --md-primary-fg-color: #2b7bd9;
+  --md-primary-fg-color--light: #4fb3f5;
+  --md-primary-fg-color--dark: #1f5fae;
+  --md-accent-fg-color: #5d50e5;
+  --md-accent-fg-color--transparent: rgba(93, 80, 229, 0.1);
 }
 
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color: #0f766e;
-  --md-primary-fg-color--light: #14b8a6;
-  --md-primary-fg-color--dark: #115e59;
-  --md-accent-fg-color: #f59e0b;
-  --md-accent-fg-color--transparent: rgba(245, 158, 11, 0.1);
-  --md-typeset-a-color: #2dd4bf;
+  --md-primary-fg-color: #2b7bd9;
+  --md-primary-fg-color--light: #57d3f3;
+  --md-primary-fg-color--dark: #1f5fae;
+  --md-accent-fg-color: #8a80ff;
+  --md-accent-fg-color--transparent: rgba(138, 128, 255, 0.1);
+  --md-typeset-a-color: #57d3f3;
 }
 
 /* Landing page: hero with the text on the left and a panel screenshot on the right */

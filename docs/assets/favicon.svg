@@ -1,9 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Option A: the panel, with a house on its screen -->
-  <rect x="4" y="4" width="56" height="56" rx="12" fill="#0d9488"/>
-  <rect x="12" y="12" width="40" height="30" rx="4" fill="#ffffff"/>
-  <path d="M32 18 L43 27 V36 H21 V27 Z" fill="#0d9488"/>
-  <rect x="29" y="29" width="6" height="7" fill="#ffffff"/>
-  <circle cx="22" cy="51" r="3" fill="#f59e0b"/>
-  <circle cx="42" cy="51" r="3" fill="#f59e0b"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- NSPanel Easy favicon: the logo reduced for small sizes (frame, sun and wave only) -->
+  <rect x="2" y="6" width="28" height="20" rx="4" fill="#141625" stroke="#4fb3f5" stroke-width="2.5"/>
+  <path d="M5 20 C12 17 18 19 23 14 L27 11 L27 15 C22 19 18 22 5 23 Z" fill="#5d50e5"/>
+  <circle cx="11" cy="13" r="3.5" fill="#f5c531"/>
 </svg>

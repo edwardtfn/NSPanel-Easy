@@ -1,9 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Option A: the panel, with a house on its screen -->
-  <rect x="4" y="4" width="56" height="56" rx="12" fill="#0d9488"/>
-  <rect x="12" y="12" width="40" height="30" rx="4" fill="#ffffff"/>
-  <path d="M32 18 L43 27 V36 H21 V27 Z" fill="#0d9488"/>
-  <rect x="29" y="29" width="6" height="7" fill="#ffffff"/>
-  <circle cx="22" cy="51" r="3" fill="#f59e0b"/>
-  <circle cx="42" cy="51" r="3" fill="#f59e0b"/>
+  <!-- NSPanel Easy logo: the panel's home page, as on the Discord server icon -->
+  <defs>
+    <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57d3f3"/>
+      <stop offset="1" stop-color="#4f8ef5"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c0306f"/>
+      <stop offset="0.5" stop-color="#5d50e5"/>
+      <stop offset="1" stop-color="#4ec2f0"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="12" width="56" height="40" rx="7" fill="#141625" stroke="url(#frame)" stroke-width="3.5"/>
+  <path d="M8 40 C22 34 34 38 44 30 C50 25 54 22 57 20 L57 26 C50 32 44 40 30 41 C20 42 12 44 8 46 Z" fill="url(#wave)" opacity="0.9"/>
+  <g stroke="#f5c531" stroke-width="1.6" stroke-linecap="round">
+    <line x1="21" y1="17" x2="21" y2="19.5"/>
+    <line x1="27.5" y1="19.5" x2="25.8" y2="21.2"/>
+    <line x1="14.5" y1="19.5" x2="16.2" y2="21.2"/>
+    <line x1="30" y1="26" x2="27.5" y2="26"/>
+  </g>
+  <circle cx="21" cy="26" r="5" fill="#f5c531"/>
+  <path d="M12 34 a4 4 0 0 1 2-7.4 a5.2 5.2 0 0 1 9.8 1.2 a3.4 3.4 0 0 1 0.6 6.2 Z" fill="#ffffff"/>
+  <rect x="42" y="43" width="6" height="3.5" rx="0.8" fill="#3a3f55"/>
+  <rect x="49.5" y="43" width="6" height="3.5" rx="0.8" fill="#3a3f55"/>
 </svg>
