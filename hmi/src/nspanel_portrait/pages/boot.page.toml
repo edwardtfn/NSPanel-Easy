@@ -36,7 +36,7 @@ pco = "#ffffff"
 xcen = 0
 ycen = 0
 txt = "NSPanel Easy"
-txt_maxl = 12
+txt_maxl = 64
 
 [[component]]
 name = "lbl1"
@@ -73,7 +73,7 @@ name = "version"
 type = "variable"
 vscope = 1
 sta = 1
-txt = "2026.11.18"
+txt = "9999.99.9"
 txt_maxl = 12
 
 [[component]]
@@ -458,3 +458,21 @@ xcen = 1
 ycen = 1
 txt = ""
 txt_maxl = 5
+
+[[component]]
+name = "hs_blueprint"
+type = "hotspot"
+sendkey = 3
+x = 18
+y = 196
+w = 288
+h = 26
+
+[[component]]
+name = "hs_icon_names"
+type = "hotspot"
+sendkey = 3
+x = 18
+y = 250
+w = 288
+h = 26

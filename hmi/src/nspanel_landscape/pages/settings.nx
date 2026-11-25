@@ -32,6 +32,7 @@ on settings.load:
     bt_reboot_pic.pic=@pic(picture-0092)
     bt_sleep_pic.pic=@pic(picture-0093)
     bt_theme_pic.pic=@pic(picture-0094)
+    bt_status_pic.pic=@pic(picture-0135)
     // Back button
     button_back.pco=color_pco_navigation
     button_back.picc=settings.pic
@@ -92,7 +93,8 @@ on tm_dim.timer:
   tm_dim.en=0
 
 on tm_status.timer:
-  page boot  // The status page, for troubleshooting
+  // Long press on the background: same as the status button
+  click bt_status_hs,0
 
 on bt_sleep_hs.up:
   page screensaver
@@ -110,3 +112,13 @@ on bt_theme_hs.up:
   }
   printh 00
   printh FF FF FF
+
+on bt_status_hs.up:
+  // The status page, for troubleshooting. It stays open, also across restarts, until it is closed (#841).
+  tm_status.en=0
+  if(status_page_pinned==0)
+  {
+    status_page_pinned=1
+    wepo 1,8
+  }
+  page boot

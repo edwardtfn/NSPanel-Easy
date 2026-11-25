@@ -11,6 +11,7 @@ substitutions:
   ##############################
   ## Change only in your      ##
   ## local yaml substitutions ##
+  home_page_simple: false  # Prototype (#339): use the simple home page (clock and big custom buttons) as home
   TAG_PAGE_HOME: nspanel.page.home
   SUN_DEFAULT_LATITUDE: '0'
   SUN_DEFAULT_LONGITUDE: '0'
@@ -21,6 +22,7 @@ substitutions:
 esphome:
   build_flags:
     - -D NSPANEL_EASY_PAGE_HOME
+    - -D NSPANEL_EASY_HOME_PAGE_SIMPLE=${1 if home_page_simple else 0}
     - -D NSPANEL_EASY_USE_WEATHER
 
 globals:
@@ -127,6 +129,19 @@ script:
     then:
       - lambda: |-
           if (page != "mem") return;
+          if (component == "home_simple_names") {
+            // Names of the tiles of the simple home page (#339), wrapped on two lines as on the button pages
+            #if NSPANEL_EASY_HOME_PAGE_SIMPLE
+            for (size_t i = 0; i < txt_list.size() and i < 6; ++i) {
+              std::string name = txt_list[i];
+              std::replace(name.begin(), name.end(), '\\', '/');  // Before the wrap, which adds "\r"
+              std::replace(name.begin(), name.end(), '"', '\'');
+              disp1->send_command_printf("home_simple.name%02u.txt=\"%s\"", static_cast<unsigned>(i + 1),
+                                         wrapText(name, 14, ${LANG_BYTES_PER_CHAR}).c_str());
+            }  // for (each tile)
+            #endif  // NSPANEL_EASY_HOME_PAGE_SIMPLE
+            return;
+          }  // if (home_simple_names)
           if (component == "sun_coordinates") {
             // Latitude and longitude arrive together so they are always applied
             // as a pair, never half-updated.
@@ -234,7 +249,8 @@ script:
             if (event != "short_click") return false;
             // The confirm page re-emits the accepted click while it is still
             // showing, so the guard below is what stops it looping back here.
-            if (current_page_id != get_page_id("home")) return false;
+            // The simple home page (#339) sends the same clicks as home
+            if (current_page_id != get_page_id("home") && current_page_id != get_page_id("home_simple")) return false;
 
             const uint8_t slot = parse_home_button_index(component.c_str());
             if (slot == UINT8_MAX) return false;
@@ -244,7 +260,7 @@ script:
             disp1->set_component_text("confirm.page_name", "home");
             disp1->set_component_text("confirm.component", component.c_str());
             disp1->set_component_text("confirm.body", "");  // Global component, may hold a button page label
-            disp1->set_component_value("confirm.page_id", get_page_id("home"));
+            disp1->set_component_value("confirm.page_id", current_page_id);  // Back to the page of the click
             goto_page->execute(get_page_id("confirm"));
             return true;
           };

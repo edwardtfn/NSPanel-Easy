@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.11.18)
+  name: NSPanel Easy Configuration (v9999.99.9)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -5322,7 +5322,7 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.11.18
+  blueprint_version: 9999.99.9
 
   # Minimum ESPHome firmware version required by this Blueprint (the Blueprint -> ESPHome contract).
   # Set it to 'next' when a change makes the Blueprint depend on a newer firmware, e.g. a new API
@@ -8151,6 +8151,25 @@ actions:
                                     {{ ns.decimal_value }}
                                 continue_on_error: true
                               - *delay_boot
+                          # Names of the tiles of the simple home page (#339): the button's title, or the entity's name.
+                          # The panel wraps them on two lines, as the names of the buttons on the button pages.
+                          - alias: Simple home page - Tile names
+                            action: 'esphome.{{ action_prefix }}_component_text_list'
+                            data:
+                              page: mem
+                              id: home_simple_names
+                              txt_list: >-
+                                {%- set ns = namespace(names=[]) -%}
+                                {%- for button in home_page.custom_buttons[:6] -%}
+                                  {%- set entity = button.entity if button.entity is string else "" -%}
+                                  {%- set title = button.name if button.name is string and button.name | length > 0
+                                      else (state_attr(entity, "friendly_name") | default(entity, true)
+                                            if "." in entity and states[entity] is not none else "") -%}
+                                  {%- set ns.names = ns.names + [title | string] -%}
+                                {%- endfor -%}
+                                {{ ns.names }}
+                            continue_on_error: true
+                          - *delay_boot
                           - alias: Temperatures appearance
                             sequence:
                               - variables:
@@ -9669,12 +9688,13 @@ actions:
                                       # - hourly: every slot lies between sunset and sunrise, using the time of day of the next sun events.
                                       #   Skipped when a sun event is more than 26 hours away (polar day or night) or the sun is not available.
                                       # Anything else (missing data, legacy forecast attribute) keeps the day pictures.
+                                      # A real boolean: Home Assistant keeps a lowercase `false` as the string "false", which is true (#851)
                                       forecast_is_night: >
                                         {%- set items = forecast_day | selectattr("datetime", "defined") | list if datetime_is_string else [] -%}
                                         {%- if items | count == 0 -%}
-                                          false
+                                          False
                                         {%- elif forecast_type == "daily" -%}
-                                          false
+                                          False
                                         {%- elif forecast_type == "twice_daily" -%}
                                           {{ items | selectattr("is_daytime", "defined") | selectattr("is_daytime", "false") | list | count == items | count }}
                                         {%- elif forecast_type == "hourly" -%}
@@ -9685,7 +9705,7 @@ actions:
                                           {%- if next_rising is none or next_setting is none
                                                 or as_timestamp(next_rising) - now_ts > 93600
                                                 or as_timestamp(next_setting) - now_ts > 93600 -%}
-                                            false
+                                            False
                                           {%- else -%}
                                             {%- set rising = as_local(next_rising) -%}
                                             {%- set setting = as_local(next_setting) -%}
@@ -9708,7 +9728,7 @@ actions:
                                             {{ ns.night }}
                                           {%- endif -%}
                                         {%- else -%}
-                                          false
+                                          False
                                         {%- endif -%}
                                       # Values of the day from the forecast slots, as [field, how the slots combine]. One template computes
                                       # them all, so the Blueprint has fewer distinct templates (#636). A value is none when no slot has a number.
