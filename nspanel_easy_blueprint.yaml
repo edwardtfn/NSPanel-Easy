@@ -9688,12 +9688,13 @@ actions:
                                       # - hourly: every slot lies between sunset and sunrise, using the time of day of the next sun events.
                                       #   Skipped when a sun event is more than 26 hours away (polar day or night) or the sun is not available.
                                       # Anything else (missing data, legacy forecast attribute) keeps the day pictures.
+                                      # A real boolean: Home Assistant keeps a lowercase `false` as the string "false", which is true (#851)
                                       forecast_is_night: >
                                         {%- set items = forecast_day | selectattr("datetime", "defined") | list if datetime_is_string else [] -%}
                                         {%- if items | count == 0 -%}
-                                          false
+                                          False
                                         {%- elif forecast_type == "daily" -%}
-                                          false
+                                          False
                                         {%- elif forecast_type == "twice_daily" -%}
                                           {{ items | selectattr("is_daytime", "defined") | selectattr("is_daytime", "false") | list | count == items | count }}
                                         {%- elif forecast_type == "hourly" -%}
@@ -9704,7 +9705,7 @@ actions:
                                           {%- if next_rising is none or next_setting is none
                                                 or as_timestamp(next_rising) - now_ts > 93600
                                                 or as_timestamp(next_setting) - now_ts > 93600 -%}
-                                            false
+                                            False
                                           {%- else -%}
                                             {%- set rising = as_local(next_rising) -%}
                                             {%- set setting = as_local(next_setting) -%}
@@ -9727,7 +9728,7 @@ actions:
                                             {{ ns.night }}
                                           {%- endif -%}
                                         {%- else -%}
-                                          false
+                                          False
                                         {%- endif -%}
                                       # Values of the day from the forecast slots, as [field, how the slots combine]. One template computes
                                       # them all, so the Blueprint has fewer distinct templates (#636). A value is none when no slot has a number.

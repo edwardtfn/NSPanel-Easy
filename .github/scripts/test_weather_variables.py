@@ -14,6 +14,7 @@ tested version must render (a fix), and an error in the tested version always co
 
 The forecast cases above carry no unit attributes, so the decimals of the forecast pressure and precipitation,
 which depend on the unit (issue #803), are also checked against fixed expectations, in the tested version only.
+So is the type of `forecast_is_night`, which must parse to a boolean (issue #851).
 
 The values of the day may be separate variables or entries of one `forecast_values` variable (one template
 for all of them, issue #636); both forms are compared by name. When rendering `parameters`, the values are
@@ -295,6 +296,40 @@ def check_precision(candidate):
     return len(PRECISION_CASES), failures
 
 
+# Forecasts for the night check of the next days' icons (issue #851): (forecast_type, forecast_day). The hourly
+# forecasts need the sun entity and the time, which the mock doesn't provide.
+NIGHT_CASES = (
+    ("daily", []),
+    ("daily", [{"datetime": "2026-11-05T12:00:00+00:00", "condition": "sunny"}]),
+    ("twice_daily", [{"datetime": "2026-11-05T06:00:00+00:00", "condition": "sunny", "is_daytime": True}]),
+    ("twice_daily", [{"datetime": "2026-11-05T18:00:00+00:00", "condition": "sunny", "is_daytime": False}]),
+    ("other", [{"datetime": "2026-11-05T12:00:00+00:00", "condition": "sunny"}]),
+)
+
+
+def check_night_type(path):
+    """Check that `forecast_is_night` is a real boolean once parsed, never the string "false"; return (cases, failures)."""
+    with open(path, encoding="utf-8") as f:
+        data = yaml.load(f, Loader=BlueprintLoader)  # nosec B506 - SafeLoader subclass
+    branch = find(data.get("actions"), lambda d: d.get("alias", "").startswith(BRANCH_ALIAS))
+    holder = find(branch, lambda d: isinstance(d.get("forecast_is_night"), str))
+    if holder is None:
+        sys.exit(f"ERROR: 'forecast_is_night' not found in {path}")
+    hass = MockHomeAssistant()
+    setup_environment(hass)
+    failures = 0
+    for forecast_type, forecast_day in NIGHT_CASES:
+        context = {"forecast_type": forecast_type, "forecast_day": forecast_day, "datetime_is_string": True}
+        try:
+            result = render(hass, holder["forecast_is_night"], context)
+        except Exception as error:  # noqa: B902 - any template error is a failure here
+            result = f"{type(error).__name__}: {error}"
+        if not isinstance(result, bool):
+            failures += 1
+            print(f"NIGHT type={forecast_type} day={forecast_day}\n  expected a boolean, got: {result!r}")
+    return len(NIGHT_CASES), failures
+
+
 def compare(reference, candidate):
     """Run every case through both versions; return (cases, differences)."""
     hass = MockHomeAssistant()
@@ -333,7 +368,9 @@ def main():
           f"{fixed:,} fixed (reference fails, tested renders)")
     precision_total, precision_failures = check_precision(candidate_forecast)
     print(f"Forecast decimals per unit: {precision_total:,} cases, {precision_failures:,} failures")
-    return 1 if differences or forecast_differences or precision_failures else 0
+    night_total, night_failures = check_night_type(sys.argv[2] if len(sys.argv) == 3 else "nspanel_easy_blueprint.yaml")
+    print(f"Night check of the next days: {night_total:,} cases, {night_failures:,} failures")
+    return 1 if differences or forecast_differences or precision_failures or night_failures else 0
 
 
 if __name__ == "__main__":
