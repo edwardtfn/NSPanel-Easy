@@ -64,7 +64,7 @@ number:
       then:
         - lambda: |-
             if (isnan(x)) return;
-            boot_log->execute("Cover", "Set acc. wait time");
+            ESP_LOGD("${TAG_BOOT}", "Cover: Set acc. wait time");
             cover_embedded->set_acceleration_wait_time(x);
             dump_config_cover->execute();
 
@@ -85,7 +85,7 @@ number:
       then:
         - lambda: |-
             if (isnan(x)) return;
-            boot_log->execute("Cover", "Set dir. change wait time");
+            ESP_LOGD("${TAG_BOOT}", "Cover: Set dir. change wait time");
             cover_embedded->set_direction_change_waittime(x);
             dump_config_cover->execute();
 
@@ -106,7 +106,7 @@ number:
       then:
         - lambda: |-
             if (isnan(x)) return;
-            boot_log->execute("Cover", "Set relay interlock time");
+            ESP_LOGD("${TAG_BOOT}", "Cover: Set relay interlock time");
             relay_1->set_interlock_wait_time(x);
             relay_2->set_interlock_wait_time(x);
             dump_config_cover->execute();
@@ -128,7 +128,7 @@ number:
       then:
         - lambda: |-
             if (isnan(x)) return;
-            boot_log->execute("Cover", "Set open duration");
+            ESP_LOGD("${TAG_BOOT}", "Cover: Set open duration");
             cover_embedded->set_open_duration(x);
             dump_config_cover->execute();
 
@@ -149,7 +149,7 @@ number:
       then:
         - lambda: |-
             if (isnan(x)) return;
-            boot_log->execute("Cover", "Set close duration");
+            ESP_LOGD("${TAG_BOOT}", "Cover: Set close duration");
             cover_embedded->set_close_duration(x);
             dump_config_cover->execute();
 

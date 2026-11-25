@@ -247,6 +247,7 @@ script:
           disp1->send_command_printf("button_back_font=%i", id(button_back_font));
           disp1->send_command_printf("home_page_id=%" PRIu8, home_page_id);
           wakeup_page_id = get_page_id(wakeup_page_name->current_option().c_str());
+          if (wakeup_page_id == get_page_id("home")) wakeup_page_id = home_page_id;  // The selected home page (#339)
           if (wakeup_page_id >= PAGE_COUNT) {
             // Not the name of a page: keep a valid id, as it is used to look up the name of the page
             ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown wake-up page, using home");
@@ -616,6 +617,7 @@ script:
           if (
                 timeout_dim->state >= 1 and
                 current_page_id != get_page_id("screensaver") and
+                // The boot page is the status page: shown at full brightness until it is closed
                 current_page_id != get_page_id("boot")
               ) {
             set_brightness->execute(display_dim_brightness->state);
@@ -628,6 +630,7 @@ script:
       - lambda: |-
           if (timeout_page->state >= 1) {
             ESP_LOGV("${TAG_HW_DISPLAY}", "Timed out on page: %s", page_names[current_page_id]);
+            // The boot page is the status page: kept until it is closed, the problem is solved or the panel restarts
             if (current_page_id != get_page_id("boot") and
                 current_page_id != get_page_id("confirm") and
                 current_page_id != home_page_id and
@@ -722,16 +725,14 @@ script:
   - id: wait_for_version_tft
     mode: single
     then:
-      - script.execute:
-          id: boot_log
-          category: Boot
-          log_message: Check TFT version
+      - lambda: |-
+          ESP_LOGD("${TAG_BOOT}", "Boot: Check TFT version");
       - repeat:
           count: 180  # seconds
           then:
             - lambda: |-
                 if (!version_tft->state.empty()) wait_for_version_tft->stop();
-                if (iteration % 5 == 0) boot_log->execute("Boot", "Waiting for TFT version");
+                if (iteration % 5 == 0) ESP_LOGD("${TAG_BOOT}", "Boot: Waiting for TFT version");
             - delay: 1s
 
   - id: !extend wait_for_versions
@@ -760,7 +761,10 @@ script:
             ESP_LOGE("${TAG_HW_DISPLAY}", "TFT version invalid");
             return;
           }
-          if (current_page_id == get_page_id("screensaver") or current_page_id == get_page_id("boot")) {
+          // The status page opened by the user stays until the user closes it (#841)
+          const bool status_page = current_page_id == get_page_id("boot") and system_flags.boot_page_requested;
+          if (!status_page and
+              (current_page_id == get_page_id("screensaver") or current_page_id == get_page_id("boot"))) {
             brightness_auto_hold_armed = automatic;  // Consumed by the page change
             ESP_LOGD("${TAG_HW_DISPLAY}", "Wake-up on page %s", page_names[target_page_id]);
             #ifdef NSPANEL_EASY_PAGE_CLIMATE
@@ -875,6 +879,7 @@ select:
       then:
         - lambda: |-
             wakeup_page_id = get_page_id(x.c_str());
+            if (wakeup_page_id == get_page_id("home")) wakeup_page_id = home_page_id;  // The selected home page (#339)
             if (wakeup_page_id >= PAGE_COUNT) {
               // Not the name of a page (e.g. an option of a customization): keep a page the display can open
               ESP_LOGW("${TAG_HW_DISPLAY}", "Unknown wake-up page '%s', using home", x.c_str());

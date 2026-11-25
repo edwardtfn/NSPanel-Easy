@@ -31,6 +31,11 @@ namespace hmi::screensaver {
 
 // Display components
 constexpr HMIComponent TEXT = {"text", 4};  ///< Time/clock label (word-wrap enabled, 1000 chars max)
+// Stacked time (font 12 on the US model): one component per line, each centered on its own.
+// Present in both TFTs with the same IDs; hidden on page load and shown by ESPHome when used.
+constexpr HMIComponent TIME_HOUR = {"time_hour", 18};          ///< Stacked time: hour (screensaver font)
+constexpr HMIComponent TIME_MINUTE = {"time_minute", 19};      ///< Stacked time: minute (screensaver font)
+constexpr HMIComponent TIME_MERIDIEM = {"time_meridiem", 20};  ///< Stacked time: meridiem (smaller fixed font)
 
 // Touch capture components
 constexpr HMIComponent WAKEUP = {"wakeup", 1};  ///< Full-screen wake-up touch area
@@ -40,7 +45,7 @@ constexpr HMIComponent SWIPE = {"swipe", 2};    ///< Swipe gesture capture area
 constexpr HMIComponent TIMER_SWIPESTORE = {"swipestore", 3};  ///< Swipe coordinate sampling timer (50 ms)
 
 // All visual components for iteration (timers and touch caps excluded)
-constexpr HMIComponent ALL[] = {TEXT};
+constexpr HMIComponent ALL[] = {TEXT, TIME_HOUR, TIME_MINUTE, TIME_MERIDIEM};
 
 constexpr size_t COMPONENT_COUNT = sizeof(ALL) / sizeof(ALL[0]);
 

@@ -18,7 +18,6 @@ pages = [
     "climate",
     "confirm",
     "cover",
-    "debug",
     "entitypage01",
     "entitypage02",
     "entitypage03",
@@ -43,6 +42,7 @@ pages = [
     "weather03",
     "weather04",
     "weather05",
+    "home_simple",
 ]
 pictures = [
     "picture-0000",
@@ -179,6 +179,8 @@ pictures = [
     "picture-0131",
     "picture-0132",
     "picture-0133",
+    "picture-0134",
+    "picture-0135",
 ]
 fonts = [
     "font-00",

@@ -30,6 +30,12 @@
 #                     background canvas, as "X,Y".
 #     dimensions:     Size of the region to crop out, as "WxH".
 #
+#                     `coordinates` can also be a list of "X,Y": the source
+#                     is then placed at each of them, and the whole canvas is
+#                     kept, with `dimensions` as the size of the source. The
+#                     button pages use it: each button's components crop their
+#                     background from that canvas, at their own position.
+#
 #   copy:             When true, the source file is copied directly with no
 #                     compositing (black background assumed). No light variant
 #                     is generated. Overrides geometry fields.
@@ -81,30 +87,114 @@
 # -----------------------------------------------------------------------------
 # Buttons page
 # -----------------------------------------------------------------------------
-- id: buttons_pages_background_active
-  note: "Background for pages with buttons - active state"
-  dark: 47
-  light: 80
-  landscape:
-    src: buttons_pages/buttons_pages_background_active_landscape.png
-    coordinates: "0,0"
-    dimensions: "480x320"
-  portrait:
-    src: buttons_pages/buttons_pages_background_active_portrait.png
-    coordinates: "0,0"
-    dimensions: "320x480"
-- id: buttons_pages_background_innactive
-  note: "Background for pages with buttons - inactive state"
+- id: buttons_pages_background_inactive_dark
+  note: "Buttons of the button pages, off, dark theme (one per button position)"
+  src: buttons_pages/button_dark_off.png
   dark: 46
+  light: null
+  landscape:
+    dimensions: "100x100"
+    coordinates:
+      - "17,65"
+      - "124,65"
+      - "231,65"
+      - "338,65"
+      - "17,196"
+      - "124,196"
+      - "231,196"
+      - "338,196"
+  portrait:
+    dimensions: "100x100"
+    coordinates:
+      - "38,74"
+      - "181,74"
+      - "38,176"
+      - "181,176"
+      - "38,279"
+      - "181,279"
+      - "38,380"
+      - "181,380"
+- id: buttons_pages_background_active_dark
+  note: "Buttons of the button pages, on, dark theme"
+  src: buttons_pages/button_dark_on.png
+  dark: 47
+  light: null
+  landscape:
+    dimensions: "100x100"
+    coordinates:
+      - "17,65"
+      - "124,65"
+      - "231,65"
+      - "338,65"
+      - "17,196"
+      - "124,196"
+      - "231,196"
+      - "338,196"
+  portrait:
+    dimensions: "100x100"
+    coordinates:
+      - "38,74"
+      - "181,74"
+      - "38,176"
+      - "181,176"
+      - "38,279"
+      - "181,279"
+      - "38,380"
+      - "181,380"
+- id: buttons_pages_background_inactive_light
+  note: "Buttons of the button pages, off, light theme"
+  src: buttons_pages/button_light_off.png
+  dark: null
   light: 79
   landscape:
-    src: buttons_pages/buttons_pages_background_innactive_landscape.png
-    coordinates: "0,0"
-    dimensions: "480x320"
+    dimensions: "100x100"
+    coordinates:
+      - "17,65"
+      - "124,65"
+      - "231,65"
+      - "338,65"
+      - "17,196"
+      - "124,196"
+      - "231,196"
+      - "338,196"
   portrait:
-    src: buttons_pages/buttons_pages_background_innactive_portrait.png
-    coordinates: "0,0"
-    dimensions: "320x480"
+    dimensions: "100x100"
+    coordinates:
+      - "38,74"
+      - "181,74"
+      - "38,176"
+      - "181,176"
+      - "38,279"
+      - "181,279"
+      - "38,380"
+      - "181,380"
+- id: buttons_pages_background_active_light
+  note: "Buttons of the button pages, on, light theme"
+  src: buttons_pages/button_light_on.png
+  dark: null
+  light: 80
+  landscape:
+    dimensions: "100x100"
+    coordinates:
+      - "17,65"
+      - "124,65"
+      - "231,65"
+      - "338,65"
+      - "17,196"
+      - "124,196"
+      - "231,196"
+      - "338,196"
+  portrait:
+    dimensions: "100x100"
+    coordinates:
+      - "38,74"
+      - "181,74"
+      - "38,176"
+      - "181,176"
+      - "38,279"
+      - "181,279"
+      - "38,380"
+      - "181,380"
 
 # -----------------------------------------------------------------------------
 # Climate page
@@ -641,10 +731,10 @@
   dark: 85
   light: 92
   landscape:
-    coordinates: "57,210"
+    coordinates: "37,210"
     dimensions: "60x60"
   portrait:
-    coordinates: "35,368"
+    coordinates: "22,368"
     dimensions: "60x60"
 - id: settings_button_action_sleep
   src: settings/button_action_dark_gray.png
@@ -652,21 +742,32 @@
   dark: 86
   light: 93
   landscape:
-    coordinates: "177,210"
+    coordinates: "142,210"
     dimensions: "60x60"
   portrait:
-    coordinates: "130,368"
+    coordinates: "94,368"
     dimensions: "60x60"
 - id: settings_button_action_theme
   src: settings/button_action_dark_gray.png
-  note: "Action button 3 (rightmost)"
+  note: "Action button 3"
   dark: 87
   light: 94
   landscape:
-    coordinates: "297,210"
+    coordinates: "247,210"
     dimensions: "60x60"
   portrait:
-    coordinates: "225,368"
+    coordinates: "166,368"
+    dimensions: "60x60"
+- id: settings_button_action_status
+  src: settings/button_action_dark_gray.png
+  note: "Action button 4 (rightmost): the status page"
+  dark: 134
+  light: 135
+  landscape:
+    coordinates: "352,210"
+    dimensions: "60x60"
+  portrait:
+    coordinates: "238,368"
     dimensions: "60x60"
 - id: settings_dim_slider_active
   note: "Dim slider - active/blue fill"

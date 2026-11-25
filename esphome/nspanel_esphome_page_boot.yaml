@@ -8,7 +8,11 @@
 
 ---
 substitutions:
-  PAGE_BOOT_COMPONENT_ID_BT_REBOOT: 20
+  PAGE_BOOT_COMPONENT_ID_BT_REBOOT: 14
+  # Plain substitution for the lambdas: a dotted one makes ESPHome read the whole lambda as a Jinja template
+  PAGE_BOOT_PORTRAIT_MODEL: ${DISPLAY_MODES.US.TEXT}
+  PAGE_BOOT_COMPONENT_ID_HS_BLUEPRINT: 35   # Touch area of the Blueprint line
+  PAGE_BOOT_COMPONENT_ID_HS_ICON_NAMES: 36  # Touch area of the icon names line
   PAGE_BOOT_DELAY_TO_EXIT: 30s
   PAGE_BOOT_ID: 0
   TAG_PAGE_BOOT: nspanel.page.boot
@@ -36,6 +40,11 @@ display:
               display_report.hard_coded_mode = number;
             } else if (key == "magic_flag") {
               display_report.magic_flag = number;
+            } else if (key == "status_page_pinned") {
+              // The status page left open before a restart, which the display opens again by itself (#841). Before
+              // the end of the report, so the boot does not leave the page once the display is ready.
+              status_page_pinned = (number == 1);
+              system_flags.boot_page_requested = (current_page_id == get_page_id("boot") and status_page_pinned);
             }  // if (key)
     on_custom_text_sensor:
       then:
@@ -82,27 +91,39 @@ display:
     on_touch:
       then:
         - lambda: |-
-            if (
-                  !touch_event and  // Only act with release
-                  page_id == get_page_id("boot") and
-                  component_id == ${PAGE_BOOT_COMPONENT_ID_BT_REBOOT}  // Reboot button
-                ) {
-              screen_power->turn_off();
-              App.safe_reboot();
-            }
+            if (touch_event or page_id != get_page_id("boot")) return;  // Only act with release, on the boot page
+            switch (component_id) {
+              case ${PAGE_BOOT_COMPONENT_ID_BT_REBOOT}:
+                screen_power->turn_off();
+                App.safe_reboot();
+                break;
+              case ${PAGE_BOOT_COMPONENT_ID_HS_BLUEPRINT}:
+                // Retry a request of the Blueprint settings that was given up (red), as after a reload
+                if (blueprint_settings_state != BlueprintSettingsState::FAILED) break;
+                ESP_LOGI("${TAG_PAGE_BOOT}", "Blueprint settings requested again from the status page");
+                blueprint_settings_timeout->stop();
+                blueprint_settings_state = BlueprintSettingsState::NEEDED;
+                blueprint_settings_requests = 0;
+                blueprint_settings_resend = false;
+                boot_request_blueprint_settings->execute("reload");
+                page_boot_status->execute(false);
+                break;
+              #ifdef NSPANEL_EASY_SUBSCRIBE
+              case ${PAGE_BOOT_COMPONENT_ID_HS_ICON_NAMES}:
+                // Retry the icon names that were given up (red), keeping the names received
+                if (!sub_icon_names_failed()) break;
+                ESP_LOGI("${TAG_PAGE_BOOT}", "Icon names requested again from the status page");
+                api_icon_names_fetch->execute();
+                page_boot_status->execute(false);
+                break;
+              #endif  // NSPANEL_EASY_SUBSCRIBE
+            }  // switch (component_id)
 
 esphome:
   build_flags:
     - -D NSPANEL_EASY_PAGE_BOOT
 
 script:
-  - id: !extend boot_log
-    then:
-      - lambda: |-
-          // Not while a page change is pending: the command would reach the next page, which has no log_body
-          if (current_page_id != get_page_id("boot") or id(page_change_pending)) return;
-          disp1->send_command_printf("log_body.txt+=\"%s: %s\\r\"", category.c_str(), log_message.c_str());
-
   - id: !extend boot_preparation
     then:
       - script.execute: page_boot_exit_on_timeout
@@ -297,6 +318,12 @@ script:
       - lambda: |-
           if (system_flags.boot_completed) return;
           if (current_page_id != get_page_id("screensaver") and current_page_id != get_page_id("boot")) return;
+          if (status_page_pinned) {
+            // Left open by the user before the restart: the display opened it again by itself (#841)
+            ESP_LOGI("${TAG_PAGE_BOOT}", "Display ready, keeping the status page left open");
+            if (current_page_id != get_page_id("boot")) goto_page->execute(get_page_id("boot"));
+            return;
+          }  // if (status page pinned)
           ESP_LOGI("${TAG_PAGE_BOOT}", "Display ready, opening the wake-up page");
           // Not a user action: the wake-up page stays dimmed while booting, e.g. after a power outage at night (#485, #656)
           brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));
@@ -315,6 +342,11 @@ script:
           brightness_current = UINT8_MAX;  // Set by the display itself until now
           if (current_page_id == get_page_id("boot")) return;
           if (current_page_id == get_page_id("screensaver")) {
+            if (status_page_pinned) {
+              // Left open by the user before the restart: shown again until the user closes it (#841)
+              goto_page->execute(get_page_id("boot"));
+              return;
+            }  // if (status page pinned)
             // Still on the screensaver when the boot completes: replace the start screen by the screensaver
             page_screensaver->execute();
             return;
@@ -328,16 +360,9 @@ script:
       - lambda: |-
           ESP_LOGD("${TAG_PAGE_BOOT}", "Page boot constructor started");
           page_boot_exit_on_timeout->execute();
-          disp1->set_component_text("ver_firmware", "Firmware: ${version}");  // ESPHome version
-          #ifdef ARDUINO
-          disp1->set_component_text("sys_framework", "Framework: Arduino");
-          #elif defined(USE_ESP_IDF)
-          disp1->set_component_text("sys_framework", "Framework: ESP-IDF");
-          #else
-          disp1->set_component_text("sys_framework", "Framework: Unknown");
-          #endif
-          page_boot_show_blueprint_version->execute();
-          page_boot_show_ip->execute();
+          // The close button is hidden by the display while ESPHome is not connected
+          disp1->send_command("vis button_back,1");
+          page_boot_status->execute(true);
           wait_for_page_boot_exit->execute();
           ESP_LOGD("${TAG_PAGE_BOOT}", "Page boot constructor completed");
 
@@ -347,38 +372,187 @@ script:
       - delay: ${PAGE_BOOT_DELAY_TO_EXIT}
       - script.wait: wait_for_version_tft
       - lambda: |-
+          // Opened by the user as a status page: kept until the user leaves it
+          if (system_flags.boot_page_requested) return;
           // Not a user action: the wake-up page stays dimmed, unless the boot page was touched (#485, #656)
           if (current_page_id == get_page_id("boot")) {
             brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));
             wakeup->execute(false);
           }  // if (current_page_id == get_page_id("boot"))
 
-  - id: page_boot_show_blueprint_version
+  ##### Status page: the lines known by the firmware, from ESPHome to the icon names #####
+  # The display fills the first line (TFT version and baud rate) and the details itself, and greys these lines out
+  # while ESPHome is not connected. Called when the page opens (force: send every line) and every second while it is
+  # shown (only the lines that changed).
+  - id: page_boot_status
     mode: single
+    parameters:
+      force: bool
     then:
       - lambda: |-
-          if (current_page_id == get_page_id("boot") and !id(page_change_pending) and !version_blueprint->state.empty())
-            disp1->set_component_text_printf("ver_blueprint", "Blueprint: %s", version_blueprint->state.c_str());
-
-  - id: page_boot_show_ip
-    mode: single
-    then:
-      - lambda: |-
-          if (!wifi_component->is_connected()) return;
           if (current_page_id != get_page_id("boot") or id(page_change_pending)) return;
-          auto ips = network::get_ip_addresses();
-          if (ips.empty()) return;
-          char ip[16];  // sufficient for IPv4: "255.255.255.255" + '\0'
-          ips[0].str_to(ip);
-          disp1->set_component_text_printf("sys_ip", "IP: %s", ip);
+          enum StatusMark : uint8_t { STATUS_OK, STATUS_WARN, STATUS_BAD, STATUS_NONE };
+          static constexpr const char *STATUS_GLYPHS[] = {"\uE5DF", "\uE027", "\uE158", "\uE765"};
+          static constexpr uint16_t STATUS_COLORS[] = {15947, 62885, 57895, 33913};  // Green, orange, red, grey
+          static constexpr uint16_t STATUS_WHITE = 65535;
+          // Rows 2 to 7, as last sent: the mark and the value
+          static std::string shown[6];
+          static std::string shown_name;
+          if (force) {
+            for (auto &row : shown) row.clear();
+            shown_name.clear();
+          }
+
+          // The panel's name in the title, to tell the panels apart on photos (#841). Without ESPHome, the
+          // display keeps "NSPanel Easy".
+          std::string name = App.get_friendly_name().str();
+          if (name.empty()) name = App.get_name().str();
+          std::replace(name.begin(), name.end(), '"', '\'');
+          if (name.size() > 60) {
+            size_t cut = 60;
+            while (cut > 0 and (static_cast<uint8_t>(name[cut]) & 0xC0) == 0x80) cut--;  // Not inside a character
+            name.resize(cut);
+          }  // if (too long for the title)
+          if (!name.empty() and name != shown_name) {
+            shown_name = name;
+            disp1->send_command_printf("nspanel_easy.txt=\"%s\"", name.c_str());
+          }  // if (name changed)
+          auto show = [&](uint8_t row, StatusMark mark, const std::string &value) {
+            const std::string key = std::to_string(mark) + value;
+            if (shown[row - 2] == key) return;
+            shown[row - 2] = key;
+            const uint16_t color = (mark == STATUS_OK) ? STATUS_WHITE : STATUS_COLORS[mark];
+            disp1->send_command_printf("mark%u.txt=\"%s\"", row, STATUS_GLYPHS[mark]);
+            disp1->send_command_printf("mark%u.pco=%u", row, STATUS_COLORS[mark]);
+            disp1->send_command_printf("val%u.txt=\"%s\"", row, value.c_str());
+            disp1->send_command_printf("val%u.pco=%u", row, color);
+            disp1->send_command_printf("lbl%u.pco=%u", row, mark == STATUS_NONE ? STATUS_COLORS[STATUS_NONE] : STATUS_WHITE);
+          };
+
+          // ESPHome: the firmware version and the ESPHome version it was built with (#841), orange when the TFT
+          // carries another one. Portrait (the US model) has room for the short form only.
+          const std::string &tft = version_tft->state;
+          if (!tft.empty() and tft != "${version}") {
+            show(2, STATUS_WARN, "${version}, TFT differs");
+          } else {
+            // The long form only fits in landscape, and up to the 32 bytes of the line (not a dev build of ESPHome)
+            const std::string full = "${version}, ESPHome " ESPHOME_VERSION;
+            const bool portrait = display_model->current_option() == "${PAGE_BOOT_PORTRAIT_MODEL}";
+            show(2, STATUS_OK, (portrait or full.size() > 32) ? "${version} / " ESPHOME_VERSION : full);
+          }  // if (TFT version)
+
+          // Wi-Fi: the IP address and the signal, orange below -75 dBm
+          if (!wifi_component->is_connected()) {
+            show(3, STATUS_BAD, "not connected");
+          } else {
+            char wifi[32] = "connected";
+            auto ips = network::get_ip_addresses();
+            const int rssi = wifi_component->wifi_rssi();
+            if (!ips.empty()) {
+              char ip[16];  // Sufficient for IPv4: "255.255.255.255" + '\0'
+              ips[0].str_to(ip);
+              snprintf(wifi, sizeof(wifi), "%s %d dBm", ip, rssi);
+            }  // if (address known)
+            show(3, rssi < -75 ? STATUS_WARN : STATUS_OK, wifi);
+          }  // if (Wi-Fi)
+
+          // Home Assistant, and for how long (#841)
+          const bool ha = api_server->is_connected_with_state_subscription();
+          if (ha and ha_connected_since_ms > 0) {
+            const uint32_t minutes = static_cast<uint32_t>((millis_64() - ha_connected_since_ms) / 60000ULL);
+            char since[32];
+            if (minutes >= 1440) {
+              snprintf(since, sizeof(since), "connected %" PRIu32 "d %" PRIu32 "h", minutes / 1440, (minutes / 60) % 24);
+            } else if (minutes >= 60) {
+              snprintf(since, sizeof(since), "connected %" PRIu32 "h %" PRIu32 "m", minutes / 60, minutes % 60);
+            } else {
+              snprintf(since, sizeof(since), "connected %" PRIu32 "m", minutes);
+            }  // if (duration)
+            show(4, STATUS_OK, since);
+          } else {
+            show(4, ha ? STATUS_OK : STATUS_BAD, ha ? "connected" : "not connected");
+          }  // if (Home Assistant)
+
+          // Blueprint: its version and how far its settings are
+          const std::string &blueprint = version_blueprint->state;
+          const std::string prefix = blueprint.empty() ? "" : blueprint + " ";
+          switch (blueprint_settings_state) {
+            case BlueprintSettingsState::COMPLETE:
+              show(5, system_flags.blueprint_ready ? STATUS_OK : STATUS_WARN, prefix + "complete");
+              break;
+            case BlueprintSettingsState::PENDING:
+              show(5, STATUS_WARN, prefix + "receiving");
+              break;
+            case BlueprintSettingsState::FAILED:
+              show(5, STATUS_BAD, prefix + "gave up");
+              break;
+            default:
+              show(5, ha ? STATUS_WARN : STATUS_BAD, ha ? prefix + "waiting" : "not available");
+              break;
+          }  // switch (blueprint_settings_state)
+
+          #ifdef NSPANEL_EASY_SUBSCRIBE
+          // Bindings: how many are live, and whether they are stored and verified
+          char bindings[32];
+          if (sub_store_failed()) {
+            snprintf(bindings, sizeof(bindings), "%" PRIu16 ", not stored", sub_count);
+            show(6, STATUS_BAD, bindings);
+          } else if (sub_unverified_count() > 0) {
+            snprintf(bindings, sizeof(bindings), "%" PRIu16 ", not verified", sub_count);
+            show(6, STATUS_WARN, bindings);
+          } else {
+            snprintf(bindings, sizeof(bindings), "%" PRIu16, sub_count);
+            show(6, sub_count > 0 ? STATUS_OK : STATUS_WARN, bindings);
+          }  // if (bindings)
+
+          // Icon names: all received, still arriving, or given up
+          char icons[32];
+          const uint16_t received = sub_icon_names_received();
+          const uint16_t expected = sub_icon_names_expected();
+          if (sub_icon_names_complete()) {
+            snprintf(icons, sizeof(icons), "all %" PRIu16, expected);
+            show(7, STATUS_OK, icons);
+          } else if (sub_icon_names_failed()) {
+            snprintf(icons, sizeof(icons), "gave up at %" PRIu16, received);
+            show(7, STATUS_BAD, icons);
+          } else if (expected > 0) {
+            snprintf(icons, sizeof(icons), "%" PRIu16 " of %" PRIu16, received, expected);
+            show(7, STATUS_WARN, icons);
+          } else {
+            show(7, STATUS_WARN, "waiting");
+          }  // if (icon names)
+          #else
+          show(6, STATUS_NONE, "-");
+          show(7, STATUS_NONE, "-");
+          #endif  // NSPANEL_EASY_SUBSCRIBE
 
   - id: !extend page_change
     then:
       - lambda: |-
           // Leaving the screensaver the display starts on ends its start screen
           if (new_page_id != get_page_id("screensaver")) display_start_hold_release->execute();
+          // The boot page opened from the settings page (long press) is the status page, shown on request: it is
+          // left by the user, like any other page, instead of by the boot (#615). It stays open across restarts
+          // until the user leaves it (#841): the display keeps that in its EEPROM, and this follows it. A display
+          // restart goes back to the screensaver, or to this page when pinned: that is not the user.
+          const uint8_t boot_page_id = get_page_id("boot");
+          if (new_page_id == boot_page_id and last_page_id == get_page_id("settings")) {
+            status_page_pinned = true;
+          } else if (last_page_id == boot_page_id and new_page_id != boot_page_id and
+                     new_page_id != get_page_id("screensaver") and status_page_pinned) {
+            ESP_LOGD("${TAG_PAGE_BOOT}", "Status page closed");
+            status_page_pinned = false;
+            // The display clears its own copy with the close button only: also for any other way out of the page
+            disp1->send_command("status_page_pinned=0");
+            disp1->send_command("wepo 0,8");
+          }  // if (status page opened or closed)
+          system_flags.boot_page_requested = (new_page_id == boot_page_id and status_page_pinned);
           if (new_page_id != get_page_id("boot")) return;
           page_boot->execute();
+
+  - id: !extend update_flag_api_ready
+    then:
+      - lambda: ha_connection_update(api_server->is_connected_with_state_subscription());  // For the status page
 
   - id: !extend stop_all
     then:
@@ -389,8 +563,7 @@ script:
     then:
       - lambda: |-
           page_boot->stop();
-          page_boot_show_blueprint_version->stop();
-          page_boot_show_ip->stop();
+          page_boot_status->stop();
 
   - id: wait_for_page_boot_exit
     mode: restart
@@ -402,12 +575,14 @@ script:
           then:
             - lambda: |-
                 ESP_LOGV("${TAG_PAGE_BOOT}", "Waiting for boot page exit");
+                page_boot_status->execute(false);
             - delay: 1s
 
   - id: !extend watchdog_round
     then:
       - lambda: |-
           if (current_page_id != get_page_id("boot")) return;
+          if (system_flags.boot_page_requested) return;  // Status page opened by the user
           if (version_tft->state.empty()) return;
           brightness_auto_hold_arm(static_cast<uint8_t>(display_brightness->state));  // Not a user action (#656)
           wakeup->execute(true);
@@ -417,11 +592,5 @@ text_sensor:
     on_value:
       then:
         - lambda: |-
-            page_boot_show_blueprint_version->execute();
             wait_to_be_ready->execute();
-
-wifi:
-  on_connect:
-    then:
-      - script.execute: page_boot_show_ip
 ...

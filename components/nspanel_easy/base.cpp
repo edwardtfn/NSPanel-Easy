@@ -35,6 +35,22 @@ uint32_t blueprint_last_setting_ms = 0;
 // Loop time at which the boot sequence started waiting for the Blueprint; see base.h.
 uint32_t blueprint_wait_started_ms = 0;
 
+// State of the global settings requested from the Blueprint; see base.h.
+// Needed from the start: nothing was requested since the panel started.
+BlueprintSettingsState blueprint_settings_state = BlueprintSettingsState::NEEDED;
+
+// Full requests sent to Home Assistant since the settings were last needed; see base.h.
+uint8_t blueprint_settings_requests = 0;
+
+// The display restarted during a send; see base.h.
+bool blueprint_settings_resend = false;
+
+// The status page stays open across restarts; see base.h. Reported by the display.
+bool status_page_pinned = false;
+
+// When Home Assistant connected; see base.h.
+uint64_t ha_connected_since_ms = 0;
+
 // Fire a Home Assistant event for NSPanel HA Blueprint
 void fire_ha_event(const std::string &type, std::map<std::string, std::string> data) {
   // Add device name and type to the event data

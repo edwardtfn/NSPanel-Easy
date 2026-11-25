@@ -11,6 +11,7 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cstring>
+#include <ctime>  // For time and mktime, the calendar lead time
 
 #include <esp_attr.h>
 #include <esp_heap_caps.h>
@@ -295,7 +296,11 @@ static RTC_NOINIT_ATTR uint32_t sub_wipe_marker;
  * @param count Number of bindings that could not be stored.
  * @return true when the preferences were erased and the panel is restarting.
  */
+/// @brief Set once storing the bindings failed in this session, for the status page.
+static bool sub_store_failed_flag = false;
+
 static bool sub_persist_failed(uint16_t count) {
+  sub_store_failed_flag = true;
   // How full the storage is, as the usual cause is a small or fragmented NVS partition
   nvs_stats_t nvs{};
   if (nvs_get_stats(nullptr, &nvs) == ESP_OK) {
@@ -467,19 +472,86 @@ static uint16_t sub_find_target(const SubBinding *set, uint16_t count, const cha
  *
  * @param idx Binding index.
  */
-static void sub_apply(uint16_t idx) {
-  const SubBinding &binding = sub_bindings[idx];
-  SubRuntime &rt = sub_runtime[idx];
+/// @brief Lead time of calendar chips, in seconds (see sub_set_calendar_lead()).
+static uint32_t sub_calendar_lead_s = 0;
+
+/// @brief Clock values before this epoch (2024-01-01) mean the clock is not set yet.
+static constexpr time_t SUB_CLOCK_VALID_EPOCH = 1704067200;
+
+/// @brief Time a calendar chip stays shown after the event start, until Home Assistant reports the event as on.
+static constexpr time_t SUB_CALENDAR_START_GRACE_S = 120;
+
+/**
+ * @brief Whether a calendar chip is within its lead time before the next event.
+ *
+ * Home Assistant reports `start_time` in its local time, as "YYYY-MM-DD HH:MM:SS",
+ * and the panel's clock and time zone come from Home Assistant, so both read the same.
+ *
+ * @param binding The calendar binding.
+ * @param rt Its runtime state, with the start of the current or next event.
+ * @return true from the lead time before the event starts until shortly after it starts
+ *         (SUB_CALENDAR_START_GRACE_S), so the chip does not blink before the `on` state arrives.
+ */
+static bool sub_calendar_upcoming(const SubBinding &binding, const SubRuntime &rt) {
+  if (sub_calendar_lead_s == 0 || strcmp(binding.page, "chips") != 0 || rt.start_time[0] == '\0') {
+    return false;
+  }
+  const time_t now = ::time(nullptr);
+  if (now < SUB_CLOCK_VALID_EPOCH) {
+    return false;  // The clock has not been synchronised yet
+  }
+
+  struct tm start_tm{};
+  if (sscanf(rt.start_time, "%d-%d-%d %d:%d:%d", &start_tm.tm_year, &start_tm.tm_mon, &start_tm.tm_mday,
+             &start_tm.tm_hour, &start_tm.tm_min, &start_tm.tm_sec) != 6) {
+    return false;  // No upcoming event ("None"), or an unexpected format
+  }
+  start_tm.tm_year -= 1900;
+  start_tm.tm_mon -= 1;
+  start_tm.tm_isdst = -1;  // Let the time zone decide on daylight saving time
+  const time_t start = mktime(&start_tm);
+  if (start == static_cast<time_t>(-1)) {
+    return false;
+  }
+
+  return now >= start - static_cast<time_t>(sub_calendar_lead_s) && now < start + SUB_CALENDAR_START_GRACE_S;
+}
+
+/**
+ * @brief Classify a binding's current state.
+ *
+ * @param binding The binding.
+ * @param rt Its runtime state.
+ * @param[out] effective The state string the classification was made from.
+ * @return The classification.
+ */
+static SubEntityState sub_classify(const SubBinding &binding, const SubRuntime &rt, const char *&effective) {
   const SubDomain domain = static_cast<SubDomain>(binding.domain);
 
   // Climate prefers hvac_action over the hvac mode whenever the attribute holds
   // a usable value, matching the blueprint's precedence.
-  const char *effective = rt.state;
+  effective = rt.state;
   if (domain == SUB_DOMAIN_CLIMATE && rt.action[0] != '\0' && !sub_state_in(rt.action, SUB_UNUSABLE_STATES)) {
     effective = rt.action;
   }
 
-  rt.last_state = evaluate_sub_state(domain, effective);
+  const SubEntityState eval = evaluate_sub_state(domain, effective);
+
+  // A calendar chip is already shown during its lead time before the next event. The effective
+  // state follows, so renderers pick the active icon and colour as during the event.
+  if (domain == SUB_DOMAIN_CALENDAR && eval == SUB_STATE_OFF && sub_calendar_upcoming(binding, rt)) {
+    effective = "on";
+    return SUB_STATE_ON;
+  }
+  return eval;
+}
+
+static void sub_apply(uint16_t idx) {
+  const SubBinding &binding = sub_bindings[idx];
+  SubRuntime &rt = sub_runtime[idx];
+
+  const char *effective = nullptr;
+  rt.last_state = sub_classify(binding, rt, effective);
   const bool visible = sub_visible(rt.last_state, binding.inverted);
 
   ESP_LOGV(TAG, "%s.%s%s%s: '%s' => vis=%s", binding.page, binding.component, binding.attribute[0] != '\0' ? "." : "",
@@ -692,6 +764,22 @@ void sub_subscribe_all() {
             sub_apply(idx);
           }));
     }
+
+    // A calendar chip can be shown before its next event, so the start of that
+    // event needs a subscription of its own (only chips use it).
+    if (binding.domain == SUB_DOMAIN_CALENDAR && attribute == nullptr && strcmp(binding.page, "chips") == 0) {
+      api::global_api_server->subscribe_home_assistant_state(
+          binding.entity, SUB_CALENDAR_START, std::function<void(StringRef)>([idx](StringRef start_time) {
+            sub_stats_count(idx);
+            SubRuntime &rt = sub_runtime[idx];
+            if (strncmp(rt.start_time, start_time.c_str(), sizeof(rt.start_time)) == 0) {
+              return;  // Unchanged; nothing to recompute
+            }
+            ++sub_stats_changed;
+            sub_copy(rt.start_time, sizeof(rt.start_time), start_time.c_str());
+            sub_apply(idx);
+          }));
+    }
   }  // for each binding
 
   ESP_LOGI(TAG, "%" PRIu16 " binding(s) subscribed | heap cost=%d B", sub_count,
@@ -701,15 +789,22 @@ void sub_subscribe_all() {
 #endif  // USE_API_HOMEASSISTANT_STATES
 }
 
+// Defined with the icon names below
+static bool sub_icon_pending_set(uint16_t idx, const char *name);
+
 void sub_push_binding(const char *push_id, const char *page, const char *component, const char *entity,
                       const char *device_class, const char *attribute, const char *icon_on, const char *icon_off,
                       uint16_t color_on, uint16_t color_off, bool inverted, const char *icon_name) {
   // An icon sent by name is resolved here, once, into the codepoint the renderers use
   char named_icon[4] = "";
+  // A name not found while the names are still arriving waits for them (see sub_icon_names_settle())
+  const char *pending_name = "";
   if ((icon_on == nullptr || icon_on[0] == '\0') && icon_name != nullptr && icon_name[0] != '\0') {
     if (sub_icon_lookup(icon_name, named_icon, sizeof(named_icon))) {
       icon_on = named_icon;
       icon_off = named_icon;
+    } else if (sub_icon_names_wanted()) {
+      pending_name = icon_name;
     } else {
       ESP_LOGW(TAG, "%s.%s: icon '%s' is not known", page, component, icon_name);
     }
@@ -813,7 +908,8 @@ void sub_push_binding(const char *push_id, const char *page, const char *compone
     sub_copy(rt.icon_off, sizeof(rt.icon_off), icon_off);
     rt.color_on = color_on;
     rt.color_off = color_off;
-    rt.has_appearance = true;
+    // An icon waiting for its name is not drawn yet, so the fallback icon never shows in between
+    rt.has_appearance = !sub_icon_pending_set(idx, pending_name);
 
     sub_apply(idx);
     break;
@@ -962,40 +1058,188 @@ static char *sub_icon_names = nullptr;
 /// @brief Characters used in sub_icon_names, null excluded.
 static size_t sub_icon_names_len = 0;
 
-/// @brief Names received in this session, so a chunk can be checked against its start index.
+/// @brief Names received in this session, so a block can be checked against its start index.
 static uint16_t sub_icon_names_count = 0;
 
-void sub_icon_names_add(uint16_t start, const std::string &names) {
+/// @brief Number of names in the whole list, from the Blueprint's replies; 0 until the first reply.
+static uint16_t sub_icon_names_total = 0;
+
+/// @brief Block asked for and not yet received: its first position and its number of names.
+static bool sub_icon_names_waiting = false;
+static uint16_t sub_icon_names_asked_start = UINT16_MAX;
+static uint16_t sub_icon_names_asked_count = 0;
+
+/// @brief Requests of the current block, the first one included.
+static uint8_t sub_icon_names_attempts = 0;
+
+/// @brief Set when the list was given up for this session, after the last retry.
+static bool sub_icon_names_given_up = false;
+
+/// @brief Icon names of the live bindings whose icon waits for the list, by binding index; empty when none.
+static char (*sub_icon_pending)[SUB_ICON_NAME_LEN] = nullptr;
+
+/// @brief Draws the bindings whose icon waited for the list, once it is complete or given up.
+static void sub_icon_names_settle() {
+  if (sub_icon_pending != nullptr) {
+    for (uint16_t idx = 0; idx < sub_count && idx < SUB_MAX; ++idx) {
+      char *name = sub_icon_pending[idx];
+      if (name[0] == '\0') {
+        continue;
+      }
+      SubRuntime &rt = sub_runtime[idx];
+      char glyph[4] = "";
+      if (sub_icon_lookup(name, glyph, sizeof(glyph))) {
+        sub_copy(rt.icon_on, sizeof(rt.icon_on), glyph);
+        sub_copy(rt.icon_off, sizeof(rt.icon_off), glyph);
+      } else {
+        ESP_LOGW(TAG, "%s.%s: icon '%s' is not known", sub_bindings[idx].page, sub_bindings[idx].component, name);
+      }  // if (name resolved)
+      name[0] = '\0';
+      rt.has_appearance = true;
+    }  // for each live binding
+  }  // if (sub_icon_pending != nullptr)
+  // Also the entities' own icons on the button pages, which wait for the list as well
+  sub_render_all();
+}
+
+/**
+ * @brief Keeps (or clears, with an empty name) the icon name of a live binding until the list is complete.
+ * @return true when a name is kept; false when cleared, or when it cannot be kept (the binding is then drawn
+ *         with the fallback icon, instead of waiting for a name that would never be resolved).
+ */
+static bool sub_icon_pending_set(uint16_t idx, const char *name) {
+  if (idx >= SUB_MAX) {
+    return false;
+  }
+  if (sub_icon_pending == nullptr) {
+    if (name[0] == '\0') {
+      return false;
+    }
+    sub_icon_pending = static_cast<char (*)[SUB_ICON_NAME_LEN]>(sub_alloc(SUB_ICON_NAME_LEN * SUB_MAX));
+    if (sub_icon_pending == nullptr) {
+      ESP_LOGW(TAG, "Out of memory for the icons waiting for their names");
+      return false;
+    }
+    memset(sub_icon_pending, 0, SUB_ICON_NAME_LEN * SUB_MAX);
+  }  // if (sub_icon_pending == nullptr)
+  sub_copy(sub_icon_pending[idx], SUB_ICON_NAME_LEN, name);
+  return name[0] != '\0';
+}
+
+bool sub_icon_names_complete() { return sub_icon_names_total > 0 && sub_icon_names_count >= sub_icon_names_total; }
+
+bool sub_icon_names_wanted() { return !sub_icon_names_complete() && !sub_icon_names_given_up; }
+
+bool sub_icon_names_awaiting() { return sub_icon_names_waiting; }
+
+uint16_t sub_icon_names_received() { return sub_icon_names_count; }
+
+uint16_t sub_icon_names_expected() { return sub_icon_names_total; }
+
+bool sub_icon_names_failed() { return sub_icon_names_given_up; }
+
+uint8_t sub_unverified_count() { return sub_unverified; }
+
+bool sub_store_failed() { return sub_store_failed_flag; }
+
+void sub_icon_names_fetch_reset() {
+  sub_icon_names_given_up = false;
+  sub_icon_names_attempts = 0;
+  sub_icon_names_asked_start = UINT16_MAX;
+  sub_icon_names_waiting = false;
+}
+
+bool sub_icon_names_request(uint16_t block, uint8_t retries, uint16_t &start, uint16_t &count) {
+  if (!sub_icon_names_wanted() || block == 0) {
+    return false;
+  }
+  start = sub_icon_names_count;
+  if (start == sub_icon_names_asked_start) {
+    if (sub_icon_names_attempts > retries) {
+      ESP_LOGW(TAG, "Icon names: no reply for the names from %" PRIu16 "; icons given by name are drawn by domain",
+               start);
+      sub_icon_names_given_up = true;
+      sub_icon_names_waiting = false;
+      sub_icon_names_settle();
+      return false;
+    }  // if (no retries left)
+    ESP_LOGW(TAG, "Icon names: no reply for the names from %" PRIu16 "; asking again", start);
+  } else {
+    sub_icon_names_asked_start = start;
+    sub_icon_names_attempts = 0;
+  }  // if (same block)
+  ++sub_icon_names_attempts;
+  count = block;
+  if (sub_icon_names_total > 0 && sub_icon_names_total - start < count) {
+    count = sub_icon_names_total - start;
+  }
+  sub_icon_names_asked_count = count;
+  sub_icon_names_waiting = true;
+  ESP_LOGV(TAG, "Icon names: asking for %" PRIu16 " from %" PRIu16, count, start);
+  return true;
+}
+
+void sub_icon_names_add(uint16_t start, uint16_t total, const std::string &names) {
   if (sub_icon_names == nullptr) {
     sub_icon_names = static_cast<char *>(sub_alloc(SUB_ICON_NAMES_CAPACITY));
     if (sub_icon_names == nullptr) {
       ESP_LOGW(TAG, "Out of memory for the icon names");
       return;
     }
+    sub_icon_names[0] = ',';
+    sub_icon_names[1] = '\0';
+    sub_icon_names_len = 1;
   }  // if (sub_icon_names == nullptr)
-  if (start == 0) {
+  if (total == 0) {
+    ESP_LOGW(TAG, "Icon names: a reply without the total; ignored");
+    return;
+  }
+  // A different total means another list, e.g. after a Blueprint update: start it over
+  if (total != sub_icon_names_total) {
+    if (sub_icon_names_total > 0) {
+      ESP_LOGW(TAG, "Icon names: the list changed (%" PRIu16 " names, was %" PRIu16 "); asking for it again", total,
+               sub_icon_names_total);
+    }
     sub_icon_names[0] = ',';
     sub_icon_names[1] = '\0';
     sub_icon_names_len = 1;
     sub_icon_names_count = 0;
-  } else if (start != sub_icon_names_count) {
-    ESP_LOGW(TAG, "Icon names: chunk at %" PRIu16 " but %" PRIu16 " received; ignored", start, sub_icon_names_count);
+    sub_icon_names_total = total;
+    sub_icon_names_asked_start = UINT16_MAX;
+    sub_icon_names_attempts = 0;
+  }  // if (total changed)
+  if (start != sub_icon_names_count) {
+    // A late reply to a block already received, or a block after a missing one: the next request asks again
+    ESP_LOGD(TAG, "Icon names: block at %" PRIu16 " but %" PRIu16 " received; ignored", start, sub_icon_names_count);
     return;
   }
-  if (names.empty()) {
+  const uint16_t received = names.empty() ? 0 : static_cast<uint16_t>(1 + std::count(names.begin(), names.end(), ','));
+  const uint16_t left = static_cast<uint16_t>(total - start);
+  const uint16_t expected =
+      (sub_icon_names_asked_count > 0 && sub_icon_names_asked_count < left) ? sub_icon_names_asked_count : left;
+  if (received != expected) {
+    ESP_LOGW(TAG, "Icon names: %" PRIu16 " names at %" PRIu16 ", %" PRIu16 " expected; ignored", received, start,
+             expected);
     return;
   }
   if (sub_icon_names_len + names.size() + 2 > SUB_ICON_NAMES_CAPACITY) {
     ESP_LOGW(TAG, "Icon names: more than %" PRIu32 " bytes; the rest is not resolved", SUB_ICON_NAMES_CAPACITY);
-    sub_icon_names_count = UINT16_MAX;  // Refuse the following chunks too
+    sub_icon_names_given_up = true;
+    sub_icon_names_waiting = false;
+    sub_icon_names_settle();
     return;
   }
   memcpy(sub_icon_names + sub_icon_names_len, names.data(), names.size());
   sub_icon_names_len += names.size();
   sub_icon_names[sub_icon_names_len++] = ',';
   sub_icon_names[sub_icon_names_len] = '\0';
-  sub_icon_names_count = static_cast<uint16_t>(sub_icon_names_count + 1 + std::count(names.begin(), names.end(), ','));
-  ESP_LOGV(TAG, "Icon names: %" PRIu16 " received", sub_icon_names_count);
+  sub_icon_names_count = static_cast<uint16_t>(sub_icon_names_count + received);
+  sub_icon_names_waiting = false;
+  ESP_LOGV(TAG, "Icon names: %" PRIu16 " of %" PRIu16 " received", sub_icon_names_count, total);
+  if (sub_icon_names_complete()) {
+    ESP_LOGI(TAG, "Icon names: all %" PRIu16 " received", total);
+    sub_icon_names_settle();
+  }
 }
 
 bool sub_icon_lookup(const char *name, char *glyph, size_t size) {
@@ -1307,6 +1551,29 @@ void sub_render_page(const char *page) {
   }  // for each binding
 }
 
+void sub_set_calendar_lead(uint32_t minutes) {
+  const uint32_t lead_s = minutes * 60;
+  if (lead_s == sub_calendar_lead_s) {
+    return;
+  }
+  sub_calendar_lead_s = lead_s;
+  ESP_LOGD(TAG, "Calendar chips lead time: %" PRIu32 " min", minutes);
+  sub_calendar_recheck();
+}
+
+void sub_calendar_recheck() {
+  for (uint16_t idx = 0; idx < sub_count; ++idx) {
+    if (sub_bindings[idx].domain != SUB_DOMAIN_CALENDAR) {
+      continue;
+    }
+    // Rendered again only when the lead time changed the classification
+    const char *effective = nullptr;
+    if (sub_classify(sub_bindings[idx], sub_runtime[idx], effective) != sub_runtime[idx].last_state) {
+      sub_apply(idx);
+    }
+  }  // for each binding
+}
+
 void sub_log_stats(uint32_t window_s) {
   if (sub_stats_received == 0) {
     return;  // Nothing arrived; stay quiet
@@ -1362,6 +1629,8 @@ void sub_dump_config() {
   ESP_LOGCONFIG(TAG, "Subscriptions");
   ESP_LOGCONFIG(TAG, "  Bindings: %" PRIu16 " of %" PRIu16, sub_count, SUB_MAX);
   ESP_LOGCONFIG(TAG, "  Entity length: %" PRIu8 " chars", static_cast<uint8_t>(SUB_ENTITY_LEN - 1));
+  ESP_LOGCONFIG(TAG, "  Icon names: %" PRIu16 " of %" PRIu16 "%s", sub_icon_names_count, sub_icon_names_total,
+                sub_icon_names_given_up ? " (given up)" : "");
   if (sub_unverified > 0) {
     ESP_LOGCONFIG(TAG, "  Unverified commits: %" PRIu8, sub_unverified);
   }

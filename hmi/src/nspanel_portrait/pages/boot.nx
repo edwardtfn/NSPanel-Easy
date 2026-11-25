@@ -1,84 +1,180 @@
 on boot.load:
   // Only shown when ESPHome does not connect or on request, so it is always bright enough to be read
   dim=100
-  covx baud,tmp_baudrate.txt,0,0
-  sys_baudrate.txt="Baud rate: "
-  sys_baudrate.txt+=tmp_baudrate.txt
-  sys_baudrate.txt+=" bps"
-  ver_tft.txt="TFT: "+version.txt
+  // Shown when ESPHome does not connect, or opened from the settings page (long press) for troubleshooting.
+  // Without ESPHome, there is no page to go back to.
+  if(esphome==0)
+  {
+    vis button_back,0
+  }
+  // The status is filled right away, then every second
+  tm_status.tim=50
   sendme
 
 on boot.loadend:
-  line 14,336,305,336,WHITE
-  line 305,336,305,477,WHITE
-  line 14,336,14,477,WHITE
-  line 14,477,305,477,WHITE
-  line 16,338,303,338,WHITE
-  line 303,338,303,475,WHITE
-  line 16,338,16,475,WHITE
-  line 16,475,305,475,WHITE
-  vis log_title,1
-  line 14,76,305,76,WHITE
-  line 305,76,305,192,WHITE
-  line 14,76,14,192,WHITE
-  line 14,192,305,192,WHITE
-  line 16,78,303,78,WHITE
-  line 303,78,303,190,WHITE
-  line 16,78,16,190,WHITE
-  line 16,190,305,190,WHITE
-  vis ver_title,1
-  line 14,206,305,206,WHITE
-  line 305,206,305,322,WHITE
-  line 14,206,14,322,WHITE
-  line 14,322,305,322,WHITE
-  line 16,208,303,208,WHITE
-  line 303,208,303,320,WHITE
-  line 16,208,16,320,WHITE
-  line 16,320,305,320,WHITE
-  vis sys_title,1
+  line 10,76,310,76,WHITE
+  line 310,76,310,472,WHITE
+  line 10,76,10,472,WHITE
+  line 10,472,310,472,WHITE
+  line 12,78,308,78,WHITE
+  line 308,78,308,470,WHITE
+  line 12,78,12,470,WHITE
+  line 12,470,308,470,WHITE
+  line 18,280,302,280,44509
+  vis stat_title,1
 
-on log_scroll.timer:
-  strlen log_body.txt,log_len.val
-  log_pos.val=0
-  log_line_count.val=0
-  log_start_pos.val=0
-  log_end_pos.val=0
-  log_temp.txt=""
-  // Count the number of lines (instances of \r)
-  while(log_pos.val<log_len.val)
+on tm_status.timer:
+  // A checklist of what the panel needs, rebuilt every second while the page is shown. The display fills the
+  // first line and the details itself, so they are shown also without ESPHome. With ESPHome, the firmware
+  // fills the other lines (`page_boot_status`). Texts are only written when they change, to avoid redrawing.
+  tm_status.tim=1000
+  // Display: the TFT version and the baud rate, the first things to check when ESPHome does not connect
+  covx baud,va0.txt,0,0
+  va1.txt=version.txt+" "+va0.txt+" bps"
+  if(val1.txt!=va1.txt)
   {
-    // Extract each character to find \r
-    substr log_body.txt,log_temp.txt,log_pos.val,2
-    if(log_temp.txt=="\r")
-    {
-      log_line_count.val++
-      // Record the position of the first \r
-      if(log_line_count.val==1)
-      {
-        log_start_pos.val=log_pos.val
-      }
-      // Record the position of the second \r
-      if(log_line_count.val==2)
-      {
-        log_end_pos.val=log_pos.val
-      }
-    }
-    log_pos.val++
+    val1.txt=va1.txt
   }
-  // Check if the number of lines exceeds the maximum allowed
-  if(log_line_count.val>log_max_lines.val)
+  // Orange while ESPHome is connected but the display was not acknowledged
+  sys0=15947
+  if(esphome==1)
   {
-    // If more than max_lines, remove the first line
-    if(log_end_pos.val>0)
+    if(display_ack==0)
     {
-      // Remove the first line including the newline character
-      substr log_body.txt,log_body.txt,log_start_pos.val+1,log_len.val-log_start_pos.val-1
+      sys0=62885
     }
   }
-  doevents
+  if(mark1.pco!=sys0)
+  {
+    mark1.pco=sys0
+    if(sys0==15947)
+    {
+      mark1.txt=""
+    }else
+    {
+      mark1.txt=""
+    }
+  }
+  // Without ESPHome, the other lines are not known: ESPHome is marked as missing, and the rest is greyed out
+  if(esphome==0)
+  {
+    if(val2.txt!="not connected")
+    {
+      mark2.txt=""
+      mark2.pco=57895
+      val2.txt="not connected"
+      val2.pco=57895
+      // mark3 to mark7 (ids 30 to 34), val3 to val7 (ids 23 to 27), lbl3 to lbl7 (ids 6 to 10)
+      sys1=23
+      sys2=6
+      for(sys0=30;sys0<=34;sys0++)
+      {
+        b[sys0].txt=""
+        b[sys0].pco=33913
+        b[sys1].txt="-"
+        b[sys1].pco=33913
+        b[sys2].pco=33913
+        sys1++
+        sys2++
+      }
+    }
+  }
+  // Details, from the display
+  va1.txt="Model "
+  covx display_mode,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=" (TFT "
+  covx hard_coded_display_mode,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="), ack "
+  covx display_ack,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="\rPages: home "
+  covx home_page_id,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=", wake "
+  covx wakeup_page_id,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=", back "
+  covx back_page_id,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="\rBrightness "
+  covx brightness,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="/"
+  covx brightness_dim,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="/"
+  covx brightness_sleep,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=", now "
+  covx dim,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+="\rThermostat "
+  covx climate_embedded,va0.txt,0,0
+  va1.txt+=va0.txt
+  va1.txt+=", recmod "
+  covx recmod,va0.txt,0,0
+  va1.txt+=va0.txt
+  // Home page items shown: the bits set in vis_home
+  sys0=vis_home
+  sys1=0
+  while(sys0>0)
+  {
+    sys2=sys0&1
+    sys1+=sys2
+    sys0=sys0>>1
+  }
+  va1.txt+="\rHome "
+  covx sys1,va0.txt,0,0
+  va1.txt+=va0.txt
+  // Button and entity pages in use
+  sys1=0
+  if(is_buttonpage01!=0)
+  {
+    sys1++
+  }
+  if(is_buttonpage02!=0)
+  {
+    sys1++
+  }
+  if(is_buttonpage03!=0)
+  {
+    sys1++
+  }
+  if(is_buttonpage04!=0)
+  {
+    sys1++
+  }
+  va1.txt+=", buttons "
+  covx sys1,va0.txt,0,0
+  va1.txt+=va0.txt
+  sys1=0
+  if(is_entitypage01!=0)
+  {
+    sys1++
+  }
+  if(is_entitypage02!=0)
+  {
+    sys1++
+  }
+  if(is_entitypage03!=0)
+  {
+    sys1++
+  }
+  if(is_entitypage04!=0)
+  {
+    sys1++
+  }
+  va1.txt+=", entities "
+  covx sys1,va0.txt,0,0
+  va1.txt+=va0.txt
+  if(stat_body.txt!=va1.txt)
+  {
+    stat_body.txt=va1.txt
+  }
 
 on bt_reboot.up:
-  log_body.txt+="Click button 'Reboot'\r"
   if(api==0)
   {
     rest
@@ -108,3 +204,12 @@ on tm_display_ack.timer:
     prints "display_ack",0
     printh 00 01 FF FF FF
   }
+
+on button_back.down:
+  // Closed by the user: no longer opened when the display starts (#841)
+  if(status_page_pinned==1)
+  {
+    status_page_pinned=0
+    wepo 0,8
+  }
+  page home_page_id

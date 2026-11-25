@@ -639,7 +639,12 @@ void buttons_loop() {
     page.dirty = false;
     if (page.configured) {
       if (!page.label.empty()) {
-        nextion_display->set_component_text("page_label", page.label.c_str());  // Otherwise the page's default stays
+        // Otherwise the page's default stays. With the chips, the title is the one under them.
+#if NSPANEL_EASY_CHIPS_PAGE_BUTTONS
+        nextion_display->set_component_text("label_chips", page.label.c_str());
+#else
+        nextion_display->set_component_text("page_label", page.label.c_str());
+#endif  // NSPANEL_EASY_CHIPS_PAGE_BUTTONS
       }
       nextion_display->set_component_value("confirm", page.confirm);
     }  // if (page.configured)
@@ -714,6 +719,9 @@ void buttons_sub_render(const SubBinding &binding, const SubRuntime &rt, const c
         return;
       }
       const bool changed = slot.icon_attr[0] != '\0' && strncmp(rt.state, "mdi:", 4) == 0;
+      if (changed && sub_icon_names_wanted()) {
+        return;  // Not recorded yet: applied once the icon names are in (sub_render_all())
+      }
       strncpy(slot.icon_attr, rt.state, sizeof(slot.icon_attr) - 1);
       slot.icon_attr[sizeof(slot.icon_attr) - 1] = '\0';
       if (changed) {

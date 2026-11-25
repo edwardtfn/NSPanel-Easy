@@ -22,12 +22,12 @@ namespace esphome::nspanel_easy {
  * such as settings, home, weather information, and more.
  */
 constexpr const char *const page_names[] = {
-    "boot",         "home",         "screensaver",  "alarm",        "button",       "buttonpage01", "buttonpage02",
-    "buttonpage03", "buttonpage04", "canvas",       "climate",      "confirm",      "cover",        "debug",
-    "entitypage01", "entitypage02", "entitypage03", "entitypage04", "fan",          "graph",        "keyb_num",
-    "light",        "media_player", "notification", "popup_select", "qrcode",       "select",       "settings",
-    "switch",       "timer",        "utilities",    "vacuum",       "water_heater", "weather01",    "weather02",
-    "weather03",    "weather04",    "weather05"};
+    "boot",         "home",         "screensaver",  "alarm",        "button",    "buttonpage01", "buttonpage02",
+    "buttonpage03", "buttonpage04", "canvas",       "climate",      "confirm",   "cover",        "entitypage01",
+    "entitypage02", "entitypage03", "entitypage04", "fan",          "graph",     "keyb_num",     "light",
+    "media_player", "notification", "popup_select", "qrcode",       "select",    "settings",     "switch",
+    "timer",        "utilities",    "vacuum",       "water_heater", "weather01", "weather02",    "weather03",
+    "weather04",    "weather05",    "home_simple"};
 
 constexpr size_t PAGE_COUNT = sizeof(page_names) / sizeof(page_names[0]);
 static_assert(PAGE_COUNT <= UINT8_MAX, "PAGE_COUNT exceeds uint8_t range");
@@ -127,7 +127,6 @@ static_assert(get_page_id("canvas") != UINT8_MAX, "Missing required page: canvas
 static_assert(get_page_id("climate") != UINT8_MAX, "Missing required page: climate");
 static_assert(get_page_id("confirm") != UINT8_MAX, "Missing required page: confirm");
 static_assert(get_page_id("cover") != UINT8_MAX, "Missing required page: cover");
-static_assert(get_page_id("debug") != UINT8_MAX, "Missing required page: debug");
 static_assert(get_page_id("entitypage01") != UINT8_MAX, "Missing required page: entitypage01");
 static_assert(get_page_id("entitypage02") != UINT8_MAX, "Missing required page: entitypage02");
 static_assert(get_page_id("entitypage03") != UINT8_MAX, "Missing required page: entitypage03");
@@ -171,8 +170,8 @@ constexpr bool is_page_offline_capable(uint8_t page_id, bool climate_embedded) {
       return climate_embedded;
     case get_page_id("boot"):
     case get_page_id("confirm"):
-    case get_page_id("debug"):
     case get_page_id("home"):
+    case get_page_id("home_simple"):
     case get_page_id("qrcode"):
     case get_page_id("screensaver"):
     case get_page_id("settings"):

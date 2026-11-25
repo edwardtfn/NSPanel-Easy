@@ -74,7 +74,6 @@ script:
           const uint32_t resolved_target = (target_rate != 0) ? static_cast<uint32_t>(target_rate)
                                                               : static_cast<uint32_t>(${BAUD_RATE});
           ESP_LOGI("${TAG_HW_UART}", "Baud scan: starting (target %" PRIu32 " bps)", resolved_target);
-          boot_log->execute("Baud", "Scanning baud rates");
 
       # Power-cycle the display to ensure a clean UART state
       - switch.turn_off: screen_power
@@ -194,13 +193,10 @@ script:
           system_flags.baud_fallback_active = found && (tf_uart->get_baud_rate() != ${BAUD_RATE});
           system_flags.baud_rate_set = found;
 
-          // Update baud rate sensor to reflect current UART state
-          baud_rate_active->update();
-
           if (found) {
-            boot_log->execute("Baud", "Scan complete - rate found");
+            ESP_LOGD("${TAG_BOOT}", "Baud: Scan complete - rate found");
           } else {
-            boot_log->execute("Baud", "Scan complete - no rate found");
+            ESP_LOGD("${TAG_BOOT}", "Baud: Scan complete - no rate found");
           }
 
   - id: !extend dump_config
@@ -279,20 +275,8 @@ script:
           then:
             - lambda: |-
                 if (tf_uart->available() == 0) wait_for_uart_drain->stop();
-                if (iteration % 5 == 0) boot_log->execute("Boot", "Waiting for UART empty queue");
+                if (iteration % 5 == 0) ESP_LOGD("${TAG_BOOT}", "Boot: Waiting for UART empty queue");
             - delay: 1s
-
-text_sensor:
-  - id: baud_rate_active
-    name: Baud rate
-    platform: template
-    icon: mdi:swap-horizontal
-    entity_category: diagnostic
-    lambda: |-
-      return std::to_string(tf_uart->get_baud_rate());
-    filters:
-      - append: " bps"
-    update_interval: 111min
 
 uart:
   - id: tf_uart  # UART for Nextion display
