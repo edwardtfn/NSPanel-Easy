@@ -5,7 +5,7 @@
 ##### PLEASE only make changes if it is necessary and also the required knowledge is available. #####
 ##### For normal use with the Blueprint, no changes are necessary.                              #####
 #####################################################################################################
-##### Include ESPectre CSI motion detection as a wake-up-the-screen add-on.                     #####
+##### Include ESPHome's built-in ESPectre component as a wake-up-the-screen add-on.             #####
 #####################################################################################################
 ---
 substitutions:
@@ -14,103 +14,180 @@ substitutions:
   ## Change only in your      ##
   ## local yaml substitutions ##
   ##############################
-  espectre_ref: "3.1.0"                          # ESPectre release this add-on was tested with (override at your own risk)
   espectre_traffic_generator_mode: "wifi_raw"    # ping, dns, dns_tcp, wifi_raw or external
   espectre_detection_algorithm: "high_accuracy"  # high_accuracy or lightweight
-  espectre_direct_api: "true"                    # see ESPectre documentation
+  espectre_quiet_boot_log: false                 # Holds back the runtime's status line until the boot completes
 
 esphome:
+  min_version: 2026.11.0
   build_flags:
     - -D NSPANEL_EASY_ADDON_ESPECTRE
 
-external_components:
-  - source:
-      type: git
-      url: https://github.com/francescopace/espectre
-      ref: ${espectre_ref}
-      path: src/cpp/frontend/esphome/components
-    components: [espectre]
+logger:
+  runtime_tag_levels: ${espectre_quiet_boot_log}  # For espectre.runtime, held back during the boot (see boot below)
 
 espectre:
   id: espectre_csi
   detection_algorithm: ${espectre_detection_algorithm}
   traffic_generator_mode: ${espectre_traffic_generator_mode}
-  direct_api: ${espectre_direct_api}
 
-  threshold_number:
-    name: "Motion Threshold"
-
-  motion_sensor:
-    id: espectre_motion
-    name: "ESPectre Motion"
-    on_press:
-      then:
+binary_sensor:
+  - platform: espectre
+    motion:
+      id: espectre_motion
+      name: "ESPectre Motion"
+      on_press:
         # wake the screen
         - script.execute:
             id: wakeup
             reset_timer: true
-        # display the motion sensor icon
+      # display or hide the motion sensor icon, also when the state becomes unknown, as when sensing is turned off
+      on_state_change:
         - script.execute:
             id: refresh_relays
             relay_mask: 2
-    on_release:
-      then:
-        # hide the motion sensor icon
-        - script.execute:
-            id: refresh_relays
-            relay_mask: 2
+    calibrating:
+      name: "Calibration Active"
+
+number:
+  - platform: espectre
+    threshold:
+      name: "Motion Threshold"
+    motion_on_hits:
+      name: "Motion On Hits"
+    motion_off_hits:
+      name: "Motion Off Hits"
+
+select:
+  - platform: espectre
+    traffic_generator_mode:
+      name: "CSI Traffic Source"
+    detection_algorithm:
+      name: "Detection Profile"
+    csi_sample_spacing:
+      name: "CSI Packet Spacing"
+
+switch:
+  - platform: espectre
+    sensing:
+      id: espectre_sensing
+      name: "Sensing Enabled"
+      # Kept over restarts (the component's default, RESTORE_DEFAULT_ON). The stops for uploads don't go through
+      # this switch (see espectre_stop), so they don't change the saved state.
+
+sensor:
+  - platform: espectre
+    movement:
+      name: "Movement Score"
+    diagnostics:
+      id: espectre_diagnostics
+      generator_rate:
+        name: "Generator Rate"
+      traffic_tx_rate:
+        name: "Traffic TX Rate"
+      traffic_rx_rate:
+        name: "Traffic RX Rate"
+      csi_accepted_rate:
+        name: "CSI Accepted Rate"
+      csi_occupancy:
+        name: "CSI Temporal Occupancy"
+
+  - platform: wifi_signal
+    name: "WiFi RSSI"
+    entity_category: diagnostic
+
+button:
+  - platform: espectre
+    name: "Recalibrate"
+
+  # The Traffic Generator app presses this while its diagnostics panel is open.
+  - platform: template
+    name: "Refresh Diagnostics"
+    entity_category: diagnostic
+    on_press:
+      - component.update: espectre_diagnostics
 
 ota:
-  # Sensing is paused when an OTA starts (ota_std.on_begin -> stop_all, see below).
-  # A failed or aborted OTA does not reboot the panel, so resume sensing here.
+  # Sensing is stopped when an OTA starts (ota_std.on_begin -> stop_all -> espectre_stop, see below).
+  # The component only starts again with a restart, which a failed or aborted OTA does not do, so the panel restarts
+  # here. Also with sensing off, as turning it on later would otherwise need a restart too.
   - id: !extend ota_std
     on_abort:
       then:
-        - lambda: id(espectre_csi).set_sensing_runtime(true);
+        - script.execute: espectre_restart_after_ota
     on_error:
       then:
-        - lambda: id(espectre_csi).set_sensing_runtime(true);
+        - script.execute: espectre_restart_after_ota
 
 script:
   - id: !extend dump_config
     then:
       - lambda: |-
-          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "Add-on 'ESPectre motion detection' release %s", "${espectre_ref}");
-          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "  Traffic generator: %s", "${espectre_traffic_generator_mode}");
-          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "  Detection algorithm: %s", "${espectre_detection_algorithm}");
-          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "  Direct API: %s", "${espectre_direct_api}");
+          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "ESPectre motion detection (built into ESPHome)");
+          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "  Configured traffic source: %s", "${espectre_traffic_generator_mode}");
+          ESP_LOGCONFIG("${TAG_ADDON_ESPECTRE}", "  Configured detector: %s", "${espectre_detection_algorithm}");
 
-  # wait until platform ready - pause sensing in early boot
-  - id: !extend boot_early_routines
-    then:
-      - lambda: id(espectre_csi).set_sensing_runtime(false);
-
-  # wait until platform ready - enable sensing in late boot
-  - id: !extend boot
+  # Stops the component at once, without the switch, so the switch keeps the user's choice. Used for the uploads,
+  # as their transfer blocks the main loop, where a change of the switch would be applied.
+  # The component only starts again with a restart.
+  - id: espectre_stop
+    mode: single
     then:
       - lambda: |-
-          id(espectre_csi).set_sensing_runtime(true);
+          ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Stopping sensing");
+          espectre_csi->on_shutdown();
+
+  # Brings the component back after a failed or aborted OTA, which does not restart the panel
+  - id: espectre_restart_after_ota
+    mode: single
+    then:
+      - lambda: ESP_LOGW("${TAG_ADDON_ESPECTRE}", "Restarting to bring ESPectre back after the OTA");
+      # Lets the warning reach the log and the OTA client before the restart
+      - delay: 1s
+      - lambda: App.safe_reboot();
 
   # reduce pressure on system during OTA and TFT uploads
   - id: !extend stop_all
     then:
-      - lambda: |-
-          if (system_flags.tft_upload_active or system_flags.ota_in_progress) {
-            id(espectre_csi).set_sensing_runtime(false);
-          }
+      - if:
+          condition:
+            lambda: return system_flags.tft_upload_active or system_flags.ota_in_progress;
+          then:
+            - script.execute: espectre_stop
 
   # display/hide the motion sensor icon in chip relay_2
+  # chip_relay2 is repurposed to mirror the ESPectre motion sensor instead of relay 2's own state.
+  # The built-in relay 2 branch is excluded at build time (NSPANEL_EASY_ADDON_ESPECTRE), so this is the only writer of that chip.
   - id: !extend refresh_relays
     then:
       - lambda: |-
-          // chip_relay2 is repurposed to mirror the ESPectre motion sensor
-          // instead of relay 2's own state. The built-in relay 2 branch is
-          // excluded at build time (NSPANEL_EASY_ADDON_ESPECTRE), so this is
-          // the only writer of that chip.
           if (system_flags.tft_upload_active) return;  // Skip refresh if TFT update is in progress
           if (!(relay_mask & 2)) return;
-          const bool motion = espectre_motion->state;
+          // An unknown state, as when sensing is turned off, is no motion
+          const bool motion = espectre_motion->has_state() and espectre_motion->state;
           if (chip_states[CHIP_IDX_RELAY2].visible == motion) return;
           chip_states[CHIP_IDX_RELAY2].visible = motion;
           chip_render(CHIP_IDX_RELAY2);
+
+  # Sensing starts as soon as the component is set up, with the switch's saved state. With espectre_quiet_boot_log,
+  # the runtime's status line (espectre.runtime, every few seconds) is held back until the boot completes, to keep the
+  # boot log readable. Warnings and errors still show.
+  - id: !extend boot_early_routines
+    then:
+      - lambda: |-
+          #ifdef USE_LOGGER_RUNTIME_TAG_LEVELS
+          if (${espectre_quiet_boot_log} and logger::global_logger->get_log_level() > ESPHOME_LOG_LEVEL_WARN) {
+            logger::global_logger->set_log_level("espectre.runtime", ESPHOME_LOG_LEVEL_WARN);
+          }  // if (quiet boot log, and the logger more verbose than WARN)
+          #endif  // USE_LOGGER_RUNTIME_TAG_LEVELS
+
+  - id: !extend boot
+    then:
+      - lambda: |-
+          #ifdef USE_LOGGER_RUNTIME_TAG_LEVELS
+          if (${espectre_quiet_boot_log}) {
+            logger::global_logger->set_log_level("espectre.runtime", logger::global_logger->get_log_level());
+            ESP_LOGI("${TAG_ADDON_ESPECTRE}", "Boot completed: ESPectre status back in the log");
+          }  // if (quiet boot log)
+          #endif  // USE_LOGGER_RUNTIME_TAG_LEVELS
 ...

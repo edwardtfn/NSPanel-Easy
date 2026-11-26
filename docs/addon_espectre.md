@@ -3,7 +3,7 @@
 ## Description
 
 This add-on enables the use of your panel's Wi-Fi traffic to act as a motion sensor using the
-ESPectre module. See [ESPectre.dev](https://espectre.dev) for details on how the module works and for its license conditions.
+ESPectre component built into ESPHome. See [ESPectre.dev](https://espectre.dev) for details on how the module works and for its license conditions.
 
 If the display is blank, and motion is detected, the display wakes up.
 
@@ -18,6 +18,15 @@ For best results you will need to make adjustments in _Home Assistant > Settings
 2. This add-on repurposes the status icon (chip) normally used for **relay 2**: it shows motion instead of the relay state.
    The relay itself keeps working, but its state is no longer shown on the display.
    Consider this before combining it with add-ons that use relay 2, such as [Cover](addon_cover.md) or climate backup relay on relay 2 [Climate](addon_climate.md).
+
+## Requirements
+
+ESPHome 2026.11.0 or later, which includes the ESPectre component.
+
+> [!NOTE]
+> Earlier versions of this add-on used ESPectre as an external component. After updating, Home Assistant may show
+> a repair for the ESPectre diagnostic sensors, as their unit changed from `pkt/s` to `pps`. It only asks what to do with
+> the old statistics of these sensors.
 
 ## Installation
 
@@ -54,11 +63,29 @@ The following keys are available to be used in your `substitutions`. All values 
 <!-- markdownlint-disable MD013 MD033 -->
 | Key | Required | Supported values | Default | Description |
 | :- | :-: | :-: | :-: | :- |
-| espectre_ref | no | valid ESPectre release tag | "3.1.0" | ESPectre version control |
-| espectre_direct_api | no | "false" or "true" | "true" | the direct API is used by the ESPectre App |
 | espectre_detection_algorithm | no | "high_accuracy" or "lightweight" | "high_accuracy" | see ESPectre docs |
 | espectre_traffic_generator_mode | no | "ping", "dns", "dns_tcp", "wifi_raw" or "external" | "wifi_raw" | "external" if using ESPectre App as traffic generator |
+| espectre_quiet_boot_log | no | "false" or "true" | "false" | "true" holds back the status line of ESPectre in the log until the boot completes. Sensing itself is not delayed |
 <!-- markdownlint-enable MD013 MD033 -->
+
+`espectre_ref` and `espectre_direct_api` are no longer used, and can be removed from your settings.
+
+## Entities
+
+| Entity | Type | Description |
+| :- | :- | :- |
+| ESPectre Motion | Binary sensor | Motion detected. Wakes up the display and shows the relay 2 chip. |
+| Calibration Active | Binary sensor | On while ESPectre calibrates. |
+| Movement Score | Sensor | The current movement level. |
+| Motion Threshold, Motion On Hits, Motion Off Hits | Number | Detection tuning. |
+| CSI Traffic Source, Detection Profile, CSI Packet Spacing | Select | Traffic and detection settings. |
+| Sensing Enabled | Switch | Turns the detection on or off. Kept over restarts. |
+| Recalibrate | Button | Starts a new calibration. Leave the room empty while it runs. |
+| Generator Rate, Traffic TX/RX Rate, CSI Accepted Rate, CSI Temporal Occupancy, WiFi RSSI | Sensor (diagnostic) | Traffic diagnostics. |
+| Refresh Diagnostics | Button (diagnostic) | Updates the diagnostic sensors. |
+
+Sensing stops during OTA and TFT uploads. Both end with a restart, after which sensing resumes when "Sensing Enabled" is on.
+A failed or aborted OTA does not restart the panel by itself, so the panel restarts to bring ESPectre back.
 
 ## Blueprint settings
 
@@ -98,7 +125,9 @@ esp32_ble_tracker:
 
 ## Image size
 
-Tested with `ESPHome 2026.9.1`, `ESPectre 3.0.0` and `NSPanel-Easy 2026.10.0`.
+Tested with `ESPHome 2026.9.1`, `ESPectre 3.0.0` and `NSPanel-Easy 2026.10.0`, with ESPectre as an external component.
+The component built into ESPHome 2026.11.0 is smaller: in the CI build of this add-on, it uses about 137 kB less flash
+and 4.5 kB less RAM.
 
 ### Summary
 
