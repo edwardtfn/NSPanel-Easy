@@ -64,6 +64,9 @@ We run all of our tests with "Accuweather", so the parameters shown on the panel
 Forecast values that the integration doesn't provide, or provides as something other than a number, are left out of the weather pages.
 Forecast values are shown as whole numbers, except where that would hide the changes from day to day:
 the pressure in inHg and the precipitation in inches have 2 decimals, the pressure in kPa and the precipitation in mm have 1 decimal.
+The pages of the next days show the day icon of the conditions that have a day and a night icon (such as sunny or partly cloudy).
+They only show the night icon when every period of that page is at night: with a twice-daily forecast, when the integration marks
+all of them as night, and with an hourly forecast, when they all end before sunrise. Daily forecasts always show the day icon.
 
 ### Weather pages - Show maximum temperature first
 
