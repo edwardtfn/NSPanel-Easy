@@ -55,13 +55,51 @@ script:
       - lambda: |-
           if (system_flags.tft_upload_active) return;  // Do not refresh if uploading TFT
 
-          // Screensaver time with font 12 on the US model is stacked, one line per part
-          const auto screensaver_layout = [](std::string &text) {
-            if (id(screensaver_display_time_font) == 12 &&
-                display_model->current_option() == "${DISPLAY_MODES.US.TEXT}") {
-              nspanel_easy::replace_all(text, ":", "\\r");
-              nspanel_easy::replace_all(text, " ", "\\r");
-            }  // if stacked layout
+          // Screensaver time. With font 12 on the US model it is stacked: hour, minute and meridiem each in their
+          // own component, so every line is centered on its own (Nextion aligns the lines of a multi-line text
+          // to the left of the widest one). Otherwise the whole time goes to `text`.
+          //   full: the time as shown on one line (meridiem included)
+          //   bare: the time without the meridiem
+          //   meridiem: the meridiem text, empty when the format has none
+          const auto screensaver_show = [](const std::string &full, const std::string &bare, const char *meridiem) {
+            // The stacked components are hidden by the page on load; they are hidden here only when the layout
+            // changes while the page is shown, so a panel not using them never addresses them
+            static bool stacked_shown = false;
+            if (id(screensaver_display_time_font) != 12 ||
+                display_model->current_option() != "${DISPLAY_MODES.US.TEXT}") {
+              if (stacked_shown) {
+                disp1->hide_component("time_hour");
+                disp1->hide_component("time_minute");
+                disp1->hide_component("time_meridiem");
+                stacked_shown = false;
+              }  // if stacked shown before
+              disp1->set_component_text("text", full.c_str());
+              disp1->show_component("text");
+              return;
+            }  // if not stacked layout
+
+            // Hour up to the first separator (":", "." or " "), minute after it
+            const size_t split = bare.find_first_of(":. ");
+            const std::string hour = bare.substr(0, split);
+            std::string minute;
+            if (split != std::string::npos) {
+              minute = bare.substr(split);
+              const size_t start = minute.find_first_not_of(":. ");
+              minute = (start == std::string::npos) ? "" : minute.substr(start);
+            }  // if separator found
+
+            stacked_shown = true;
+            disp1->hide_component("text");
+            disp1->set_component_text("time_hour", hour.c_str());
+            disp1->show_component("time_hour");
+            disp1->set_component_text("time_minute", minute.c_str());
+            disp1->show_component("time_minute");
+            if (meridiem[0] != '\0') {
+              disp1->set_component_text("time_meridiem", meridiem);
+              disp1->show_component("time_meridiem");
+            } else {
+              disp1->hide_component("time_meridiem");
+            }  // if meridiem
           };
 
           // Time
@@ -72,10 +110,8 @@ script:
             ESP_LOGW("${TAG_DATETIME}", "refresh_datetime: time provider not yet synchronized");
             if (id(screensaver_display_time) && current_page_id == get_page_id("screensaver") &&
                 !system_flags.display_start_hold) {
-              std::string placeholder = "${TIME_PLACEHOLDER}";
-              screensaver_layout(placeholder);
-              disp1->set_component_text("text", placeholder.c_str());
-              disp1->show_component("text");
+              const std::string placeholder = "${TIME_PLACEHOLDER}";
+              screensaver_show(placeholder, placeholder, "");
             }  // if screensaver showing the time
             disp1->set_component_text("home.meridiem", " ");
             disp1->set_component_text("home.time", "${TIME_PLACEHOLDER}");
@@ -96,14 +132,9 @@ script:
                                                             : "${LOCALIZATION[LANG].meridiem.pm}";
           const bool has_meridiem = (time_format_str.find("%p") != std::string::npos);
 
-          if (id(screensaver_display_time) && current_page_id == get_page_id("screensaver") &&
-              !system_flags.display_start_hold) {
-            std::string time_format_str_sleep = time_format_str;
-            nspanel_easy::replace_all(time_format_str_sleep, "%p", meridiem_text);
-            screensaver_layout(time_format_str_sleep);
-            disp1->set_component_text("text", now.strftime(time_format_str_sleep).c_str());
-            disp1->show_component("text");
-          }
+          // Screensaver: the time on one line, meridiem included
+          std::string time_format_str_sleep = time_format_str;
+          nspanel_easy::replace_all(time_format_str_sleep, "%p", meridiem_text);
 
           // Resolve %p for home page — strip from time string, set meridiem component separately
           // Trim both ends after replacement to avoid leading/trailing whitespace
@@ -112,6 +143,12 @@ script:
             time_format_str.erase(time_format_str.begin());
           while (!time_format_str.empty() && time_format_str.back() == ' ')
             time_format_str.pop_back();
+
+          if (id(screensaver_display_time) && current_page_id == get_page_id("screensaver") &&
+              !system_flags.display_start_hold) {
+            screensaver_show(now.strftime(time_format_str_sleep), now.strftime(time_format_str),
+                             has_meridiem ? meridiem_text : "");
+          }  // if screensaver showing the time
 
           disp1->set_component_text("home.meridiem", has_meridiem ? meridiem_text : " ");
           disp1->set_component_text("home.time", now.strftime(time_format_str).c_str());

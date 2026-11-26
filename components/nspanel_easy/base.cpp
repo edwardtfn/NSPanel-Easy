@@ -45,6 +45,12 @@ uint8_t blueprint_settings_requests = 0;
 // The display restarted during a send; see base.h.
 bool blueprint_settings_resend = false;
 
+// The status page stays open across restarts; see base.h. Reported by the display.
+bool status_page_pinned = false;
+
+// When Home Assistant connected; see base.h.
+uint64_t ha_connected_since_ms = 0;
+
 // Fire a Home Assistant event for NSPanel HA Blueprint
 void fire_ha_event(const std::string &type, std::map<std::string, std::string> data) {
   // Add device name and type to the event data

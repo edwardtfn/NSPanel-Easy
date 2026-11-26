@@ -206,4 +206,10 @@ on tm_display_ack.timer:
   }
 
 on button_back.down:
+  // Closed by the user: no longer opened when the display starts (#841)
+  if(status_page_pinned==1)
+  {
+    status_page_pinned=0
+    wepo 0,8
+  }
   page home_page_id

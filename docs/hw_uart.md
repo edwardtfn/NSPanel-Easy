@@ -95,20 +95,22 @@ With the default settings (`BAUD_RATE_TIMEOUT=11s`, `BAUD_RATE_DELAY_AFTER_POWER
   approximately 20 seconds for a full sweep, plus the power-cycle and post-power-on
   delays
 
-## Diagnostic entities
+## Diagnostics
 
-This package exposes one diagnostic entity in Home Assistant:
+This package exposes no entities in Home Assistant. The current operating baud rate is
+shown on the display's status page (first line, next to the TFT version).
 
-<!-- markdownlint-disable MD013 -->
-| Entity | Type | Description |
-| :- | :- | :- |
-| `Baud rate` | Sensor (text) | Current operating baud rate of the ESP UART, in `bps`. Updated on every successful baud rate change and periodically thereafter. |
-<!-- markdownlint-enable MD013 -->
+The `UART` section of the configuration dump in the device logs shows the active and the
+compiled `BAUD_RATE` and whether the panel is running in fallback mode. The dump printed
+at boot can come before the baud rate scan finishes, so it may still show the primary rate.
+Opening the device logs (e.g. in ESPHome Device Builder) prints the dump again with the
+current state, and the scan itself logs `Baud scan: found active rate ... bps` when it
+finds the display.
 
 > [!TIP]
-> If you suspect a baud rate problem, check the `Baud rate` sensor first. A
-> value other than your configured `BAUD_RATE` indicates the panel is running in fallback
-> mode and a TFT upload is required to restore the configured rate.
+> If you suspect a baud rate problem, open the device logs and check the `UART` section.
+> `Mode: FALLBACK (detected via scan)` indicates the display answered at a rate other than
+> your configured `BAUD_RATE`, and a TFT upload is required to restore the configured rate.
 
 ## Diagnostic button
 

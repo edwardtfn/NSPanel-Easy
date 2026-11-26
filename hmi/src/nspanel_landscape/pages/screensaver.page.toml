@@ -190,3 +190,42 @@ en = 0
 [[component]]
 name = "boot_count"
 type = "variable"
+
+[[component]]
+name = "time_hour"
+type = "text"
+x = 0
+y = 45
+w = 450
+h = 115
+font = "font-06"
+bco = "#000000"
+pco = "#424142"
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "time_minute"
+type = "text"
+x = 0
+y = 160
+w = 450
+h = 115
+font = "font-06"
+bco = "#000000"
+pco = "#424142"
+txt = ""
+txt_maxl = 20
+
+[[component]]
+name = "time_meridiem"
+type = "text"
+x = 0
+y = 275
+w = 450
+h = 45
+font = "font-04"
+bco = "#000000"
+pco = "#424142"
+txt = ""
+txt_maxl = 30

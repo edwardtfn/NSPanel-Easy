@@ -206,7 +206,9 @@ api:
                 if (back_page_id == UINT8_MAX) {
                   ESP_LOGW("${TAG_API}", "Unknown back_page '%s', falling back to home", back_page.c_str());
                   back_page_id = home_page_id;
-                }
+                } else if (back_page_id == get_page_id("home")) {
+                  back_page_id = home_page_id;  // The selected home page, such as the simple one (#339)
+                }  // if (back_page_id)
                 disp1->send_command_printf("back_page_id=%" PRIu8, back_page_id);
               }
             }
