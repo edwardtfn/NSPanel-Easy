@@ -57,7 +57,8 @@ api:
           // A settings send cut by the disconnection of Home Assistant misses the calls made while disconnected. If its
           // end still arrives after the connection is back, the settings are requested again, as after a display
           // restart. Not for other clients, such as the ESPHome logs, while Home Assistant stays connected.
-          const bool home_assistant = client_info.rfind("Home Assistant", 0) == 0 or
+          // find() works on the std::string of ESPHome 2026.11 and on the StringRef of later versions (no rfind)
+          const bool home_assistant = client_info.find("Home Assistant") == 0 or
                                       !api_server->is_connected_with_state_subscription();
           if (home_assistant and blueprint_settings_state == BlueprintSettingsState::PENDING) {
             blueprint_settings_resend = true;
