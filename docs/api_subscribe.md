@@ -140,8 +140,10 @@ The package enables `api: homeassistant_states: true` automatically, which is re
 panel's position among them (with the end of its settings). Each panel then asks for its first block in its own
 slot of the window, from `api_icon_names_spread_min_ms` to `api_icon_names_spread_ms`, once Home Assistant is
 connected: with 3 panels and the defaults, after 0, 10 and 20 s. A single panel asks at once. Until the number of
-panels is known (an older Blueprint), the wait is random in the window. The same slots spread the settings
-requests after a Home Assistant restart or an automation reload.
+panels is known (an older Blueprint), the wait is random in the window. The position is kept for the next boot,
+so the same slots also spread the settings requests: at boot, and after a Home Assistant restart or an
+automation reload (in a 20 s window). To choose the order yourself, for example so the most used panels come
+first, set `panel_order` on each panel (`0` first; see [Substitutions](substitutions.md)).
 
 Lowering `api_subscribe_max` reduces the size of the staging buffer used during a push. It does not
 reduce steady-state memory, which scales with the number of bindings actually configured.
@@ -219,10 +221,11 @@ it causes no restart.
 
 The panel asks for the names itself, one block at a time, with the event `icon_names_request` and the
 fields `start` (position of the first name, from 0) and `count` (number of names). It asks for the next
-block only once the previous one has arrived. A block is kept only when it continues the list and holds
-`count` names, or the rest of the list when fewer are left. A block that does not arrive within
-`api_icon_names_timeout` is asked for again, up to `api_icon_names_retries` times. While Home Assistant is
-away, the panel waits, and goes on from the last block received when it is back.
+block only once the previous one has arrived, after `api_icon_names_pause_ms`. A block is kept only when it
+continues the list and holds `count` names, or the rest of the list when fewer are left. A block that does not
+arrive within `api_icon_names_timeout` is asked for again, up to `api_icon_names_retries` times, after a pause
+of twice `api_icon_names_pause_ms`, doubled on each retry (up to 16 times; none after the last retry). While
+Home Assistant is away, the panel waits, and goes on from the last block received when it is back.
 
 | Parameter | Type | Description |
 | --- | --- | --- |

@@ -51,16 +51,23 @@ bool blueprint_settings_resend = false;
 uint8_t blueprint_panel_count = 0;
 uint8_t blueprint_panel_index = 0;
 
+// Position set by the user; see base.h.
+int16_t panel_order_override = -1;
+
 uint32_t panel_slot_wait_ms(uint32_t min_ms, uint32_t max_ms) {
-  if (blueprint_panel_count == 1)
+  if (blueprint_panel_count == 1 and panel_order_override < 1)
     return 0;  // Alone: nothing to wait for
   if (max_ms <= min_ms)
     return min_ms;
   const uint32_t span_ms = max_ms - min_ms;
   if (blueprint_panel_count == 0)
     return min_ms + random_uint32() % (span_ms + 1);  // Unknown: a random time in the window
-  const uint8_t index = std::min<uint8_t>(blueprint_panel_index, blueprint_panel_count - 1);
-  return min_ms + static_cast<uint32_t>(static_cast<uint64_t>(span_ms) * index / blueprint_panel_count);
+  // A position set by the user beyond the panels found makes room for it
+  const uint16_t index = (panel_order_override >= 0)
+                             ? static_cast<uint16_t>(panel_order_override)
+                             : std::min<uint16_t>(blueprint_panel_index, blueprint_panel_count - 1);
+  const uint16_t count = std::max<uint16_t>(blueprint_panel_count, index + 1);
+  return min_ms + static_cast<uint32_t>(static_cast<uint64_t>(span_ms) * index / count);
 }
 
 // The status page stays open across restarts; see base.h. Reported by the display.

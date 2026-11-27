@@ -165,7 +165,8 @@ script:
             - wait_until:
                 condition:
                   lambda: |-
-                    return !id(api_icon_names_spread_pending) or blueprint_panel_count > 0 or
+                    return ${api_icon_names_spread_ms} == 0 or !id(api_icon_names_spread_pending) or
+                           blueprint_panel_count > 0 or
                            blueprint_settings_state == BlueprintSettingsState::COMPLETE or
                            blueprint_settings_state == BlueprintSettingsState::FAILED;
                 timeout: !lambda return ${api_icon_names_spread_ms};

@@ -58,6 +58,7 @@ substitutions:
 | Substitution | Default | Description |
 | :- | :- | :- |
 | `api_stale_grace_period` | `30s` | Time without Home Assistant before the values on display are indicated as stale. After a restart, they are stale until Home Assistant connects, without waiting for this period. Chips of Home Assistant entities, home custom buttons and the weather picture are then hidden (the relay and embedded thermostat chips are controlled locally and stay visible), the indoor temperature falls back to the panel's own sensor, and the outdoor temperature and the home values are greyed out. Everything recovers as soon as Home Assistant is back. |
+| `panel_order` | `-1` | Position of this panel when the panels of an installation spread their requests to Home Assistant, from `0` (first). `-1` uses the order found by the Blueprint. See [API Subscriptions](api_subscribe.md#options). |
 <!-- markdownlint-enable MD013 -->
 
 ## Hardware buttons
