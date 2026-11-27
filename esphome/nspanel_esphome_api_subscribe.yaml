@@ -29,6 +29,9 @@ substitutions:
   api_icon_names_block: '400'            # Names per block.
   api_icon_names_timeout: '5s'           # Time to wait for a block before asking for it again.
   api_icon_names_retries: '3'            # Retries of one block before drawing the icons given by name by domain.
+  # Spread of the requests, so panels that start or reconnect together don't ask Home Assistant all at once (#636)
+  api_icon_names_spread_ms: '30000'      # Longest random wait (ms) before the first block. 0 asks at once.
+  api_icon_names_pause_ms: '1000'        # Wait (ms) between blocks, doubled on each retry of a block. 0 for none.
 
 esphome:
   build_flags:
@@ -110,8 +113,12 @@ api:
 script:
   ##### Asks the Blueprint for the icon names, one block at a time, until the list is complete. #####
   # A block that does not arrive within the timeout is asked for again. While Home Assistant is away, it waits.
+  # With `spread`, the first block waits a random time, so panels that start or reconnect together are spread out.
+  # Blocks are paced, and a block asked for again waits longer each time, so a slow Home Assistant gets fewer requests.
   - id: api_icon_names_fetch
     mode: restart
+    parameters:
+      spread: bool
     then:
       - lambda: |-
           // A block of 0 would never ask for anything, and more than the Blueprint answers would never complete
@@ -119,7 +126,16 @@ script:
                         "api_icon_names_block must be from 1 to 1000");
           static_assert(${api_icon_names_retries} >= 0 and ${api_icon_names_retries} <= 255,
                         "api_icon_names_retries must be from 0 to 255");
+          static_assert(${api_icon_names_spread_ms} >= 0 and ${api_icon_names_spread_ms} <= 600000,
+                        "api_icon_names_spread_ms must be from 0 to 600000");
+          static_assert(${api_icon_names_pause_ms} >= 0 and ${api_icon_names_pause_ms} <= 60000,
+                        "api_icon_names_pause_ms must be from 0 to 60000");
           sub_icon_names_fetch_reset();
+      - delay: !lambda |-
+          if (!spread or ${api_icon_names_spread_ms} == 0 or !sub_icon_names_wanted()) return 0;
+          const uint32_t wait_ms = random_uint32() % (static_cast<uint32_t>(${api_icon_names_spread_ms}) + 1);
+          ESP_LOGD("${TAG_SUB}", "Icon names: asking in %" PRIu32 " ms", wait_ms);
+          return wait_ms;
       - while:
           condition:
             lambda: return sub_icon_names_wanted();
@@ -141,6 +157,14 @@ script:
                 condition:
                   lambda: return !sub_icon_names_awaiting();
                 timeout: ${api_icon_names_timeout}
+            # A block received: the pause before the next one. A block still awaited: a longer pause before asking
+            # for it again, doubled on each retry (up to 16 times the pause).
+            - delay: !lambda |-
+                if (!sub_icon_names_wanted()) return 0;
+                const uint32_t pause_ms = ${api_icon_names_pause_ms};
+                if (!sub_icon_names_awaiting()) return pause_ms;
+                const uint8_t attempts = sub_icon_names_attempts_made();
+                return pause_ms << std::min<uint8_t>(attempts, 4);
 
   ##### Collapses a burst of binding calls into a single restart decision. #####
   - id: api_subscribe_debounce
@@ -180,7 +204,7 @@ script:
           sub_render_all();
           // Back with Home Assistant: the icon names it could not send are asked for again
           if (!api_stale and sub_icon_names_wanted()) {
-            api_icon_names_fetch->execute();
+            api_icon_names_fetch->execute(true);
           }  // if (fresh and names missing)
 
   - id: !extend boot_early_routines
@@ -191,8 +215,8 @@ script:
           if (sub_load() > 0) {
             sub_subscribe_all();
           }
-          // Asked for as soon as Home Assistant connects, as the bindings use them
-          api_icon_names_fetch->execute();
+          // Asked for once Home Assistant connects, as the bindings use them
+          api_icon_names_fetch->execute(true);
 
   - id: !extend new_minute
     then:

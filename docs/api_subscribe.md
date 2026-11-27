@@ -131,6 +131,8 @@ The package enables `api: homeassistant_states: true` automatically, which is re
 | `api_icon_names_block` | `400` | Icon names asked for in one block, from `1` to `1000` (the most the Blueprint replies with). |
 | `api_icon_names_timeout` | `5s` | Time to wait for a block of icon names before asking for it again. |
 | `api_icon_names_retries` | `3` | Retries of one block of icon names before the icons given by name are drawn by domain. |
+| `api_icon_names_spread_ms` | `30000` | Longest random wait, in milliseconds, before the first block of icon names, after a start or a reconnection to Home Assistant. Panels that start together (after a power cut, for example) then ask at different times. `0` asks at once. A retry from the status page never waits. |
+| `api_icon_names_pause_ms` | `1000` | Wait, in milliseconds, between two blocks of icon names. Before a block is asked for again, the wait is doubled on each retry (up to 16 times), so a slow Home Assistant gets fewer requests. `0` asks for the next block at once. |
 | `api_subscribe_wipe_nvs_on_failure` | `false` | Erase every stored preference and restart when the bindings cannot be stored. Read [this](#clearing-the-storage-automatically) first. |
 
 Lowering `api_subscribe_max` reduces the size of the staging buffer used during a push. It does not

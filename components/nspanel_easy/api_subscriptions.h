@@ -747,6 +747,9 @@ bool sub_store_failed();
 /// @brief Start asking for the icon names again, with a fresh count of retries, keeping the names received.
 void sub_icon_names_fetch_reset();
 
+/// @brief Requests of the block asked for last, the first one included; 0 before the first request.
+uint8_t sub_icon_names_attempts_made();
+
 /**
  * @brief Next block of icon names to ask for.
  *

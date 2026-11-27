@@ -1138,6 +1138,8 @@ uint16_t sub_icon_names_expected() { return sub_icon_names_total; }
 
 bool sub_icon_names_failed() { return sub_icon_names_given_up; }
 
+uint8_t sub_icon_names_attempts_made() { return sub_icon_names_attempts; }
+
 uint8_t sub_unverified_count() { return sub_unverified; }
 
 bool sub_store_failed() { return sub_store_failed_flag; }
