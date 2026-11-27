@@ -30,8 +30,8 @@ substitutions:
   api_icon_names_timeout: '5s'           # Time to wait for a block before asking for it again.
   api_icon_names_retries: '3'            # Retries of one block before drawing the icons given by name by domain.
   # Spread of the requests, so panels that start or reconnect together don't ask Home Assistant all at once (#636)
-  api_icon_names_spread_ms: '30000'      # Longest random wait (ms) before the first block. 0 asks at once.
-  api_icon_names_spread_min_ms: '0'      # Shortest random wait (ms), e.g. to let other panels ask first.
+  api_icon_names_spread_ms: '30000'      # End of the window (ms) the panels' first blocks are spread over. 0: at once.
+  api_icon_names_spread_min_ms: '0'      # Start of that window (ms), e.g. to let other panels ask first.
   api_icon_names_pause_ms: '1000'        # Wait (ms) between blocks, doubled on each retry of a block. 0 for none.
 
 esphome:
@@ -128,8 +128,9 @@ globals:
 script:
   ##### Asks the Blueprint for the icon names, one block at a time, until the list is complete. #####
   # A block that does not arrive within the timeout is asked for again. While Home Assistant is away, it waits.
-  # With `spread`, and after every loss of the connection, the next block waits a random time once Home Assistant
-  # is connected, so panels that start or reconnect together are spread out. Blocks are paced, and a block asked
+  # With `spread`, and after every loss of the connection, the next block waits once Home Assistant is connected,
+  # in this panel's slot among the panels (a random time while their number is unknown), so panels that start or
+  # reconnect together are spread out. Blocks are paced, and a block asked
   # for again waits longer each time, so a slow Home Assistant gets fewer requests.
   - id: api_icon_names_fetch
     mode: restart
@@ -158,13 +159,20 @@ script:
             - wait_until:
                 condition:
                   lambda: return api_server->is_connected_with_state_subscription();
-            # The random wait starts once Home Assistant is connected, so panels waiting for it don't all ask
-            # at the moment it comes back
+            # The wait starts once Home Assistant is connected, so panels waiting for it don't all ask at the
+            # moment it comes back. Without the number of panels yet, the settings come first: they carry it,
+            # so each panel can ask in its own slot (a single panel at once).
+            - wait_until:
+                condition:
+                  lambda: |-
+                    return !id(api_icon_names_spread_pending) or blueprint_panel_count > 0 or
+                           blueprint_settings_state == BlueprintSettingsState::COMPLETE or
+                           blueprint_settings_state == BlueprintSettingsState::FAILED;
+                timeout: !lambda return ${api_icon_names_spread_ms};
             - delay: !lambda |-
                 if (!id(api_icon_names_spread_pending)) return 0;
                 id(api_icon_names_spread_pending) = false;
-                const uint32_t span_ms = ${api_icon_names_spread_ms} - ${api_icon_names_spread_min_ms};
-                const uint32_t wait_ms = ${api_icon_names_spread_min_ms} + random_uint32() % (span_ms + 1);
+                const uint32_t wait_ms = panel_slot_wait_ms(${api_icon_names_spread_min_ms}, ${api_icon_names_spread_ms});
                 ESP_LOGD("${TAG_SUB}", "Icon names: asking in %" PRIu32 " ms", wait_ms);
                 return wait_ms;
             - lambda: |-

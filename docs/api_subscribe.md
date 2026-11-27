@@ -131,10 +131,17 @@ The package enables `api: homeassistant_states: true` automatically, which is re
 | `api_icon_names_block` | `400` | Icon names asked for in one block, from `1` to `1000` (the most the Blueprint replies with). |
 | `api_icon_names_timeout` | `5s` | Time to wait for a block of icon names before asking for it again. |
 | `api_icon_names_retries` | `3` | Retries of one block of icon names before the icons given by name are drawn by domain. |
-| `api_icon_names_spread_ms` | `30000` | Longest random wait (ms) before a block of icon names, once Home Assistant is connected (also after a reconnection). `0` asks at once. |
-| `api_icon_names_spread_min_ms` | `0` | Shortest random wait (ms), up to `api_icon_names_spread_ms`, e.g. to let other panels ask first. |
+| `api_icon_names_spread_ms` | `30000` | End of the window (ms) over which the panels' first blocks of icon names are spread. `0` asks at once. See below. |
+| `api_icon_names_spread_min_ms` | `0` | Start of that window (ms), up to `api_icon_names_spread_ms`, e.g. to let other panels ask first. |
 | `api_icon_names_pause_ms` | `1000` | Wait (ms) between blocks of icon names, doubled on each retry of a block (up to 16 times). `0` asks for the next block at once. |
 | `api_subscribe_wipe_nvs_on_failure` | `false` | Erase every stored preference and restart when the bindings cannot be stored. Read [this](#clearing-the-storage-automatically) first. |
+
+**Spreading the panels.** The Blueprint tells each panel how many NSPanel Easy panels Home Assistant has, and the
+panel's position among them (with the end of its settings). Each panel then asks for its first block in its own
+slot of the window, from `api_icon_names_spread_min_ms` to `api_icon_names_spread_ms`, once Home Assistant is
+connected: with 3 panels and the defaults, after 0, 10 and 20 s. A single panel asks at once. Until the number of
+panels is known (an older Blueprint), the wait is random in the window. The same slots spread the settings
+requests after a Home Assistant restart or an automation reload.
 
 Lowering `api_subscribe_max` reduces the size of the staging buffer used during a push. It does not
 reduce steady-state memory, which scales with the number of bindings actually configured.
