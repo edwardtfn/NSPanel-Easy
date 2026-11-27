@@ -438,6 +438,9 @@ recorder:
       - nspanel_easy_page_refresh_request
 ```
 
+If your `configuration.yaml` already has a `recorder:` section, add the `exclude` lines to it instead of adding a second
+`recorder:` key. If it already has an `event_types` list under `exclude`, add only the two event types to that list.
+
 Restart Home Assistant to apply the change.
 
 > [!NOTE]

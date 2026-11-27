@@ -481,6 +481,7 @@ recorder:
       - nspanel_easy_page_refresh_request
 ```
 
+If you already have a `recorder:` section, add the `exclude` lines to it instead of a second `recorder:` key.
 The panels keep working as before, as the exclusion changes only what is stored.
 See [Keep the panel events out of the recorder](howto.md#keep-the-panel-events-out-of-the-recorder) for more details.
 
