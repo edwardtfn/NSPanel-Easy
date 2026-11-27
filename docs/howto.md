@@ -20,6 +20,7 @@ Below are the topics covered in this document, each with relevant tips and solut
 6. [Play RTTTL Sound](#play-rtttl-sound)
 7. [Start automations via Input_Boolean](#start-automations-via-input_boolean)
 8. [Updating Wi-Fi and OTA passwords in ESPHome with this project](#updating-wi-fi-settings-and-ota-passwords-in-esphome-with-this-project)
+9. [Keep the panel events out of the recorder](#keep-the-panel-events-out-of-the-recorder)
 
 ## How to create "issues" when I have a problem
 
@@ -419,3 +420,29 @@ If you've already changed your Wi-Fi network settings, this step will fail.
 
 By carefully updating both your Wi-Fi settings and OTA passwords in your ESPHome configuration, you can avoid connection issues.
 Remember to always back up your configuration and be prepared to use a serial connection if Wi-Fi connectivity is lost.
+
+## Keep the panel events out of the recorder
+
+The panels talk to the Blueprint through `esphome.nspanel_easy` events, and the Blueprint asks itself to render a page again
+with `nspanel_easy_page_refresh_request` events. Home Assistant's recorder stores every event by default, so with several
+panels these events can be among the most stored ones in your database.
+
+They are only messages between the panel and the Blueprint, so you can leave them out of the recorder in your
+`configuration.yaml`:
+
+```yaml
+recorder:
+  exclude:
+    event_types:
+      - esphome.nspanel_easy
+      - nspanel_easy_page_refresh_request
+```
+
+Restart Home Assistant to apply the change.
+
+> [!NOTE]
+> The exclusion changes only what is stored in the database. The events still reach the Blueprint, so the panels work as
+> before. Excluded events are no longer shown in the logbook, and events already stored are removed only by the recorder's
+> regular purge (`purge_keep_days`).
+
+More information: <https://www.home-assistant.io/integrations/recorder/>
