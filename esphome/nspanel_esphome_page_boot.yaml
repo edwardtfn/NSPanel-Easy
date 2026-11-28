@@ -113,7 +113,7 @@ display:
                 // Retry the icon names that were given up (red), keeping the names received
                 if (!sub_icon_names_failed()) break;
                 ESP_LOGI("${TAG_PAGE_BOOT}", "Icon names requested again from the status page");
-                api_icon_names_fetch->execute();
+                api_icon_names_fetch->execute(false);  // Asked by touch: no random wait
                 page_boot_status->execute(false);
                 break;
               #endif  // NSPANEL_EASY_SUBSCRIBE
