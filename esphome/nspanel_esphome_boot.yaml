@@ -20,11 +20,29 @@ substitutions:
   # each new request (up to 8 times), and gives up after BOOT_SETTINGS_MAX_REQUESTS requests (#664)
   BOOT_SETTINGS_RETRY_DELAY_MS: 30000
   BOOT_SETTINGS_MAX_REQUESTS: 5
-  # When the Blueprint tells that the settings changed, the panel waits up to this long (at random) before requesting
-  # them, so the panels of a large installation do not all request at the same time
+  # The panels of an installation request their settings each in its own slot of this window (by their position
+  # among the panels, sent by the Blueprint and kept for the next boot), so they don't all request at once:
+  # at boot, and when the Blueprint tells that the settings changed. Random while the position is unknown.
   BOOT_SETTINGS_STALE_MAX_DELAY_MS: 20000
+  # Position of this panel in the order the panels request things at the same time, from 0 (first, the most
+  # important panels), instead of the order the Blueprint finds. -1 for the Blueprint's order.
+  panel_order: '-1'
   BOOT_NEXTION_WAIT_TIMEOUT: 120s
   TAG_BOOT: nspanel.boot
+
+globals:
+  - id: panel_slot_saved  # count << 8 | index from the last settings, for the slot at the next boot; 0 unknown
+    type: uint16_t
+    restore_value: true
+    initial_value: '0'
+  - id: boot_settings_slot_pending  # The settings request at boot waits for this panel's slot
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: boot_settings_slot_deferred  # A full request came before the slot and is sent when it comes
+    type: bool
+    restore_value: false
+    initial_value: 'false'
 
 display:
   - id: !extend disp1
@@ -128,6 +146,34 @@ script:
     then:  # Critical components should subscribe themselves to this
       - lambda: |-
           ESP_LOGI("${TAG_BOOT}", "Starting boot early routines sequence");
+          static_assert(${panel_order} >= -1 and ${panel_order} <= 254, "panel_order must be from -1 to 254");
+          panel_order_override = ${panel_order};
+          // The position from the last settings: the settings request at boot already waits for this panel's slot
+          blueprint_panel_count = static_cast<uint8_t>(id(panel_slot_saved) >> 8);
+          blueprint_panel_index = static_cast<uint8_t>(id(panel_slot_saved) & 0xFF);
+          if (blueprint_panel_count > 0 and panel_slot_wait_ms(0, ${BOOT_SETTINGS_STALE_MAX_DELAY_MS}) > 0) {
+            id(boot_settings_slot_pending) = true;
+            boot_settings_slot->execute();
+          }  // if (a slot to wait for)
+
+  # Holds the settings request at boot until this panel's slot, counted from the connection to Home Assistant.
+  # A full request made before that is sent when the slot comes.
+  - id: boot_settings_slot
+    mode: single
+    then:
+      - wait_until:
+          condition:
+            lambda: return api_server->is_connected_with_state_subscription();
+      - delay: !lambda |-
+          const uint32_t wait_ms = panel_slot_wait_ms(0, ${BOOT_SETTINGS_STALE_MAX_DELAY_MS});
+          ESP_LOGD("${TAG_BOOT}", "Settings: requesting in %" PRIu32 " ms", wait_ms);
+          return wait_ms;
+      - lambda: |-
+          id(boot_settings_slot_pending) = false;
+          if (id(boot_settings_slot_deferred)) {
+            id(boot_settings_slot_deferred) = false;
+            boot_request_blueprint_settings->execute("setup");
+          }  // if (a request waited for the slot)
 
   - id: boot_nextion
     mode: single
@@ -211,6 +257,12 @@ script:
             ESP_LOGD("${TAG_BOOT}", "Blueprint settings still arriving, request skipped");
             return;
           }  // if settings still arriving
+          // Before this panel's slot at boot, a full request waits for it (boot_settings_slot)
+          if (step != "start" and id(boot_settings_slot_pending)) {
+            ESP_LOGD("${TAG_BOOT}", "Blueprint settings requested in this panel's slot");
+            id(boot_settings_slot_deferred) = true;
+            return;
+          }  // if (before the slot)
           const bool api_connected = api_server->is_connected_with_state_subscription();
           ESP_LOGD("${TAG_BOOT}", "Request blueprint settings");
           fire_ha_event("boot", {{"step", step.c_str()}});
@@ -224,6 +276,9 @@ script:
               // Until the display is set up, ESPHome drops display_ack=1 and the display sends display_ack again
               full_request_lost = true;
             }
+          } else if (full_request_lost and api_connected and disp1->is_setup() and id(boot_settings_slot_pending)) {
+            id(boot_settings_slot_deferred) = true;  // Sent in this panel's slot
+            full_request_lost = false;
           } else if (full_request_lost and api_connected and disp1->is_setup()) {
             // Send the lost full request now instead of waiting for the next retry.
             // A display that is not set up yet sends display_ack again by itself.
@@ -285,7 +340,9 @@ script:
           blueprint_settings_state = BlueprintSettingsState::NEEDED;
           blueprint_settings_requests = 0;
           blueprint_settings_resend = false;  // This request sends them again anyway
-      - delay: !lambda return random_uint32() % (${BOOT_SETTINGS_STALE_MAX_DELAY_MS} + 1);
+      # Each panel in its own slot, so the panels of an installation don't all request at once (random while
+      # the number of panels is unknown, and no wait for a single panel)
+      - delay: !lambda return panel_slot_wait_ms(0, ${BOOT_SETTINGS_STALE_MAX_DELAY_MS});
       - lambda: |-
           boot_request_blueprint_settings->execute("reload");
 
@@ -305,6 +362,15 @@ script:
               ESP_LOGD("${TAG_BOOT}", "End of an older Blueprint settings send, ignored");
               return;
             }  // if (no request waiting for it)
+            // Since #858, the Blueprint sends the number of panels and this panel's position: count << 8 | index.
+            // An older Blueprint sends 1: both are unknown again. Kept for the next boot, written only on a change.
+            const uint16_t slot = (val >= 256) ? static_cast<uint16_t>(std::min<int32_t>(val, 0xFFFF)) : 0;
+            blueprint_panel_count = static_cast<uint8_t>(slot >> 8);
+            blueprint_panel_index = static_cast<uint8_t>(slot & 0xFF);
+            if (id(panel_slot_saved) != slot) id(panel_slot_saved) = slot;
+            if (slot != 0) {
+              ESP_LOGD("${TAG_BOOT}", "Panel %" PRIu8 " of %" PRIu8, blueprint_panel_index + 1, blueprint_panel_count);
+            }  // if (number of panels known)
             blueprint_settings_timeout->stop();
             if (blueprint_settings_resend) {
               // The display restarted, or Home Assistant disconnected, during this send, so part of it was missed
@@ -340,6 +406,7 @@ script:
           boot_wrap_up->stop();
           blueprint_settings_stale->stop();
           blueprint_settings_timeout->stop();
+          boot_settings_slot->stop();
 
   - id: !extend watchdog_round
     then:

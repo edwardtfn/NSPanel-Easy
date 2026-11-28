@@ -58,6 +58,7 @@ substitutions:
 | Substitution | Default | Description |
 | :- | :- | :- |
 | `api_stale_grace_period` | `30s` | Time without Home Assistant before the values on display are indicated as stale. After a restart, they are stale until Home Assistant connects, without waiting for this period. Chips of Home Assistant entities, home custom buttons and the weather picture are then hidden (the relay and embedded thermostat chips are controlled locally and stay visible), the indoor temperature falls back to the panel's own sensor, and the outdoor temperature and the home values are greyed out. Everything recovers as soon as Home Assistant is back. |
+| `panel_order` | `-1` | Position of this panel when the panels of an installation spread their requests to Home Assistant, from `0` (first). `-1` uses the order found by the Blueprint. See [API Subscriptions](api_subscribe.md#options). |
 <!-- markdownlint-enable MD013 -->
 
 ## Hardware buttons
@@ -119,8 +120,8 @@ The defaults suit almost every installation, so change them only to solve a spec
 | `api_icon_names_block` | `400` | Icon names asked from the Blueprint in one block. See [API Subscriptions](api_subscribe.md#options). |
 | `api_icon_names_retries` | `3` | Retries of one block of icon names before the icons given by name are drawn by domain. See [API Subscriptions](api_subscribe.md#options). |
 | `api_icon_names_timeout` | `5s` | Time to wait for a block of icon names before asking for it again. See [API Subscriptions](api_subscribe.md#options). |
-| `api_icon_names_spread_ms` | `30000` | Longest random wait, in milliseconds, before the first block of icon names, so panels that start together don't ask at once. See [API Subscriptions](api_subscribe.md#options). |
-| `api_icon_names_spread_min_ms` | `0` | Shortest random wait, in milliseconds, before the first block of icon names, e.g. to let other panels ask first. See [API Subscriptions](api_subscribe.md#options). |
+| `api_icon_names_spread_ms` | `30000` | End of the window, in milliseconds, over which the panels' first blocks of icon names are spread. See [API Subscriptions](api_subscribe.md#options). |
+| `api_icon_names_spread_min_ms` | `0` | Start of that window, in milliseconds, e.g. to let other panels ask first. See [API Subscriptions](api_subscribe.md#options). |
 | `api_icon_names_pause_ms` | `1000` | Wait, in milliseconds, between blocks of icon names, doubled on each retry of a block. See [API Subscriptions](api_subscribe.md#options). |
 | `api_subscribe_entity_len` | `96` | Buffer size for an `entity_id` in an [API subscription](api_subscribe.md), including the null terminator. An `entity_id` that does not fit is not bound and does not update; the log then reports the size to set. Accepts `32` to `255`; changing it discards the stored bindings once, and the Blueprint pushes them again. |
 | `api_subscribe_max` | `128` | Maximum number of [API subscription](api_subscribe.md#options) bindings. |
