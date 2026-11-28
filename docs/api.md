@@ -48,7 +48,7 @@ Please validate inputs on the caller side; otherwise this can crash the ESPHome 
 One example is colors. In almost all cases, an array of three unsigned integers between 0 and 255 is expected.
 If you send anything different, the conversion to the RGB565 used by Nextion will crash.
 
-#### Action naming and `<your_panel_name>`
+#### Action naming
 
 All examples use `esphome.<your_panel_name>_<action>` as a placeholder.
 The actual action name in Home Assistant is derived from your ESPHome device name, slugified (lowercase, spaces replaced with underscores).
@@ -149,7 +149,7 @@ data:
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 >
 > Ensure the `id` and color parameters accurately target and define the new color for the component.
 
@@ -234,7 +234,7 @@ data:
 The `popup_select` picker accepts up to 32 options and shows them in pages of 8, navigated by swiping up or down on the list or with the arrow buttons below it. Options beyond the 32nd are discarded.
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 >
 > Make sure the `id` corresponds to the correct component on your display (or the correct memory namespace key) for the text update to work as intended.
 
@@ -285,7 +285,7 @@ data:
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 >
 > Ensure the `id` accurately matches the component on your display to successfully update its value.
 
@@ -314,7 +314,7 @@ data:
 ```
 <!-- markdownlint-disable MD028 -->
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 >
 > Ensure the ids match the components on your display you wish to hide or show.
 
@@ -389,7 +389,7 @@ data:
 > Without the Blueprint, or when the entity does not match, the entity's own name and icon are used.
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 > This setup provides a direct and user-friendly way to access and return from detailed entity information, enhancing the interface's usability.
 <!-- markdownlint-enable MD028 -->
 
@@ -428,7 +428,7 @@ data:
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 
 ### Hardware Button State Indication Action: `hw_button_state`
 
@@ -455,7 +455,7 @@ data:
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 > This action leverages a bitmask (`button_mask`) for flexible control over multiple hardware buttons simultaneously,
 > offering a streamlined method for updating their visual states.
 
@@ -489,7 +489,7 @@ data:
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 
 ### Notification Clear Action: `notification_clear`
 
@@ -506,7 +506,7 @@ action: esphome.<your_panel_name>_notification_clear
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 This simple action clears the current notification from the display, maintaining a tidy interface.
 
 ### Notification Show Action: `notification_show`
@@ -534,7 +534,7 @@ data:
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 > This ensures the action executes correctly, displaying the notification with the specified `label` and `message`.
 >
 > Utilize `\r` within the message for custom line breaks, offering precise formatting control.
@@ -574,7 +574,7 @@ data:
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 > This action configuration allows for the alarm settings page to dynamically reflect the current features, state,
 > and control options of your alarm system, enhancing the overall user experience.
 
@@ -612,7 +612,7 @@ data:
 ```
 <!-- markdownlint-disable MD028 -->
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 > This action will generate and display the QR code based on the provided data, navigating to the QR code page if `show` is set to `true`.
 
 > [!NOTE]
@@ -648,7 +648,7 @@ data:
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 >
 > Ensure the `tone` parameter contains a valid RTTTL string to successfully play the melody.
 
@@ -680,7 +680,7 @@ data:
 ```
 <!-- markdownlint-disable MD028 -->
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 > Using "default" fetches the URL associated with the selected display model in Home Assistant settings, simplifying updates or customizations.
 
 > [!WARNING]
@@ -715,7 +715,7 @@ data:
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 
 This action updates utility group display elements with the specified values and direction indicators dynamically.
 
@@ -745,7 +745,7 @@ data:
 ```
 
 > [!NOTE]
-> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming-and-your_panel_name)).
+> Replace `<your_panel_name>` with the slugified name of your panel (see [Action naming](#action-naming)).
 > This ensures the action executes correctly,
 > waking the display and optionally resetting timers based on the `reset_timer` parameter.
 

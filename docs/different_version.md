@@ -98,6 +98,6 @@ or the [tag](https://github.com/edwardtfn/NSPanel-Easy/tags) (for previous versi
 - Please note that the images provided in this guide might become outdated as the project evolves.
 It's always a good idea to refer to the latest version of the project for current details.
 - For the most up-to-date information and updates,
-refer to the [project's documents](README.md)
+refer to the [project's documents](index.md)
 and check the [issues](https://github.com/edwardtfn/NSPanel-Easy/issues)
 sections on our GitHub repository.

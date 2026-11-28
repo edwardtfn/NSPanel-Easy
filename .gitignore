@@ -21,3 +21,6 @@ local
 
 # Pinned nxwright venv installed by the HMI scripts (nxwright_env.sh)
 /hmi/dev/.cache
+
+# Documentation site build output (zensical build)
+/site
