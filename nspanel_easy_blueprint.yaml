@@ -6,7 +6,7 @@
 ##################################################################################################
 ---
 blueprint:
-  name: NSPanel Easy Configuration (v2026.11.19)
+  name: NSPanel Easy Configuration (v9999.99.9)
   author: Edward Firmo (https://github.com/edwardtfn)
   description: >
     # NSPanel Easy Configuration via Blueprint
@@ -5322,7 +5322,7 @@ trigger_variables:
 variables:
   # Blueprint version will be following release version defined automatically when merging to main
   # There's no need to change it here
-  blueprint_version: 2026.11.19
+  blueprint_version: 9999.99.9
 
   # Minimum ESPHome firmware version required by this Blueprint (the Blueprint -> ESPHome contract).
   # Set it to 'next' when a change makes the Blueprint depend on a newer firmware, e.g. a new API
@@ -9026,12 +9026,28 @@ actions:
 
                       # Must stay the last call: tells the panel that its settings arrived completely. Without it,
                       # the panel requests them again (#664).
+                      # The value also carries the number of NSPanel Easy panels and this panel's position among
+                      # them (count << 8 | index), so each panel can make its requests in its own slot instead of
+                      # all panels at once (#636). The panels are the ESPHome devices whose model is NSPanel-Easy
+                      # (from the firmware's project name), sorted by device id so every panel finds the same order.
+                      # A panel not found is counted as one more. An older firmware ignores the value.
                       - alias: End of settings
                         action: 'esphome.{{ action_prefix }}_component_val'
                         data:
                           page: mem
                           id: settings_end
-                          val: 1
+                          val: >-
+                            {%- set ns = namespace(ids=[]) -%}
+                            {%- for device in integration_entities('esphome') | map('device_id')
+                                  | reject('none') | unique -%}
+                              {%- if device_attr(device, 'model') == 'NSPanel-Easy' -%}
+                                {%- set ns.ids = ns.ids + [device] -%}
+                              {%- endif -%}
+                            {%- endfor -%}
+                            {%- set ids = ns.ids | sort -%}
+                            {%- set index = ids.index(nspanel_deviceid) if nspanel_deviceid in ids else ids | count -%}
+                            {%- set count = [ids | count, index + 1] | max -%}
+                            {{ ([count, 255] | min) * 256 + ([index, 254] | min) }}
                         continue_on_error: true
 
               # The panel asks for the icon names one block at a time, in codepoint order, so it resolves any icon

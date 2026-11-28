@@ -1,6 +1,8 @@
 // base.cpp
 #include "base.h"
 #include "esphome/core/application.h"
+#include "esphome/core/helpers.h"  // For random_uint32()
+#include <algorithm>
 
 namespace esphome::nspanel_easy {
 
@@ -44,6 +46,29 @@ uint8_t blueprint_settings_requests = 0;
 
 // The display restarted during a send; see base.h.
 bool blueprint_settings_resend = false;
+
+// NSPanel Easy panels in Home Assistant, and this panel's position among them; see base.h.
+uint8_t blueprint_panel_count = 0;
+uint8_t blueprint_panel_index = 0;
+
+// Position set by the user; see base.h.
+int16_t panel_order_override = -1;
+
+uint32_t panel_slot_wait_ms(uint32_t min_ms, uint32_t max_ms) {
+  if (blueprint_panel_count == 1 and panel_order_override < 1)
+    return 0;  // Alone: nothing to wait for
+  if (max_ms <= min_ms)
+    return min_ms;
+  const uint32_t span_ms = max_ms - min_ms;
+  if (blueprint_panel_count == 0)
+    return min_ms + random_uint32() % (span_ms + 1);  // Unknown: a random time in the window
+  // A position set by the user beyond the panels found makes room for it
+  const uint16_t index = (panel_order_override >= 0)
+                             ? static_cast<uint16_t>(panel_order_override)
+                             : std::min<uint16_t>(blueprint_panel_index, blueprint_panel_count - 1);
+  const uint16_t count = std::max<uint16_t>(blueprint_panel_count, index + 1);
+  return min_ms + static_cast<uint32_t>(static_cast<uint64_t>(span_ms) * index / count);
+}
 
 // The status page stays open across restarts; see base.h. Reported by the display.
 bool status_page_pinned = false;

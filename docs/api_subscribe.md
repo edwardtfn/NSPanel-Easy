@@ -131,7 +131,19 @@ The package enables `api: homeassistant_states: true` automatically, which is re
 | `api_icon_names_block` | `400` | Icon names asked for in one block, from `1` to `1000` (the most the Blueprint replies with). |
 | `api_icon_names_timeout` | `5s` | Time to wait for a block of icon names before asking for it again. |
 | `api_icon_names_retries` | `3` | Retries of one block of icon names before the icons given by name are drawn by domain. |
+| `api_icon_names_spread_ms` | `30000` | End of the window (ms) over which the panels' first blocks of icon names are spread. `0` asks at once. See below. |
+| `api_icon_names_spread_min_ms` | `0` | Start of that window (ms), up to `api_icon_names_spread_ms`, e.g. to let other panels ask first. |
+| `api_icon_names_pause_ms` | `1000` | Wait (ms) between blocks of icon names, doubled on each retry of a block (up to 16 times). `0` asks for the next block at once. |
 | `api_subscribe_wipe_nvs_on_failure` | `false` | Erase every stored preference and restart when the bindings cannot be stored. Read [this](#clearing-the-storage-automatically) first. |
+
+**Spreading the panels.** The Blueprint tells each panel how many NSPanel Easy panels Home Assistant has, and the
+panel's position among them (with the end of its settings). Each panel then asks for its first block in its own
+slot of the window, from `api_icon_names_spread_min_ms` to `api_icon_names_spread_ms`, once Home Assistant is
+connected: with 3 panels and the defaults, after 0, 10 and 20 s. A single panel asks at once. Until the number of
+panels is known (an older Blueprint), the wait is random in the window. The position is kept for the next boot,
+so the same slots also spread the settings requests: at boot, and after a Home Assistant restart or an
+automation reload (in a 20 s window). To choose the order yourself, for example so the most used panels come
+first, set `panel_order` on each panel (`0` first; see [Substitutions](substitutions.md)).
 
 Lowering `api_subscribe_max` reduces the size of the staging buffer used during a push. It does not
 reduce steady-state memory, which scales with the number of bindings actually configured.
@@ -209,10 +221,11 @@ it causes no restart.
 
 The panel asks for the names itself, one block at a time, with the event `icon_names_request` and the
 fields `start` (position of the first name, from 0) and `count` (number of names). It asks for the next
-block only once the previous one has arrived. A block is kept only when it continues the list and holds
-`count` names, or the rest of the list when fewer are left. A block that does not arrive within
-`api_icon_names_timeout` is asked for again, up to `api_icon_names_retries` times. While Home Assistant is
-away, the panel waits, and goes on from the last block received when it is back.
+block only once the previous one has arrived, after `api_icon_names_pause_ms`. A block is kept only when it
+continues the list and holds `count` names, or the rest of the list when fewer are left. A block that does not
+arrive within `api_icon_names_timeout` is asked for again, up to `api_icon_names_retries` times, after a pause
+of twice `api_icon_names_pause_ms`, doubled on each retry (up to 16 times; none after the last retry). While
+Home Assistant is away, the panel waits, and goes on from the last block received when it is back.
 
 | Parameter | Type | Description |
 | --- | --- | --- |

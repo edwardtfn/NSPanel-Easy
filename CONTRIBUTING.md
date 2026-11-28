@@ -97,7 +97,7 @@ for each area it touches:
 | `Area: Blueprint` | `nspanel_easy_blueprint.yaml` |
 | `Area: Firmware` | `esphome/`, `components/`, `nspanel_esphome*.yaml` |
 | `Area: TFT` | `hmi/src/` |
-| `Area: Documentation` | any `*.md` |
+| `Area: Documentation` | any `*.md`, `docs/`, `mkdocs.yml` |
 | `Area: CI` | `.github/`, `.rules/`, `hmi/dev/scripts/` |
 | `Area: Tests` | `.test/` |
 

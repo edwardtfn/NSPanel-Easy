@@ -288,6 +288,28 @@ extern uint8_t blueprint_settings_requests;
 /// @brief The display restarted, or Home Assistant disconnected, during a send: requested again once it ends.
 extern bool blueprint_settings_resend;
 
+/// @brief NSPanel Easy panels in Home Assistant, sent by the Blueprint with the end of the settings; 0 while unknown.
+extern uint8_t blueprint_panel_count;
+
+/// @brief Position of this panel among them, from 0; valid only with a known blueprint_panel_count.
+extern uint8_t blueprint_panel_index;
+
+/// @brief Position set by the user (`panel_order`) in place of blueprint_panel_index; -1 for none.
+extern int16_t panel_order_override;
+
+/**
+ * @brief Wait before a request that the panels of an installation tend to make at the same time.
+ *
+ * With the number of panels known, each panel gets its own slot in the window, by its position (or the one
+ * set by the user): the panels are spread evenly, and a single panel does not wait. Unknown (an older
+ * Blueprint, or before the first settings), a random time in the window.
+ *
+ * @param min_ms Start of the window, in milliseconds.
+ * @param max_ms End of the window, in milliseconds; not below min_ms.
+ * @return The wait, in milliseconds: 0 for a single panel, otherwise from min_ms to max_ms.
+ */
+uint32_t panel_slot_wait_ms(uint32_t min_ms, uint32_t max_ms);
+
 /**
  * @brief Loop time at which the boot sequence started waiting for the Blueprint settings.
  *

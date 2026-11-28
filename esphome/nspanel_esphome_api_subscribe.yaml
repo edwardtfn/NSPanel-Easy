@@ -29,6 +29,10 @@ substitutions:
   api_icon_names_block: '400'            # Names per block.
   api_icon_names_timeout: '5s'           # Time to wait for a block before asking for it again.
   api_icon_names_retries: '3'            # Retries of one block before drawing the icons given by name by domain.
+  # Spread of the requests, so panels that start or reconnect together don't ask Home Assistant all at once (#636)
+  api_icon_names_spread_ms: '30000'      # End of the window (ms) the panels' first blocks are spread over. 0: at once.
+  api_icon_names_spread_min_ms: '0'      # Start of that window (ms), e.g. to let other panels ask first.
+  api_icon_names_pause_ms: '1000'        # Wait (ms) between blocks, doubled on each retry of a block. 0 for none.
 
 esphome:
   build_flags:
@@ -107,11 +111,31 @@ api:
               api_subscribe_watchdog->stop();
             }  // if (!sub_push_active())
 
+globals:
+  - id: api_icon_names_spread_pending  # The next block of icon names waits a random time, once connected
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: api_icon_names_pause_from_ms  # millis() at which the pause after a block of icon names started
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: api_icon_names_pause_retry  # The pause is the longer one, before a block is asked for again
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+
 script:
   ##### Asks the Blueprint for the icon names, one block at a time, until the list is complete. #####
   # A block that does not arrive within the timeout is asked for again. While Home Assistant is away, it waits.
+  # With `spread`, and after every loss of the connection, the next block waits once Home Assistant is connected,
+  # in this panel's slot among the panels (a random time while their number is unknown), so panels that start or
+  # reconnect together are spread out. Blocks are paced, and a block asked
+  # for again waits longer each time, so a slow Home Assistant gets fewer requests.
   - id: api_icon_names_fetch
     mode: restart
+    parameters:
+      spread: bool
     then:
       - lambda: |-
           // A block of 0 would never ask for anything, and more than the Blueprint answers would never complete
@@ -119,7 +143,15 @@ script:
                         "api_icon_names_block must be from 1 to 1000");
           static_assert(${api_icon_names_retries} >= 0 and ${api_icon_names_retries} <= 255,
                         "api_icon_names_retries must be from 0 to 255");
+          static_assert(${api_icon_names_spread_ms} >= 0 and ${api_icon_names_spread_ms} <= 600000,
+                        "api_icon_names_spread_ms must be from 0 to 600000");
+          static_assert(${api_icon_names_spread_min_ms} >= 0 and
+                            ${api_icon_names_spread_min_ms} <= ${api_icon_names_spread_ms},
+                        "api_icon_names_spread_min_ms must be from 0 to api_icon_names_spread_ms");
+          static_assert(${api_icon_names_pause_ms} >= 0 and ${api_icon_names_pause_ms} <= 60000,
+                        "api_icon_names_pause_ms must be from 0 to 60000");
           sub_icon_names_fetch_reset();
+          id(api_icon_names_spread_pending) = spread;
       - while:
           condition:
             lambda: return sub_icon_names_wanted();
@@ -127,7 +159,28 @@ script:
             - wait_until:
                 condition:
                   lambda: return api_server->is_connected_with_state_subscription();
+            # The wait starts once Home Assistant is connected, so panels waiting for it don't all ask at the
+            # moment it comes back. Without the number of panels yet, the settings come first: they carry it,
+            # so each panel can ask in its own slot (a single panel at once).
+            - wait_until:
+                condition:
+                  lambda: |-
+                    return ${api_icon_names_spread_ms} == 0 or !id(api_icon_names_spread_pending) or
+                           blueprint_panel_count > 0 or
+                           blueprint_settings_state == BlueprintSettingsState::COMPLETE or
+                           blueprint_settings_state == BlueprintSettingsState::FAILED;
+                timeout: !lambda return ${api_icon_names_spread_ms};
+            - delay: !lambda |-
+                if (!id(api_icon_names_spread_pending)) return 0;
+                id(api_icon_names_spread_pending) = false;
+                const uint32_t wait_ms = panel_slot_wait_ms(${api_icon_names_spread_min_ms}, ${api_icon_names_spread_ms});
+                ESP_LOGD("${TAG_SUB}", "Icon names: asking in %" PRIu32 " ms", wait_ms);
+                return wait_ms;
             - lambda: |-
+                if (!api_server->is_connected_with_state_subscription()) {
+                  id(api_icon_names_spread_pending) = true;  // Lost during the random wait: wait again
+                  return;
+                }  // if (not connected)
                 uint16_t start = 0;
                 uint16_t count = 0;
                 if (sub_icon_names_request(${api_icon_names_block}, ${api_icon_names_retries}, start, count)) {
@@ -139,8 +192,37 @@ script:
                 }  // if (a block to ask for)
             - wait_until:
                 condition:
-                  lambda: return !sub_icon_names_awaiting();
+                  lambda: |-
+                    if (!api_server->is_connected_with_state_subscription()) {
+                      id(api_icon_names_spread_pending) = true;
+                      return true;
+                    }  // if (connection lost)
+                    return !sub_icon_names_awaiting();
                 timeout: ${api_icon_names_timeout}
+            # A block received: the pause before the next one. A block still awaited: a longer pause before asking
+            # for it again, doubled on each retry (up to 16 times the pause), and none after its last retry.
+            # A reply that arrives late, during that longer pause, starts a normal pause from its arrival.
+            - lambda: |-
+                id(api_icon_names_pause_from_ms) = millis();
+                id(api_icon_names_pause_retry) = sub_icon_names_awaiting();
+            - wait_until:
+                condition:
+                  lambda: |-
+                    if (!sub_icon_names_wanted()) return true;
+                    if (!api_server->is_connected_with_state_subscription()) {
+                      id(api_icon_names_spread_pending) = true;
+                      return true;  // The loop waits for the connection, then for a random time
+                    }  // if (connection lost)
+                    if (id(api_icon_names_pause_retry) and !sub_icon_names_awaiting()) {
+                      id(api_icon_names_pause_retry) = false;  // Late reply
+                      id(api_icon_names_pause_from_ms) = millis();
+                    }  // if (late reply)
+                    uint32_t wait_ms = ${api_icon_names_pause_ms};
+                    if (id(api_icon_names_pause_retry)) {
+                      const uint8_t attempts = sub_icon_names_attempts_made();
+                      wait_ms = attempts > ${api_icon_names_retries} ? 0 : wait_ms << std::min<uint8_t>(attempts, 4);
+                    }  // if (retry)
+                    return millis() - id(api_icon_names_pause_from_ms) >= wait_ms;
 
   ##### Collapses a burst of binding calls into a single restart decision. #####
   - id: api_subscribe_debounce
@@ -180,7 +262,7 @@ script:
           sub_render_all();
           // Back with Home Assistant: the icon names it could not send are asked for again
           if (!api_stale and sub_icon_names_wanted()) {
-            api_icon_names_fetch->execute();
+            api_icon_names_fetch->execute(true);
           }  // if (fresh and names missing)
 
   - id: !extend boot_early_routines
@@ -191,8 +273,8 @@ script:
           if (sub_load() > 0) {
             sub_subscribe_all();
           }
-          // Asked for as soon as Home Assistant connects, as the bindings use them
-          api_icon_names_fetch->execute();
+          // Asked for once Home Assistant connects, as the bindings use them
+          api_icon_names_fetch->execute(true);
 
   - id: !extend new_minute
     then:

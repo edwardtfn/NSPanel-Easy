@@ -1,0 +1,144 @@
+---
+# Documentation site for NSPanel Easy, built with Zensical (https://zensical.org/).
+# Zensical reads this MkDocs-compatible configuration; the pages stay as plain Markdown in `docs/`,
+# so they still read well on GitHub, where the firmware and the TFT link to them.
+site_name: NSPanel Easy
+site_url: https://edwardtfn.github.io/NSPanel-Easy/
+site_description: >-
+  Code-free customization of the Sonoff NSPanel with ESPHome and Home Assistant.
+repo_url: https://github.com/edwardtfn/NSPanel-Easy
+repo_name: edwardtfn/NSPanel-Easy
+edit_uri: edit/main/docs/
+copyright: NSPanel Easy is open source, licensed under the MIT license.
+
+docs_dir: docs
+
+# Keep the `.html` URLs of the previous site (e.g. `install.html`, `icons/cheatsheet.html`)
+use_directory_urls: false
+
+# `README.md` is the documentation index for GitHub's folder view; the site uses `index.md` instead
+exclude_docs: |
+  README.md
+
+theme:
+  name: material
+  language: en
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    # Follows the system setting, with a toggle for light and dark
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  features:
+    - content.action.edit
+    - content.code.copy
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - toc.follow
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/edwardtfn/NSPanel-Easy
+      name: NSPanel Easy on GitHub
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/KyVPd33znv
+      name: NSPanel Easy on Discord
+
+markdown_extensions:
+  # GitHub alerts (`> [!NOTE]`) rendered as admonitions, so the same pages work on GitHub and on the site
+  - github-callouts
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      # GitHub-style heading anchors, so the links written for GitHub keep working on the site
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Where to buy: where_to_buy.md
+      - Panel models: nspanel_models.md
+      - Installation: install.md
+      - Migrating from Blackymas: migration_from_blackymas.md
+      - Backing up the stock firmware: backup_stock_firmware.md
+  - Configuration:
+      - Blueprint: blueprint.md
+      - Substitutions: substitutions.md
+      - Localization: localization.md
+      - Network: network.md
+      - Customization: customization.md
+      - Pin customization: pins_customization.md
+      - Hardware UART: hw_uart.md
+  - Add-ons:
+      - Upload TFT: addon_upload_tft.md
+      - Bluetooth proxy: addon_bluetooth_proxy.md
+      - Climate: addon_climate.md
+      - Cover: addon_cover.md
+      - Display light: addon_display_light.md
+      - ESPectre: addon_espectre.md
+  - Guides:
+      - How-to: howto.md
+      - Alarm control panel: alarm.md
+      - NSPanel Blank: nspanel_blank.md
+      - Using a different version: different_version.md
+  - Reference:
+      - API: api.md
+      - API subscriptions: api_subscribe.md
+      - Page canvas: page_canvas.md
+      - MDI icons cheatsheet: icons/cheatsheet.html
+  - Troubleshooting:
+      - Panel startup issues: error_initializing.md
+      - Compiling errors: error_compiling.md
+      - TFT upload issues: tft_upload.md
+      - Version compatibility: version_compatibility.md
+  - Project:
+      - How AI is used: ai_usage.md
+      - Contributing: https://github.com/edwardtfn/NSPanel-Easy/blob/main/CONTRIBUTING.md
+      - Code of conduct: https://github.com/edwardtfn/NSPanel-Easy/blob/main/CODE_OF_CONDUCT.md
+      - Security policy: https://github.com/edwardtfn/NSPanel-Easy/blob/main/SECURITY.md
+...
