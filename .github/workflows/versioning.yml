@@ -6,7 +6,8 @@
 # 3. Resolves the "next" sentinel in min_blueprint_version and min_tft_version, if set
 # 4. Raises min_esphome_compiler_version (never lowers it) and updates blueprint homeassistant.min_version
 # 5. Updates the bug report template with current version placeholders
-# 6. Updates the blueprint version and display name, and resolves the "next" sentinel in its min_esphome_version
+# 6. Updates the blueprint version and display name, resolves the "next" sentinel in its min_esphome_version,
+#    and sets its source_url to the released file (development or test URLs are never released)
 # 7. Sets the TFT version in the HMI source to the new version
 # 8. Commits all version changes and pushes to main
 # 9. Builds pre-built firmware binaries and the TFT files in parallel (nspanel-easy, wall-display, TFT)
@@ -382,6 +383,27 @@ jobs:
           else
             MIN_ESPHOME=$(grep "^  min_esphome_version:" "$BLUEPRINT" | awk '{print $2}')
             echo "min_esphome_version is already set to ${MIN_ESPHOME}, no sentinel to resolve"
+          fi
+
+          # Set the blueprint's source URL to the released file, used by Home Assistant to
+          # re-import the blueprint. Development or test environments may point it elsewhere
+          # (a fork, a branch), which must never reach a release.
+          SOURCE_URL="https://raw.githubusercontent.com/edwardtfn/NSPanel-Easy/refs/tags/latest/nspanel_easy_blueprint.yaml"
+          if [ "$(grep -c '^  source_url: ' "$BLUEPRINT")" -ne 1 ]; then
+            echo "ERROR: Expected exactly one source_url line in $BLUEPRINT"
+            exit 1
+          fi
+          if grep -qxF "  source_url: ${SOURCE_URL}" "$BLUEPRINT"; then
+            echo "source_url is already set to ${SOURCE_URL}"
+          else
+            OLD_SOURCE_URL=$(grep '^  source_url: ' "$BLUEPRINT" | sed 's/^  source_url: //')
+            # '|' as the sed delimiter, as the URL contains '/'
+            sed -i "s|^  source_url: .*|  source_url: ${SOURCE_URL}|" "$BLUEPRINT"
+            if ! grep -qxF "  source_url: ${SOURCE_URL}" "$BLUEPRINT"; then
+              echo "ERROR: Failed to update source_url in $BLUEPRINT"
+              exit 1
+            fi
+            echo "::warning title=Blueprint source_url::Replaced '${OLD_SOURCE_URL}' with the release URL"
           fi
 
           # Update the minimum Home Assistant version required to run this blueprint,
