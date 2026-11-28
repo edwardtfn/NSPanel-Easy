@@ -364,7 +364,7 @@ and you'll now receive updates from the new repository.
 ### What's next?
 
 - **Check for new features** in the
-  [NSPanel Easy documentation](../README.md).
+  [NSPanel Easy documentation](index.md).
 - **Review the Blueprint settings** for any new options available with NSPanel Easy.
 - **Consider keeping the panel events out of the recorder**, so they don't fill your Home Assistant database.
   See [Keeping the Panel Events Out of the Recorder](install.md#keeping-the-panel-events-out-of-the-recorder-optional).

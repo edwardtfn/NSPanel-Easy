@@ -1,0 +1,75 @@
+---
+name: Documentation site
+
+# Builds the documentation site (mkdocs.yml, with Zensical) on every pull request that changes it,
+# and publishes it to GitHub Pages from `main`, so the site always matches the latest release.
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - '.github/requirements-docs.txt'
+      - '.github/workflows/docs.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - '.github/requirements-docs.txt'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+# One deployment at a time; a newer push to main replaces a waiting one
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build site
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: '.github/requirements-docs.txt'
+
+      - name: Install dependencies
+        run: pip install -r .github/requirements-docs.txt
+
+      # Strict: a broken link or anchor fails the build
+      - name: Build site
+        run: zensical build --clean --strict
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    # Only the released documentation (main) is published
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+...

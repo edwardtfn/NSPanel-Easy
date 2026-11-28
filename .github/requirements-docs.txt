@@ -1,0 +1,12 @@
+# .github/requirements-docs.txt
+#
+# Python dependencies of the documentation site (mkdocs.yml).
+# Pinned here so Dependabot can track and propose version updates.
+#
+# Used by:
+#   - .github/workflows/docs.yml
+#
+# Local preview: pip install -r .github/requirements-docs.txt && zensical serve
+
+zensical==0.1.3
+markdown-callouts==0.4.0
