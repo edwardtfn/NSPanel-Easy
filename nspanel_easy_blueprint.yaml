@@ -17,7 +17,7 @@ blueprint:
   source_url: https://raw.githubusercontent.com/edwardtfn/NSPanel-Easy/refs/tags/latest/nspanel_easy_blueprint.yaml
   domain: automation
   homeassistant:
-    min_version: 2026.10.0
+    min_version: 2026.11.0
 
   input:
     nspanel_name:  # This key was kept with this name to support inputs from legacy versions where the panel name was used
@@ -415,28 +415,42 @@ blueprint:
             Entity which should be displayed.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          # Empty is null (not []) for the inputs other inputs depend on: Home Assistant's `exists`
+          # condition counts only null and "" as empty (#783)
+          default: &selector_entity_single_default_none null
           selector: &selector_value_entity
             entity:
               multiple: *selector_entity_single_multiple
         home_value01_label_color:
           name: Home page - Entity State 01 - Text color
+          visible:
+            field: home_value01
+            operator: exists
           description: *description_text_color
           default: &default_home_value_color [200, 204, 200]
           selector: *color_selector
         home_value01_icon:
           name: Home page - Entity State 01 - Icon
+          visible:
+            field: home_value01
+            operator: exists
           description: &description_icon_automatic_default >
             ***Icon Display:** If not specified, an attribute-defined icon will be used, if available. Otherwise, no icon will be shown.*
           default: []
           selector: *selector_icon
         home_value01_icon_color:
           name: Home page - Entity State 01 - Icon color
+          visible:
+            field: home_value01
+            operator: exists
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
         home_value01_graph:
           name: Home page - Entity State 01 - Graph
+          visible:
+            field: home_value01
+            operator: exists
           description: &description_home_value_graph >-
             When enabled, tapping this value (or its icon) opens a graph of the entity over the last 24 hours,
             drawn from the 5-minute means of the Home Assistant recorder statistics.
@@ -448,6 +462,12 @@ blueprint:
             boolean: {}
         home_value01_graph_min:
           name: Home page - Entity State 01 - Graph minimum
+          visible:
+            - field: home_value01
+              operator: exists
+            - field: home_value01_graph
+              operator: eq
+              value: true
           description: &description_home_value_graph_min >-
             Fixed lower bound of the graph. Leave empty for an automatic bound, from the lowest value of the last 24 hours.
           default: ""
@@ -455,6 +475,12 @@ blueprint:
             text: {}
         home_value01_graph_max:
           name: Home page - Entity State 01 - Graph maximum
+          visible:
+            - field: home_value01
+              operator: exists
+            - field: home_value01_graph
+              operator: eq
+              value: true
           description: &description_home_value_graph_max >-
             Fixed upper bound of the graph. Leave empty for an automatic bound, from the highest value of the last 24 hours.
           default: ""
@@ -462,105 +488,177 @@ blueprint:
         home_value02:
           name: Home page - Entity State 02 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         home_value02_label_color:
           name: Home page - Entity State 02 - Text color
+          visible:
+            field: home_value02
+            operator: exists
           description: *description_text_color
           default: *default_home_value_color
           selector: *color_selector
         home_value02_icon:
           name: Home page - Entity State 02 - Icon
+          visible:
+            field: home_value02
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         home_value02_icon_color:
           name: Home page - Entity State 02 - Icon color
+          visible:
+            field: home_value02
+            operator: exists
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
         home_value02_graph:
           name: Home page - Entity State 02 - Graph
+          visible:
+            field: home_value02
+            operator: exists
           description: *description_home_value_graph
           default: false
           selector: *selector_home_value_graph
         home_value02_graph_min:
           name: Home page - Entity State 02 - Graph minimum
+          visible:
+            - field: home_value02
+              operator: exists
+            - field: home_value02_graph
+              operator: eq
+              value: true
           description: *description_home_value_graph_min
           default: ""
           selector: *selector_home_value_graph_bound
         home_value02_graph_max:
           name: Home page - Entity State 02 - Graph maximum
+          visible:
+            - field: home_value02
+              operator: exists
+            - field: home_value02_graph
+              operator: eq
+              value: true
           description: *description_home_value_graph_max
           default: ""
           selector: *selector_home_value_graph_bound
         home_value03:
           name: Home page - Entity State 03 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         home_value03_label_color:
           name: Home page - Entity State 03 - Text color
+          visible:
+            field: home_value03
+            operator: exists
           description: *description_text_color
           default: *default_home_value_color
           selector: *color_selector
         home_value03_icon:
           name: Home page - Entity State 03 - Icon
+          visible:
+            field: home_value03
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         home_value03_icon_color:
           name: Home page - Entity State 03 - Icon color
+          visible:
+            field: home_value03
+            operator: exists
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
         home_value03_graph:
           name: Home page - Entity State 03 - Graph
+          visible:
+            field: home_value03
+            operator: exists
           description: *description_home_value_graph
           default: false
           selector: *selector_home_value_graph
         home_value03_graph_min:
           name: Home page - Entity State 03 - Graph minimum
+          visible:
+            - field: home_value03
+              operator: exists
+            - field: home_value03_graph
+              operator: eq
+              value: true
           description: *description_home_value_graph_min
           default: ""
           selector: *selector_home_value_graph_bound
         home_value03_graph_max:
           name: Home page - Entity State 03 - Graph maximum
+          visible:
+            - field: home_value03
+              operator: exists
+            - field: home_value03_graph
+              operator: eq
+              value: true
           description: *description_home_value_graph_max
           default: ""
           selector: *selector_home_value_graph_bound
         home_value04:
           name: Home page - Entity State 04 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         home_value04_label_color:
           name: Home page - Entity State 04 - Text color
+          visible:
+            field: home_value04
+            operator: exists
           description: *description_text_color
           default: *default_home_value_color
           selector: *color_selector
         home_value04_icon:
           name: Home page - Entity State 04 - Icon
+          visible:
+            field: home_value04
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         home_value04_icon_color:
           name: Home page - Entity State 04 - Icon color
+          visible:
+            field: home_value04
+            operator: exists
           description: *description_icon_color
           default: *default_home_value_color
           selector: *color_selector
         home_value04_graph:
           name: Home page - Entity State 04 - Graph
+          visible:
+            field: home_value04
+            operator: exists
           description: *description_home_value_graph
           default: false
           selector: *selector_home_value_graph
         home_value04_graph_min:
           name: Home page - Entity State 04 - Graph minimum
+          visible:
+            - field: home_value04
+              operator: exists
+            - field: home_value04_graph
+              operator: eq
+              value: true
           description: *description_home_value_graph_min
           default: ""
           selector: *selector_home_value_graph_bound
         home_value04_graph_max:
           name: Home page - Entity State 04 - Graph maximum
+          visible:
+            - field: home_value04
+              operator: exists
+            - field: home_value04_graph
+              operator: eq
+              value: true
           description: *description_home_value_graph_max
           default: ""
           selector: *selector_home_value_graph_bound
@@ -593,7 +691,7 @@ blueprint:
             *Entities with supported advanced settings will open it's settings page, all other entities will execute the action or toggle when clicked.*
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: &selector_home_custom_button_entity
             entity:
               multiple: *selector_entity_single_multiple
@@ -623,11 +721,17 @@ blueprint:
                   - water_heater
         home_custom_button01_icon:
           name: Home page - Custom button 1 - Icon
+          visible:
+            field: home_custom_button01
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         home_custom_button01_name:
           name: Home Page - Custom Button 1 - Title
+          visible:
+            field: home_custom_button01
+            operator: exists
           description: &description_home_custom_button_title >
             Define a title for display on the button's detailed page, if applicable.
             This title will not appear on the Home page but on the detailed page accessed through this button, where supported.
@@ -638,6 +742,9 @@ blueprint:
             text:
         home_custom_button01_confirm:
           name: Home page - Custom button 1 - Require confirmation
+          visible:
+            field: home_custom_button01
+            operator: exists
           default: false
           description: &description_ask_for_confirmation >
             When enabled, a confirmation dialog will be shown before the action is executed.
@@ -646,21 +753,30 @@ blueprint:
         home_custom_button02:
           name: Home page - Custom button 2 - Entity
           description: *description_home_custom_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_home_custom_button_entity
         home_custom_button02_icon:
           name: Home page - Custom button 2 - Icon
+          visible:
+            field: home_custom_button02
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         home_custom_button02_name:
           name: Home Page - Custom Button 2 - Title
+          visible:
+            field: home_custom_button02
+            operator: exists
           description: *description_home_custom_button_title
           default: ""
           selector:
             text:
         home_custom_button02_confirm:
           name: Home page - Custom button 2 - Require confirmation
+          visible:
+            field: home_custom_button02
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
@@ -668,21 +784,30 @@ blueprint:
         home_custom_button03:
           name: Home page - Custom button 3 - Entity
           description: *description_home_custom_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_home_custom_button_entity
         home_custom_button03_icon:
           name: Home page - Custom button 3 - Icon
+          visible:
+            field: home_custom_button03
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         home_custom_button03_name:
           name: Home Page - Custom Button 3 - Title
+          visible:
+            field: home_custom_button03
+            operator: exists
           description: *description_home_custom_button_title
           default: ""
           selector:
             text:
         home_custom_button03_confirm:
           name: Home page - Custom button 3 - Require confirmation
+          visible:
+            field: home_custom_button03
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
@@ -690,21 +815,30 @@ blueprint:
         home_custom_button04:
           name: Home page - Custom button 4 - Entity
           description: *description_home_custom_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_home_custom_button_entity
         home_custom_button04_icon:
           name: Home page - Custom button 4 - Icon
+          visible:
+            field: home_custom_button04
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         home_custom_button04_name:
           name: Home Page - Custom Button 4 - Title
+          visible:
+            field: home_custom_button04
+            operator: exists
           description: *description_home_custom_button_title
           default: ""
           selector:
             text:
         home_custom_button04_confirm:
           name: Home page - Custom button 4 - Require confirmation
+          visible:
+            field: home_custom_button04
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
@@ -712,21 +846,30 @@ blueprint:
         home_custom_button05:
           name: Home page - Custom button 5 - Entity
           description: *description_home_custom_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_home_custom_button_entity
         home_custom_button05_icon:
           name: Home page - Custom button 5 - Icon
+          visible:
+            field: home_custom_button05
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         home_custom_button05_name:
           name: Home Page - Custom Button 5 - Title
+          visible:
+            field: home_custom_button05
+            operator: exists
           description: *description_home_custom_button_title
           default: ""
           selector:
             text:
         home_custom_button05_confirm:
           name: Home page - Custom button 5 - Require confirmation
+          visible:
+            field: home_custom_button05
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
@@ -734,21 +877,30 @@ blueprint:
         home_custom_button06:
           name: Home page - Custom button 6 - Entity
           description: *description_home_custom_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_home_custom_button_entity
         home_custom_button06_icon:
           name: Home page - Custom button 6 - Icon
+          visible:
+            field: home_custom_button06
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         home_custom_button06_name:
           name: Home Page - Custom Button 6 - Title
+          visible:
+            field: home_custom_button06
+            operator: exists
           description: *description_home_custom_button_title
           default: ""
           selector:
             text:
         home_custom_button06_confirm:
           name: Home page - Custom button 6 - Require confirmation
+          visible:
+            field: home_custom_button06
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
@@ -756,21 +908,30 @@ blueprint:
         alarm:  # This key was kept with this name to support inputs from legacy versions where the alarm was the only option at that button
           name: Home page - Custom button 7 - Entity
           description: *description_home_custom_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_home_custom_button_entity
         home_custom_button07_icon:
           name: Home page - Custom button 7 - Icon
+          visible:
+            field: alarm
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         home_custom_button07_name:
           name: Home Page - Custom Button 7 - Title
+          visible:
+            field: alarm
+            operator: exists
           description: *description_home_custom_button_title
           default: ""
           selector:
             text:
         home_custom_button07_confirm:
           name: Home page - Custom button 7 - Require confirmation
+          visible:
+            field: alarm
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
@@ -860,7 +1021,7 @@ blueprint:
         chip01:
           name: Chip 01 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: &chip-entity-selector
             entity:
               multiple: *selector_entity_single_multiple
@@ -882,143 +1043,206 @@ blueprint:
                   - water_heater
         chip01_inverted:
           name: Chip 01 - Inverted
+          visible:
+            field: chip01
+            operator: exists
           description: "If enabled, this chip's display is reversed. It will appear when the linked entity is `off`."
           default: false
           selector:
             boolean:
         chip01_icon:
           name: Chip 01 - Icon
+          visible:
+            field: chip01
+            operator: exists
           description: "Specify an icon to show when the entity's state matches. If not set, the entity's default icon is used."
           default: []
           selector: *selector_icon
         chip01_icon_color:
           name: Chip 01 - Icon color
+          visible:
+            field: chip01
+            operator: exists
           description: *description_icon_color
           default: []
           selector: *color_selector
         chip02:
           name: Chip 02 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *chip-entity-selector
         chip02_inverted:
           name: Chip 02 - Inverted
+          visible:
+            field: chip02
+            operator: exists
           description: "If enabled, this chip's display is reversed. It will appear when the linked entity is `off`."
           default: false
           selector:
             boolean:
         chip02_icon:
           name: Chip 02 - Icon
+          visible:
+            field: chip02
+            operator: exists
           description: "Specify an icon to show when the entity's state matches. If not set, the entity's default icon is used."
           default: []
           selector: *selector_icon
         chip02_icon_color:
           name: Chip 02 - Icon color
+          visible:
+            field: chip02
+            operator: exists
           description: *description_icon_color
           default: []
           selector: *color_selector
         chip03:
           name: Chip 03 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *chip-entity-selector
         chip03_inverted:
           name: Chip 03 - Inverted
+          visible:
+            field: chip03
+            operator: exists
           description: "If enabled, this chip's display is reversed. It will appear when the linked entity is `off`."
           default: false
           selector:
             boolean:
         chip03_icon:
           name: Chip 03 - Icon
+          visible:
+            field: chip03
+            operator: exists
           description: "Specify an icon to show when the entity's state matches. If not set, the entity's default icon is used."
           default: []
           selector: *selector_icon
         chip03_icon_color:
           name: Chip 03 - Icon color
+          visible:
+            field: chip03
+            operator: exists
           description: *description_icon_color
           default: []
           selector: *color_selector
         chip04:
           name: Chip 04 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *chip-entity-selector
         chip04_inverted:
           name: Chip 04 - Inverted
+          visible:
+            field: chip04
+            operator: exists
           description: "If enabled, this chip's display is reversed. It will appear when the linked entity is `off`."
           default: false
           selector:
             boolean:
         chip04_icon:
           name: Chip 04 - Icon
+          visible:
+            field: chip04
+            operator: exists
           description: "Specify an icon to show when the entity's state matches. If not set, the entity's default icon is used."
           default: []
           selector: *selector_icon
         chip04_icon_color:
           name: Chip 04 - Icon color
+          visible:
+            field: chip04
+            operator: exists
           description: *description_icon_color
           default: []
           selector: *color_selector
         chip05:
           name: Chip 05 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *chip-entity-selector
         chip05_inverted:
           name: Chip 05 - Inverted
+          visible:
+            field: chip05
+            operator: exists
           description: "If enabled, this chip's display is reversed. It will appear when the linked entity is `off`."
           default: false
           selector:
             boolean:
         chip05_icon:
           name: Chip 05 - Icon
+          visible:
+            field: chip05
+            operator: exists
           description: "Specify an icon to show when the entity's state matches. If not set, the entity's default icon is used."
           default: []
           selector: *selector_icon
         chip05_icon_color:
           name: Chip 05 - Icon color
+          visible:
+            field: chip05
+            operator: exists
           description: *description_icon_color
           default: []
           selector: *color_selector
         chip06:
           name: Chip 06 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *chip-entity-selector
         chip06_inverted:
           name: Chip 06 - Inverted
+          visible:
+            field: chip06
+            operator: exists
           description: "If enabled, this chip's display is reversed. It will appear when the linked entity is `off`."
           default: false
           selector:
             boolean:
         chip06_icon:
           name: Chip 06 - Icon
+          visible:
+            field: chip06
+            operator: exists
           description: "Specify an icon to show when the entity's state matches. If not set, the entity's default icon is used."
           default: []
           selector: *selector_icon
         chip06_icon_color:
           name: Chip 06 - Icon color
+          visible:
+            field: chip06
+            operator: exists
           description: *description_icon_color
           default: []
           selector: *color_selector
         chip07:
           name: Chip 07 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *chip-entity-selector
         chip07_inverted:
           name: Chip 07 - Inverted
+          visible:
+            field: chip07
+            operator: exists
           description: "If enabled, this chip's display is reversed. It will appear when the linked entity is `off`."
           default: false
           selector:
             boolean:
         chip07_icon:
           name: Chip 07 - Icon
+          visible:
+            field: chip07
+            operator: exists
           description: "Specify an icon to show when the entity's state matches. If not set, the entity's default icon is used."
           default: []
           selector: *selector_icon
         chip07_icon_color:
           name: Chip 07 - Icon color
+          visible:
+            field: chip07
+            operator: exists
           description: *description_icon_color
           default: []
           selector: *color_selector
@@ -1123,7 +1347,7 @@ blueprint:
             Entity to be controlled.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: &climate_custom_button_entity_selector
             entity:
               multiple: *selector_entity_single_multiple
@@ -1146,11 +1370,17 @@ blueprint:
                   - timer
         climate_button08_icon:
           name: Climate page - Custom button 01 - Icon
+          visible:
+            field: climate_button08
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         climate_button08_icon_color:
           name: Climate page - Custom button 01 - Icon color
+          visible:
+            field: climate_button08
+            operator: exists
           description: &description_button_icon_color >-
             Icon color displayed when the entity is `On`.
             The `Off` color follows the global default.
@@ -1166,15 +1396,21 @@ blueprint:
         climate_button09:
           name: Climate page - Custom button 02 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *climate_custom_button_entity_selector
         climate_button09_icon:
           name: Climate page - Custom button 02 - Icon
+          visible:
+            field: climate_button09
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         climate_button09_icon_color:
           name: Climate page - Custom button 02 - Icon color
+          visible:
+            field: climate_button09
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
@@ -1187,80 +1423,116 @@ blueprint:
         climate_value01:
           name: Climate page - Entity State 01 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         climate_value01_icon:
           name: Climate page - Entity State 01 - Icon
+          visible:
+            field: climate_value01
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         climate_value01_icon_color:
           name: Climate page - Entity State 01 - Icon color
+          visible:
+            field: climate_value01
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         climate_value01_label_color:
           name: Climate page - Entity State 01 - Text color
+          visible:
+            field: climate_value01
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
         climate_value02:
           name: Climate page - Entity State 02 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         climate_value02_icon:
           name: Climate page - Entity State 02 - Icon
+          visible:
+            field: climate_value02
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         climate_value02_icon_color:
           name: Climate page - Entity State 02 - Icon color
+          visible:
+            field: climate_value02
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         climate_value02_label_color:
           name: Climate page - Entity State 02 - Text color
+          visible:
+            field: climate_value02
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
         climate_value03:
           name: Climate page - Entity State 03 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         climate_value03_icon:
           name: Climate page - Entity State 03 - Icon
+          visible:
+            field: climate_value03
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         climate_value03_icon_color:
           name: Climate page - Entity State 03 - Icon color
+          visible:
+            field: climate_value03
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         climate_value03_label_color:
           name: Climate page - Entity State 03 - Text color
+          visible:
+            field: climate_value03
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
         climate_value04:
           name: Climate page - Entity State 04 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         climate_value04_icon:
           name: Climate page - Entity State 04 - Icon
+          visible:
+            field: climate_value04
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         climate_value04_icon_color:
           name: Climate page - Entity State 04 - Icon color
+          visible:
+            field: climate_value04
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         climate_value04_label_color:
           name: Climate page - Entity State 04 - Text color
+          visible:
+            field: climate_value04
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
@@ -1273,80 +1545,116 @@ blueprint:
         water_heater_value01:
           name: Water heater page - Entity State 01 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         water_heater_value01_icon:
           name: Water heater page - Entity State 01 - Icon
+          visible:
+            field: water_heater_value01
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         water_heater_value01_icon_color:
           name: Water heater page - Entity State 01 - Icon color
+          visible:
+            field: water_heater_value01
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         water_heater_value01_label_color:
           name: Water heater page - Entity State 01 - Text color
+          visible:
+            field: water_heater_value01
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
         water_heater_value02:
           name: Water heater page - Entity State 02 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         water_heater_value02_icon:
           name: Water heater page - Entity State 02 - Icon
+          visible:
+            field: water_heater_value02
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         water_heater_value02_icon_color:
           name: Water heater page - Entity State 02 - Icon color
+          visible:
+            field: water_heater_value02
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         water_heater_value02_label_color:
           name: Water heater page - Entity State 02 - Text color
+          visible:
+            field: water_heater_value02
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
         water_heater_value03:
           name: Water heater page - Entity State 03 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         water_heater_value03_icon:
           name: Water heater page - Entity State 03 - Icon
+          visible:
+            field: water_heater_value03
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         water_heater_value03_icon_color:
           name: Water heater page - Entity State 03 - Icon color
+          visible:
+            field: water_heater_value03
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         water_heater_value03_label_color:
           name: Water heater page - Entity State 03 - Text color
+          visible:
+            field: water_heater_value03
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
         water_heater_value04:
           name: Water heater page - Entity State 04 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         water_heater_value04_icon:
           name: Water heater page - Entity State 04 - Icon
+          visible:
+            field: water_heater_value04
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         water_heater_value04_icon_color:
           name: Water heater page - Entity State 04 - Icon color
+          visible:
+            field: water_heater_value04
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         water_heater_value04_label_color:
           name: Water heater page - Entity State 04 - Text color
+          visible:
+            field: water_heater_value04
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
@@ -1361,80 +1669,116 @@ blueprint:
         humidifier_value01:
           name: Humidifier page - Entity State 01 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         humidifier_value01_icon:
           name: Humidifier page - Entity State 01 - Icon
+          visible:
+            field: humidifier_value01
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         humidifier_value01_icon_color:
           name: Humidifier page - Entity State 01 - Icon color
+          visible:
+            field: humidifier_value01
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         humidifier_value01_label_color:
           name: Humidifier page - Entity State 01 - Text color
+          visible:
+            field: humidifier_value01
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
         humidifier_value02:
           name: Humidifier page - Entity State 02 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         humidifier_value02_icon:
           name: Humidifier page - Entity State 02 - Icon
+          visible:
+            field: humidifier_value02
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         humidifier_value02_icon_color:
           name: Humidifier page - Entity State 02 - Icon color
+          visible:
+            field: humidifier_value02
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         humidifier_value02_label_color:
           name: Humidifier page - Entity State 02 - Text color
+          visible:
+            field: humidifier_value02
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
         humidifier_value03:
           name: Humidifier page - Entity State 03 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         humidifier_value03_icon:
           name: Humidifier page - Entity State 03 - Icon
+          visible:
+            field: humidifier_value03
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         humidifier_value03_icon_color:
           name: Humidifier page - Entity State 03 - Icon color
+          visible:
+            field: humidifier_value03
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         humidifier_value03_label_color:
           name: Humidifier page - Entity State 03 - Text color
+          visible:
+            field: humidifier_value03
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
         humidifier_value04:
           name: Humidifier page - Entity State 04 - Entity
           description: *description_entity_displayed
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *selector_value_entity
         humidifier_value04_icon:
           name: Humidifier page - Entity State 04 - Icon
+          visible:
+            field: humidifier_value04
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         humidifier_value04_icon_color:
           name: Humidifier page - Entity State 04 - Icon color
+          visible:
+            field: humidifier_value04
+            operator: exists
           description: *description_icon_color
           default: [200, 204, 200]
           selector: *color_selector
         humidifier_value04_label_color:
           name: Humidifier page - Entity State 04 - Text color
+          visible:
+            field: humidifier_value04
+            operator: exists
           description: *description_text_color
           default: [200, 204, 200]
           selector: *color_selector
@@ -1871,7 +2215,7 @@ blueprint:
         entity01:
           name: Button page 1, Button 1 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: &button_entity_selector
             entity:
               multiple: *selector_entity_single_multiple
@@ -1903,6 +2247,9 @@ blueprint:
                   - water_heater
         entity01_name:
           name: Button page 1, Button 1 - Label
+          visible:
+            field: entity01
+            operator: exists
           description: &description_button_label >-
             Labels up to 10 characters display reliably.
             Longer labels may work but results depend on the script used.
@@ -1913,22 +2260,34 @@ blueprint:
             text:
         entity01_icon:
           name: Button page 1, Button 1 - Icon
+          visible:
+            field: entity01
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity01_icon_color:
           name: Button page 1, Button 1 - Icon color
+          visible:
+            field: entity01
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity01_confirm:
           name: Button page 1, Button 1 - Require confirmation
+          visible:
+            field: entity01
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity01_custom_action:
           name: Button page 1, Button 1 - Custom action
+          visible:
+            field: entity01
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -1936,6 +2295,9 @@ blueprint:
             action:
         entity01_state_entity:
           name: Button page 1, Button 1 - State Indicator Entity
+          visible:
+            field: entity01
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -1943,6 +2305,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity01_state_value:
           name: Button page 1, Button 1 - State Value
+          visible:
+            field: entity01
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -1952,32 +2317,47 @@ blueprint:
         entity02:
           name: Button page 1, Button 2 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity02_name:
           name: Button page 1, Button 2 - Label
+          visible:
+            field: entity02
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity02_icon:
           name: Button page 1, Button 2 - Icon
+          visible:
+            field: entity02
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity02_icon_color:
           name: Button page 1, Button 2 - Icon color
+          visible:
+            field: entity02
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity02_confirm:
           name: Button page 1, Button 2 - Require confirmation
+          visible:
+            field: entity02
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity02_custom_action:
           name: Button page 1, Button 2 - Custom action
+          visible:
+            field: entity02
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -1985,6 +2365,9 @@ blueprint:
             action:
         entity02_state_entity:
           name: Button page 1, Button 2 - State Indicator Entity
+          visible:
+            field: entity02
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -1992,6 +2375,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity02_state_value:
           name: Button page 1, Button 2 - State Value
+          visible:
+            field: entity02
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2001,32 +2387,47 @@ blueprint:
         entity03:
           name: Button page 1, Button 3 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity03_name:
           name: Button page 1, Button 3 - Label
+          visible:
+            field: entity03
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity03_icon:
           name: Button page 1, Button 3 - Icon
+          visible:
+            field: entity03
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity03_icon_color:
           name: Button page 1, Button 3 - Icon color
+          visible:
+            field: entity03
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity03_confirm:
           name: Button page 1, Button 3 - Require confirmation
+          visible:
+            field: entity03
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity03_custom_action:
           name: Button page 1, Button 3 - Custom action
+          visible:
+            field: entity03
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2034,6 +2435,9 @@ blueprint:
             action:
         entity03_state_entity:
           name: Button page 1, Button 3 - State Indicator Entity
+          visible:
+            field: entity03
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2041,6 +2445,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity03_state_value:
           name: Button page 1, Button 3 - State Value
+          visible:
+            field: entity03
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2050,32 +2457,47 @@ blueprint:
         entity04:
           name: Button page 1, Button 4 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity04_name:
           name: Button page 1, Button 4 - Label
+          visible:
+            field: entity04
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity04_icon:
           name: Button page 1, Button 4 - Icon
+          visible:
+            field: entity04
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity04_icon_color:
           name: Button page 1, Button 4 - Icon color
+          visible:
+            field: entity04
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity04_confirm:
           name: Button page 1, Button 4 - Require confirmation
+          visible:
+            field: entity04
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity04_custom_action:
           name: Button page 1, Button 4 - Custom action
+          visible:
+            field: entity04
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2083,6 +2505,9 @@ blueprint:
             action:
         entity04_state_entity:
           name: Button page 1, Button 4 - State Indicator Entity
+          visible:
+            field: entity04
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2090,6 +2515,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity04_state_value:
           name: Button page 1, Button 4 - State Value
+          visible:
+            field: entity04
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2099,32 +2527,47 @@ blueprint:
         entity05:
           name: Button page 1, Button 5 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity05_name:
           name: Button page 1, Button 5 - Label
+          visible:
+            field: entity05
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity05_icon:
           name: Button page 1, Button 5 - Icon
+          visible:
+            field: entity05
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity05_icon_color:
           name: Button page 1, Button 5 - Icon color
+          visible:
+            field: entity05
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity05_confirm:
           name: Button page 1, Button 5 - Require confirmation
+          visible:
+            field: entity05
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity05_custom_action:
           name: Button page 1, Button 5 - Custom action
+          visible:
+            field: entity05
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2132,6 +2575,9 @@ blueprint:
             action:
         entity05_state_entity:
           name: Button page 1, Button 5 - State Indicator Entity
+          visible:
+            field: entity05
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2139,6 +2585,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity05_state_value:
           name: Button page 1, Button 5 - State Value
+          visible:
+            field: entity05
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2148,32 +2597,47 @@ blueprint:
         entity06:
           name: Button page 1, Button 6 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity06_name:
           name: Button page 1, Button 6 - Label
+          visible:
+            field: entity06
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity06_icon:
           name: Button page 1, Button 6 - Icon
+          visible:
+            field: entity06
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity06_icon_color:
           name: Button page 1, Button 6 - Icon color
+          visible:
+            field: entity06
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity06_confirm:
           name: Button page 1, Button 6 - Require confirmation
+          visible:
+            field: entity06
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity06_custom_action:
           name: Button page 1, Button 6 - Custom action
+          visible:
+            field: entity06
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2181,6 +2645,9 @@ blueprint:
             action:
         entity06_state_entity:
           name: Button page 1, Button 6 - State Indicator Entity
+          visible:
+            field: entity06
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2188,6 +2655,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity06_state_value:
           name: Button page 1, Button 6 - State Value
+          visible:
+            field: entity06
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2197,32 +2667,47 @@ blueprint:
         entity07:
           name: Button page 1, Button 7 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity07_name:
           name: Button page 1, Button 7 - Label
+          visible:
+            field: entity07
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity07_icon:
           name: Button page 1, Button 7 - Icon
+          visible:
+            field: entity07
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity07_icon_color:
           name: Button page 1, Button 7 - Icon color
+          visible:
+            field: entity07
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity07_confirm:
           name: Button page 1, Button 7 - Require confirmation
+          visible:
+            field: entity07
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity07_custom_action:
           name: Button page 1, Button 7 - Custom action
+          visible:
+            field: entity07
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2230,6 +2715,9 @@ blueprint:
             action:
         entity07_state_entity:
           name: Button page 1, Button 7 - State Indicator Entity
+          visible:
+            field: entity07
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2237,6 +2725,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity07_state_value:
           name: Button page 1, Button 7 - State Value
+          visible:
+            field: entity07
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2246,32 +2737,47 @@ blueprint:
         entity08:
           name: Button page 1, Button 8 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity08_name:
           name: Button page 1, Button 8 - Label
+          visible:
+            field: entity08
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity08_icon:
           name: Button page 1, Button 8 - Icon
+          visible:
+            field: entity08
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity08_icon_color:
           name: Button page 1, Button 8 - Icon color
+          visible:
+            field: entity08
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity08_confirm:
           name: Button page 1, Button 8 - Require confirmation
+          visible:
+            field: entity08
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity08_custom_action:
           name: Button page 1, Button 8 - Custom action
+          visible:
+            field: entity08
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2279,6 +2785,9 @@ blueprint:
             action:
         entity08_state_entity:
           name: Button page 1, Button 8 - State Indicator Entity
+          visible:
+            field: entity08
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2286,6 +2795,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity08_state_value:
           name: Button page 1, Button 8 - State Value
+          visible:
+            field: entity08
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2307,32 +2819,47 @@ blueprint:
         entity09:
           name: Button page 2, Button 1 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity09_name:
           name: Button page 2, Button 1 - Label
+          visible:
+            field: entity09
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity09_icon:
           name: Button page 2, Button 1 - Icon
+          visible:
+            field: entity09
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity09_icon_color:
           name: Button page 2, Button 1 - Icon color
+          visible:
+            field: entity09
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity09_confirm:
           name: Button page 2, Button 1 - Require confirmation
+          visible:
+            field: entity09
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity09_custom_action:
           name: Button page 2, Button 1 - Custom action
+          visible:
+            field: entity09
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2340,6 +2867,9 @@ blueprint:
             action:
         entity09_state_entity:
           name: Button page 2, Button 1 - State Indicator Entity
+          visible:
+            field: entity09
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2347,6 +2877,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity09_state_value:
           name: Button page 2, Button 1 - State Value
+          visible:
+            field: entity09
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2356,32 +2889,47 @@ blueprint:
         entity10:
           name: Button page 2, Button 2 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity10_name:
           name: Button page 2, Button 2 - Label
+          visible:
+            field: entity10
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity10_icon:
           name: Button page 2, Button 2 - Icon
+          visible:
+            field: entity10
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity10_icon_color:
           name: Button page 2, Button 2 - Icon color
+          visible:
+            field: entity10
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity10_confirm:
           name: Button page 2, Button 2 - Require confirmation
+          visible:
+            field: entity10
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity10_custom_action:
           name: Button page 2, Button 2 - Custom action
+          visible:
+            field: entity10
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2389,6 +2937,9 @@ blueprint:
             action:
         entity10_state_entity:
           name: Button page 2, Button 2 - State Indicator Entity
+          visible:
+            field: entity10
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2396,6 +2947,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity10_state_value:
           name: Button page 2, Button 2 - State Value
+          visible:
+            field: entity10
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2405,32 +2959,47 @@ blueprint:
         entity11:
           name: Button page 2, Button 3 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity11_name:
           name: Button page 2, Button 3 - Label
+          visible:
+            field: entity11
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity11_icon:
           name: Button page 2, Button 3 - Icon
+          visible:
+            field: entity11
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity11_icon_color:
           name: Button page 2, Button 3 - Icon color
+          visible:
+            field: entity11
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity11_confirm:
           name: Button page 2, Button 3 - Require confirmation
+          visible:
+            field: entity11
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity11_custom_action:
           name: Button page 2, Button 3 - Custom action
+          visible:
+            field: entity11
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2438,6 +3007,9 @@ blueprint:
             action:
         entity11_state_entity:
           name: Button page 2, Button 3 - State Indicator Entity
+          visible:
+            field: entity11
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2445,6 +3017,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity11_state_value:
           name: Button page 2, Button 3 - State Value
+          visible:
+            field: entity11
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2454,32 +3029,47 @@ blueprint:
         entity12:
           name: Button page 2, Button 4 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity12_name:
           name: Button page 2, Button 4 - Label
+          visible:
+            field: entity12
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity12_icon:
           name: Button page 2, Button 4 - Icon
+          visible:
+            field: entity12
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity12_icon_color:
           name: Button page 2, Button 4 - Icon color
+          visible:
+            field: entity12
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity12_confirm:
           name: Button page 2, Button 4 - Require confirmation
+          visible:
+            field: entity12
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity12_custom_action:
           name: Button page 2, Button 4 - Custom action
+          visible:
+            field: entity12
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2487,6 +3077,9 @@ blueprint:
             action:
         entity12_state_entity:
           name: Button page 2, Button 4 - State Indicator Entity
+          visible:
+            field: entity12
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2494,6 +3087,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity12_state_value:
           name: Button page 2, Button 4 - State Value
+          visible:
+            field: entity12
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2503,32 +3099,47 @@ blueprint:
         entity13:
           name: Button page 2, Button 5 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity13_name:
           name: Button page 2, Button 5 - Label
+          visible:
+            field: entity13
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity13_icon:
           name: Button page 2, Button 5 - Icon
+          visible:
+            field: entity13
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity13_icon_color:
           name: Button page 2, Button 5 - Icon color
+          visible:
+            field: entity13
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity13_confirm:
           name: Button page 2, Button 5 - Require confirmation
+          visible:
+            field: entity13
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity13_custom_action:
           name: Button page 2, Button 5 - Custom action
+          visible:
+            field: entity13
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2536,6 +3147,9 @@ blueprint:
             action:
         entity13_state_entity:
           name: Button page 2, Button 5 - State Indicator Entity
+          visible:
+            field: entity13
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2543,6 +3157,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity13_state_value:
           name: Button page 2, Button 5 - State Value
+          visible:
+            field: entity13
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2552,32 +3169,47 @@ blueprint:
         entity14:
           name: Button page 2, Button 6 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity14_name:
           name: Button page 2, Button 6 - Label
+          visible:
+            field: entity14
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity14_icon:
           name: Button page 2, Button 6 - Icon
+          visible:
+            field: entity14
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity14_icon_color:
           name: Button page 2, Button 6 - Icon color
+          visible:
+            field: entity14
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity14_confirm:
           name: Button page 2, Button 6 - Require confirmation
+          visible:
+            field: entity14
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity14_custom_action:
           name: Button page 2, Button 6 - Custom action
+          visible:
+            field: entity14
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2585,6 +3217,9 @@ blueprint:
             action:
         entity14_state_entity:
           name: Button page 2, Button 6 - State Indicator Entity
+          visible:
+            field: entity14
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2592,6 +3227,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity14_state_value:
           name: Button page 2, Button 6 - State Value
+          visible:
+            field: entity14
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2601,32 +3239,47 @@ blueprint:
         entity15:
           name: Button page 2, Button 7 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity15_name:
           name: Button page 2, Button 7 - Label
+          visible:
+            field: entity15
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity15_icon:
           name: Button page 2, Button 7 - Icon
+          visible:
+            field: entity15
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity15_icon_color:
           name: Button page 2, Button 7 - Icon color
+          visible:
+            field: entity15
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity15_confirm:
           name: Button page 2, Button 7 - Require confirmation
+          visible:
+            field: entity15
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity15_custom_action:
           name: Button page 2, Button 7 - Custom action
+          visible:
+            field: entity15
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2634,6 +3287,9 @@ blueprint:
             action:
         entity15_state_entity:
           name: Button page 2, Button 7 - State Indicator Entity
+          visible:
+            field: entity15
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2641,6 +3297,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity15_state_value:
           name: Button page 2, Button 7 - State Value
+          visible:
+            field: entity15
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2650,32 +3309,47 @@ blueprint:
         entity16:
           name: Button page 2, Button 8 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity16_name:
           name: Button page 2, Button 8 - Label
+          visible:
+            field: entity16
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity16_icon:
           name: Button page 2, Button 8 - Icon
+          visible:
+            field: entity16
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity16_icon_color:
           name: Button page 2, Button 8 - Icon color
+          visible:
+            field: entity16
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity16_confirm:
           name: Button page 2, Button 8 - Require confirmation
+          visible:
+            field: entity16
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity16_custom_action:
           name: Button page 2, Button 8 - Custom action
+          visible:
+            field: entity16
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2683,6 +3357,9 @@ blueprint:
             action:
         entity16_state_entity:
           name: Button page 2, Button 8 - State Indicator Entity
+          visible:
+            field: entity16
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2690,6 +3367,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity16_state_value:
           name: Button page 2, Button 8 - State Value
+          visible:
+            field: entity16
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2711,32 +3391,47 @@ blueprint:
         entity17:
           name: Button page 3, Button 1 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity17_name:
           name: Button page 3, Button 1 - Label
+          visible:
+            field: entity17
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity17_icon:
           name: Button page 3, Button 1 - Icon
+          visible:
+            field: entity17
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity17_icon_color:
           name: Button page 3, Button 1 - Icon color
+          visible:
+            field: entity17
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity17_confirm:
           name: Button page 3, Button 1 - Require confirmation
+          visible:
+            field: entity17
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity17_custom_action:
           name: Button page 3, Button 1 - Custom action
+          visible:
+            field: entity17
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2744,6 +3439,9 @@ blueprint:
             action:
         entity17_state_entity:
           name: Button page 3, Button 1 - State Indicator Entity
+          visible:
+            field: entity17
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2751,6 +3449,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity17_state_value:
           name: Button page 3, Button 1 - State Value
+          visible:
+            field: entity17
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2760,32 +3461,47 @@ blueprint:
         entity18:
           name: Button page 3, Button 2 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity18_name:
           name: Button page 3, Button 2 - Label
+          visible:
+            field: entity18
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity18_icon:
           name: Button page 3, Button 2 - Icon
+          visible:
+            field: entity18
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity18_icon_color:
           name: Button page 3, Button 2 - Icon color
+          visible:
+            field: entity18
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity18_confirm:
           name: Button page 3, Button 2 - Require confirmation
+          visible:
+            field: entity18
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity18_custom_action:
           name: Button page 3, Button 2 - Custom action
+          visible:
+            field: entity18
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2793,6 +3509,9 @@ blueprint:
             action:
         entity18_state_entity:
           name: Button page 3, Button 2 - State Indicator Entity
+          visible:
+            field: entity18
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2800,6 +3519,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity18_state_value:
           name: Button page 3, Button 2 - State Value
+          visible:
+            field: entity18
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2809,32 +3531,47 @@ blueprint:
         entity19:
           name: Button page 3, Button 3 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity19_name:
           name: Button page 3, Button 3 - Label
+          visible:
+            field: entity19
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity19_icon:
           name: Button page 3, Button 3 - Icon
+          visible:
+            field: entity19
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity19_icon_color:
           name: Button page 3, Button 3 - Icon color
+          visible:
+            field: entity19
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity19_confirm:
           name: Button page 3, Button 3 - Require confirmation
+          visible:
+            field: entity19
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity19_custom_action:
           name: Button page 3, Button 3 - Custom action
+          visible:
+            field: entity19
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2842,6 +3579,9 @@ blueprint:
             action:
         entity19_state_entity:
           name: Button page 3, Button 3 - State Indicator Entity
+          visible:
+            field: entity19
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2849,6 +3589,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity19_state_value:
           name: Button page 3, Button 3 - State Value
+          visible:
+            field: entity19
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2858,32 +3601,47 @@ blueprint:
         entity20:
           name: Button page 3, Button 4 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity20_name:
           name: Button page 3, Button 4 - Label
+          visible:
+            field: entity20
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity20_icon:
           name: Button page 3, Button 4 - Icon
+          visible:
+            field: entity20
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity20_icon_color:
           name: Button page 3, Button 4 - Icon color
+          visible:
+            field: entity20
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity20_confirm:
           name: Button page 3, Button 4 - Require confirmation
+          visible:
+            field: entity20
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity20_custom_action:
           name: Button page 3, Button 4 - Custom action
+          visible:
+            field: entity20
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2891,6 +3649,9 @@ blueprint:
             action:
         entity20_state_entity:
           name: Button page 3, Button 4 - State Indicator Entity
+          visible:
+            field: entity20
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2898,6 +3659,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity20_state_value:
           name: Button page 3, Button 4 - State Value
+          visible:
+            field: entity20
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2907,32 +3671,47 @@ blueprint:
         entity21:
           name: Button page 3, Button 5 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity21_name:
           name: Button page 3, Button 5 - Label
+          visible:
+            field: entity21
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity21_icon:
           name: Button page 3, Button 5 - Icon
+          visible:
+            field: entity21
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity21_icon_color:
           name: Button page 3, Button 5 - Icon color
+          visible:
+            field: entity21
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity21_confirm:
           name: Button page 3, Button 5 - Require confirmation
+          visible:
+            field: entity21
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity21_custom_action:
           name: Button page 3, Button 5 - Custom action
+          visible:
+            field: entity21
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2940,6 +3719,9 @@ blueprint:
             action:
         entity21_state_entity:
           name: Button page 3, Button 5 - State Indicator Entity
+          visible:
+            field: entity21
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2947,6 +3729,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity21_state_value:
           name: Button page 3, Button 5 - State Value
+          visible:
+            field: entity21
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -2956,32 +3741,47 @@ blueprint:
         entity22:
           name: Button page 3, Button 6 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity22_name:
           name: Button page 3, Button 6 - Label
+          visible:
+            field: entity22
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity22_icon:
           name: Button page 3, Button 6 - Icon
+          visible:
+            field: entity22
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity22_icon_color:
           name: Button page 3, Button 6 - Icon color
+          visible:
+            field: entity22
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity22_confirm:
           name: Button page 3, Button 6 - Require confirmation
+          visible:
+            field: entity22
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity22_custom_action:
           name: Button page 3, Button 6 - Custom action
+          visible:
+            field: entity22
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -2989,6 +3789,9 @@ blueprint:
             action:
         entity22_state_entity:
           name: Button page 3, Button 6 - State Indicator Entity
+          visible:
+            field: entity22
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -2996,6 +3799,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity22_state_value:
           name: Button page 3, Button 6 - State Value
+          visible:
+            field: entity22
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3005,32 +3811,47 @@ blueprint:
         entity23:
           name: Button page 3, Button 7 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity23_name:
           name: Button page 3, Button 7 - Label
+          visible:
+            field: entity23
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity23_icon:
           name: Button page 3, Button 7 - Icon
+          visible:
+            field: entity23
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity23_icon_color:
           name: Button page 3, Button 7 - Icon color
+          visible:
+            field: entity23
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity23_confirm:
           name: Button page 3, Button 7 - Require confirmation
+          visible:
+            field: entity23
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity23_custom_action:
           name: Button page 3, Button 7 - Custom action
+          visible:
+            field: entity23
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -3038,6 +3859,9 @@ blueprint:
             action:
         entity23_state_entity:
           name: Button page 3, Button 7 - State Indicator Entity
+          visible:
+            field: entity23
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -3045,6 +3869,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity23_state_value:
           name: Button page 3, Button 7 - State Value
+          visible:
+            field: entity23
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3054,32 +3881,47 @@ blueprint:
         entity24:
           name: Button page 3, Button 8 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity24_name:
           name: Button page 3, Button 8 - Label
+          visible:
+            field: entity24
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity24_icon:
           name: Button page 3, Button 8 - Icon
+          visible:
+            field: entity24
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity24_icon_color:
           name: Button page 3, Button 8 - Icon color
+          visible:
+            field: entity24
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity24_confirm:
           name: Button page 3, Button 8 - Require confirmation
+          visible:
+            field: entity24
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity24_custom_action:
           name: Button page 3, Button 8 - Custom action
+          visible:
+            field: entity24
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -3087,6 +3929,9 @@ blueprint:
             action:
         entity24_state_entity:
           name: Button page 3, Button 8 - State Indicator Entity
+          visible:
+            field: entity24
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -3094,6 +3939,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity24_state_value:
           name: Button page 3, Button 8 - State Value
+          visible:
+            field: entity24
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3115,32 +3963,47 @@ blueprint:
         entity25:
           name: Button page 4, Button 1 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity25_name:
           name: Button page 4, Button 1 - Label
+          visible:
+            field: entity25
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity25_icon:
           name: Button page 4, Button 1 - Icon
+          visible:
+            field: entity25
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity25_icon_color:
           name: Button page 4, Button 1 - Icon color
+          visible:
+            field: entity25
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity25_confirm:
           name: Button page 4, Button 1 - Require confirmation
+          visible:
+            field: entity25
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity25_custom_action:
           name: Button page 4, Button 1 - Custom action
+          visible:
+            field: entity25
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -3148,6 +4011,9 @@ blueprint:
             action:
         entity25_state_entity:
           name: Button page 4, Button 1 - State Indicator Entity
+          visible:
+            field: entity25
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -3155,6 +4021,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity25_state_value:
           name: Button page 4, Button 1 - State Value
+          visible:
+            field: entity25
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3164,32 +4033,47 @@ blueprint:
         entity26:
           name: Button page 4, Button 2 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity26_name:
           name: Button page 4, Button 2 - Label
+          visible:
+            field: entity26
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity26_icon:
           name: Button page 4, Button 2 - Icon
+          visible:
+            field: entity26
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity26_icon_color:
           name: Button page 4, Button 2 - Icon color
+          visible:
+            field: entity26
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity26_confirm:
           name: Button page 4, Button 2 - Require confirmation
+          visible:
+            field: entity26
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity26_custom_action:
           name: Button page 4, Button 2 - Custom action
+          visible:
+            field: entity26
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -3197,6 +4081,9 @@ blueprint:
             action:
         entity26_state_entity:
           name: Button page 4, Button 2 - State Indicator Entity
+          visible:
+            field: entity26
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -3204,6 +4091,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity26_state_value:
           name: Button page 4, Button 2 - State Value
+          visible:
+            field: entity26
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3213,32 +4103,47 @@ blueprint:
         entity27:
           name: Button page 4, Button 3 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity27_name:
           name: Button page 4, Button 3 - Label
+          visible:
+            field: entity27
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity27_icon:
           name: Button page 4, Button 3 - Icon
+          visible:
+            field: entity27
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity27_icon_color:
           name: Button page 4, Button 3 - Icon color
+          visible:
+            field: entity27
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity27_confirm:
           name: Button page 4, Button 3 - Require confirmation
+          visible:
+            field: entity27
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity27_custom_action:
           name: Button page 4, Button 3 - Custom action
+          visible:
+            field: entity27
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -3246,6 +4151,9 @@ blueprint:
             action:
         entity27_state_entity:
           name: Button page 4, Button 3 - State Indicator Entity
+          visible:
+            field: entity27
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -3253,6 +4161,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity27_state_value:
           name: Button page 4, Button 3 - State Value
+          visible:
+            field: entity27
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3262,32 +4173,47 @@ blueprint:
         entity28:
           name: Button page 4, Button 4 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity28_name:
           name: Button page 4, Button 4 - Label
+          visible:
+            field: entity28
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity28_icon:
           name: Button page 4, Button 4 - Icon
+          visible:
+            field: entity28
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity28_icon_color:
           name: Button page 4, Button 4 - Icon color
+          visible:
+            field: entity28
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity28_confirm:
           name: Button page 4, Button 4 - Require confirmation
+          visible:
+            field: entity28
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity28_custom_action:
           name: Button page 4, Button 4 - Custom action
+          visible:
+            field: entity28
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -3295,6 +4221,9 @@ blueprint:
             action:
         entity28_state_entity:
           name: Button page 4, Button 4 - State Indicator Entity
+          visible:
+            field: entity28
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -3302,6 +4231,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity28_state_value:
           name: Button page 4, Button 4 - State Value
+          visible:
+            field: entity28
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3311,32 +4243,47 @@ blueprint:
         entity29:
           name: Button page 4, Button 5 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity29_name:
           name: Button page 4, Button 5 - Label
+          visible:
+            field: entity29
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity29_icon:
           name: Button page 4, Button 5 - Icon
+          visible:
+            field: entity29
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity29_icon_color:
           name: Button page 4, Button 5 - Icon color
+          visible:
+            field: entity29
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity29_confirm:
           name: Button page 4, Button 5 - Require confirmation
+          visible:
+            field: entity29
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity29_custom_action:
           name: Button page 4, Button 5 - Custom action
+          visible:
+            field: entity29
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -3344,6 +4291,9 @@ blueprint:
             action:
         entity29_state_entity:
           name: Button page 4, Button 5 - State Indicator Entity
+          visible:
+            field: entity29
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -3351,6 +4301,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity29_state_value:
           name: Button page 4, Button 5 - State Value
+          visible:
+            field: entity29
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3360,32 +4313,47 @@ blueprint:
         entity30:
           name: Button page 4, Button 6 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity30_name:
           name: Button page 4, Button 6 - Label
+          visible:
+            field: entity30
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity30_icon:
           name: Button page 4, Button 6 - Icon
+          visible:
+            field: entity30
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity30_icon_color:
           name: Button page 4, Button 6 - Icon color
+          visible:
+            field: entity30
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity30_confirm:
           name: Button page 4, Button 6 - Require confirmation
+          visible:
+            field: entity30
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity30_custom_action:
           name: Button page 4, Button 6 - Custom action
+          visible:
+            field: entity30
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -3393,6 +4361,9 @@ blueprint:
             action:
         entity30_state_entity:
           name: Button page 4, Button 6 - State Indicator Entity
+          visible:
+            field: entity30
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -3400,6 +4371,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity30_state_value:
           name: Button page 4, Button 6 - State Value
+          visible:
+            field: entity30
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3409,32 +4383,47 @@ blueprint:
         entity31:
           name: Button page 4, Button 7 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity31_name:
           name: Button page 4, Button 7 - Label
+          visible:
+            field: entity31
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity31_icon:
           name: Button page 4, Button 7 - Icon
+          visible:
+            field: entity31
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity31_icon_color:
           name: Button page 4, Button 7 - Icon color
+          visible:
+            field: entity31
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity31_confirm:
           name: Button page 4, Button 7 - Require confirmation
+          visible:
+            field: entity31
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity31_custom_action:
           name: Button page 4, Button 7 - Custom action
+          visible:
+            field: entity31
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -3442,6 +4431,9 @@ blueprint:
             action:
         entity31_state_entity:
           name: Button page 4, Button 7 - State Indicator Entity
+          visible:
+            field: entity31
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -3449,6 +4441,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity31_state_value:
           name: Button page 4, Button 7 - State Value
+          visible:
+            field: entity31
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3458,32 +4453,47 @@ blueprint:
         entity32:
           name: Button page 4, Button 8 - Entity
           description: *description_button_entity
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector: *button_entity_selector
         entity32_name:
           name: Button page 4, Button 8 - Label
+          visible:
+            field: entity32
+            operator: exists
           description: *description_button_label
           default: ""
           selector:
             text:
         entity32_icon:
           name: Button page 4, Button 8 - Icon
+          visible:
+            field: entity32
+            operator: exists
           description: *description_icon_automatic_default
           default: []
           selector: *selector_icon
         entity32_icon_color:
           name: Button page 4, Button 8 - Icon color
+          visible:
+            field: entity32
+            operator: exists
           description: *description_button_icon_color
           default: [0, 128, 248]
           selector: *color_selector
         entity32_confirm:
           name: Button page 4, Button 8 - Require confirmation
+          visible:
+            field: entity32
+            operator: exists
           default: false
           description: *description_ask_for_confirmation
           selector:
             boolean:
         entity32_custom_action:
           name: Button page 4, Button 8 - Custom action
+          visible:
+            field: entity32
+            operator: exists
           description: >-
             Additional action(s) to run when the button is clicked.
           default: []
@@ -3491,6 +4501,9 @@ blueprint:
             action:
         entity32_state_entity:
           name: Button page 4, Button 8 - State Indicator Entity
+          visible:
+            field: entity32
+            operator: exists
           description: >
             Specifies the entity reflecting the state of this button's indicator.
             If not set, the state of the controlled entity itself will dictate the indicator's state.
@@ -3498,6 +4511,9 @@ blueprint:
           selector: *hardware-button-state-selector
         entity32_state_value:
           name: Button page 4, Button 8 - State Value
+          visible:
+            field: entity32
+            operator: exists
           description: >
             When set, the button indicator is on when the State Indicator Entity's
             state matches this value. When empty, the indicator uses standard on/off logic.
@@ -3563,18 +4579,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity01_name:
           name: Entity page 1, Row 1 - Label
+          visible:
+            field: entities_entity01
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity01_icon:
           name: Entity page 1, Row 1 - Icon
+          visible:
+            field: entities_entity01
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3584,18 +4606,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity02_name:
           name: Entity page 1, Row 2 - Label
+          visible:
+            field: entities_entity02
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity02_icon:
           name: Entity page 1, Row 2 - Icon
+          visible:
+            field: entities_entity02
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3605,18 +4633,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity03_name:
           name: Entity page 1, Row 3 - Label
+          visible:
+            field: entities_entity03
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity03_icon:
           name: Entity page 1, Row 3 - Icon
+          visible:
+            field: entities_entity03
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3626,18 +4660,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity04_name:
           name: Entity page 1, Row 4 - Label
+          visible:
+            field: entities_entity04
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity04_icon:
           name: Entity page 1, Row 4 - Icon
+          visible:
+            field: entities_entity04
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3647,18 +4687,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity05_name:
           name: Entity page 1, Row 5 - Label
+          visible:
+            field: entities_entity05
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity05_icon:
           name: Entity page 1, Row 5 - Icon
+          visible:
+            field: entities_entity05
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3668,18 +4714,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity06_name:
           name: Entity page 1, Row 6 - Label
+          visible:
+            field: entities_entity06
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity06_icon:
           name: Entity page 1, Row 6 - Icon
+          visible:
+            field: entities_entity06
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3689,18 +4741,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity07_name:
           name: Entity page 1, Row 7 - Label
+          visible:
+            field: entities_entity07
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity07_icon:
           name: Entity page 1, Row 7 - Icon
+          visible:
+            field: entities_entity07
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3710,18 +4768,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity08_name:
           name: Entity page 1, Row 8 - Label
+          visible:
+            field: entities_entity08
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity08_icon:
           name: Entity page 1, Row 8 - Icon
+          visible:
+            field: entities_entity08
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3743,18 +4807,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity09_name:
           name: Entity page 2, Row 1 - Label
+          visible:
+            field: entities_entity09
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity09_icon:
           name: Entity page 2, Row 1 - Icon
+          visible:
+            field: entities_entity09
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3764,18 +4834,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity10_name:
           name: Entity page 2, Row 2 - Label
+          visible:
+            field: entities_entity10
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity10_icon:
           name: Entity page 2, Row 2 - Icon
+          visible:
+            field: entities_entity10
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3785,18 +4861,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity11_name:
           name: Entity page 2, Row 3 - Label
+          visible:
+            field: entities_entity11
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity11_icon:
           name: Entity page 2, Row 3 - Icon
+          visible:
+            field: entities_entity11
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3806,18 +4888,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity12_name:
           name: Entity page 2, Row 4 - Label
+          visible:
+            field: entities_entity12
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity12_icon:
           name: Entity page 2, Row 4 - Icon
+          visible:
+            field: entities_entity12
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3827,18 +4915,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity13_name:
           name: Entity page 2, Row 5 - Label
+          visible:
+            field: entities_entity13
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity13_icon:
           name: Entity page 2, Row 5 - Icon
+          visible:
+            field: entities_entity13
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3848,18 +4942,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity14_name:
           name: Entity page 2, Row 6 - Label
+          visible:
+            field: entities_entity14
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity14_icon:
           name: Entity page 2, Row 6 - Icon
+          visible:
+            field: entities_entity14
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3869,18 +4969,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity15_name:
           name: Entity page 2, Row 7 - Label
+          visible:
+            field: entities_entity15
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity15_icon:
           name: Entity page 2, Row 7 - Icon
+          visible:
+            field: entities_entity15
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3890,18 +4996,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity16_name:
           name: Entity page 2, Row 8 - Label
+          visible:
+            field: entities_entity16
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity16_icon:
           name: Entity page 2, Row 8 - Icon
+          visible:
+            field: entities_entity16
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3923,18 +5035,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity17_name:
           name: Entity page 3, Row 1 - Label
+          visible:
+            field: entities_entity17
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity17_icon:
           name: Entity page 3, Row 1 - Icon
+          visible:
+            field: entities_entity17
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3944,18 +5062,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity18_name:
           name: Entity page 3, Row 2 - Label
+          visible:
+            field: entities_entity18
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity18_icon:
           name: Entity page 3, Row 2 - Icon
+          visible:
+            field: entities_entity18
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3965,18 +5089,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity19_name:
           name: Entity page 3, Row 3 - Label
+          visible:
+            field: entities_entity19
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity19_icon:
           name: Entity page 3, Row 3 - Icon
+          visible:
+            field: entities_entity19
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -3986,18 +5116,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity20_name:
           name: Entity page 3, Row 4 - Label
+          visible:
+            field: entities_entity20
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity20_icon:
           name: Entity page 3, Row 4 - Icon
+          visible:
+            field: entities_entity20
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4007,18 +5143,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity21_name:
           name: Entity page 3, Row 5 - Label
+          visible:
+            field: entities_entity21
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity21_icon:
           name: Entity page 3, Row 5 - Icon
+          visible:
+            field: entities_entity21
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4028,18 +5170,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity22_name:
           name: Entity page 3, Row 6 - Label
+          visible:
+            field: entities_entity22
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity22_icon:
           name: Entity page 3, Row 6 - Icon
+          visible:
+            field: entities_entity22
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4049,18 +5197,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity23_name:
           name: Entity page 3, Row 7 - Label
+          visible:
+            field: entities_entity23
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity23_icon:
           name: Entity page 3, Row 7 - Icon
+          visible:
+            field: entities_entity23
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4070,18 +5224,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity24_name:
           name: Entity page 3, Row 8 - Label
+          visible:
+            field: entities_entity24
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity24_icon:
           name: Entity page 3, Row 8 - Icon
+          visible:
+            field: entities_entity24
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4103,18 +5263,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity25_name:
           name: Entity page 4, Row 1 - Label
+          visible:
+            field: entities_entity25
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity25_icon:
           name: Entity page 4, Row 1 - Icon
+          visible:
+            field: entities_entity25
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4124,18 +5290,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity26_name:
           name: Entity page 4, Row 2 - Label
+          visible:
+            field: entities_entity26
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity26_icon:
           name: Entity page 4, Row 2 - Icon
+          visible:
+            field: entities_entity26
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4145,18 +5317,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity27_name:
           name: Entity page 4, Row 3 - Label
+          visible:
+            field: entities_entity27
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity27_icon:
           name: Entity page 4, Row 3 - Icon
+          visible:
+            field: entities_entity27
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4166,18 +5344,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity28_name:
           name: Entity page 4, Row 4 - Label
+          visible:
+            field: entities_entity28
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity28_icon:
           name: Entity page 4, Row 4 - Icon
+          visible:
+            field: entities_entity28
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4187,18 +5371,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity29_name:
           name: Entity page 4, Row 5 - Label
+          visible:
+            field: entities_entity29
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity29_icon:
           name: Entity page 4, Row 5 - Icon
+          visible:
+            field: entities_entity29
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4208,18 +5398,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity30_name:
           name: Entity page 4, Row 6 - Label
+          visible:
+            field: entities_entity30
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity30_icon:
           name: Entity page 4, Row 6 - Icon
+          visible:
+            field: entities_entity30
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4229,18 +5425,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity31_name:
           name: Entity page 4, Row 7 - Label
+          visible:
+            field: entities_entity31
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity31_icon:
           name: Entity page 4, Row 7 - Icon
+          visible:
+            field: entities_entity31
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -4250,18 +5452,24 @@ blueprint:
             Choose an entity to display in this position. If left blank, no entity will be shown.
 
             *Only one entity may be selected.*
-          default: *selector_entity_single_default_empty
+          default: *selector_entity_single_default_none
           selector:
             entity:
               multiple: *selector_entity_single_multiple
         entities_entity32_name:
           name: Entity page 4, Row 8 - Label
+          visible:
+            field: entities_entity32
+            operator: exists
           description: "Specify a custom label for this entity. This label will replace the entity's default `friendly_name` if provided."
           default: ""
           selector:
             text:
         entities_entity32_icon:
           name: Entity page 4, Row 8 - Icon
+          visible:
+            field: entities_entity32
+            operator: exists
           description: "Set a custom icon for this entity. If not set, the entity's default icon is used, if available. Leave blank for no icon."
           default: []
           selector: *selector_icon
@@ -8241,6 +9449,7 @@ actions:
                                       | selectattr("page", "in", pages.entitypages)
                                       | selectattr("entity", "defined")
                                       | rejectattr("entity", "eq", [])
+                                      | rejectattr("entity", "none")
                                       | list
                                       | count > 0
                                     }}
@@ -8984,7 +10193,8 @@ actions:
                                   {% for btn in buttons_pages.buttons
                                         | selectattr("page", "eq", page)
                                         | selectattr("entity", "defined")
-                                        | rejectattr("entity", "eq", []) %}
+                                        | rejectattr("entity", "eq", [])
+                                        | rejectattr("entity", "none") %}
                                     {% set slot = btn.component | replace("button", "") | int - 1 %}
                                     {% set pns.mask = pns.mask + (2 ** slot) %}
                                   {% endfor %}
@@ -9010,6 +10220,7 @@ actions:
                                         | selectattr("page", "eq", page)
                                         | selectattr("entity", "defined")
                                         | rejectattr("entity", "eq", [])
+                                        | rejectattr("entity", "none")
                                         | list
                                         | count > 0 %}
                                   {% set ns.items = ns.items + ["is_" ~ page ~ "=" ~ (1 if has_entities else 0)] %}
@@ -9387,6 +10598,7 @@ actions:
                                   | selectattr("page", "eq", event_page)
                                   | selectattr("entity", "defined")
                                   | rejectattr("entity", "eq", [])
+                                  | rejectattr("entity", "none")
                                   | list
                                 }}
                               sequence: &update_entity_page_entity
@@ -10801,6 +12013,7 @@ actions:
                                     | selectattr("entity", "defined")
                                     | rejectattr("entity", "eq", "")
                                     | rejectattr("entity", "eq", [])
+                                    | rejectattr("entity", "none")
                                     | list
                                   }}
                                 sequence:
@@ -11288,6 +12501,7 @@ actions:
                                   | selectattr("component", "eq", nspanel_event.component)
                                   | selectattr("entity", "defined")
                                   | rejectattr("entity", "eq", [])
+                                  | rejectattr("entity", "none")
                                   | list
                                 }}
                           - condition: '{{ last_click_button | count > 0 }}'
