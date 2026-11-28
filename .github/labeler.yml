@@ -29,6 +29,8 @@
   - changed-files:
       - any-glob-to-any-file:
           - '**/*.md'
+          - docs/**
+          - mkdocs.yml
 
 'Area: CI':
   - changed-files:

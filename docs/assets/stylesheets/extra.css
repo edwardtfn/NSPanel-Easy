@@ -1,0 +1,83 @@
+/* NSPanel Easy - site styles */
+
+/* Brand colours, from the logo (the Discord server icon): sky blue (primary) and indigo (accent) */
+:root,
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #2b7bd9;
+  --md-primary-fg-color--light: #4fb3f5;
+  --md-primary-fg-color--dark: #1f5fae;
+  --md-accent-fg-color: #5d50e5;
+  --md-accent-fg-color--transparent: rgba(93, 80, 229, 0.1);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #2b7bd9;
+  --md-primary-fg-color--light: #57d3f3;
+  --md-primary-fg-color--dark: #1f5fae;
+  --md-accent-fg-color: #8a80ff;
+  --md-accent-fg-color--transparent: rgba(138, 128, 255, 0.1);
+  --md-typeset-a-color: #57d3f3;
+}
+
+/* Landing page: hero with the text on the left and a panel screenshot on the right */
+.pe-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2rem;
+  margin: 1rem 0 2rem;
+}
+
+.pe-hero-text {
+  flex: 1 1 22rem;
+}
+
+.pe-hero-text h1 {
+  font-weight: 700;
+  margin-bottom: 0.6em;
+}
+
+.pe-hero-image {
+  flex: 0 1 24rem;
+  text-align: center;
+}
+
+/* The screenshots already show the panel's frame: only a soft shadow */
+.pe-hero-image img {
+  filter: drop-shadow(0 0.6rem 1.2rem rgba(0, 0, 0, 0.3));
+}
+
+/* Landing page: the three setup steps as numbered cards */
+.md-typeset .pe-steps ol {
+  counter-reset: pe-step;
+  list-style: none;
+  padding: 0;
+  margin-left: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.md-typeset .pe-steps ol li {
+  counter-increment: pe-step;
+  position: relative;
+  margin: 0;
+  padding: 2.8rem 1rem 1rem;
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-radius: 0.2rem;
+}
+
+.md-typeset .pe-steps ol li::before {
+  content: counter(pe-step);
+  position: absolute;
+  top: 0.8rem;
+  left: 1rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  line-height: 1.6rem;
+  border-radius: 50%;
+  text-align: center;
+  font-weight: 700;
+  color: #fff;
+  background-color: var(--md-primary-fg-color);
+}

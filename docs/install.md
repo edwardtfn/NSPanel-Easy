@@ -40,6 +40,7 @@ Let’s embark on this journey together to create a smart home that’s uniquely
   - [Importing the Blueprint](#importing-the-blueprint)
   - [Creating an Automation](#creating-an-automation)
   - [Editing Automation Settings](#editing-automation-settings)
+  - [Keeping the Panel Events Out of the Recorder (Optional)](#keeping-the-panel-events-out-of-the-recorder-optional)
 - [How to Handle Multiple Panels](#how-to-handle-multiple-panels)
 - [Advanced Configuration for ESPHome and Home Assistant Experts](#advanced-configuration-for-esphome-and-home-assistant-experts)
 - [Additional Tips and Resources](#additional-tips-and-resources)
@@ -466,6 +467,23 @@ You can modify your automation anytime to change configurations:
 
 > [!TIP]
 > For a comprehensive list of panel settings, refer to the [Blueprint Guide](blueprint.md).
+
+### Keeping the Panel Events Out of the Recorder (Optional)
+
+The panels and the Blueprint exchange many events, and Home Assistant's recorder stores all of them by default.
+To keep them out of your database, add this to your `configuration.yaml` and restart Home Assistant:
+
+```yaml
+recorder:
+  exclude:
+    event_types:
+      - esphome.nspanel_easy
+      - nspanel_easy_page_refresh_request
+```
+
+If you already have a `recorder:` section, add the `exclude` lines to it instead of a second `recorder:` key.
+The panels keep working as before, as the exclusion changes only what is stored.
+See [Keep the panel events out of the recorder](howto.md#keep-the-panel-events-out-of-the-recorder) for more details.
 
 ## How to Handle Multiple Panels
 
